@@ -1,0 +1,6 @@
+kamel delete ccm-justin-mock-app
+kamel run CcmJustinMockApp/CcmJustinMockApp.java --profile openshift  --trait route.tls-termination=edge --trait route.tls-insecure-edge-termination-policy=Redirect --trait route.host=ccm-justin-mock-app-dev.apps.clab.devops.gov.bc.ca
+
+# JADE-681 
+# Added route traits to ensure the JUSTIN mock app route is configured to listen to HTTPS requests
+# https://camel.apache.org/camel-k/1.8.x/traits/route.html
