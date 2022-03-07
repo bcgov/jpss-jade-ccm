@@ -1,0 +1,2 @@
+kamel delete ccm-dems-edge-adapter
+kamel run CcmDemsEdgeAdapter/CcmDemsEdgeAdapter.java --property file:CcmDemsEdgeAdapter/application.properties --profile openshift

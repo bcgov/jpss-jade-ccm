@@ -1,0 +1,2 @@
+kamel delete ccm-dems-mock-app
+kamel run CcmDemsMockApp/CcmDemsMockApp.java --profile openshift --trait route.enabled=false

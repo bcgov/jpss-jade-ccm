@@ -1,0 +1,2 @@
+kamel delete ccm-notification-service
+kamel run CcmNotificationService/CcmNotificationService.java --property file:CcmNotificationService/application.properties --profile openshift
