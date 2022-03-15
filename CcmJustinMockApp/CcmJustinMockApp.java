@@ -35,5 +35,11 @@ public class CcmJustinMockApp extends RouteBuilder {
     .setBody().simple("Successfully generated new court file: number=${exchangeProperty.number}.")
     //.log("Newly generated court file: ${body}");
     .log("${body}");
+
+    from("platform-http:/greeting?httpMethodRestrict=GET")
+    .routeId("greeting")
+    .setProperty("name").simple("${header.name}")
+    .setBody().simple("<html><body><h2>Hello ${exchangeProperty.name}</body></html>")
+    .log("Greeting: Hello ${exchangeProperty.name}.");
   }
 }
