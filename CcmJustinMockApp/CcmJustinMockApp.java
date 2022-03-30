@@ -41,5 +41,10 @@ public class CcmJustinMockApp extends RouteBuilder {
     .setProperty("name").simple("${header.name}")
     .setBody().simple("<html><body><h2>Hello ${exchangeProperty.name}</body></html>")
     .log("Greeting: Hello ${exchangeProperty.name}.");
+
+    from("platform-http:/v1/version?httpMethodRestrict=GET")
+    .routeId("version")
+    .log("version query request received")
+    .setBody().simple("{\n  \"component\": \"CCM JUSTIN Mock Application\",\n  \"version\": \"0.0.1\"\n}");
   }
 }

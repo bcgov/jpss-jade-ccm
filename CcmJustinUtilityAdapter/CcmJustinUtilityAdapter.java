@@ -23,7 +23,10 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     .unmarshal().json()
     .transform(simple("{\"number\": \"${body[number]}\", \"status\": \"created\", \"sensitive_content\": \"${body[sensitive_content]}\", \"public_content\": \"${body[public_content]}\", \"created_datetime\": \"${body[created_datetime]}\"}"))
     .log("body (after unmarshalling): '${body}'")
-    .to("kafka:{{kafka.topic.name}}");
+    //
+    // BCPSDEMS-143 Kafka routing below commented out until deployment issue is resolved
+    //.to("kafka:{{kafka.topic.name}}");
+    ;
   }
 }
 
