@@ -1,0 +1,15 @@
+apiVersion: ops.gov.bc.ca/v1alpha1
+kind: SysdigTeam
+metadata:
+  name: ac13ae-sysdigteam
+  namespace: ac13ae-tools
+spec:
+  team:
+    description: The Sysdig Team for the JPSS Red Hat Integration POC project
+    users:
+    - name: jennifer.dowd@gov.bc.ca
+      role: ROLE_TEAM_MANAGER
+    - name: david@agahchen.ca
+      role: ROLE_TEAM_MANAGER
+    - name: ayodotojo@yahoo.com
+      role: ROLE_TEAM_EDIT

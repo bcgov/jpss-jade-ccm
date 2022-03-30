@@ -1,0 +1,20 @@
+services:
+- name: a-greeting-service-for-cef5dd-dev
+  host: ccm-justin-mock-app.cef5dd-dev.svc
+  tags: [ ns.cef5dd-dev ]
+  port: 443
+  protocol: https
+  retries: 0
+  routes:
+  - name: a-greeting-service-for-cef5dd-dev-route
+    tags: [ ns.cef5dd-dev ]
+    hosts:
+    - dems-adapter-dev.api.gov.bc.ca
+    paths:
+    - /
+    methods:
+    - GET
+    strip_path: false
+    https_redirect_status_code: 426
+    path_handling: v0
+

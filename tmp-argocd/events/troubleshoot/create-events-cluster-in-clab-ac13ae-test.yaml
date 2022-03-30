@@ -1,0 +1,77 @@
+# Strimzi Kafka
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: operator
+  name: events
+  namespace: ac13ae-test  # Replace this with the namespace
+spec:
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  kafka:
+    config:
+      default.replication.factor: 3
+      offsets.topic.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      transaction.state.log.replication.factor: 3
+    listeners:
+    - name: plain
+      port: 9092
+      tls: false
+      type: internal
+    - name: tls
+      port: 9093
+      tls: true
+      type: internal
+    livenessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    readinessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    replicas: 3
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 2Gi
+    storage:
+      deleteClaim: true
+      size: 5Gi
+      type: persistent-claim
+      class: netapp-file-standard
+    template:
+      statefulset:
+        metadata:
+          labels:
+            app.kubernetes.io/component: kafka
+            app.kubernetes.io/part-of: events
+  kafkaExporter:
+    groupRegex: .*
+    topicRegex: .*
+  zookeeper:
+    livenessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    readinessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    replicas: 3
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        memory: 1Gi
+    storage:
+      deleteClaim: false
+      size: 1Gi
+      type: persistent-claim
+      class: netapp-file-standard
+    template:
+      statefulset:
+        metadata:
+          labels:
+            app.kubernetes.io/component: zookeeper
+            app.kubernetes.io/part-of: events

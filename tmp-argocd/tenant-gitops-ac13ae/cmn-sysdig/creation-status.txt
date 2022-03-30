@@ -1,0 +1,66 @@
+Name:         ac13ae-sysdigteam
+Namespace:    ac13ae-tools
+Labels:       <none>
+Annotations:  API Version:  ops.gov.bc.ca/v1alpha1
+Kind:         SysdigTeam
+Metadata:
+  Creation Timestamp:  2022-01-17T22:23:31Z
+  Finalizers:
+    finalizer.ops.gov.bc.ca
+  Generation:  2
+  Managed Fields:
+    API Version:  ops.gov.bc.ca/v1alpha1
+    Fields Type:  FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:finalizers:
+          .:
+          v:"finalizer.ops.gov.bc.ca":
+      f:status:
+        .:
+        f:conditions:
+    Manager:      ansible-operator
+    Operation:    Update
+    Time:         2022-01-17T22:23:31Z
+    API Version:  ops.gov.bc.ca/v1alpha1
+    Fields Type:  FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .:
+          f:kubectl.kubernetes.io/last-applied-configuration:
+      f:spec:
+        .:
+        f:team:
+          .:
+          f:description:
+          f:users:
+    Manager:         oc.exe
+    Operation:       Update
+    Time:            2022-01-17T22:23:31Z
+  Resource Version:  810699893
+  UID:               46dfa5b0-b015-463b-b2b3-9b2c44d26672
+Spec:
+  Team:
+    Description:  The Sysdig Team for the JPSS Red Hat Integration POC project
+    Users:
+      Name:  jmdowd05@gmail.com
+      Role:  ROLE_TEAM_MANAGER
+      Name:  david@agahchen.ca
+      Role:  ROLE_TEAM_MANAGER
+      Name:  vesselofgold@gmail.com
+      Role:  ROLE_TEAM_EDIT
+Status:
+  Conditions:
+    Ansible Result:
+      Changed:             0
+      Completion:          2022-01-17T23:09:55.723239
+      Failures:            0
+      Ok:                  30
+      Skipped:             13
+    Last Transition Time:  2022-01-17T23:09:28Z
+    Message:               Awaiting next reconciliation
+    Reason:                Successful
+    Status:                True
+    Type:                  Running
+Events:                    <none>

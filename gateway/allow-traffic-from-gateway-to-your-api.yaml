@@ -1,0 +1,19 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-traffic-from-gateway-to-your-api
+spec:
+  podSelector:
+    matchLabels:
+      camel.apache.org/integration: ccm-justin-mock-app
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              environment: test
+              name: 264e6f
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              environment: prod
+              name: 264e6f

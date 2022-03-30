@@ -1,0 +1,220 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  creationTimestamp: '2021-12-08T00:28:25Z'
+  generation: 4
+  labels:
+    app.kubernetes.io/managed-by: operator
+  managedFields:
+    - apiVersion: kafka.strimzi.io/v1beta2
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:labels':
+            .: {}
+            'f:app.kubernetes.io/managed-by': {}
+        'f:spec':
+          .: {}
+          'f:entityOperator':
+            .: {}
+            'f:topicOperator': {}
+            'f:userOperator': {}
+          'f:kafka':
+            'f:storage':
+              .: {}
+              'f:deleteClaim': {}
+              'f:size': {}
+              'f:type': {}
+            'f:listeners': {}
+            .: {}
+            'f:template':
+              .: {}
+              'f:statefulset':
+                .: {}
+                'f:metadata':
+                  .: {}
+                  'f:labels':
+                    .: {}
+                    'f:app.kubernetes.io/component': {}
+                    'f:app.kubernetes.io/part-of': {}
+            'f:replicas': {}
+            'f:resources':
+              .: {}
+              'f:limits':
+                .: {}
+                'f:memory': {}
+              'f:requests':
+                .: {}
+                'f:memory': {}
+            'f:config':
+              .: {}
+              'f:default.replication.factor': {}
+              'f:offsets.topic.replication.factor': {}
+              'f:transaction.state.log.min.isr': {}
+              'f:transaction.state.log.replication.factor': {}
+            'f:livenessProbe': {}
+            'f:readinessProbe': {}
+          'f:kafkaExporter': {}
+          'f:zookeeper':
+            .: {}
+            'f:livenessProbe': {}
+            'f:readinessProbe': {}
+            'f:replicas': {}
+            'f:resources':
+              .: {}
+              'f:limits':
+                .: {}
+                'f:memory': {}
+              'f:requests':
+                .: {}
+                'f:memory': {}
+            'f:storage':
+              .: {}
+              'f:size': {}
+              'f:type': {}
+            'f:template':
+              .: {}
+              'f:statefulset':
+                .: {}
+                'f:metadata':
+                  .: {}
+                  'f:labels':
+                    .: {}
+                    'f:app.kubernetes.io/component': {}
+                    'f:app.kubernetes.io/part-of': {}
+      manager: Mozilla
+      operation: Update
+      time: '2022-01-18T00:24:16Z'
+    - apiVersion: kafka.strimzi.io/v1beta2
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:clusterId': {}
+          'f:conditions': {}
+          'f:listeners': {}
+          'f:observedGeneration': {}
+      manager: okhttp
+      operation: Update
+      time: '2022-01-18T00:29:21Z'
+  name: cmn-kafka
+  namespace: ac13ae-test
+  resourceVersion: '811014424'
+  uid: 4b3331a5-1b11-4fcf-9107-ba2864212576
+spec:
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  kafka:
+    config:
+      default.replication.factor: 3
+      offsets.topic.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      transaction.state.log.replication.factor: 3
+    listeners:
+      - name: plain
+        port: 9092
+        tls: false
+        type: internal
+      - name: tls
+        port: 9093
+        tls: true
+        type: internal
+    livenessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    readinessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    replicas: 3
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 2Gi
+    storage:
+      deleteClaim: true
+      size: 5Gi
+      type: persistent-claim
+    template:
+      statefulset:
+        metadata:
+          labels:
+            app.kubernetes.io/component: kafka
+            app.kubernetes.io/part-of: cmn-kafka
+  kafkaExporter:
+    groupRegex: .*
+    topicRegex: .*
+  zookeeper:
+    livenessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    readinessProbe:
+      initialDelaySeconds: 15
+      timeoutSeconds: 5
+    replicas: 3
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        memory: 1Gi
+    storage:
+      deleteClaim: false
+      size: 1Gi
+      type: persistent-claim
+    template:
+      statefulset:
+        metadata:
+          labels:
+            app.kubernetes.io/component: zookeeper
+            app.kubernetes.io/part-of: cmn-kafka
+status:
+  clusterId: 3h4AsQZAQ7qXLRXlbkjEBQ
+  conditions:
+    - lastTransitionTime: '2022-01-18T00:29:21.856Z'
+      status: 'True'
+      type: Ready
+  listeners:
+    - addresses:
+        - host: cmn-kafka-kafka-bootstrap.ac13ae-test.svc
+          port: 9092
+      bootstrapServers: 'cmn-kafka-kafka-bootstrap.ac13ae-test.svc:9092'
+      type: plain
+    - addresses:
+        - host: cmn-kafka-kafka-bootstrap.ac13ae-test.svc
+          port: 9093
+      bootstrapServers: 'cmn-kafka-kafka-bootstrap.ac13ae-test.svc:9093'
+      certificates:
+        - |
+          -----BEGIN CERTIFICATE-----
+          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
+          -----END CERTIFICATE-----
+      type: tls
+  observedGeneration: 4
