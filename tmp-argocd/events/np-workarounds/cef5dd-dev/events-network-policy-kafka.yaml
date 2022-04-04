@@ -1,0 +1,95 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  resourceVersion: '3075399680'
+  name: events-network-policy-kafka
+  uid: 67af0131-7d9d-4390-95f6-d8e84a666326
+  creationTimestamp: '2022-03-21T18:32:24Z'
+  generation: 1
+  managedFields:
+    - manager: okhttp
+      operation: Update
+      apiVersion: networking.k8s.io/v1
+      time: '2022-03-21T18:32:24Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:labels':
+            .: {}
+            'f:app.kubernetes.io/instance': {}
+            'f:app.kubernetes.io/managed-by': {}
+            'f:app.kubernetes.io/name': {}
+            'f:app.kubernetes.io/part-of': {}
+            'f:strimzi.io/cluster': {}
+            'f:strimzi.io/kind': {}
+            'f:strimzi.io/name': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"7f7fcdaa-5374-4d7d-a00f-144d6d0cc21a"}':
+              .: {}
+              'f:apiVersion': {}
+              'f:blockOwnerDeletion': {}
+              'f:controller': {}
+              'f:kind': {}
+              'f:name': {}
+              'f:uid': {}
+        'f:spec':
+          'f:ingress': {}
+          'f:podSelector': {}
+          'f:policyTypes': {}
+  namespace: cef5dd-dev
+  ownerReferences:
+    - apiVersion: kafka.strimzi.io/v1beta2
+      kind: Kafka
+      name: events
+      uid: 7f7fcdaa-5374-4d7d-a00f-144d6d0cc21a
+      controller: false
+      blockOwnerDeletion: false
+  labels:
+    app.kubernetes.io/instance: events
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-events
+    strimzi.io/cluster: events
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+spec:
+  podSelector:
+    matchLabels:
+      strimzi.io/name: events-kafka
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9090
+      from:
+        - podSelector:
+            matchLabels:
+              strimzi.io/name: events-kafka
+    - ports:
+        - protocol: TCP
+          port: 9091
+      from:
+        - podSelector:
+            matchLabels:
+              strimzi.io/kind: cluster-operator
+          namespaceSelector: {}
+        - podSelector:
+            matchLabels:
+              strimzi.io/name: events-kafka
+        - podSelector:
+            matchLabels:
+              strimzi.io/name: events-entity-operator
+        - podSelector:
+            matchLabels:
+              strimzi.io/name: events-kafka-exporter
+        - podSelector:
+            matchLabels:
+              strimzi.io/name: events-cruise-control
+    - ports:
+        - protocol: TCP
+          port: 9092
+    - ports:
+        - protocol: TCP
+          port: 9093
+  policyTypes:
+    - Ingress
