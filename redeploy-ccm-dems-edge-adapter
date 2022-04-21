@@ -1,6 +1,8 @@
 kamel delete ccm-dems-edge-adapter
 kamel run CcmDemsEdgeAdapter/CcmDemsEdgeAdapter.java \
   --property file:CcmDemsEdgeAdapter/application.properties \
+  --secret=dems-secrets \
+  --secret=dems-edge-adapter-secrets \
   --profile openshift  \
   --trait route.tls-termination=edge \
   --trait route.tls-insecure-edge-termination-policy=Redirect \

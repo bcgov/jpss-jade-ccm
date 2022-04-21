@@ -16,19 +16,19 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
   public void configure() throws Exception {
     log.info("About to start DEMS edge adapter route: kafka -> ccm-dems-mock-app");
 
-    // from("kafka:{{kafka.topic.name}}")
-    // .routeId("courtCases")
-    // .log("Message received from Kafka : ${body}")
-    // .log("    on the topic ${headers[kafka.TOPIC]}")
-    // .log("    on the partition ${headers[kafka.PARTITION]}")
-    // .log("    with the offset ${headers[kafka.OFFSET]}")
-    // .log("    with the key ${headers[kafka.KEY]}")
-    // .unmarshal().json()
-    // .setBody().simple("{\"number\": \"${exchangeProperty.number}\", \"sensitive_content\": \"Shh... this is the secret.\", \"public_content\": \"This is a mock event object.\", \"created_datetime\": \"${date:header.created_datetime:yyyy-MM-dd'T'HH:mm:ssX}\"}")
-    // .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    // .to("http://ccm-dems-mock-app/createCourtCase")
-    // .setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
-    // .log("${body}");
+    from("kafka:{{kafka.topic.name}}")
+    .routeId("courtCases")
+    .log("Message received from Kafka : ${body}")
+    .log("    on the topic ${headers[kafka.TOPIC]}")
+    .log("    on the partition ${headers[kafka.PARTITION]}")
+    .log("    with the offset ${headers[kafka.OFFSET]}")
+    .log("    with the key ${headers[kafka.KEY]}")
+    .unmarshal().json()
+    .setBody().simple("{\"number\": \"${exchangeProperty.number}\", \"sensitive_content\": \"Shh... this is the secret.\", \"public_content\": \"This is a mock event object.\", \"created_datetime\": \"${date:header.created_datetime:yyyy-MM-dd'T'HH:mm:ssX}\"}")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .to("http://ccm-dems-mock-app/createCourtCase")
+    .setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
+    .log("${body}");
 
     // from("platform-http:/v1/version?httpMethodRestrict=GET")
     // .routeId("version")
@@ -52,7 +52,8 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
         .log("Response: ${exchangeProperty.version}")
       .otherwise()
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-        .setBody().simple("Authentication error.")
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setBody().simple("{ \"message\": \"Authentication error.\" }")
         .log("Response: ${body}")
       .end();
     // .to("http://ccm-justin-mock-app/v1/version").setBody().simple("${body}").log("${body}")
@@ -72,7 +73,8 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
         .log("Response: ${body}")
       .otherwise()
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-        .setBody().simple("Authentication error.")
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setBody().simple("{ \"message\": \"Authentication error.\" }")
         .log("Response: ${body}")
       .end();
   }
