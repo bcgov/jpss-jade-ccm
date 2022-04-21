@@ -25,7 +25,7 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     .log("body (after unmarshalling): '${body}'")
     //
     // BCPSDEMS-143 Kafka routing below commented out until deployment issue is resolved
-    //.to("kafka:{{kafka.topic.name}}");
+    .to("kafka:{{kafka.topic.name}}");
     ;
   }
 }
