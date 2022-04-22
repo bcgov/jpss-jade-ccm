@@ -1,8 +1,7 @@
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: test-kafka
-  namespace: cef5dd-dev
+  name: workaround-np-kafka
 spec:
   podSelector:
     matchLabels:

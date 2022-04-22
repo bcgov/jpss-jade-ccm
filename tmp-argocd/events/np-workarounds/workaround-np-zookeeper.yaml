@@ -1,16 +1,15 @@
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: test-kafka
-  namespace: cef5dd-test
+  name: workaround-np-zookeeper
 spec:
   podSelector:
     matchLabels:
-      strimzi.io/name: events-kafka
+      strimzi.io/name: events-zookeeper
   ingress:
     - ports:
         - protocol: TCP
-          port: 9091
+          port: 2181
       from:
         - podSelector:
             matchLabels:
@@ -18,11 +17,5 @@ spec:
           namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: openshift-operators
-    - ports:
-        - protocol: TCP
-          port: 9092
-    - ports:
-        - protocol: TCP
-          port: 9093
   policyTypes:
     - Ingress
