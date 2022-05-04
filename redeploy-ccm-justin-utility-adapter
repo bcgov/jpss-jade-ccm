@@ -1,2 +1,6 @@
 kamel delete ccm-justin-utility-adapter
-kamel run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java --property file:CcmJustinUtilityAdapter/application.properties --profile openshift --trait route.enabled=false
+kamel run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
+  --property file:CcmJustinUtilityAdapter/application.properties \
+  --profile openshift \
+  --trait route.enabled=false \
+  --trait service.node-port=false
