@@ -4,6 +4,7 @@ kamel run CcmDemsEdgeAdapter/CcmDemsEdgeAdapter.java \
   --secret=dems-secrets \
   --secret=dems-edge-adapter-secrets \
   --profile openshift  \
+  --trait service.node-port=false \
   --trait route.tls-termination=edge \
   --trait route.tls-insecure-edge-termination-policy=Redirect \
   --trait route.host=ccm-dems-edge-adapter-dev.apps.silver.devops.gov.bc.ca

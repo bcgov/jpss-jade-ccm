@@ -1,6 +1,7 @@
 kamel delete ccm-justin-mock-app
 kamel run CcmJustinMockApp/CcmJustinMockApp.java \
     --profile openshift  \
+    --trait service.node-port=false \
     --trait route.tls-termination=edge \
     --trait route.tls-insecure-edge-termination-policy=Redirect \
     --trait route.host=ccm-justin-mock-app-dev.apps.silver.devops.gov.bc.ca
