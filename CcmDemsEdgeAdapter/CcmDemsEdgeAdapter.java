@@ -14,8 +14,6 @@ import org.apache.camel.builder.RouteBuilder;
 public class CcmDemsEdgeAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    log.info("About to start DEMS edge adapter route: kafka -> ccm-dems-mock-app");
-
     from("kafka:{{kafka.topic.name}}")
     .routeId("courtCases")
     .log("Message received from Kafka : ${body}")
@@ -24,10 +22,10 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
     .log("    with the offset ${headers[kafka.OFFSET]}")
     .log("    with the key ${headers[kafka.KEY]}")
     .unmarshal().json()
-    .setBody().simple("{\"number\": \"${exchangeProperty.number}\", \"sensitive_content\": \"Shh... this is the secret.\", \"public_content\": \"This is a mock event object.\", \"created_datetime\": \"${date:header.created_datetime:yyyy-MM-dd'T'HH:mm:ssX}\"}")
+    //.setBody().simple("{\"number\": \"${exchangeProperty.number}\", \"sensitive_content\": \"Shh... this is the secret.\", \"public_content\": \"This is a mock event object.\", \"created_datetime\": \"${date:header.created_datetime:yyyy-MM-dd'T'HH:mm:ssX}\"}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .to("http://ccm-dems-mock-app/createCourtCase")
-    .setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
+    //.to("http://ccm-dems-mock-app/createCourtCase")
+    //.setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
     .log("${body}");
 
     // from("platform-http:/v1/version?httpMethodRestrict=GET")
