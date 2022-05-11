@@ -24,9 +24,13 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
     .unmarshal().json()
     //.setBody().simple("{\"number\": \"${exchangeProperty.number}\", \"sensitive_content\": \"Shh... this is the secret.\", \"public_content\": \"This is a mock event object.\", \"created_datetime\": \"${date:header.created_datetime:yyyy-MM-dd'T'HH:mm:ssX}\"}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     //.to("http://ccm-dems-mock-app/createCourtCase")
+    .setBody().simple("{\"name\": \"JUSTIN Mock Case ${body[number]}\", \"description\": \"${body[public_content]}\", \"timeZone\": \"Pacific Standard Time\"}")
+    .to("{{dems.host}}/cases")
     //.setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
-    .log("${body}");
+    .log("Response from DEMS: ${body}");
 
     // from("platform-http:/v1/version?httpMethodRestrict=GET")
     // .routeId("version")
@@ -67,7 +71,7 @@ public class CcmDemsEdgeAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-        .to("https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/v1/version")
+        .to("{{dems.host}}/version")
         .log("Response: ${body}")
       .otherwise()
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
