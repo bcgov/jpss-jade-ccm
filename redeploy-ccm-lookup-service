@@ -1,5 +1,5 @@
 kamel delete ccm-lookup-service
-kamel run CcmLookupService/CcmLookupService.java 
+kamel run CcmLookupService/CcmLookupService.java \
   --property file:CcmLookupService/application.properties \
   --profile openshift \
   --trait service.node-port=false \

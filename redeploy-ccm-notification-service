@@ -1,5 +1,5 @@
 kamel delete ccm-notification-service
-kamel run CcmNotificationService/CcmNotificationService.java 
+kamel run CcmNotificationService/CcmNotificationService.java \
   --property file:CcmNotificationService/application.properties \
   --profile openshift \
   --trait service.node-port=false \
