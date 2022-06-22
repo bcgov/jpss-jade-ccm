@@ -1,0 +1,58 @@
+{
+  "AtlasMapping" : {
+    "jsonType" : "io.atlasmap.v2.AtlasMapping",
+    "dataSource" : [ {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "inProgressEvents-in-a24af96c-3a54-45ce-ad85-4951dbcab48b",
+      "name" : "JUSTIN-events",
+      "description" : "Source document JUSTIN-events type: JSON",
+      "uri" : "atlas:json:inProgressEvents-in-a24af96c-3a54-45ce-ad85-4951dbcab48b",
+      "dataSourceType" : "SOURCE"
+    } ],
+    "mappings" : {
+      "mapping" : [ {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ {
+            "delimiter" : " ",
+            "delimitingEmptyValues" : true,
+            "@type" : "Concatenate"
+          } ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "inProgressEvents-in-a24af96c-3a54-45ce-ad85-4951dbcab48b",
+            "path" : "/events<>/appl_application_cd",
+            "fieldType" : "STRING",
+            "name" : "appl_application_cd"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.v2.PropertyField",
+          "docId" : "DOC.Properties.131418",
+          "path" : "/current/event",
+          "fieldType" : "STRING",
+          "name" : "event",
+          "scope" : "current"
+        } ],
+        "id" : "mapping.282607"
+      } ]
+    },
+    "lookupTables" : {
+      "lookupTable" : [ ]
+    },
+    "constants" : {
+      "constant" : [ ]
+    },
+    "properties" : {
+      "property" : [ {
+        "name" : "event",
+        "fieldType" : "STRING",
+        "scope" : "current",
+        "dataSourceType" : "TARGET"
+      } ]
+    },
+    "name" : "UI.0"
+  }
+}
