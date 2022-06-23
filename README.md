@@ -14,11 +14,11 @@ JADE-CCM integrates between a court case managmeent system (JUSTIN), a digital e
 
 ![JADE-CCM architecture diagram](img/ccm_architecture_diagram.drawio.png)
 
-JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is aRed Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
+JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
 
 ## Known Re-Queuable JUSTIN Change Notifications in Dev
 
-The following re-queuable Dev JUSTIN change notifications will be used to support "create case in DEMS" (5.2.1) and "sync user list in DEMS" (5.3.1) scenario development.
+The following re-queuable Dev JUSTIN change notifications will be used to support "create case in DEMS" (5.2.1) and "sync user list in DEMS" (5.3.1) functional development.
 
 | event_type | event_message_id | RCC_ID |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ The following re-queuable Dev JUSTIN change notifications will be used to suppor
 
 Postman collection file for JUSTIN APIs: tools/JUSTIN-DEMS.postman_collectoin.json
 
-## Deploy Events Cluster to Dev Environment in OCP Silver Cluster (cef5dd-dev)
+## Deploy JADE-Events Cluster to Dev Environment in OCP Silver Cluster (cef5dd-dev)
 
 Requires installation of the oc command line interface tool (visit download page from OCP Silver Cluster [here](https://console.apps.silver.devops.gov.bc.ca/command-line-tools).)
 
