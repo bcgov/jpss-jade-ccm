@@ -69,7 +69,7 @@ Working directory: tools/postman
 
 ## Download and Run Atlasmap Mapping UI
 
-AtlasMap provides a GUI to define JSON to JSON transformation.  The map can then be used ina ca Camel component.
+AtlasMap provides a GUI to define JSON to JSON transformation.  The map can then be used in a Camel component.
 
 Documentation: https://docs.atlasmap.io/#quickstart
 
@@ -83,3 +83,12 @@ Steps
 
 * Execute: java -jar tools/atlasmap/lib/atlasmap-standalone-2.3.18.jar
 * Open URL: http://localhost:8585
+
+
+## Guides
+
+* Camel Quarkus: https://camel.apache.org/camel-quarkus/2.9.x/user-guide/first-steps.html
+* Integration Systems with Apache Camel and Quarkus on Red Hat OpenShift: https://developers.redhat.com/articles/2021/05/17/integrating-systems-apache-camel-and-quarkus-red-hat-openshift#
+* Camel Quarkus Examples: https://github.com/jboss-fuse/camel-quarkus-examples/tree/camel-quarkus-examples-1.6.0-product/file-bindy-ftp
+* Unmarshalling a JSON Array Using camel-jackson: https://www.baeldung.com/java-camel-jackson-json-array
+* Youtube video (30 min): [Getting started with Apache Camel on Quarkus](https://www.youtube.com/watch?v=POWsZnGhVHM)

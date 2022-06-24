@@ -1,5 +1,5 @@
-kamel delete ccm-justin-mock-app
-kamel run CcmJustinMockApp/CcmJustinMockApp.java \
+kamel -n cef5dd-dev delete ccm-justin-mock-app
+kamel -n cef5dd-dev run CcmJustinMockApp/CcmJustinMockApp.java \
     --profile openshift  \
     --trait service.node-port=false \
     --trait route.enabled=false

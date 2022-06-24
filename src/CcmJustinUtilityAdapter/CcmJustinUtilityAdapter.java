@@ -11,6 +11,7 @@
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+//import org.apache.camel.model.dataformat.JsonDataFormat;
 
 class EventsProcessor implements Processor {
 
@@ -43,6 +44,26 @@ class EventsProcessor implements Processor {
   }
 }
 
+// class JustinEventData {
+//   String data_element_nm;
+//   String data_value_txt;
+// }
+
+// class JustinEvent {
+//   Integer event_message_id;
+//   String appl_application_cd;
+//   String message_event_type_cd;
+//   String event_dtm;
+//   JustinEventData event_data;
+// }
+
+// class JustinEventList {
+//   // Unmarshalling a JSON Array Using camel-jackson
+//   // https://www.baeldung.com/java-camel-jackson-json-array
+
+//   JustinEvent[] events;
+// }
+
 public class CcmJustinUtilityAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
@@ -67,14 +88,21 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
 
+    // https://tomd.xyz/camel-transformation/
+    // Youtube (30 min): Getting started with Apache Camel on Quarkus - https://www.youtube.com/watch?v=POWsZnGhVHM
+    // https://developers.redhat.com/articles/2021/05/17/integrating-systems-apache-camel-and-quarkus-red-hat-openshift#
+    JsonDataFormat json = new JsonDataFormat(JsonLibrary.Jackson);
+
     from("timer://simpleTimer?period={{notification.check.frequency}}")
     .routeId("getNotifications")
-    .log("checking for new notificatoins...")
+    .log("checking for new notifications...")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
-    .process(new EventsProcessor())
-    .log("In progress events from JUSTIN: ${body}");
+    // .process(new EventsProcessor())
+    .log("In progress events from JUSTIN: ${body}")
+    // .unmarshal(new JasonDataFormat(JustinEventList.class))
+    ;
   }
 }
 

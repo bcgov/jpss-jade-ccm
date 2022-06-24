@@ -1,5 +1,5 @@
-kamel delete ccm-justin-utility-adapter
-kamel run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
+kamel -n cef5dd-dev delete ccm-justin-utility-adapter
+kamel -n cef5dd-dev run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
   --property file:CcmJustinUtilityAdapter/application.properties \
   --profile openshift \
   --trait route.enabled=false \
