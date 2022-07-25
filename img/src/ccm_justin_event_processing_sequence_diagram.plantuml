@@ -1,0 +1,39 @@
+@startuml
+'hide footbox
+participant j_mock as "JUSTIN Interface"
+participant j_adapter as "JUSTIN Adapter"
+queue court_cases_q as "Court Cases (event topic)"
+participant d_adapter as "DEMS Adapter"
+participant d_mock as "DEMS Interface"
+
+title JADE-CCM JUSTIN Event Processing Sequence Diagram
+
+loop every 5 minutes
+    j_adapter-> j_mock : Retrieve all business events
+    activate j_adapter
+    activate j_mock
+    j_mock --> j_adapter
+    deactivate j_mock
+    loop for every court changed event
+        j_adapter -> court_cases_q: Produce court case changed event
+        j_adapter -> j_mock: Set event processed successfully
+        activate j_mock
+        j_mock --> j_adapter
+        deactivate j_mock
+    end
+    deactivate j_adapter
+end
+
+court_cases_q -> d_adapter: Process court case changed event
+activate d_adapter
+d_adapter -> d_mock: Check case exists in DEMS
+activate d_mock
+d_mock --> d_adapter
+deactivate d_mock
+alt case exists in DEMS
+    d_adapter -> court_cases_q: Produce court case created event
+else case does not exist in DEMS
+    d_adapter -> court_cases_q: Produce court case updated event
+end
+deactivate d_adapter
+@enduml

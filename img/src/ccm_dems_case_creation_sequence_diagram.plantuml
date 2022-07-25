@@ -1,0 +1,35 @@
+@startuml
+'hide footbox
+participant j_mock as "JUSTIN Interface"
+participant j_adapter as "JUSTIN Adapter"
+queue court_cases_q as "Court Cases (event topic)"
+participant lookup_service as "Case Lookup Service"
+participant d_adapter as "DEMS Adapter"
+participant d_mock as "DEMS Interface"
+
+title JADE-CCM Case Creation Event Processing Sequence Diagram
+
+    court_cases_q -> d_adapter : Process court case created event
+    activate d_adapter
+    d_adapter -> lookup_service: Retrieve case details
+    activate lookup_service
+    lookup_service -> j_adapter: Retrieve court file details
+    activate j_adapter
+    j_adapter -> j_mock: Retrieve court file details
+    activate j_mock
+    j_mock --> j_adapter
+    deactivate j_mock
+    j_adapter --> lookup_service
+    deactivate j_adapter
+    lookup_service --> d_adapter
+    deactivate lookup_service
+    d_adapter -> d_mock: Create case in DEMS
+    activate d_mock
+    d_mock --> d_adapter
+    deactivate d_mock
+    d_adapter -> d_mock: Sync case users in DEMS
+    activate d_mock
+    d_mock --> d_adapter
+    deactivate d_mock
+    deactivate d_adapter
+@enduml

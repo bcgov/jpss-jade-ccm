@@ -1,6 +1,11 @@
 kamel -n cef5dd-dev delete ccm-justin-utility-adapter
 kamel -n cef5dd-dev run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
+  --resource file:CcmJustinUtilityAdapter/JustinEventData.java \
+  --resource file:CcmJustinUtilityAdapter/JustinEvent.java \
+  --resource file:CcmJustinUtilityAdapter/JustinEventList.java \
   --property file:CcmJustinUtilityAdapter/application.properties \
   --profile openshift \
   --trait route.enabled=false \
   --trait service.node-port=false
+  # --dev
+kamel -n cef5dd-dev log ccm-justin-utility-adapter
