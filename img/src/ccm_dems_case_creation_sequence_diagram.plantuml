@@ -1,35 +1,76 @@
 @startuml
 'hide footbox
-participant j_mock as "JUSTIN Interface"
+participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-queue court_cases_q as "Court Cases (event topic)"
-participant lookup_service as "Case Lookup Service"
+participant case_lookup_service as "Case Lookup Service"
+participant case_notification_service as "Case Notification Service"
+queue court_cases_topic as "Court Cases (event topic)"
 participant d_adapter as "DEMS Adapter"
-participant d_mock as "DEMS Interface"
+participant d_interface as "DEMS Interface"
 
-title JADE-CCM Case Creation Event Processing Sequence Diagram
+title
+JADE-CCM Case Creation Event Processing Sequence Diagram
+end title
 
-    court_cases_q -> d_adapter : Process court case created event
-    activate d_adapter
-    d_adapter -> lookup_service: Retrieve case details
-    activate lookup_service
-    lookup_service -> j_adapter: Retrieve court file details
-    activate j_adapter
-    j_adapter -> j_mock: Retrieve court file details
-    activate j_mock
-    j_mock --> j_adapter
-    deactivate j_mock
-    j_adapter --> lookup_service
-    deactivate j_adapter
-    lookup_service --> d_adapter
-    deactivate lookup_service
-    d_adapter -> d_mock: Create case in DEMS
-    activate d_mock
-    d_mock --> d_adapter
-    deactivate d_mock
-    d_adapter -> d_mock: Sync case users in DEMS
-    activate d_mock
-    d_mock --> d_adapter
-    deactivate d_mock
-    deactivate d_adapter
+autonumber
+
+court_cases_topic o-> case_notification_service : Process court case created event
+activate case_notification_service
+case_notification_service -> case_lookup_service: Retrieve court case details
+activate case_lookup_service
+case_lookup_service -> j_adapter: Retrieve court case details from JUSTIN
+
+activate j_adapter
+j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
+j_adapter -> j_interface: Call getAgencyFile()
+activate j_interface
+j_interface --> j_adapter: Agency file details
+deactivate j_interface
+j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+j_adapter --> case_lookup_service: Court case details
+deactivate j_adapter
+
+case_lookup_service --> case_notification_service: Court case details
+deactivate case_lookup_service
+case_notification_service -> d_adapter: Create court case
+
+activate d_adapter
+d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+d_adapter -> d_interface: Create case in DEMS
+activate d_interface
+d_interface --> d_adapter: Created
+deactivate d_interface
+d_adapter --> case_notification_service: Created
+deactivate d_adapter
+
+case_notification_service -> case_lookup_service: Retrieve court case authorized user list
+activate case_lookup_service
+case_lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
+
+activate j_adapter
+j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
+j_adapter -> j_interface: Call getAuthUsers()
+activate j_interface
+j_interface --> j_adapter: Auth user list details
+deactivate j_interface
+j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+j_adapter --> case_lookup_service: Auth user list details
+deactivate j_adapter
+
+case_lookup_service --> case_notification_service: Auth user list details details
+deactivate case_lookup_service
+
+case_notification_service -> d_adapter: Sync caes users
+activate d_adapter
+d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+d_adapter -> d_interface: Sync case users in DEMS
+activate d_interface
+d_interface --> d_adapter: Acknowledged
+deactivate d_interface
+d_adapter --> case_notification_service: Acknowledged
+deactivate d_adapter
+
+caption
+Prepared by David Agahchen | Updated July 26, 2022
+end caption
 @enduml
