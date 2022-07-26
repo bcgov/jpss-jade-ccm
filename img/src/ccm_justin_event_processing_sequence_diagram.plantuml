@@ -2,8 +2,9 @@
 'hide footbox
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-queue court_cases_topic as "Court Cases (event topic)"
+collections court_cases_topic as "Court Cases (event topic)"
 participant case_notification_service as "Case Notification Service"
+participant case_lookup_service as "Case Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
@@ -36,28 +37,31 @@ deactivate j_adapter
 
 court_cases_topic o-> case_notification_service: Process court case changed event
 activate case_notification_service
-case_notification_service -> d_adapter: Check case exists
-activate d_adapter
-note left
+case_notification_service -> case_lookup_service: Check case exists
+activate case_lookup_service
+note over case_lookup_service, d_adapter
 Integration assumption: DEMS is the system-of-record
 for whether a court case already exists or not
 end note
+case_lookup_service -> d_adapter: Check case exists in DEMS
+activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
 d_adapter -> d_interface: Check case exists in DEMS
 activate d_interface
 d_interface --> d_adapter: Response
 deactivate d_interface
-d_adapter -> d_adapter: Convert data from System (DEMS) to Business model
-d_adapter --> case_notification_service: Response
+d_adapter --> case_lookup_service: Response
 deactivate d_adapter
+case_lookup_service --> case_notification_service: Response
+deactivate case_lookup_service
 alt New court case
-    case_notification_service -> court_cases_topic: Produce court case created event
+    case_notification_service ->o court_cases_topic: Produce court case created event
 else Existing court case
-    case_notification_service -> court_cases_topic: Produce court case updated event
+    case_notification_service ->o court_cases_topic: Produce court case updated event
 end
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated July 26, 2022
+Prepared by David Agahchen | Updated July 26, 2022 (revision 1)
 end caption
 @enduml

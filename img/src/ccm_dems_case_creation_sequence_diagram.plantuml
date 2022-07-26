@@ -4,7 +4,7 @@ participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
 participant case_lookup_service as "Case Lookup Service"
 participant case_notification_service as "Case Notification Service"
-queue court_cases_topic as "Court Cases (event topic)"
+collections court_cases_topic as "Court Case Events"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
@@ -71,6 +71,6 @@ d_adapter --> case_notification_service: Acknowledged
 deactivate d_adapter
 
 caption
-Prepared by David Agahchen | Updated July 26, 2022
+Prepared by David Agahchen | Updated July 26, 2022 (revision 1)
 end caption
 @enduml
