@@ -1,5 +1,5 @@
-kamel delete ccm-dems-edge-adapter
-kamel run CcmDemsEdgeAdapter/CcmDemsEdgeAdapter.java \
+kamel -n cef5dd-dev delete ccm-dems-edge-adapter
+kamel -n cef5dd-dev run CcmDemsEdgeAdapter/CcmDemsEdgeAdapter.java \
   --property file:CcmDemsEdgeAdapter/application.properties \
   --config secret:dems-secrets \
   --config secret:dems-edge-adapter-secrets \
