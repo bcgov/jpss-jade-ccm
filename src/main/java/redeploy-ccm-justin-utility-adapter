@@ -3,6 +3,9 @@ kamel -n cef5dd-dev run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
   --resource file:CcmJustinUtilityAdapter/JustinEventData.java \
   --resource file:CcmJustinUtilityAdapter/JustinEvent.java \
   --resource file:CcmJustinUtilityAdapter/JustinEventList.java \
+  --resource file:CcmJustinUtilityAdapter/TestData.java \
+  --resource file:../../../tools/atlasmap/justin-sample-data/in.json \
+  --resource file:../../../tools/atlasmap/inOut.adm \
   --property file:CcmJustinUtilityAdapter/application.properties \
   --profile openshift \
   --trait route.enabled=false \

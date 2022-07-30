@@ -14,6 +14,8 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
+//import org.apache.camel.model.;
+
 
 class JustinEventListProcessor implements Processor {
 
@@ -37,11 +39,16 @@ class JustinEventListProcessor implements Processor {
     String body = exchange.getIn().getBody(String.class);
     String exchangeId = exchange.getExchangeId();
     String messageId = exchange.getIn().getMessageId();
-    JustinEventData jel = exchange.getIn().getBody(JustinEventData.class);
+    // TestData jel = exchange.getIn().getBody(TestData.class);
+    //JsonPath.parse(body).read(TestData.class);
+
+    // https://www.tutorialspoint.com/jackson_annotations/jackson_annotations_jsonproperty.htm
+    // TestData td = mapper.readerFor(TestData.class).readValue(body);
 
     System.out.println("Received message. Exchange Id = " + exchangeId + "; Message Id = " + messageId);
     System.out.println("Body length: " + body.length());
-    System.out.println("Event list size: " + jel);
+    System.out.println("Body: " + body);
+    // System.out.println("Test Data id: " + td.getId());
 
     if (body != null && body.contains("Kaboom")) {
       throw new Exception("Illegal data found!");
@@ -90,16 +97,18 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     // https://developers.redhat.com/articles/2021/05/17/integrating-systems-apache-camel-and-quarkus-red-hat-openshift#
     //
     JsonDataFormat json = new JsonDataFormat(JsonLibrary.Jackson);
-    json.setUnmarshalType(JustinEventList.class);
+    //json.setUnmarshalType(TestData.class);
 
-    from("timer://simpleTimer?period={{notification.check.frequency}}")
+    //from("timer://simpleTimer?period={{notification.check.frequency}}")
     //from("file:/etc/camel/resources/?fileName=getEventBatch.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=getEventData.json&noop=true&idempotent=true")
+    //from("file:/etc/camel/resources/?fileName=event.json&noop=true&exchangePattern=InOnly&readLock=none&repeatCount=1&initialDelay=500")
+    from("file:/etc/camel/resources/?fileName=in.json&noop=true&exchangePattern=InOnly&readLock=none")
     .routeId("getJUSTINNotifications")
     .log("checking for new notifications...")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
+    // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
     // .process(new EventsProcessor())
     .log("In progress events from JUSTIN:")
     // .unmarshal(new JsonDataFormat(JustinEventList.class))
@@ -116,8 +125,15 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     JustinEventListProcessor jp = new JustinEventListProcessor();
 
     from("direct:process")
-    .log("In direct:process")
-    .process(jp);
+    //.unmarshal().json(JsonLibrary.Jackson, TestData.class)
+    //.jsonpath("@.data", false, TestData.class)
+    .log("in: '${body}'")
+    .to("atlasmap:inOut.adm")
+    .log("out: '${body}'");
+    // .log("Call Atlasmap now.");
+    //.choice()
+    //  .when().jsonpath("id", )
+    //.process(jp);
   }
 }
 

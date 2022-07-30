@@ -32,7 +32,7 @@ The following re-queuable Dev JUSTIN change notifications will be used to suppor
 | AUTH_LIST | 2077 | 50421.0734 |
 | AGEN_FILE | 2078 | 50421.0734 |
 
-Postman collection file for JUSTIN APIs: tools/JUSTIN-DEMS.postman_collectoin.json
+Postman collection file for JUSTIN APIs: tools/JUSTIN-DEMS.postman_collection.json
 
 ## Deploy JADE-Events Cluster to Dev Environment in OCP Silver Cluster (cef5dd-dev)
 
