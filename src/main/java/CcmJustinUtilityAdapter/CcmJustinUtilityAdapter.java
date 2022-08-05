@@ -6,7 +6,7 @@
 //
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
 // camel-k: trait=jvm.classpath=/etc/camel/resources/
 
 import org.apache.camel.Exchange;
@@ -71,6 +71,18 @@ class JustinEventListProcessor implements Processor {
 public class CcmJustinUtilityAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
+    // onException(Exception.class)
+    // .process(new Processor() {
+    //     @Override
+    //     public void process(Exchange exchange) throws Exception {
+    //         // place to add logic to handle exception
+    //         Throwable caught = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, 
+    //                 Throwable.class);
+    //         logger.error("FATAL ERROR - ", caught);
+    //     }
+    // })
+    // .handled(true);
+
     from("platform-http:/courtFileCreated?httpMethodRestrict=POST")
     .routeId("courtFileCreated")
     .removeHeader("CamelHttpUri")
@@ -103,9 +115,11 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     //from("file:/etc/camel/resources/?fileName=getEventBatch.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=getEventData.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=event.json&noop=true&exchangePattern=InOnly&readLock=none&repeatCount=1&initialDelay=500")
-    from("file:/etc/camel/resources/?fileName=in.json&noop=true&exchangePattern=InOnly&readLock=none")
-    .routeId("getJUSTINNotifications")
-    .log("checking for new notifications...")
+    //from("file:/etc/camel/resources/?fileName=in.json&noop=true&exchangePattern=InOnly&readLock=none")
+    from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
+    .routeId("processSamepleAgencyFile")
+    //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
+    .log("Process sameple agency file...")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
@@ -128,12 +142,23 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     //.unmarshal().json(JsonLibrary.Jackson, TestData.class)
     //.jsonpath("@.data", false, TestData.class)
     .log("in: '${body}'")
-    .to("atlasmap:inOut.adm")
+    //.setProperty("rcc_id", constant("123"))
+    //.setProperty("earliest_offence_date", constant("2022-01-01"))
+    //.to("atlasmap:justin2businessCourtCase.adm")
+    //.to("atlasmap:old-justin2businessCourtCase.adm")
+    .to("atlasmap:justin2businessCourtCaseData.adm")
     .log("out: '${body}'");
+    //.log(simple("property.concat_case_flags: '${property.concat_case_flags}'"));
     // .log("Call Atlasmap now.");
     //.choice()
     //  .when().jsonpath("id", )
     //.process(jp);
+
+    // from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
+    // .routeId("processNewJUSTINNotifications")
+    // .log("Check for new notifications...")
+    // .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    // .setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
   }
 }
 

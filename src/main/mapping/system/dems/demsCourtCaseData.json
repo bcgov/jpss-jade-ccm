@@ -1,0 +1,59 @@
+{
+    "name": "Jones, Fred John; Smith, Peter",
+    "timeZone": "Pacific Standard Time",
+    "templatecase": "28",
+    "fields": [
+        {
+            "name": "Agency File ID",
+            "value": "50419.0734"
+        },
+        {
+            "name": "Agency File No.",
+            "value": "RU-6132022"
+        },
+        {
+            "name": "Submit Date",
+            "value": "2020-05-30"
+        },
+        {
+            "name": "Asessment Crown",
+            "value": "Johnson, Robert"
+        },
+        {
+            "name": "Case Decision",
+            "value": "ADV"
+        },
+        {
+            "name": "Proposed Charges",
+            "value": "CCC 344.2(1) Robbery; CCC 441.1 Some Text"
+        },
+        {
+            "name": "Initiating Agency",
+            "value": "105: Kelowna Municipal RCMP"
+        },
+        {
+            "name": "Investigating Officer",
+            "value": "Rhodes, Christopher 52812"
+        },
+        {
+            "name": "Case Flags",
+            "value": [
+                "VUL1",
+                "CHI1"
+            ]
+        },
+        {
+            "name": "Offence Date (earliest)",
+            "value": "2020-12-30"
+        },
+        {
+            "name": "Proposed App. Date (earliest)",
+            "value": "2021-12-30"
+        },
+        {
+            "name": "Proposed Process Type",
+            "value": "Jones, Fred John AN; Smith, Peter WAR"
+        }
+
+    ]
+}

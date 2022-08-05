@@ -1,0 +1,483 @@
+{
+  "AtlasMapping" : {
+    "jsonType" : "io.atlasmap.v2.AtlasMapping",
+    "dataSource" : [ {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+      "name" : "agencyFile",
+      "description" : "Source document agencyFile type: JSON",
+      "uri" : "atlas:json:agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+      "dataSourceType" : "SOURCE"
+    }, {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+      "name" : "courtCaseData",
+      "description" : "Target document courtCaseData type: JSON",
+      "uri" : "atlas:json:courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+      "dataSourceType" : "TARGET"
+    } ],
+    "mappings" : {
+      "mapping" : [ {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/accused_name",
+            "fieldType" : "STRING",
+            "name" : "accused_name"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/full_name",
+          "fieldType" : "STRING",
+          "name" : "full_name"
+        } ],
+        "id" : "mapping.724610"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ {
+            "delimiter" : ": ",
+            "delimitingEmptyValues" : true,
+            "@type" : "Concatenate"
+          } ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 0,
+            "path" : "/initiating_agency_identifier",
+            "fieldType" : "STRING",
+            "name" : "initiating_agency_identifier"
+          }, {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 1,
+            "path" : "/initiating_agency_name",
+            "fieldType" : "STRING",
+            "name" : "initiating_agency_name"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/initiating_agency",
+          "fieldType" : "STRING",
+          "name" : "initiating_agency"
+        } ],
+        "id" : "mapping.580002"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/accused_name",
+            "fieldType" : "STRING",
+            "name" : "accused_name"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/name_and_proposed_process_type",
+          "fieldType" : "STRING",
+          "name" : "name_and_proposed_process_type"
+        } ],
+        "id" : "mapping.704360"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/proposed_process_type",
+            "fieldType" : "STRING",
+            "name" : "proposed_process_type"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/proposed_process_type",
+          "fieldType" : "STRING",
+          "name" : "proposed_process_type"
+        } ],
+        "id" : "mapping.803597"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/part_id",
+            "fieldType" : "STRING",
+            "name" : "part_id"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/identifier",
+          "fieldType" : "STRING",
+          "name" : "identifier"
+        } ],
+        "id" : "mapping.615314"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/offence_from_date",
+            "fieldType" : "STRING",
+            "name" : "offence_from_date"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/offence_date",
+          "fieldType" : "STRING",
+          "name" : "offence_date"
+        } ],
+        "id" : "mapping.153334"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/proposed_appr_date",
+            "fieldType" : "STRING",
+            "name" : "proposed_appr_date"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/proposed_appearance_date",
+          "fieldType" : "STRING",
+          "name" : "proposed_appearance_date"
+        } ],
+        "id" : "mapping.342878"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/proposed_process_type",
+            "fieldType" : "STRING",
+            "name" : "proposed_process_type"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/name_and_proposed_process_type",
+          "fieldType" : "STRING",
+          "name" : "name_and_proposed_process_type"
+        } ],
+        "id" : "mapping.1033"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/assessment_crown_name",
+          "fieldType" : "STRING",
+          "name" : "assessment_crown_name"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/assessment_crown_name",
+          "fieldType" : "STRING",
+          "name" : "assessment_crown_name"
+        } ],
+        "id" : "mapping.766548"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.v2.ConstantField",
+          "value" : "TBD",
+          "docId" : "DOC.Constants.463899",
+          "path" : "/TBD",
+          "fieldType" : "STRING",
+          "name" : "TBD"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/file_note",
+          "fieldType" : "STRING",
+          "name" : "file_note"
+        } ],
+        "id" : "mapping.511048"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/rcc_id",
+          "fieldType" : "STRING",
+          "name" : "rcc_id"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/rcc_id",
+          "fieldType" : "STRING",
+          "name" : "rcc_id"
+        } ],
+        "id" : "mapping.32410"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/rcc_submit_date",
+          "fieldType" : "STRING",
+          "name" : "rcc_submit_date"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/rcc_submit_date",
+          "fieldType" : "STRING",
+          "name" : "rcc_submit_date"
+        } ],
+        "id" : "mapping.491589"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/security_clearance_level",
+          "fieldType" : "STRING",
+          "name" : "security_clearance_level"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/security_clearance_level",
+          "fieldType" : "STRING",
+          "name" : "security_clearance_level"
+        } ],
+        "id" : "mapping.813688"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ {
+            "delimiter" : " ",
+            "delimitingEmptyValues" : true,
+            "@type" : "Concatenate"
+          } ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 0,
+            "path" : "/investigating_officer_name",
+            "fieldType" : "STRING",
+            "name" : "investigating_officer_name"
+          }, {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 1,
+            "path" : "/investigating_officer_pin",
+            "fieldType" : "STRING",
+            "name" : "investigating_officer_pin"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/investigating_officer",
+          "fieldType" : "STRING",
+          "name" : "investigating_officer"
+        } ],
+        "id" : "mapping.641857"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/rcc_id",
+          "fieldType" : "STRING",
+          "name" : "rcc_id"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/dems_case_name",
+          "fieldType" : "STRING",
+          "name" : "dems_case_name"
+        } ],
+        "id" : "mapping.784620"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/case_decision_cd",
+          "fieldType" : "STRING",
+          "name" : "case_decision_cd"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/case_status_code",
+          "fieldType" : "STRING",
+          "name" : "case_status_code"
+        } ],
+        "id" : "mapping.940720"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "path" : "/accused<>/accused_name",
+            "fieldType" : "STRING",
+            "name" : "accused_name"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/accused_person<>/name_and_proposed_process_type",
+          "fieldType" : "STRING",
+          "name" : "name_and_proposed_process_type"
+        } ],
+        "id" : "mapping.478756"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.v2.PropertyField",
+          "docId" : "DOC.Properties.307432",
+          "path" : "/current/first_three_charges_list",
+          "fieldType" : "STRING",
+          "name" : "first_three_charges_list",
+          "scope" : "current"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/first_three_charges_list",
+          "fieldType" : "STRING",
+          "name" : "first_three_charges_list"
+        } ],
+        "id" : "mapping.851643"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "expression" : "if (${agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba:/vul1} == 'Y','VUL1','')${agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba:/chi1}",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 0,
+            "path" : "/vul1",
+            "fieldType" : "STRING",
+            "name" : "vul1"
+          }, {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+            "index" : 1,
+            "path" : "/chi1",
+            "fieldType" : "STRING",
+            "name" : "chi1"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.v2.PropertyField",
+          "docId" : "DOC.Properties.2861",
+          "path" : "/camelExchangeProperty/concat_case_flags",
+          "fieldType" : "STRING",
+          "name" : "concat_case_flags",
+          "scope" : "camelExchangeProperty"
+        } ],
+        "id" : "mapping.960878"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-0736e15c-ff4f-407c-9b2c-15467ac56cba",
+          "path" : "/agency_file_no",
+          "fieldType" : "STRING",
+          "name" : "agency_file_no"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-48759a06-18a7-4c73-9d72-d87270fa897f",
+          "path" : "/agency_file_no",
+          "fieldType" : "STRING",
+          "name" : "agency_file_no"
+        } ],
+        "id" : "mapping.314794"
+      } ]
+    },
+    "lookupTables" : {
+      "lookupTable" : [ ]
+    },
+    "constants" : {
+      "constant" : [ {
+        "name" : "TBD",
+        "value" : "TBD",
+        "fieldType" : "STRING"
+      } ]
+    },
+    "properties" : {
+      "property" : [ {
+        "name" : "first_three_charges_list",
+        "fieldType" : "STRING",
+        "scope" : "current",
+        "dataSourceType" : "SOURCE"
+      }, {
+        "name" : "concat_case_flags",
+        "fieldType" : "STRING",
+        "scope" : "camelExchangeProperty",
+        "dataSourceType" : "TARGET"
+      }, {
+        "name" : "concatenated_case_flags",
+        "fieldType" : "STRING",
+        "scope" : "current",
+        "dataSourceType" : "TARGET"
+      } ]
+    },
+    "name" : "UI.0"
+  }
+}

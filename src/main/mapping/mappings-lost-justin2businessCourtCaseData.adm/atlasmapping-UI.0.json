@@ -1,0 +1,228 @@
+{
+  "AtlasMapping" : {
+    "jsonType" : "io.atlasmap.v2.AtlasMapping",
+    "dataSource" : [ {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+      "name" : "agencyFile",
+      "description" : "Source document agencyFile type: JSON",
+      "uri" : "atlas:json:agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+      "dataSourceType" : "SOURCE"
+    }, {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+      "name" : "courtCaseData",
+      "description" : "Target document courtCaseData type: JSON",
+      "uri" : "atlas:json:courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+      "dataSourceType" : "TARGET"
+    } ],
+    "mappings" : {
+      "mapping" : [ {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+            "path" : "/accused<>/accused_name",
+            "fieldType" : "STRING",
+            "name" : "accused_name"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/accused person<>/full_name",
+          "fieldType" : "STRING",
+          "name" : "full_name"
+        } ],
+        "id" : "mapping.556870"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+            "path" : "/accused<>/part_id",
+            "fieldType" : "STRING",
+            "name" : "part_id"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/accused person<>/id",
+          "fieldType" : "STRING",
+          "name" : "id"
+        } ],
+        "id" : "mapping.765821"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/rcc_id",
+          "fieldType" : "STRING",
+          "name" : "rcc_id"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/rcc_id",
+          "fieldType" : "STRING",
+          "name" : "rcc_id"
+        } ],
+        "id" : "mapping.897399"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/rcc_submit_date",
+          "fieldType" : "STRING",
+          "name" : "rcc_submit_date"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/rcc_submit_date",
+          "fieldType" : "STRING",
+          "name" : "rcc_submit_date"
+        } ],
+        "id" : "mapping.464520"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputFieldGroup" : {
+          "jsonType" : "io.atlasmap.v2.FieldGroup",
+          "actions" : [ ],
+          "field" : [ {
+            "jsonType" : "io.atlasmap.json.v2.JsonField",
+            "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+            "path" : "/accused<>/proposed_process_type",
+            "fieldType" : "STRING",
+            "name" : "proposed_process_type"
+          } ]
+        },
+        "inputField" : [ ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/accused person<>/proposed_process_type",
+          "fieldType" : "STRING",
+          "name" : "proposed_process_type"
+        } ],
+        "id" : "mapping.629259"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/case_decision_cd",
+          "fieldType" : "STRING",
+          "name" : "case_decision_cd"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/case_status_code",
+          "fieldType" : "STRING",
+          "name" : "case_status_code"
+        } ],
+        "id" : "mapping.861678"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/assessment_crown_name",
+          "fieldType" : "STRING",
+          "name" : "assessment_crown_name"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/assessment_crown_name",
+          "fieldType" : "STRING",
+          "name" : "assessment_crown_name"
+        } ],
+        "id" : "mapping.306465"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.v2.ConstantField",
+          "value" : "TBD",
+          "docId" : "DOC.Constants.605454",
+          "path" : "/TBD",
+          "fieldType" : "STRING",
+          "name" : "TBD"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/file_note",
+          "fieldType" : "STRING",
+          "name" : "file_note"
+        } ],
+        "id" : "mapping.142808"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/agency_file_no",
+          "fieldType" : "STRING",
+          "name" : "agency_file_no"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/agency_file_no",
+          "fieldType" : "STRING",
+          "name" : "agency_file_no"
+        } ],
+        "id" : "mapping.496856"
+      }, {
+        "jsonType" : "io.atlasmap.v2.Mapping",
+        "inputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "actions" : [ {
+            "delimiter" : " ",
+            "collapseRepeatingDelimiters" : false,
+            "@type" : "Split"
+          } ],
+          "docId" : "agencyFile-ad4a45e1-50c5-4124-a60b-aa84e4b1eca7",
+          "path" : "/vul1",
+          "fieldType" : "STRING",
+          "name" : "vul1"
+        } ],
+        "outputField" : [ {
+          "jsonType" : "io.atlasmap.json.v2.JsonField",
+          "docId" : "courtCaseData-a0816871-3d69-45e1-8f34-19ebf5466cec",
+          "path" : "/case_flags<>",
+          "fieldType" : "STRING",
+          "name" : "case_flags"
+        } ],
+        "id" : "mapping.400372"
+      } ]
+    },
+    "lookupTables" : {
+      "lookupTable" : [ ]
+    },
+    "constants" : {
+      "constant" : [ {
+        "name" : "TBD",
+        "value" : "TBD",
+        "fieldType" : "STRING"
+      } ]
+    },
+    "properties" : {
+      "property" : [ ]
+    },
+    "name" : "UI.0"
+  }
+}

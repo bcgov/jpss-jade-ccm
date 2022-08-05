@@ -3,67 +3,34 @@
     "jsonType" : "io.atlasmap.v2.AtlasMapping",
     "dataSource" : [ {
       "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
-      "id" : "getAgencyFile-2a443041-f135-435d-accf-a07db32ec46f",
-      "name" : "getAgencyFile",
-      "description" : "Source document getAgencyFile type: JSON",
-      "uri" : "atlas:json:getAgencyFile-2a443041-f135-435d-accf-a07db32ec46f",
+      "id" : "agencyFile-56e80bb1-237e-424f-ab6c-a83d31257559",
+      "name" : "agencyFile",
+      "description" : "Source document agencyFile type: JSON",
+      "uri" : "atlas:json:agencyFile-56e80bb1-237e-424f-ab6c-a83d31257559",
       "dataSourceType" : "SOURCE"
+    }, {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "courtCaseData-aacbf474-1c64-4037-9904-9de2f4310412",
+      "name" : "courtCaseData",
+      "description" : "Target document courtCaseData type: JSON",
+      "uri" : "atlas:json:courtCaseData-aacbf474-1c64-4037-9904-9de2f4310412",
+      "dataSourceType" : "TARGET"
     } ],
     "mappings" : {
-      "mapping" : [ {
-        "jsonType" : "io.atlasmap.v2.Mapping",
-        "inputFieldGroup" : {
-          "jsonType" : "io.atlasmap.v2.FieldGroup",
-          "actions" : [ {
-            "delimiter" : " ",
-            "delimitingEmptyValues" : true,
-            "@type" : "Concatenate"
-          } ],
-          "field" : [ {
-            "jsonType" : "io.atlasmap.json.v2.JsonField",
-            "docId" : "getAgencyFile-2a443041-f135-435d-accf-a07db32ec46f",
-            "index" : 0,
-            "path" : "/accused<>/accused_name",
-            "fieldType" : "STRING",
-            "name" : "accused_name"
-          }, {
-            "jsonType" : "io.atlasmap.json.v2.JsonField",
-            "docId" : "getAgencyFile-2a443041-f135-435d-accf-a07db32ec46f",
-            "index" : 1,
-            "path" : "/accused<>/part_id",
-            "fieldType" : "STRING",
-            "name" : "part_id"
-          } ]
-        },
-        "inputField" : [ ],
-        "outputField" : [ {
-          "jsonType" : "io.atlasmap.v2.PropertyField",
-          "actions" : [ {
-            "string" : "",
-            "@type" : "Append"
-          } ],
-          "docId" : "DOC.Properties.925847",
-          "path" : "/current/name_and_type",
-          "fieldType" : "STRING",
-          "name" : "name_and_type",
-          "scope" : "current"
-        } ],
-        "id" : "mapping.977489"
-      } ]
+      "mapping" : [ ]
     },
     "lookupTables" : {
       "lookupTable" : [ ]
     },
     "constants" : {
-      "constant" : [ ]
+      "constant" : [ {
+        "name" : "VUL1",
+        "value" : "VUL1",
+        "fieldType" : "STRING"
+      } ]
     },
     "properties" : {
-      "property" : [ {
-        "name" : "name_and_type",
-        "fieldType" : "STRING",
-        "scope" : "current",
-        "dataSourceType" : "TARGET"
-      } ]
+      "property" : [ ]
     },
     "name" : "UI.0"
   }

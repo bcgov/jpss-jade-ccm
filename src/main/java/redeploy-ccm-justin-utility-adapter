@@ -4,8 +4,10 @@ kamel -n cef5dd-dev run CcmJustinUtilityAdapter/CcmJustinUtilityAdapter.java \
   --resource file:CcmJustinUtilityAdapter/JustinEvent.java \
   --resource file:CcmJustinUtilityAdapter/JustinEventList.java \
   --resource file:CcmJustinUtilityAdapter/TestData.java \
-  --resource file:../../../tools/atlasmap/justin-sample-data/in.json \
-  --resource file:../../../tools/atlasmap/inOut.adm \
+  --resource file:../mapping/system/justin/agencyFile.json \
+  --resource file:../mapping/justin2businessCourtCase.adm \
+  --resource file:../mapping/old-justin2businessCourtCase.adm \
+  --resource file:../mapping/justin2businessCourtCaseData.adm \
   --property file:CcmJustinUtilityAdapter/application.properties \
   --profile openshift \
   --trait route.enabled=false \
