@@ -16,7 +16,6 @@ import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.model.;
 
-
 class JustinEventListProcessor implements Processor {
 
   // example: https://github.com/apache/camel-examples/tree/main/examples/transformer-demo/src/main/java/org/apache/camel/example/transformer/demo
@@ -39,7 +38,7 @@ class JustinEventListProcessor implements Processor {
     String body = exchange.getIn().getBody(String.class);
     String exchangeId = exchange.getExchangeId();
     String messageId = exchange.getIn().getMessageId();
-    // TestData jel = exchange.getIn().getBody(TestData.class);
+    // TestData td = exchange.getIn().getBody(TestData.class);
     //JsonPath.parse(body).read(TestData.class);
 
     // https://www.tutorialspoint.com/jackson_annotations/jackson_annotations_jsonproperty.htm
@@ -48,11 +47,12 @@ class JustinEventListProcessor implements Processor {
     System.out.println("Received message. Exchange Id = " + exchangeId + "; Message Id = " + messageId);
     System.out.println("Body length: " + body.length());
     System.out.println("Body: " + body);
-    // System.out.println("Test Data id: " + td.getId());
 
-    if (body != null && body.contains("Kaboom")) {
-      throw new Exception("Illegal data found!");
-    }
+    // if (td == null) {
+    //   throw new Exception("Failed to process test data!");
+    // } else {
+    //   System.out.println("Test Data id: " + td.getId());
+    // }
 
     // Unmarshalling a JSON Array Using camel-jackson
     // https://www.baeldung.com/java-camel-jackson-json-array
@@ -108,15 +108,15 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     // Youtube (30 min): Getting started with Apache Camel on Quarkus - https://www.youtube.com/watch?v=POWsZnGhVHM
     // https://developers.redhat.com/articles/2021/05/17/integrating-systems-apache-camel-and-quarkus-red-hat-openshift#
     //
-    JsonDataFormat json = new JsonDataFormat(JsonLibrary.Jackson);
+    //JsonDataFormat json = new JsonDataFormat(JsonLibrary.Jackson);
     //json.setUnmarshalType(TestData.class);
 
     //from("timer://simpleTimer?period={{notification.check.frequency}}")
     //from("file:/etc/camel/resources/?fileName=getEventBatch.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=getEventData.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=event.json&noop=true&exchangePattern=InOnly&readLock=none&repeatCount=1&initialDelay=500")
-    //from("file:/etc/camel/resources/?fileName=in.json&noop=true&exchangePattern=InOnly&readLock=none")
-    from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
+    from("file:/etc/camel/resources/?fileName=testData.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
     .routeId("processSamepleAgencyFile")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
     .log("Process sameple agency file...")
@@ -136,23 +136,23 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     .log("Routing to \"direct:process\"")
     .to("direct:process");
 
-    JustinEventListProcessor jp = new JustinEventListProcessor();
+    //JustinEventListProcessor jp = new JustinEventListProcessor();
 
     from("direct:process")
-    //.unmarshal().json(JsonLibrary.Jackson, TestData.class)
     //.jsonpath("@.data", false, TestData.class)
-    .log("in: '${body}'")
+    .log("in: '${body}'");
+    //.unmarshal().json(JsonLibrary.Jackson, TestData.class)
+    //.process(jp);
     //.setProperty("rcc_id", constant("123"))
     //.setProperty("earliest_offence_date", constant("2022-01-01"))
     //.to("atlasmap:justin2businessCourtCase.adm")
     //.to("atlasmap:old-justin2businessCourtCase.adm")
-    .to("atlasmap:justin2businessCourtCaseData.adm")
-    .log("out: '${body}'");
+    //.to("atlasmap:justin2businessCourtCaseData.adm")
+    //.log("out: '${body}'");
     //.log(simple("property.concat_case_flags: '${property.concat_case_flags}'"));
     // .log("Call Atlasmap now.");
     //.choice()
     //  .when().jsonpath("id", )
-    //.process(jp);
 
     // from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
     // .routeId("processNewJUSTINNotifications")
