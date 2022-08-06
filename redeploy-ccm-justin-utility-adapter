@@ -7,7 +7,7 @@ jar cvf models.jar *.class
 kamel -n cef5dd-dev delete ccm-justin-utility-adapter
 kamel -n cef5dd-dev run \
   CcmJustinUtilityAdapter.java \
-  --dependency file://../../mapping/system/justin/agencyFile.json:path/ccm/resources/models/system/justin/agencyFile.json \
+  --dependency file://./models.jar \
   --resource file:../../mapping/system/justin/testData.json \
   --resource file:../../mapping/justin2businessCourtCaseData.adm \
   --property file:application.properties \
@@ -15,8 +15,8 @@ kamel -n cef5dd-dev run \
   --trait route.enabled=false \
   --trait service.node-port=false
   # --dev
-  # -d file://./models.jar \
-  # -d file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
+  # --dependency file://./models.jar \
+  # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
 
 popd
 
