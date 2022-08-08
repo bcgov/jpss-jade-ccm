@@ -1,0 +1,20 @@
+{
+    "event_message_id": 2045,
+    "appl_application_cd": "DEMS",
+    "message_event_type_cd": "AGEN_FILE",
+    "event_dtm": "2022-06-13 12:46",
+    "event_data": [
+        {
+            "data_element_nm": "FETCHED_DATE",
+            "data_value_txt": "NULL"
+        },
+        {
+            "data_element_nm": "GUID",
+            "data_value_txt": "E15638C7794E64E8E05400144FFBC109"
+        },
+        {
+            "data_element_nm": "RCC_ID",
+            "data_value_txt": "50419.0734"
+        }
+    ]
+}

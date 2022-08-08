@@ -1,22 +1,26 @@
+package ccm;
 // To run this integration use:
-// kamel run CcmJustinUtilityAdapter.java --property file:application.properties --profile openshift
+// kamel run CcmJustinAdapter.java --property file:application.properties --profile openshift
 // 
 // recover the service location. If you're running on minikube, minikube service platform-http-server --url=true
-// curl -d '{}' http://ccm-justin-utility-adapter/courtFileCreated
+// curl -d '{}' http://ccm-justin-adapter/courtFileCreated
 //
 
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
-// camel-k: trait=jvm.classpath=/etc/camel/resources/
+// camel-k: trait=jvm.classpath=/etc/camel/resources/ccm-models.jar
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.model.;
 
-class JustinEventListProcessor implements Processor {
+import ccm.models.system.justin.JustinEventBatch;
+import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.system.justin.JustinEvent;
+
+class JustinEventBatchProcessor implements Processor {
 
   // example: https://github.com/apache/camel-examples/tree/main/examples/transformer-demo/src/main/java/org/apache/camel/example/transformer/demo
   // example: https://www.baeldung.com/java-camel-jackson-json-array
@@ -43,10 +47,27 @@ class JustinEventListProcessor implements Processor {
 
     // https://www.tutorialspoint.com/jackson_annotations/jackson_annotations_jsonproperty.htm
     // TestData td = mapper.readerFor(TestData.class).readValue(body);
+    JustinEventBatch eb = exchange.getIn().getBody(JustinEventBatch.class);
 
     System.out.println("Received message. Exchange Id = " + exchangeId + "; Message Id = " + messageId);
     System.out.println("Body length: " + body.length());
-    System.out.println("Body: " + body);
+    System.out.println("Body.events.length: " + eb.getEvents().size());
+
+    for (JustinEvent e: eb.getEvents()) {
+      System.out.println("Processing JUSTIN event type: '" + e.getMessage_event_type_cd() + "'; JUSTIN event id: '" + e.getEvent_message_id() + "'.");
+
+      BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(e);
+
+      if (e.isAgenFileEvent()) {
+        // court case changed.  generate new business event.
+        System.out.println("Generate 'Court Case Changed' event.");
+      } else if (e.isAuthListEvent()) {
+        // auth list changed.  Generate new business event.
+        System.out.println("Generate 'Court Case Auth List Changed' event.");
+      } else {
+        System.out.println("Unknown JUSTIN event type.  Do nothing.");
+      }
+    }
 
     // if (td == null) {
     //   throw new Exception("Failed to process test data!");
@@ -68,7 +89,7 @@ class JustinEventListProcessor implements Processor {
   }
 }
 
-public class CcmJustinUtilityAdapter extends RouteBuilder {
+public class CcmJustinAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     // onException(Exception.class)
@@ -115,9 +136,10 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     //from("file:/etc/camel/resources/?fileName=getEventBatch.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=getEventData.json&noop=true&idempotent=true")
     //from("file:/etc/camel/resources/?fileName=event.json&noop=true&exchangePattern=InOnly&readLock=none&repeatCount=1&initialDelay=500")
-    from("file:/etc/camel/resources/?fileName=testData.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
-    .routeId("processSamepleAgencyFile")
+    from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=newEventsBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
+    .routeId("processSampleEventBatch")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
     .log("Process sameple agency file...")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -136,13 +158,13 @@ public class CcmJustinUtilityAdapter extends RouteBuilder {
     .log("Routing to \"direct:process\"")
     .to("direct:process");
 
-    //JustinEventListProcessor jp = new JustinEventListProcessor();
+    JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
 
     from("direct:process")
     //.jsonpath("@.data", false, TestData.class)
-    .log("in: '${body}'");
-    //.unmarshal().json(JsonLibrary.Jackson, TestData.class)
-    //.process(jp);
+    .log("in: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
+    .process(jp);
     //.setProperty("rcc_id", constant("123"))
     //.setProperty("earliest_offence_date", constant("2022-01-01"))
     //.to("atlasmap:justin2businessCourtCase.adm")

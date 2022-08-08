@@ -1,3 +1,4 @@
+package ccm.models.system.justin;
 import java.util.List;
 
 public class JustinEvent {
@@ -6,6 +7,17 @@ public class JustinEvent {
   private String message_event_type_cd;
   private String event_dtm;
   private List<JustinEventData> event_data;
+
+  public static final String EVENT_TYPE_AGEN_FILE = "AGEN_FILE";
+  public static final String EVENT_TYPE_AUTH_LIST = "AUTH_LIST";
+
+  public boolean isAgenFileEvent() {
+    return EVENT_TYPE_AGEN_FILE.equals(getMessage_event_type_cd());
+  }
+  
+  public boolean isAuthListEvent() {
+    return EVENT_TYPE_AUTH_LIST.equals(getMessage_event_type_cd());
+  }
 
   public int getEvent_message_id() {
     return this.event_message_id;

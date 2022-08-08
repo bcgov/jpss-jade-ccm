@@ -54,7 +54,7 @@ class JustinEventListProcessor implements Processor {
 
     List<String> names = td.getNames();
     List<TestContactDetails> contacts = td.getContacts();
-    if (contacts == null) {
+    if (names == null || contacts == null) {
       throw new Exception("Failed to process contacts!");
     } else {
       Iterator<String> n = td.getNames().iterator();

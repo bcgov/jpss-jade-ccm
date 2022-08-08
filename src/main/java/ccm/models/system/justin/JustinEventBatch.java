@@ -1,6 +1,7 @@
+package ccm.models.system.justin;
 import java.util.List;
 
-public class JustinEventList {
+public class JustinEventBatch {
   // Unmarshalling a JSON Array Using camel-jackson
   // https://www.baeldung.com/java-camel-jackson-json-array
 

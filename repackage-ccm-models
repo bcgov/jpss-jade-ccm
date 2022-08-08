@@ -1,0 +1,9 @@
+pushd src/main/java/
+
+\rm ccm-models.jar
+javac ccm/models/business/*.java
+javac ccm/models/system/justin/*.java
+javac ccm/models/system/dems/*.java
+jar cvf ccm-models.jar ccm/*/*/*.class ccm/*/*/*/*.class
+
+popd
