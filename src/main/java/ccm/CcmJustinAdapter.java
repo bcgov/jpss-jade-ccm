@@ -54,18 +54,18 @@ class JustinEventBatchProcessor implements Processor {
     System.out.println("Body.events.length: " + eb.getEvents().size());
 
     for (JustinEvent e: eb.getEvents()) {
-      System.out.println("Processing JUSTIN event type: '" + e.getMessage_event_type_cd() + "'; JUSTIN event id: '" + e.getEvent_message_id() + "'.");
+      System.out.print("Processing JUSTIN event type: '" + e.getMessage_event_type_cd() + "'; JUSTIN event id: '" + e.getEvent_message_id() + "'. ");
 
       BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(e);
 
       if (e.isAgenFileEvent()) {
         // court case changed.  generate new business event.
-        System.out.println("Generate 'Court Case Changed' event.");
+        System.out.println("Generating 'Court Case Changed' event..");
       } else if (e.isAuthListEvent()) {
         // auth list changed.  Generate new business event.
-        System.out.println("Generate 'Court Case Auth List Changed' event.");
+        System.out.println("Generating 'Court Case Auth List Changed' event..");
       } else {
-        System.out.println("Unknown JUSTIN event type.  Do nothing.");
+        System.out.println("Unknown JUSTIN event type; Do nothing.");
       }
     }
 

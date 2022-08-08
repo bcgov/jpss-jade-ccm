@@ -18,6 +18,7 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   public static final String STATUS_CHANGED = "CHANGED";
   public static final String STATUS_CREATED = "CREATED";
   public static final String STATUS_UPDATED = "UPDATED";
+  public static final String STATUS_AUTH_LIST_CHANGED = "AUTH_LIST_CHANGED";
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
