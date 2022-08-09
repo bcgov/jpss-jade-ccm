@@ -1,0 +1,14 @@
+pushd src/main/java/ccm
+
+kamel -n cef5dd-dev delete ccm-lookup-service
+kamel -n cef5dd-dev run \
+  CcmLookupService.java \
+  --resource file:../ccm-models.jar \
+  --property file:ccmLookupService.properties \
+  --profile openshift \
+  --trait service.node-port=false \
+  --trait route.enabled=false
+
+popd
+
+# kamel -n cef5dd-dev log ccm-lookup-service

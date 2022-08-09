@@ -1,24 +1,24 @@
 package ccm.models.business;
 
 public class BusinessBaseEvent {
-    private String event_id;
     private String event_dtm;
     private String event_version;
+    private String event_object_id;
 
     public BusinessBaseEvent() {
     }
 
     public BusinessBaseEvent(BusinessBaseEvent another) {
-        this.event_id = another.event_id;
+        this.event_object_id = another.event_object_id;
         this.event_dtm = another.event_dtm;
         this.event_version = another.event_version;
     }
 
-    public String getEvent_id() {
-        return event_id;
+    public String getEvent_object_id() {
+        return event_object_id;
     }
-    public void setEvent_id(String event_id) {
-        this.event_id = event_id;
+    public void setEvent_object_id(String event_object_id) {
+        this.event_object_id = event_object_id;
     }
     public String getEvent_version() {
         return event_version;

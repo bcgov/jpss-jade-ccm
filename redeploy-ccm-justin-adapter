@@ -5,7 +5,9 @@ kamel -n cef5dd-dev run \
   CcmJustinAdapter.java \
   --resource file:../ccm-models.jar \
   --resource file:../../mapping/system/justin/eventBatch.json \
-  --resource file:../../mapping/system/justin/2022-08-04/newEventsBatch.json \
+  --resource file:../../mapping/system/justin/eventBatch-oneRCC.json \
+  --resource file:../../mapping/system/justin/eventBatch-empty.json \
+  --resource file:../../mapping/system/justin/eventRecord.json \
   --property file:ccmJustinAdapter.properties \
   --profile openshift \
   --trait dependencies.enabled=true \
@@ -19,4 +21,4 @@ kamel -n cef5dd-dev run \
 
 popd
 
-kamel -n cef5dd-dev log ccm-justin-adapter
+# kamel -n cef5dd-dev log ccm-justin-adapter

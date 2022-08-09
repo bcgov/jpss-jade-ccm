@@ -1,6 +1,7 @@
 package ccm.models.system.dems;
 
 import java.util.List;
+import java.util.StringJoiner;
 
 import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.business.BusinessCourtCaseData;
@@ -29,6 +30,8 @@ public class DemsCreateCourtCaseData {
 
     private List<String> case_flags;
 
+    private String dems_case_name;
+
     public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
         setRcc_id(bcc.getRcc_id());
         setAgency_file_no(bcc.getAgency_file_no());
@@ -48,6 +51,14 @@ public class DemsCreateCourtCaseData {
         setMin_offence_date(bcc.getMin_offence_date());
 
         setCase_flags(bcc.getCase_flags());
+
+        // determine DEMS court case name
+        StringJoiner joiner = new StringJoiner("; ");
+        for(BusinessCourtCaseAccused accused: bcc.getAccused()) {
+            joiner.add(accused.getName());
+        }
+        String truncated_case_name = (joiner.toString().length() > 255 ? joiner.toString().substring(0, 255) : joiner.toString());
+        setDems_case_name(truncated_case_name);
     }
 
     public String getRcc_id() {
@@ -166,5 +177,15 @@ public class DemsCreateCourtCaseData {
     public void setCase_flags(List<String> case_flags) {
         this.case_flags = case_flags;
     }
+
+    public String getDems_case_name() {
+        return dems_case_name;
+    }
+
+    public void setDems_case_name(String dems_case_name) {
+        this.dems_case_name = dems_case_name;
+    }
+
+    
     
 }   

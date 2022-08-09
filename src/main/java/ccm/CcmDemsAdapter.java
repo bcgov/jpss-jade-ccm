@@ -1,3 +1,5 @@
+package ccm;
+
 // To run this integration use:
 // kamel run CcmDemsEdgeAdapter.java --property file:application.properties --profile openshift
 // 
@@ -14,7 +16,7 @@ import org.apache.camel.builder.RouteBuilder;
 public class CcmDemsAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    from("kafka:{{kafka.topic.name}}")
+    /* from("kafka:{{kafka.topic.name}}")
     .routeId("courtCases")
     .log("Message received from Kafka : ${body}")
     .log("    on the topic ${headers[kafka.TOPIC]}")
@@ -30,7 +32,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setBody().simple("{\"name\": \"JUSTIN Mock Case ${body[number]}\", \"description\": \"${body[public_content]}\", \"timeZone\": \"Pacific Standard Time\"}")
     .to("{{dems.host}}/cases")
     //.setBody().simple("Successfully created new court case in DEMS mock app: number=${exchangeProperty.number}.")
-    .log("Response from DEMS: ${body}");
+    .log("Response from DEMS: ${body}"); */
 
     // from("platform-http:/v1/version?httpMethodRestrict=GET")
     // .routeId("version")
@@ -79,5 +81,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setBody().simple("{ \"message\": \"Authentication error.\" }")
         .log("Response: ${body}")
       .end();
+      
+    from("platform-http:/getCourtCaseExists")
+    .log("Processing getCourtCaseExists request...")
+    .setBody(simple(""))
+    ;
   }
 }

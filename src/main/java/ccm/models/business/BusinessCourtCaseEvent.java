@@ -6,7 +6,6 @@ import ccm.models.system.justin.JustinEventData;
 
 public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   private String court_case_status;
-  private String court_case_event_version;
 
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
@@ -14,6 +13,8 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_rcc_id;
+
+  public static final String COURT_CASE_EVENT_VERSION = "1.0";
 
   public static final String STATUS_CHANGED = "CHANGED";
   public static final String STATUS_CREATED = "CREATED";
@@ -25,7 +26,7 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   public static final String JUSTIN_RCC_ID = "RCC_ID";
 
   public BusinessCourtCaseEvent() {
-    super.setEvent_version("1.0");
+    super.setEvent_version(COURT_CASE_EVENT_VERSION);
   }
 
   public BusinessCourtCaseEvent(JustinEvent je) {
@@ -33,6 +34,15 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
 
     setJustin_event_message_id(je.getEvent_message_id());
     setJustin_message_event_type_cd(je.getMessage_event_type_cd());
+
+    switch(je.getMessage_event_type_cd()) {
+      case JustinEvent.EVENT_TYPE_AGEN_FILE:
+        setCourt_case_status(STATUS_CHANGED);
+        break;
+      case JustinEvent.EVENT_TYPE_AUTH_LIST:
+        setCourt_case_status(STATUS_AUTH_LIST_CHANGED);
+        break;
+    }
     
     Iterator<JustinEventData> i = je.getEvent_data().iterator();
     while(i.hasNext()) {
@@ -50,13 +60,14 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
           break;
       }
     }
+
+    setEvent_object_id(getJustin_rcc_id());
   }
 
   public BusinessCourtCaseEvent(BusinessCourtCaseEvent another) {
     super((BusinessBaseEvent)another);
 
     this.court_case_status = another.court_case_status;
-    this.court_case_event_version = another.court_case_event_version;
     this.justin_event_message_id = another.justin_event_message_id;
     this.justin_message_event_type_cd = another.justin_message_event_type_cd;
     this.justin_event_dtm = another.justin_event_dtm;
@@ -75,14 +86,6 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
 
   public void setCourt_case_status(String court_case_status) {
     this.court_case_status = court_case_status;
-  }
-
-  public String getCourt_case_event_version() {
-    return court_case_event_version;
-  }
-
-  public void setCourt_case_event_version(String court_case_event_version) {
-    this.court_case_event_version = court_case_event_version;
   }
 
   public int getJustin_event_message_id() {

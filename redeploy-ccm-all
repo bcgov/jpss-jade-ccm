@@ -1,0 +1,8 @@
+. repackage-ccm-models
+. redeploy-ccm-dems-adapter
+. redeploy-ccm-lookup-service
+. redeploy-ccm-notification-service
+
+sleep 10
+
+. redeploy-ccm-justin-adapter

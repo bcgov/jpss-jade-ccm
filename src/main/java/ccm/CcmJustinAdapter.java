@@ -39,71 +39,71 @@ class JustinEventBatchProcessor implements Processor {
     // Insert code that gets executed *before* delegating
     // to the next processor in the chain.
 
-    String body = exchange.getIn().getBody(String.class);
     String exchangeId = exchange.getExchangeId();
     String messageId = exchange.getIn().getMessageId();
-    // TestData td = exchange.getIn().getBody(TestData.class);
-    //JsonPath.parse(body).read(TestData.class);
 
-    // https://www.tutorialspoint.com/jackson_annotations/jackson_annotations_jsonproperty.htm
-    // TestData td = mapper.readerFor(TestData.class).readValue(body);
-    JustinEventBatch eb = exchange.getIn().getBody(JustinEventBatch.class);
+    JustinEventBatch jeb = exchange.getIn().getBody(JustinEventBatch.class);
 
-    System.out.println("Received message. Exchange Id = " + exchangeId + "; Message Id = " + messageId);
-    System.out.println("Body length: " + body.length());
-    System.out.println("Body.events.length: " + eb.getEvents().size());
+    int batchSize = jeb.getEvents().size();
+    System.out.println("Retrieved " + batchSize + (batchSize == 1 ? " record " : " records ") + "from JUSTIN Interface.  JADE-CCM Exchange Id = " + exchangeId + "; JADE-CCM Message Id = " + messageId);
+    System.out.println("Total number of JUSTIN events retrieved: " + jeb.getEvents().size());
 
-    for (JustinEvent e: eb.getEvents()) {
-      System.out.print("Processing JUSTIN event type: '" + e.getMessage_event_type_cd() + "'; JUSTIN event id: '" + e.getEvent_message_id() + "'. ");
+    if (jeb.getEvents().size() > 0) {
+      for (JustinEvent e: jeb.getEvents()) {
+        System.out.print("Processing JUSTIN event " + e.getEvent_message_id() + " (" + e.getMessage_event_type_cd() + ").");
 
-      BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(e);
+        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(e);
 
-      if (e.isAgenFileEvent()) {
-        // court case changed.  generate new business event.
-        System.out.println("Generating 'Court Case Changed' event..");
-      } else if (e.isAuthListEvent()) {
-        // auth list changed.  Generate new business event.
-        System.out.println("Generating 'Court Case Auth List Changed' event..");
-      } else {
-        System.out.println("Unknown JUSTIN event type; Do nothing.");
+        if (e.isAgenFileEvent()) {
+          // court case changed.  generate new business event.
+          System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + be.getJustin_rcc_id() + "')..");
+        } else if (e.isAuthListEvent()) {
+          // auth list changed.  Generate new business event.
+          System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + be.getJustin_rcc_id() + "')..");
+        } else {
+          System.out.println(" Unknown JUSTIN event type; Do nothing.");
+        }
       }
     }
 
-    // if (td == null) {
-    //   throw new Exception("Failed to process test data!");
-    // } else {
-    //   System.out.println("Test Data id: " + td.getId());
-    // }
-
-    // Unmarshalling a JSON Array Using camel-jackson
-    // https://www.baeldung.com/java-camel-jackson-json-array
-
-    // Intro to the Jackson ObjectMapper
-    // https://www.baeldung.com/jackson-object-mapper-tutorial
-
-    // Quarkus Jsonpath
-    // https://camel.apache.org/camel-quarkus/2.9.x/reference/extensions/jsonpath.html
-    // https://camel.apache.org/components/3.16.x/languages/jsonpath-language.html)
-
     exchange.getMessage().setBody("OK");
+  }
+}
+
+class JustinAgenFileEventProcessor implements Processor {
+  @Override
+  public void process(Exchange exchange) throws Exception {
+    // Insert code that gets executed *before* delegating
+    // to the next processor in the chain.
+
+    JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+
+    BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+
+    exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+  }
+}
+
+class JustinAuthListEventProcessor implements Processor {
+  @Override
+  public void process(Exchange exchange) throws Exception {
+    // Insert code that gets executed *before* delegating
+    // to the next processor in the chain.
+
+    String exchangeId = exchange.getExchangeId();
+    String messageId = exchange.getIn().getMessageId();
+
+    JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+
+    BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+
+    exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
   }
 }
 
 public class CcmJustinAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    // onException(Exception.class)
-    // .process(new Processor() {
-    //     @Override
-    //     public void process(Exchange exchange) throws Exception {
-    //         // place to add logic to handle exception
-    //         Throwable caught = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, 
-    //                 Throwable.class);
-    //         logger.error("FATAL ERROR - ", caught);
-    //     }
-    // })
-    // .handled(true);
-
     from("platform-http:/courtFileCreated?httpMethodRestrict=POST")
     .routeId("courtFileCreated")
     .removeHeader("CamelHttpUri")
@@ -113,9 +113,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .unmarshal().json()
     .transform(simple("{\"number\": \"${body[number]}\", \"status\": \"created\", \"sensitive_content\": \"${body[sensitive_content]}\", \"public_content\": \"${body[public_content]}\", \"created_datetime\": \"${body[created_datetime]}\"}"))
     .log("body (after unmarshalling): '${body}'")
-    //
-    // BCPSDEMS-143 Kafka routing below commented out until deployment issue is resolved
-    .to("kafka:{{kafka.topic.name}}");
+    .to("kafka:{{kafka.topic.courtcases.name}}");
 
     from("platform-http:/v1/health?httpMethodRestrict=GET")
     .routeId("healthCheck")
@@ -125,67 +123,88 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
 
-    // https://tomd.xyz/camel-transformation/
-    // Youtube (30 min): Getting started with Apache Camel on Quarkus - https://www.youtube.com/watch?v=POWsZnGhVHM
-    // https://developers.redhat.com/articles/2021/05/17/integrating-systems-apache-camel-and-quarkus-red-hat-openshift#
-    //
-    //JsonDataFormat json = new JsonDataFormat(JsonLibrary.Jackson);
-    //json.setUnmarshalType(TestData.class);
-
     //from("timer://simpleTimer?period={{notification.check.frequency}}")
-    //from("file:/etc/camel/resources/?fileName=getEventBatch.json&noop=true&idempotent=true")
-    //from("file:/etc/camel/resources/?fileName=getEventData.json&noop=true&idempotent=true")
-    //from("file:/etc/camel/resources/?fileName=event.json&noop=true&exchangePattern=InOnly&readLock=none&repeatCount=1&initialDelay=500")
-    //from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
-    from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
-    //from("file:/etc/camel/resources/?fileName=newEventsBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
-    .routeId("processSampleEventBatch")
+    from("file:/etc/camel/resources/?fileName=eventBatch-oneRCC.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=eventBatch-empty.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
+    .routeId("processNewJUSTINEvents")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
-    .log("Process sameple agency file...")
+    // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
-    // .process(new EventsProcessor())
-    .log("In progress events from JUSTIN:")
-    // .unmarshal(new JsonDataFormat(JustinEventList.class))
-    // .unmarshal().json(JsonLibrary.Jackson, JustinEventList.class)
-    // .unmarshal(json)
-    //       .unmarshal().json(JsonLibrary.Jackson, JustinEventList.class)
-    // .choice()
-    // .when().jsonpath("events[0].appl_application_cd", true)
-    // .otherwise()
-    //   .log("Unknown event found.")
-    .log("Routing to \"direct:process\"")
-    .to("direct:process");
+    //.to("direct:processNewJUSTINEvents");
+    .log("Processing new JUSTIN events: ${body}")
+    //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
+    .setHeader("numOfEvents")
+      .jsonpath("$.events.length()")
+    .log("Event count: ${header[numOfEvents]}")
+    .setHeader("events")
+      .jsonpath("$.events")
+    //.log("Events: ${header[events]}")
+    // .split(jsonpath("$.events[*]"))
+    .split()
+      .jsonpathWriteAsString("$.events")  // https://stackoverflow.com/questions/51124978/splitting-a-json-array-with-camel
+      .setHeader("message_event_type_cd")
+        .jsonpath("$.message_event_type_cd")
+      .choice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AGEN_FILE))
+          .to("direct:processAgenFileEvent")
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AUTH_LIST))
+          .to("direct:processAuthListEvent")
+        .otherwise()
+          .log("message_event_type_cd = ${header[message_event_type_cd]}")
+          .to("direct:processUnknownEvent")
+      .end()
+      ;
 
-    JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
+      //.to("direct:processOneJUSTINEvent");
+    
+    // https://github.com/json-path/JsonPath
 
-    from("direct:process")
-    //.jsonpath("@.data", false, TestData.class)
-    .log("in: '${body}'")
+    //JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
+
+    from("direct:processNewJUSTINEvents")
+    .log("Processing new JUSTIN events: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
-    .process(jp);
-    //.setProperty("rcc_id", constant("123"))
-    //.setProperty("earliest_offence_date", constant("2022-01-01"))
-    //.to("atlasmap:justin2businessCourtCase.adm")
-    //.to("atlasmap:old-justin2businessCourtCase.adm")
-    //.to("atlasmap:justin2businessCourtCaseData.adm")
-    //.log("out: '${body}'");
-    //.log(simple("property.concat_case_flags: '${property.concat_case_flags}'"));
-    // .log("Call Atlasmap now.");
-    //.choice()
-    //  .when().jsonpath("id", )
+    .process(new JustinEventBatchProcessor())
+    .log("Getting ready to send to Kafka: ${body}")
+    ;
 
-    // from("file:/etc/camel/resources/?fileName=agencyFile.json&noop=true&exchangePattern=InOnly&readLock=none")
-    // .routeId("processNewJUSTINNotifications")
-    // .log("Check for new notifications...")
-    // .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    // .setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
+    from("direct:processAgenFileEvent")
+    .setHeader("event").body()
+    .log("Processing AGEN_FILE event: ${header[event]}")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+    .process(new JustinAgenFileEventProcessor())
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .log("Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.courtcases.name}}")
+    .setBody(simple("${header[event]}"))
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:processAuthListEvent")
+    .setHeader("event").body()
+    .log("Processing AUTH_LIST event: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+    .process(new JustinAuthListEventProcessor())
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .log("Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.courtcases.name}}")
+    .setBody(simple("${header[event]}"))
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:processUnknownEvent")
+    .log("Ignoring unknown event: ${body}")
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:confirmEventProcessed")
+    .setHeader("event_message_id")
+      .jsonpath("$.event_message_id")
+    .setHeader("message_event_type_cd")
+      .jsonpath("$.message_event_type_cd")
+    .log("Marking event ${header[event_message_id]} (${header[message_event_type_cd]}) as processed.")
+    ;
   }
-}
-
-// https://stackoverflow.com/questions/40756027/apache-camel-json-marshalling-to-pojo-java-bean
-class CourtCaseCreated {
-  public String number;
-  public String created_datetime;
 }
