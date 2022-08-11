@@ -7,7 +7,7 @@ package ccm;
 //
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
 
 import java.util.Calendar;
 
@@ -18,8 +18,8 @@ import org.apache.camel.builder.RouteBuilder;
 public class CcmLookupService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    from("platform-http:/getCourtCaseDetails?httpMethodRestrict=GET")
-    .routeId("getCourtCaseDetails")
+    from("platform-http:/getCourtCaseDetails_old?httpMethodRestrict=GET")
+    .routeId("getCourtCaseDetails_old")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -41,8 +41,18 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    //.setProperty("name",simple("${header[number]}"))
+    .log("Processing getCourtCaseExists request... number = ${header[number]}")
+    .to("http://ccm-dems-adapter/getCourtCaseExists?number=${header[number]}")
+    ;
+
+    from("platform-http:/getCourtCaseDetails")
+    .routeId("getCourtCaseDetails")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
     .setProperty("name",simple("${header.number}"))
-    .log("Processing getCourtCaseExists request... number = ${header.number}")
+    .log("Processing getCourtCaseDetails request... number = ${header[number]}")
     .to("http://ccm-dems-adapter/getCourtCaseExists")
     ;
   }

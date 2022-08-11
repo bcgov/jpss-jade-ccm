@@ -22,8 +22,10 @@ loop Every 5 minutes
     deactivate j_interface
     loop For every business event
         j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-        alt Agency file changed event
+        alt AGEN_FILE event
             j_adapter ->o court_cases_topic: Produce court case changed event
+        else AUTH_LIST changed event
+            j_adapter ->o court_cases_topic: Produce court case auth list changed event
         else Other business event
             j_adapter -> j_adapter: No operation (future functionality)
         end
@@ -62,6 +64,6 @@ end
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated July 28, 2022
+Prepared by David Agahchen | Updated August 11, 2022
 end caption
 @enduml

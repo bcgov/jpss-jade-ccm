@@ -8,7 +8,7 @@ import org.apache.camel.Processor;
 // 
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
 // camel-k: trait=jvm.classpath=/etc/camel/resources/ccm-models.jar
 
 //import org.apache.camel.Exchange;
@@ -43,6 +43,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_object_id")
     .setHeader("court_case_status")
       .jsonpath("$.court_case_status")
+    .setHeader("event")
+      .simple("${body}")
     .choice()
       .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_CHANGED))
         .to("direct:processCourtCaseChanged")
@@ -57,13 +59,15 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:processCourtCaseChanged")
     .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists?number=${header[event_object_id}")
+    //.to("http://ccm-lookup-service/getCourtCaseExists?event_object_id=${header[event_object_id]}")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
         BusinessCourtCaseEvent be = new BusinessCourtCaseEvent();
 
-        boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
+        // hardcoding boolean to false for first implementation
+        //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
+        boolean court_case_exists = false;
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
@@ -81,10 +85,21 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .log("Generating derived court case event: ${body}")
+    .to("direct:processCourtCaseCreated")
     ;
 
     from("direct:processCourtCaseCreated")
     .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
+    .log("Retrieve latest court case details from JUSTIN.")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-adapter/getCourtCaseDetails")
+    .setHeader("courtCaseDetails")
+      .simple("${body}")
+    .log("Create court case in DEMS")
+    .to("http://ccm-dems-adapter/createCourtCase")
+    .log("Process court case auth list changed")
+    .to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")

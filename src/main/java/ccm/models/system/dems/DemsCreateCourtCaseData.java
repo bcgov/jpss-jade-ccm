@@ -55,7 +55,7 @@ public class DemsCreateCourtCaseData {
         // determine DEMS court case name
         StringJoiner joiner = new StringJoiner("; ");
         for(BusinessCourtCaseAccused accused: bcc.getAccused()) {
-            joiner.add(accused.getName());
+            joiner.add(accused.getFull_name());
         }
         String truncated_case_name = (joiner.toString().length() > 255 ? joiner.toString().substring(0, 255) : joiner.toString());
         setDems_case_name(truncated_case_name);

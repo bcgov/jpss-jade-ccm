@@ -3,6 +3,7 @@ package ccm.models.business;
 import java.util.List;
 import java.util.ArrayList;
 
+import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinAgencyFile;
 
 public class BusinessCourtCaseData {
@@ -23,6 +24,8 @@ public class BusinessCourtCaseData {
     private String limitation_date;
     private String min_offence_date;
     private List<BusinessCourtCaseAccused> accused;
+
+    private String earliest_proposed_appearance_date;
 
     private List<String> case_flags;
 
@@ -48,6 +51,24 @@ public class BusinessCourtCaseData {
         if ("Y" == jaf.getVul1()) { case_flags.add("VUL1"); };
         if ("Y" == jaf.getChi1()) { case_flags.add("CHI1"); };
         if ("Y" == jaf.getVul1()) { case_flags.add("VUL1"); };
+
+        List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
+        String earliest_proposed_appearance_date = jaf.getAccused().get(0).getProposed_appr_date();    
+
+        // TODO MAPID 71
+        String proposed_process_type_list;
+
+        for (JustinAccused ja: jaf.getAccused()) {
+
+            BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
+            accusedList.add(accused);
+
+            if (earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
+                earliest_proposed_appearance_date = ja.getProposed_appr_date();
+            }
+        }
+        setAccused(accusedList);
+        setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
     }
 
     public String getRcc_id() {
@@ -152,5 +173,15 @@ public class BusinessCourtCaseData {
     public void setInvestigating_officer(String investigating_officer) {
         this.investigating_officer = investigating_officer;
     }
+
+    public String getEarliest_proposed_appearance_date() {
+        return earliest_proposed_appearance_date;
+    }
+
+    public void setEarliest_proposed_appearance_date(String earliest_proposed_appearance_date) {
+        this.earliest_proposed_appearance_date = earliest_proposed_appearance_date;
+    }
+
+    
     
 }   

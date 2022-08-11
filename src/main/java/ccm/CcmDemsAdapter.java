@@ -8,7 +8,7 @@ package ccm;
 //
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -83,8 +83,32 @@ public class CcmDemsAdapter extends RouteBuilder {
       .end();
       
     from("platform-http:/getCourtCaseExists")
-    .log("Processing getCourtCaseExists request...")
-    .setBody(simple(""))
+    .routeId("getCourtCaseExists")
+    .log("Processing getCourtCaseExists request (event_object_id=${header[event_object_id]})...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .to("{{dems.host}}/cases/rcc_id:123/id")
+    .choice()
+      .when(header(Exchange.HTTP_RESPONSE_CODE).isLessThan(300))
+        .setBody(jsonpath("$.id"))
+      .otherwise()
+        .setBody(simple(""))
+    ;
+      
+    from("platform-http:/createCourtCase")
+    .routeId("createCourtCase")
+    .log("Processing createCourtCase request: ${body}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    //.to("{{dems.host}}/cases/rcc_id:123/id")
     ;
   }
 }

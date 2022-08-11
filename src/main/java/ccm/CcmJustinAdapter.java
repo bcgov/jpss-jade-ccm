@@ -206,5 +206,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       .jsonpath("$.message_event_type_cd")
     .log("Marking event ${header[event_message_id]} (${header[message_event_type_cd]}) as processed.")
     ;
+
+    from("platform-http:/getCourtCaseDetails?httpMethodRestrict=GET")
+    .routeId("getCourtCaseDetails")
+    .log("getCourtCaseDetails request received");
   }
 }
