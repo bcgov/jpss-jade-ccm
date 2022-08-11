@@ -6,7 +6,7 @@ public class JustinEvent {
   private String appl_application_cd;
   private String message_event_type_cd;
   private String event_dtm;
-  private List<JustinEventData> event_data;
+  private List<JustinEventDataElement> event_data;
 
   public static final String EVENT_TYPE_AGEN_FILE = "AGEN_FILE";
   public static final String EVENT_TYPE_AUTH_LIST = "AUTH_LIST";
@@ -51,11 +51,11 @@ public class JustinEvent {
     this.event_dtm = event_dtm;
   }
 
-  public List<JustinEventData> getEvent_data() {
+  public List<JustinEventDataElement> getEvent_data() {
     return this.event_data;
   }
 
-  public void setEvent_data(List<JustinEventData> event_data) {
+  public void setEvent_data(List<JustinEventDataElement> event_data) {
     this.event_data = event_data;
   }
 }

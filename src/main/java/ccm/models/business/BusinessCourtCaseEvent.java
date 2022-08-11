@@ -2,7 +2,7 @@ package ccm.models.business;
 
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
-import ccm.models.system.justin.JustinEventData;
+import ccm.models.system.justin.JustinEventDataElement;
 
 public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   private String court_case_status;
@@ -44,9 +44,9 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
         break;
     }
     
-    Iterator<JustinEventData> i = je.getEvent_data().iterator();
+    Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
     while(i.hasNext()) {
-      JustinEventData jed = i.next();
+      JustinEventDataElement jed = i.next();
 
       switch(jed.getData_element_nm()) {
         case JUSTIN_FETCHED_DATE:
