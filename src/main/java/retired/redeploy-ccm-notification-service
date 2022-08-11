@@ -1,0 +1,6 @@
+kamel -n cef5dd-dev delete ccm-notification-service
+kamel -n cef5dd-dev run CcmNotificationService/CcmNotificationService.java \
+  --property file:CcmNotificationService/application.properties \
+  --profile openshift \
+  --trait service.node-port=false \
+  --trait route.enabled=false

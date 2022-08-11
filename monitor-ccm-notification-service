@@ -1,0 +1,2 @@
+export TITLEPREFIX="Notification Service   "
+kamel log ccm-notification-service

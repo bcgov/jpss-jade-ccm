@@ -1,0 +1,27 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: workaround-np-kafka-events2
+spec:
+  podSelector:
+    matchLabels:
+      strimzi.io/name: events2-kafka
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9091
+      from:
+        - podSelector:
+            matchLabels:
+              strimzi.io/kind: cluster-operator
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-operators
+    - ports:
+        - protocol: TCP
+          port: 9092
+    - ports:
+        - protocol: TCP
+          port: 9093
+  policyTypes:
+    - Ingress

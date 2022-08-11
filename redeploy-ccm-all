@@ -1,6 +1,8 @@
-. redeploy-ccm-dems-edge-adapter
-. redeploy-ccm-dems-mock-app
-. redeploy-ccm-justin-mock-app
-. redeploy-ccm-justin-utility-adapter
-. redeploy-ccm-notification-service
+. repackage-ccm-models
+. redeploy-ccm-dems-adapter
 . redeploy-ccm-lookup-service
+. redeploy-ccm-notification-service
+
+sleep 10
+
+. redeploy-ccm-justin-adapter

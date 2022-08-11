@@ -1,0 +1,5 @@
+kamel -n cef5dd-dev delete ccm-dems-mock-app
+kamel -n cef5dd-dev run CcmDemsMockApp/CcmDemsMockApp.java \
+  --profile openshift \
+  --trait service.node-port=false \
+  --trait route.enabled=false

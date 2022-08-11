@@ -1,0 +1,24 @@
+pushd src/main/java/ccm
+
+kamel -n cef5dd-dev delete ccm-justin-adapter
+kamel -n cef5dd-dev run \
+  CcmJustinAdapter.java \
+  --resource file:../ccm-models.jar \
+  --resource file:../../mapping/system/justin/eventBatch.json \
+  --resource file:../../mapping/system/justin/eventBatch-oneRCC.json \
+  --resource file:../../mapping/system/justin/eventBatch-empty.json \
+  --resource file:../../mapping/system/justin/eventRecord.json \
+  --property file:ccmJustinAdapter.properties \
+  --profile openshift \
+  --trait dependencies.enabled=true \
+  --trait route.enabled=false \
+  --trait service.node-port=false
+  # --dev
+  # --dependency file://./models.jar \
+  # --dependency github:agahchen/jpss-jade-ccm-models \
+  # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
+  # --resource file:../../mapping/justin2businessCourtCaseData.adm \
+
+popd
+
+# kamel -n cef5dd-dev log ccm-justin-adapter

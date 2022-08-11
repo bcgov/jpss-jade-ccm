@@ -1,0 +1,23 @@
+{
+    "id": 123,
+    "phone": "250-111-2222",
+    "names": [
+        "April",
+        "Bella",
+        "Charlie"
+    ],
+    "contacts": [
+        {
+            "name": "April Able",
+            "friend_since": "2020-04-01"
+        },
+        {
+            "name": "Bella Boost",
+            "friend_since": "2019-01-01"
+        },
+        {
+            "name": "Charlie Church",
+            "friend_since": "2021-12-12"
+        }
+    ]
+}

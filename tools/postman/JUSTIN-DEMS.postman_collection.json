@@ -1,0 +1,409 @@
+{
+	"info": {
+		"_postman_id": "2a3359f5-d2f7-43b0-befd-7118b2d2ad2d",
+		"name": "JUSTIN-DEMS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "newEventsBatch",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/newEventsBatch",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"newEventsBatch"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "inProgressEvents",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"inProgressEvents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "eventStatus",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n \"event_message_id\":\"2003\",\r\n \"is_success\":\"T\"\r\n}"
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/eventStatus",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"eventStatus"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "queueEvents",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}"
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/queueEvents",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"queueEvents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "eventByIdOrGuid",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "event",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventById",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2003",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"requeueEventById"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "2003",
+							"description": "event_message_id"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventsLast1Hour",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"system\":\"DEMS\"}"
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast1Hour",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"requeueEventsLast1Hour"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "2003",
+							"description": "event_message_id",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventsLast24Hours",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"system\":\"DEMS\"}"
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast24Hours",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"requeueEventsLast24Hours"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventSByDateRange Copy",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n \"from_dt\":\"18-MAY-2022\",\r\n \"to_dt\":\"19-MAY-2022\",\r\n \"system\":\"DEMS\"\r\n}"
+				},
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsByDtRange",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"requeueEventsByDtRange"
+					],
+					"query": [
+						{
+							"key": "from_dt",
+							"value": "2022-05-18 00:00:00",
+							"disabled": true
+						},
+						{
+							"key": "to_dt",
+							"value": "2022-05-19 00:00:00",
+							"disabled": true
+						},
+						{
+							"key": "system",
+							"value": "DEMS",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "agencyFile",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/agencyFile?rcc_id=50419.0734&guid=E15638C7794E64E8E05400144FFBC109",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"agencyFile"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50419.0734"
+						},
+						{
+							"key": "guid",
+							"value": "E15638C7794E64E8E05400144FFBC109"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "authUsers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/authUsers?rcc_id=50419.0734",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"authUsers"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50419.0734"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		}
+	]
+}

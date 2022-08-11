@@ -4,7 +4,7 @@ kind: Kafka
 metadata:
   labels:
     app.kubernetes.io/managed-by: operator
-  name: events
+  name: events2
   namespace: cef5dd-test  # Replace this with the dev namespace
 spec:
   entityOperator:

@@ -1,0 +1,2 @@
+export TITLEPREFIX="Lookup Service   "
+kamel log ccm-lookup-service
