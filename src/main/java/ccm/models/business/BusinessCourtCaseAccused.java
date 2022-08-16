@@ -7,6 +7,9 @@ public class BusinessCourtCaseAccused {
     private String full_name;
     private String proposed_process_type_id;
 
+    public BusinessCourtCaseAccused() {
+    }
+
     public BusinessCourtCaseAccused(JustinAccused ja) {
         setUnique_identifier(ja.getPart_id());
         setFull_name(ja.getAccused_name());
