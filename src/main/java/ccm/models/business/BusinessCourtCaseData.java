@@ -29,6 +29,9 @@ public class BusinessCourtCaseData {
 
     private List<String> case_flags;
 
+    public BusinessCourtCaseData() {
+    }
+
     public BusinessCourtCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
         setAgency_file_no(jaf.getAgency_file_no());

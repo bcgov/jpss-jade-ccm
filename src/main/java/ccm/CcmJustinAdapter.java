@@ -17,7 +17,9 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.model.;
 
 import ccm.models.system.justin.JustinEventBatch;
+import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinEvent;
 
 class JustinEventBatchProcessor implements Processor {
@@ -123,11 +125,16 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
 
+    /* 
+     * To kick off processing, execute the following on the 'service/ccm-justin-adapter' pod:
+     *    cp /etc/camel/resources/eventBatch-oneRCC.json /tmp
+     */
     //from("timer://simpleTimer?period={{notification.check.frequency}}")
-    from("file:/etc/camel/resources/?fileName=eventBatch-oneRCC.json&noop=true&exchangePattern=InOnly&readLock=none")
+    from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
+    //from("file:/etc/camel/resources/?fileName=eventBatch-oneRCC.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=eventBatch-empty.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
-    .routeId("processNewJUSTINEvents")
+    .routeId("loadJustinEventsFromFile")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
     // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -149,11 +156,14 @@ public class CcmJustinAdapter extends RouteBuilder {
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AGEN_FILE))
           .to("direct:processAgenFileEvent")
+        .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AUTH_LIST))
           .to("direct:processAuthListEvent")
+        .endChoice()
         .otherwise()
           .log("message_event_type_cd = ${header[message_event_type_cd]}")
           .to("direct:processUnknownEvent")
+        .endChoice()
       .end()
       ;
 
@@ -164,6 +174,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     //JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
 
     from("direct:processNewJUSTINEvents")
+    .routeId("processNewJUSTINEvents")
     .log("Processing new JUSTIN events: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .process(new JustinEventBatchProcessor())
@@ -171,6 +182,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
 
     from("direct:processAgenFileEvent")
+    .routeId("processAgenFileEvent")
     .setHeader("event").body()
     .log("Processing AGEN_FILE event: ${header[event]}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
@@ -183,6 +195,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
 
     from("direct:processAuthListEvent")
+    .routeId("processAuthListEvent")
     .setHeader("event").body()
     .log("Processing AUTH_LIST event: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
@@ -195,11 +208,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
 
     from("direct:processUnknownEvent")
+    .routeId("processUnknownEvent")
     .log("Ignoring unknown event: ${body}")
     .to("direct:confirmEventProcessed")
     ;
 
     from("direct:confirmEventProcessed")
+    .routeId("confirmEventProcessed")
     .setHeader("event_message_id")
       .jsonpath("$.event_message_id")
     .setHeader("message_event_type_cd")
@@ -209,6 +224,31 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("platform-http:/getCourtCaseDetails?httpMethodRestrict=GET")
     .routeId("getCourtCaseDetails")
-    .log("getCourtCaseDetails request received");
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("getCourtCaseDetails request received. number = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    //.setHeader("rcc_id", simple("${header.number}"))
+    .toD("{{justin.host}}/agencyFile?rcc_id=${header.number}")
+    .log("Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinAgencyFile.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinAgencyFile j = exchange.getIn().getBody(JustinAgencyFile.class);
+
+        System.out.println("JUSTIN data model rcc_id: " + j.getRcc_id());
+        BusinessCourtCaseData b = new BusinessCourtCaseData(j);
+        System.out.println("Business data model rcc_id: " + b.getRcc_id());
+
+        exchange.getMessage().setBody(b, BusinessCourtCaseData.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    ;
   }
 }

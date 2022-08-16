@@ -15,7 +15,9 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.system.dems.DemsCreateCourtCaseData;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -32,6 +34,7 @@ public class CcmNotificationService extends RouteBuilder {
     // .log("body (after unmarshalling): '${body}'")
     // .to("kafka:{{kafka.topic.kpis.name}}");
 
+    //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.courtcases.name}}")
     .routeId("processCourtcaseEvents")
     .log("Message received from Kafka : ${body}\n" + 
@@ -57,9 +60,11 @@ public class CcmNotificationService extends RouteBuilder {
     ;
 
     from("direct:processCourtCaseChanged")
+    .routeId("processCourtCaseChanged")
+    .streamCaching()
     .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
-    //.to("http://ccm-lookup-service/getCourtCaseExists?event_object_id=${header[event_object_id]}")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
@@ -85,37 +90,35 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .log("Generating derived court case event: ${body}")
-    .to("direct:processCourtCaseCreated")
+    .to("kafka:{{kafka.topic.courtcases.name}}")
     ;
 
     from("direct:processCourtCaseCreated")
+    .routeId("processCourtCaseCreated")
+    .streamCaching()
     .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
     .log("Retrieve latest court case details from JUSTIN.")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseDetails")
-    .setHeader("courtCaseDetails")
-      .simple("${body}")
-    .log("Create court case in DEMS")
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
+    .log("Create court case in DEMS.  body = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
     .log("Process court case auth list changed")
     .to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
+    .routeId("processCourtCaseAuthListChanged")
+    .streamCaching()
     .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
     ;
 
     from("direct:processUnknownStatus")
+    .routeId("processUnknownStatus")
+    .streamCaching()
     .log("processUnknownStatus.  event_object_id = ${header[event_object_id]}")
     ;
 
   }
-}
-
-// https://stackoverflow.com/questions/40756027/apache-camel-json-marshalling-to-pojo-java-bean
-class CourtFileApproved {
-  public String number;
-  public String created_datetime;
-  public String approved_datetime;
 }

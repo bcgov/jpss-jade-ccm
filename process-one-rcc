@@ -1,0 +1,1 @@
+oc exec service/ccm-justin-adapter -- 'cp /etc/camel/resources/eventBatch-oneRCC.json /tmp'

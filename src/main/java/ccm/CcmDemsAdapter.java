@@ -11,7 +11,16 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
 
 import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
+import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
+
+import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.system.dems.DemsCreateCourtCaseData;
+
+import org.apache.camel.CamelException;
+//import org.apache.camel.http.common.HttpOperationFailedException;
 
 public class CcmDemsAdapter extends RouteBuilder {
   @Override
@@ -84,31 +93,68 @@ public class CcmDemsAdapter extends RouteBuilder {
       
     from("platform-http:/getCourtCaseExists")
     .routeId("getCourtCaseExists")
-    .log("Processing getCourtCaseExists request (event_object_id=${header[event_object_id]})...")
+    .log("Processing getCourtCaseExists request (event_object_id=${header.event_object_id})...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .setHeader("rcc_id").simple("${header.event_object_id}")
+    .doTry()
+      .toD("{{dems.host}}/cases/rcc_id:${header.rcc_id}/id")
+    .doCatch(CamelException.class)
+    ////.onException(Exception.class)
+    ////  .handled(true)
+    ////.to("direct:testPathVar")
+      .choice()
+        .when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo(404))
+          .log(LoggingLevel.INFO,"Record not found.  HTTP response code = " + header(Exchange.HTTP_RESPONSE_CODE))
+          .setBody(jsonpath("{}"))
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR,"Unknown error.  HTTP Response Code = " + header(Exchange.HTTP_RESPONSE_CODE))
+          .log(LoggingLevel.ERROR,"Unknown error.  Headers = ${headers}")
+          .setBody(simple("{}"))
+        .endChoice()
+      .end()
+    .end()
+    ;
+
+    from("direct:testPathVar")
+    .routeId("testPathVar")
+    .streamCaching()
+    .log("Processing testPathVar request (rcc_id=${header.rcc_id})...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .to("{{dems.host}}/cases/rcc_id:123/id")
-    .choice()
-      .when(header(Exchange.HTTP_RESPONSE_CODE).isLessThan(300))
-        .setBody(jsonpath("$.id"))
-      .otherwise()
-        .setBody(simple(""))
+    //.toD("{{dems.host}}/cases/rcc_id:${header.rcc_id}/id")
     ;
       
     from("platform-http:/createCourtCase")
     .routeId("createCourtCase")
+    .streamCaching()
     .log("Processing createCourtCase request: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
+        DemsCreateCourtCaseData d = new DemsCreateCourtCaseData(b);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCreateCourtCaseData.class)
+    .log("DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //.to("{{dems.host}}/cases/rcc_id:123/id")
+    //.toD("{{dems.host}}/cases/rcc_id:123/id")
     ;
   }
 }
