@@ -123,7 +123,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     from("direct:testPathVar")
     .routeId("testPathVar")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing testPathVar request (rcc_id=${header.rcc_id})...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -136,7 +136,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       
     from("platform-http:/createCourtCase")
     .routeId("createCourtCase")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing createCourtCase request: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .process(new Processor() {
@@ -153,8 +153,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //.toD("{{dems.host}}/cases/rcc_id:123/id")
+    //.setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .toD("{{dems.host}}/org-units/1/cases")
     ;
   }
 }

@@ -20,7 +20,7 @@ public class CcmLookupService extends RouteBuilder {
   public void configure() throws Exception {
     from("platform-http:/getCourtCaseDetails_old?httpMethodRestrict=GET")
     .routeId("getCourtCaseDetails_old")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -39,7 +39,7 @@ public class CcmLookupService extends RouteBuilder {
 
     from("platform-http:/getCourtCaseExists")
     .routeId("getCourtCaseExists")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -53,7 +53,7 @@ public class CcmLookupService extends RouteBuilder {
 
     from("platform-http:/getCourtCaseDetails")
     .routeId("getCourtCaseDetails")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

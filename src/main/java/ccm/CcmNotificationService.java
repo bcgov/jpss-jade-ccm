@@ -61,7 +61,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("direct:processCourtCaseChanged")
     .routeId("processCourtCaseChanged")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
@@ -95,7 +95,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("direct:processCourtCaseCreated")
     .routeId("processCourtCaseCreated")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
     .log("Retrieve latest court case details from JUSTIN.")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -110,13 +110,13 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("direct:processCourtCaseAuthListChanged")
     .routeId("processCourtCaseAuthListChanged")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
     ;
 
     from("direct:processUnknownStatus")
     .routeId("processUnknownStatus")
-    .streamCaching()
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processUnknownStatus.  event_object_id = ${header[event_object_id]}")
     ;
 
