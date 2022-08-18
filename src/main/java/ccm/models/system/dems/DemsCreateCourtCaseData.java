@@ -1,71 +1,68 @@
 package ccm.models.system.dems;
 
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.ArrayList;
 
 import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.business.BusinessCourtCaseData;
 
 public class DemsCreateCourtCaseData {
-    private String rcc_id;
+    private String agency_file_id;
     private String agency_file_no;
-    private String security_clearance_level;
-    private String synopsis;
+    private String submit_date;
+    private String assessment_crown;
+    private String case_decision;
+    private String proposed_charges;
     private String initiating_agency;
     private String investigating_officer;
-    private String rcc_submit_date;
-    private String vul1;
-    private String chi1;
-    private String crn_decision_agency_identifier;
-    private String crn_decision_agency_name;
-    
-    private String assessment_crown_name;
-    private String assessment_crown_part_id;
-    private String case_decision_cd;
+    private String proposed_crown_office;
 
-    private String charge;
     private String limitation_date;
-    private String min_offence_date;
-    private List<BusinessCourtCaseAccused> accused;
+    private String offence_date;
+    private List<DemsCreateCourtCasePerson> people;
 
     private List<String> case_flags;
-
-    private String dems_case_name;
+    private String proposed_app_date;
+    private String proposed_process_type;
+    private String name;
 
     public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
-        setRcc_id(bcc.getRcc_id());
+        setAgency_file_id(bcc.getRcc_id());
         setAgency_file_no(bcc.getAgency_file_no());
-        setSecurity_clearance_level(bcc.getSecurity_clearance_level());
-        setSynopsis(bcc.getSynopsis());
+        setSubmit_date(bcc.getRcc_submit_date());
+
+        setAssessment_crown(bcc.getAssessment_crown_name());
+        setCase_decision(bcc.getCase_decision_cd());
+        setProposed_charges(bcc.getCharge());
+
         setInitiating_agency(bcc.getInitiating_agency());
         setInvestigating_officer(bcc.getInvestigating_officer());
-        setRcc_submit_date(bcc.getRcc_submit_date());
-        setCase_flags(bcc.getCase_flags());
-        setCrn_decision_agency_identifier(bcc.getCrn_decision_agency_identifier());
-        setCrn_decision_agency_name(bcc.getCrn_decision_agency_name());
-
-        setAssessment_crown_name(bcc.getAssessment_crown_name());
-        setCase_decision_cd(bcc.getCase_decision_cd());
-        setCharge(bcc.getCharge());
+        setProposed_crown_office(bcc.getProposed_crown_office());
         setLimitation_date(bcc.getLimitation_date());
-        setMin_offence_date(bcc.getMin_offence_date());
-
+        setOffence_date(bcc.getEarliest_offence_date());
         setCase_flags(bcc.getCase_flags());
 
-        // determine DEMS court case name
-        StringJoiner joiner = new StringJoiner("; ");
-        for(BusinessCourtCaseAccused accused: bcc.getAccused()) {
-            joiner.add(accused.getFull_name());
+        setProposed_app_date(bcc.getEarliest_proposed_appearance_date());
+        setProposed_process_type(bcc.getProposed_process_type_list());
+        setName(bcc.getDems_case_name());
+
+        List<DemsCreateCourtCasePerson> personList = new ArrayList<DemsCreateCourtCasePerson>();
+
+        for (BusinessCourtCaseAccused ba : bcc.getAccused_person()) {
+
+            DemsCreateCourtCasePerson person = new DemsCreateCourtCasePerson(ba);
+            personList.add(person);
+
         }
-        String truncated_case_name = (joiner.toString().length() > 255 ? joiner.toString().substring(0, 255) : joiner.toString());
-        setDems_case_name(truncated_case_name);
+        setPeople(personList);
+
     }
 
-    public String getRcc_id() {
-        return rcc_id;
+    public String getAgency_file_id() {
+        return agency_file_id;
     }
-    public void setRcc_id(String rcc_id) {
-        this.rcc_id = rcc_id;
+    public void setAgency_file_id(String agency_file_id) {
+        this.agency_file_id = agency_file_id;
     }
     public String getAgency_file_no() {
         return agency_file_no;
@@ -73,17 +70,31 @@ public class DemsCreateCourtCaseData {
     public void setAgency_file_no(String agency_file_no) {
         this.agency_file_no = agency_file_no;
     }
-    public String getSecurity_clearance_level() {
-        return security_clearance_level;
+    public String getSubmit_date() {
+        return submit_date;
     }
-    public void setSecurity_clearance_level(String security_clearance_level) {
-        this.security_clearance_level = security_clearance_level;
+    public void setSubmit_date(String rcc_submit_date) {
+        this.submit_date = rcc_submit_date;
     }
-    public String getSynopsis() {
-        return synopsis;
+    public String getAssessment_crown() {
+        return assessment_crown;
     }
-    public void setSynopsis(String synopsis) {
-        this.synopsis = synopsis;
+
+    public void setAssessment_crown(String assessment_crown) {
+        this.assessment_crown = assessment_crown;
+    }
+    public String getCase_decision() {
+        return case_decision;
+    }
+    public void setCase_decision(String case_decision) {
+        this.case_decision = case_decision;
+    }
+    public String getProposed_charges() {
+        return proposed_charges;
+    }
+
+    public void setProposed_charges(String proposed_charges) {
+        this.proposed_charges = proposed_charges;
     }
     public String getInitiating_agency() {
         return initiating_agency;
@@ -97,79 +108,13 @@ public class DemsCreateCourtCaseData {
     public void setInvestigating_officer(String investigating_officer) {
         this.investigating_officer = investigating_officer;
     }
-    public String getRcc_submit_date() {
-        return rcc_submit_date;
-    }
-    public void setRcc_submit_date(String rcc_submit_date) {
-        this.rcc_submit_date = rcc_submit_date;
-    }
-    public String getVul1() {
-        return vul1;
-    }
-    public void setVul1(String vul1) {
-        this.vul1 = vul1;
-    }
-    public String getChi1() {
-        return chi1;
-    }
-    public void setChi1(String chi1) {
-        this.chi1 = chi1;
-    }
-    public String getCrn_decision_agency_identifier() {
-        return crn_decision_agency_identifier;
-    }
-    public void setCrn_decision_agency_identifier(String crn_decision_agency_identifier) {
-        this.crn_decision_agency_identifier = crn_decision_agency_identifier;
-    }
-    public String getCrn_decision_agency_name() {
-        return crn_decision_agency_name;
-    }
-    public void setCrn_decision_agency_name(String crn_decision_agency_name) {
-        this.crn_decision_agency_name = crn_decision_agency_name;
-    }
-    public String getAssessment_crown_name() {
-        return assessment_crown_name;
-    }
-    public void setAssessment_crown_name(String assessment_crown_name) {
-        this.assessment_crown_name = assessment_crown_name;
-    }
-    public String getAssessment_crown_part_id() {
-        return assessment_crown_part_id;
-    }
-    public void setAssessment_crown_part_id(String assessment_crown_part_id) {
-        this.assessment_crown_part_id = assessment_crown_part_id;
-    }
-    public String getCase_decision_cd() {
-        return case_decision_cd;
-    }
-    public void setCase_decision_cd(String case_decision_cd) {
-        this.case_decision_cd = case_decision_cd;
-    }
-    public String getCharge() {
-        return charge;
-    }
-    public void setCharge(String charge) {
-        this.charge = charge;
-    }
-    public String getLimitation_date() {
-        return limitation_date;
-    }
-    public void setLimitation_date(String limitation_date) {
-        this.limitation_date = limitation_date;
-    }
-    public String getMin_offence_date() {
-        return min_offence_date;
-    }
-    public void setMin_offence_date(String min_offence_date) {
-        this.min_offence_date = min_offence_date;
-    }
-    public List<BusinessCourtCaseAccused> getAccused() {
-        return accused;
-    }
-    public void setAccused(List<BusinessCourtCaseAccused> accused) {
-        this.accused = accused;
-    }
 
+    public String getProposed_crown_office() {
+        return proposed_crown_office;
+    }
+    public void setProposed_crown_office(String proposed_crown_office) {
+        this.proposed_crown_office = proposed_crown_office;
+    }
     public List<String> getCase_flags() {
         return case_flags;
     }
@@ -177,15 +122,48 @@ public class DemsCreateCourtCaseData {
     public void setCase_flags(List<String> case_flags) {
         this.case_flags = case_flags;
     }
-
-    public String getDems_case_name() {
-        return dems_case_name;
+    public String getOffence_date() {
+        return offence_date;
+    }
+    public void setOffence_date(String offence_date) {
+        this.offence_date = offence_date;
     }
 
-    public void setDems_case_name(String dems_case_name) {
-        this.dems_case_name = dems_case_name;
+    public String getProposed_app_date() {
+        return proposed_app_date;
     }
 
-    
-    
+    public void setProposed_app_date(String proposed_app_date) {
+        this.proposed_app_date = proposed_app_date;
+    }
+
+    public String getProposed_process_type() {
+        return proposed_process_type;
+    }
+
+    public void setProposed_process_type(String proposed_process_type) {
+        this.proposed_process_type = proposed_process_type;
+    }
+    public String getLimitation_date() {
+        return limitation_date;
+    }
+    public void setLimitation_date(String limitation_date) {
+        this.limitation_date = limitation_date;
+    }
+    public List<DemsCreateCourtCasePerson> getPeople() {
+        return people;
+    }
+    public void setPeople(List<DemsCreateCourtCasePerson> people) {
+        this.people = people;
+    }
+
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
 }   

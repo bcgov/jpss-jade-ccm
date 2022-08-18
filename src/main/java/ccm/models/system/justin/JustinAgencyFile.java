@@ -20,6 +20,8 @@ public class JustinAgencyFile {
     private String assessment_crown_part_id;
     private String case_decision_cd;
 
+    private String note_to_file;
+
     private String charge;
     private String limitation_date;
     private String min_offence_date;
@@ -143,6 +145,14 @@ public class JustinAgencyFile {
 
     public void setCase_decision_cd(String case_decision_cd) {
       this.case_decision_cd = case_decision_cd;
+    }
+
+    public String getNote_to_file() {
+      return note_to_file;
+    }
+
+    public void setNote_to_file(String note_to_file) {
+      this.note_to_file = note_to_file;
     }
 
     public String getCharge() {

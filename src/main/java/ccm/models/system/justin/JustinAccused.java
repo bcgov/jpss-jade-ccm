@@ -4,6 +4,10 @@ public class JustinAccused {
     private String accused_name;
     private String proposed_process_type;
     private String proposed_appr_date;
+
+    private String crown_decision;
+    private String offence_date;
+
     private String indigenous_yn;
     private String birth_date;
     
@@ -31,6 +35,19 @@ public class JustinAccused {
     public void setProposed_appr_date(String proposed_appr_date) {
       this.proposed_appr_date = proposed_appr_date;
     }
+    public String getCrown_decision() {
+      return crown_decision;
+    }
+    public void setCrown_decision(String crown_decision) {
+      this.crown_decision = crown_decision;
+    }
+    public String getOffence_date() {
+      return offence_date;
+    }
+    public void setOffence_date(String offence_date) {
+      this.offence_date = offence_date;
+    }
+
     public String getIndigenous_yn() {
       return indigenous_yn;
     }
@@ -43,7 +60,6 @@ public class JustinAccused {
     public void setBirth_date(String birth_date) {
       this.birth_date = birth_date;
     }
-
     
   }
   
