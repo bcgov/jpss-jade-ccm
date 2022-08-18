@@ -1,9 +1,20 @@
+# preserve current directory
 pushd src/main/java/
 
-\rm ccm-models.jar
-javac ccm/models/business/*.java
-javac ccm/models/system/justin/*.java
-javac ccm/models/system/dems/*.java
-jar cvf ccm-models.jar ccm/*/*/*.class ccm/*/*/*/*.class
+# create the classes directory if missing
+mkdir -p ../../../classes
 
+# delete previous classes and jar
+\rm -rf ../../../classes/*
+
+# compile POJO classes
+javac -d ../../../classes ccm/models/business/*.java
+javac -d ../../../classes ccm/models/system/justin/*.java
+javac -d ../../../classes ccm/models/system/dems/*.java
+
+# create jar
+cd ../../../classes
+jar cvf ccm-models.jar ccm/models/*/*.class ccm/models/*/*/*.class
+
+# return to current directory
 popd

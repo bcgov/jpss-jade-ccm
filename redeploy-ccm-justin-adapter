@@ -3,7 +3,7 @@ pushd src/main/java/ccm
 kamel -n cef5dd-dev delete ccm-justin-adapter
 kamel -n cef5dd-dev run \
   CcmJustinAdapter.java \
-  --resource file:../ccm-models.jar \
+  --resource file:../../../../classes/ccm-models.jar \
   --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
   --resource file:../../../../mapping/data/system/justin/arc/eventBatch-oneRCC.json \
   --resource file:../../../../mapping/data/system/justin/arc/eventBatch-empty.json \

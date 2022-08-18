@@ -3,7 +3,7 @@ pushd src/main/java/ccm
 kamel -n cef5dd-dev delete ccm-notification-service
 kamel -n cef5dd-dev run \
   CcmNotificationService.java \
-  --resource file:../ccm-models.jar \
+  --resource file:../../../../classes/ccm-models.jar \
   --property file:ccmNotificationService.properties \
   --profile openshift \
   --trait service.node-port=false \

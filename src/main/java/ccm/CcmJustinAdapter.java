@@ -7,8 +7,13 @@ package ccm;
 //
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
-// camel-k: trait=jvm.classpath=/etc/camel/resources/ccm-models.jar
+// camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
+// camel-k: dependency=mvn:org.apache.camel.camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;

@@ -8,8 +8,13 @@ import org.apache.camel.Processor;
 // 
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
-// camel-k: trait=jvm.classpath=/etc/camel/resources/ccm-models.jar
+// camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
+// camel-k: dependency=mvn:org.apache.camel.camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -35,7 +40,7 @@ public class CcmNotificationService extends RouteBuilder {
     // .to("kafka:{{kafka.topic.kpis.name}}");
 
     //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.courtcases.name}}")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId("processCourtcaseEvents")
     .log("Message received from Kafka : ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -65,6 +70,8 @@ public class CcmNotificationService extends RouteBuilder {
     .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
@@ -72,7 +79,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         // hardcoding boolean to false for first implementation
         //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
-        boolean court_case_exists = false;
+        boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
