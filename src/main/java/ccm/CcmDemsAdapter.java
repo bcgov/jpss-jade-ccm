@@ -167,8 +167,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    //.setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    ////.toD("{{dems.host}}/org-units/1/cases")
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    //.toD("{{dems.host}}/org-units/1/cases")
     ;
   }
 }

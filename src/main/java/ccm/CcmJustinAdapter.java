@@ -8,6 +8,7 @@ package ccm;
 
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.component.kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
@@ -19,6 +20,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
 import ccm.models.system.justin.JustinEventBatch;
@@ -88,6 +90,7 @@ class JustinAgenFileEventProcessor implements Processor {
     BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
 
     exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+    exchange.getMessage().setHeader(KafkaConstants.KEY, be.getEvent_object_id());
   }
 }
 
@@ -105,6 +108,7 @@ class JustinAuthListEventProcessor implements Processor {
     BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
 
     exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+    exchange.getMessage().setHeader(KafkaConstants.KEY, be.getEvent_object_id());
   }
 }
 
@@ -130,16 +134,22 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
 
+    from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
+    .routeId("loadSampleJustinEventBatchFromFile")
+    .log("Processing file with content: ${body}")
+    .to("direct:processJustinEventBatch")
+    ;
+
     /* 
      * To kick off processing, execute the following on the 'service/ccm-justin-adapter' pod:
      *    cp /etc/camel/resources/eventBatch-oneRCC.json /tmp
      */
     //from("timer://simpleTimer?period={{notification.check.frequency}}")
-    from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
+    from("direct:processJustinEventBatch")
+    .routeId("processJustinEventBatch")
     //from("file:/etc/camel/resources/?fileName=eventBatch-oneRCC.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=eventBatch-empty.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
-    .routeId("loadJustinEventsFromFile")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
     // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))

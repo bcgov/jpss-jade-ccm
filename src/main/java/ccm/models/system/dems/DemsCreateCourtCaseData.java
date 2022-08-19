@@ -25,6 +25,7 @@ public class DemsCreateCourtCaseData {
 
         setTimeZone("Pacific Standard Time");
         setTemplateCase("28");
+        setName(bcc.getRcc_id());
         addField("Agency File ID", bcc.getRcc_id());
         addField("Agency File No.", bcc.getAgency_file_no());
 
