@@ -1,7 +1,6 @@
 package ccm.models.business;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import ccm.models.system.justin.JustinAuthUser;
@@ -9,19 +8,19 @@ import ccm.models.system.justin.JustinAuthUsersList;
 
 public class BusinessAuthUsersList {
     private String rcc_id;
-    private List<String> part_id_list;
+    private List<BusinessAuthUser> auth_users_list;
 
     public BusinessAuthUsersList(JustinAuthUsersList jal) {
       setRcc_id(jal.getRcc_id());
-      Iterator<JustinAuthUser> i = jal.getAuthuserslist().iterator();
 
-      List<String> l = new ArrayList<String>();
+      List<BusinessAuthUser> l = new ArrayList<BusinessAuthUser>();
       
-      while (i != null && i.hasNext()) {
-        part_id_list.add(i.next().getPart_id());
+      for (JustinAuthUser ja : jal.getAuthuserslist()) {
+        BusinessAuthUser ba = new BusinessAuthUser(ja);
+        l.add(ba);
       }
 
-      setPart_id_list(l);
+      setAuth_users_list(l);
     }
   
     public String getRcc_id() {
@@ -32,12 +31,12 @@ public class BusinessAuthUsersList {
       this.rcc_id = rcc_id;
     }
 
-    public List<String> getPart_id_list() {
-      return part_id_list;
+    public List<BusinessAuthUser> getAuth_users_list() {
+      return auth_users_list;
     }
 
-    public void setPart_id_list(List<String> part_id_list) {
-      this.part_id_list = part_id_list;
+    public void setAuth_users_list(List<BusinessAuthUser> auth_users_list) {
+      this.auth_users_list = auth_users_list;
     }
 
     

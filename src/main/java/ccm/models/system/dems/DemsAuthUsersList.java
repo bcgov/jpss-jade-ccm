@@ -1,7 +1,10 @@
 package ccm.models.system.dems;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import ccm.models.business.BusinessAuthUser;
 import ccm.models.business.BusinessAuthUsersList;
 
 public class DemsAuthUsersList {
@@ -10,7 +13,15 @@ public class DemsAuthUsersList {
 
     public DemsAuthUsersList(BusinessAuthUsersList b) {
       setRcc_id(b.getRcc_id());
-      setPart_id_list(b.getPart_id_list());
+      Iterator<BusinessAuthUser> i = b.getAuth_users_list().iterator();
+
+      List<String> l = new ArrayList<String>();
+      
+      while (i != null && i.hasNext()) {
+        l.add(i.next().getPart_id());
+      }
+
+      setPart_id_list(l);
     }
   
     public String getRcc_id() {
