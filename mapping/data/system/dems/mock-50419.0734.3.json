@@ -1,0 +1,33 @@
+{
+    "description": "Dragon, Dazy; Baggins, Frodo 3",
+    "timeZoneId": "Pacific Standard Time",
+    "key": "50419.0734.3",
+    "templateCase": "28",
+    "fields": [
+      {
+        "id": "Agency File ID",
+        "value": "50419.0734"
+      },
+      {
+        "id": "Agency File No.",
+        "value": "RU-6132022"
+      },
+      {
+        "id": "Case Decision",
+        "value": [
+          "ACT"
+        ]
+      },
+      {
+        "id": "Case Fields",
+        "value": [
+          "VUL1"
+        ]
+      },
+      {
+        "id": "Court File Level",
+        "value": "9"
+      }
+    ],
+    "name": "Dragon, Dazy; Baggins, Frodo 3"
+  }
