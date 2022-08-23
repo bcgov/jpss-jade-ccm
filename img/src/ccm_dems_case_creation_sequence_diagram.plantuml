@@ -2,9 +2,9 @@
 'hide footbox
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-participant case_lookup_service as "Case Lookup Service"
-participant case_notification_service as "Case Notification Service"
 collections court_cases_topic as "Court Case Events"
+participant case_notification_service as "Case Notification Service"
+participant case_lookup_service as "Case Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
@@ -71,6 +71,6 @@ d_adapter --> case_notification_service: Acknowledged
 deactivate d_adapter
 
 caption
-Prepared by David Agahchen | Updated July 26, 2022 (revision 1)
+Prepared by David Agahchen | Updated August 23, 2022
 end caption
 @enduml

@@ -16,8 +16,10 @@ autonumber
 
 activate j_adapter
 loop Every 5 minutes
-    j_adapter-> j_interface: Retrieve new business events
+    j_adapter-> j_interface: Mark all new business events as "in progress"
     activate j_interface
+    j_interface --> j_adapter: Acknowledgement
+    j_adapter-> j_interface: Retrieve all in progress business events
     j_interface --> j_adapter: List of business events
     deactivate j_interface
     loop For every business event
@@ -64,6 +66,6 @@ end
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated August 11, 2022
+Prepared by David Agahchen | Updated August 23, 2022
 end caption
 @enduml
