@@ -1,1 +1,1 @@
-kamel log ccm-notification-service | grep "Message received from Kafka"
+kamel log ccm-notification-service | grep "Event from Kafka "
