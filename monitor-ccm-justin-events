@@ -1,1 +1,1 @@
-kamel log ccm-justin-adapter | grep "Event batch " | grep -v "Event batch count: 0"
+kamel log ccm-justin-adapter | grep -v "Event batch count: 0" | grep "Event batch "
