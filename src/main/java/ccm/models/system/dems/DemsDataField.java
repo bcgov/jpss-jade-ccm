@@ -1,14 +1,14 @@
 package ccm.models.system.dems;
 
 public class DemsDataField {
-    private String id;
+    private String name;
     private Object value;
     
-    public String getId() {
-        return id;
+    public String getName() {
+        return name;
     }
-    public void setId(String id) {
-        this.id = id;
+    public void setName(String name) {
+        this.name = name;
     }
     public Object getValue() {
         return value;

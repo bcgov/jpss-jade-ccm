@@ -72,10 +72,10 @@ public class DemsCreateCourtCaseData {
         setDescription(truncated_case_name);
     }
 
-    public void addField(String fieldId, Object fieldValue) {
+    public void addField(String fieldName, Object fieldValue) {
         DemsDataField df = new DemsDataField();
 
-        df.setId(fieldId);
+        df.setName(fieldName);
         df.setValue(fieldValue);
 
         fields.add(df);

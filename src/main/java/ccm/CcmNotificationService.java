@@ -42,7 +42,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId("processCourtcaseEvents")
-    .log("Message received from Kafka : ${body}\n" + 
+    .log("Message received from Kafka (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
