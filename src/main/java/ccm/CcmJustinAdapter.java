@@ -153,6 +153,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")
+    .routeId("processTimer")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -185,10 +186,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
     .log("Event count: ${exchangeProperty.numOfEvents}")
-    .setHeader("events")
+    .setProperty("justin_events")
       .jsonpath("$.events")
-    //.log("Events: ${header[events]}")
-    // .split(jsonpath("$.events[*]"))
     .split()
       .jsonpathWriteAsString("$.events")  // https://stackoverflow.com/questions/51124978/splitting-a-json-array-with-camel
       .setProperty("message_event_type_cd")
