@@ -6,7 +6,7 @@
     "assessment_crown_name": "m16 Johnson, Robert",
     "case_status_code": "m18 ADV",
     "file_note": "m19 TBD",
-    "first_three_charges_list": "m20 CCC 344.2(1) Robbery; CCC 441.1 Some Text",
+    "charge": "m20 CCC 344.2(1) Robbery; CCC 441.1 Some Text",
     "initiating_agency": "m59 105: Kelowna Municipal RCMP",
     "investigating_officer": "m60 Rhodes, Christopher 52812",
     "proposed_crown_office": "m61 C402: Kelowna Crown Counsel",
@@ -14,7 +14,7 @@
         "m69 VUL1"
     ],
     "earliest_offence_date": "m71 2020-12-30",
-    "earliest_proposed_apperance_date": "m72 2020-12-30",
+    "earliest_proposed_appearance_date": "m72 2020-12-30",
     "proposed_process_type_list": "m73 Jones, Fred John AN; Smith, Peter WAR",
     "dems_case_name": "m87 Jones, Fred John; Smith, Peter",
     "accused_person": [
