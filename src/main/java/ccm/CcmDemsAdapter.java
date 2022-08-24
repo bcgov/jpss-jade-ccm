@@ -108,7 +108,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     .setHeader("rcc_id").simple("${header.event_object_id}")
     .doTry()
-      .toD("{{dems.host}}/cases/rcc_id:${header.rcc_id}/id")
+      .toD("{{dems.host}}/org-units/1/cases/12:${header.rcc_id}/id")
     //.doCatch(HttpOperationFailedException.class)
     .doCatch(Exception.class)
     ////.onException(Exception.class)

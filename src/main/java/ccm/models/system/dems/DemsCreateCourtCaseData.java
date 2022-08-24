@@ -22,8 +22,8 @@ enum Field {
 
 public class DemsCreateCourtCaseData {
     private String description;
-    private String timeZone;
-    private String templateCase;
+    private String timeZoneId;
+    //private String templateCase;
     private List<DemsDataField> fields;
 
     //private List<String> case_flags;
@@ -36,8 +36,8 @@ public class DemsCreateCourtCaseData {
     public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
         fields = new ArrayList<DemsDataField>();
 
-        setTimeZone("Pacific Standard Time");
-        setTemplateCase("28");
+        setTimeZoneId("Pacific Standard Time");
+        //setTemplateCase("28");
         setName(bcc.getRcc_id());
         addField(Field.AGENCY_FILE_ID.getId(), bcc.getRcc_id());
         addField(Field.AGENCY_FILE_NO.getId(), bcc.getAgency_file_no());
@@ -102,12 +102,12 @@ public class DemsCreateCourtCaseData {
         this.description = description;
     }
 
-    public String getTimeZone() {
-        return timeZone;
+    public String getTimeZoneId() {
+        return timeZoneId;
     }
 
-    public void setTimeZone(String timeZone) {
-        this.timeZone = timeZone;
+    public void setTimeZoneId(String timeZoneId) {
+        this.timeZoneId = timeZoneId;
     }
 
     // public List<String> getCase_flags() {
@@ -126,13 +126,13 @@ public class DemsCreateCourtCaseData {
         this.name = name;
     }
 
-    public String getTemplateCase() {
-        return templateCase;
-    }
+    // public String getTemplateCase() {
+    //     return templateCase;
+    // }
 
-    public void setTemplateCase(String templateCase) {
-        this.templateCase = templateCase;
-    }
+    // public void setTemplateCase(String templateCase) {
+    //     this.templateCase = templateCase;
+    // }
 
     public List<DemsDataField> getFields() {
         return fields;
