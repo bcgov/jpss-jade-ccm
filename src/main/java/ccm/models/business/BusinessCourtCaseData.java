@@ -58,14 +58,14 @@ public class BusinessCourtCaseData {
         case_flags = new ArrayList<String>();
 
         // Map 69
-        if ("Y" == jaf.getVul1()) {
+        if ("Y".equalsIgnoreCase(jaf.getVul1())) {
             case_flags.add("VUL1");
         }
-        if ("Y" == jaf.getChi1()) {
+        if ("Y".equalsIgnoreCase(jaf.getChi1())) {
             case_flags.add("CHI1");
         }
         for (JustinAccused accused : jaf.getAccused()) {
-            if ("Y" == accused.getIndigenous_yn()) {
+            if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
                  case_flags.add("Indigenous");
                  break;
             }
