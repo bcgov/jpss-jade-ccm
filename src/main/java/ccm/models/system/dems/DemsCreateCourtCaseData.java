@@ -7,6 +7,19 @@ import java.util.StringJoiner;
 import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.business.BusinessCourtCaseData;
 
+enum Field {
+    AGENCY_FILE_ID(1),
+    AGENCY_FILE_NO(2);
+
+    private final int id;
+
+    Field(final int newId) {
+        id = newId;
+    }
+
+    public int getId() { return id; }
+}
+
 public class DemsCreateCourtCaseData {
     private String description;
     private String timeZone;
@@ -26,8 +39,8 @@ public class DemsCreateCourtCaseData {
         setTimeZone("Pacific Standard Time");
         setTemplateCase("28");
         setName(bcc.getRcc_id());
-        addField("Agency File ID", bcc.getRcc_id());
-        addField("Agency File No.", bcc.getAgency_file_no());
+        addField(Field.AGENCY_FILE_ID.getId(), bcc.getRcc_id());
+        addField(Field.AGENCY_FILE_NO.getId(), bcc.getAgency_file_no());
 
 
         //addField("Approved Charges","");
@@ -36,12 +49,12 @@ public class DemsCreateCourtCaseData {
         //addField("Assigned Legal Staff","");
         List<String> cd = new ArrayList<String>();
         cd.add("ACT");
-        addField("Case Decision",cd);
+        ///addField("Case Decision",cd);
         List<String> cf = new ArrayList<String>();
         cf.add("VUL1");
-        addField("Case Fields",cf);
+        ////addField("Case Fields",cf);
         //addField("Class", "");
-        addField("Court File Level","9");
+        /////addField("Court File Level","9");
         //addField("Court File Unique ID","");
         //addField("Court Home Registry","");
 
@@ -72,10 +85,10 @@ public class DemsCreateCourtCaseData {
         setDescription(truncated_case_name);
     }
 
-    public void addField(String fieldName, Object fieldValue) {
+    public void addField(int fieldId, Object fieldValue) {
         DemsDataField df = new DemsDataField();
 
-        df.setName(fieldName);
+        df.setId(fieldId);
         df.setValue(fieldValue);
 
         fields.add(df);

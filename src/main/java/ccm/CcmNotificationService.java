@@ -108,9 +108,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
-    ////.to("http://ccm-lookup-service/getCourtCaseDetails")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Create court case in DEMS.  body = ${body}.")
-    ////.to("http://ccm-dems-adapter/createCourtCase")
+    .to("http://ccm-dems-adapter/createCourtCase")
     .log("Update court case auth list.")
     ////.to("direct:processCourtCaseAuthListChanged")
     ;
