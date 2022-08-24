@@ -15,7 +15,7 @@ public class BusinessCourtCaseData {
     private String investigating_officer;
     private String proposed_crown_office;
     private String rcc_submit_date;
-    
+
     private String assessment_crown_name;
     private String case_status_code;
     private String file_note;
@@ -32,6 +32,8 @@ public class BusinessCourtCaseData {
 
     private List<BusinessCourtCaseAccused> accused_person;
 
+    public BusinessCourtCaseData() {
+    }
 
     public BusinessCourtCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
@@ -58,14 +60,14 @@ public class BusinessCourtCaseData {
         case_flags = new ArrayList<String>();
 
         // Map 69
-        if ("Y" == jaf.getVul1()) {
+        if ("Y".equalsIgnoreCase(jaf.getVul1())) {
             case_flags.add("VUL1");
         }
-        if ("Y" == jaf.getChi1()) {
+        if ("Y".equalsIgnoreCase(jaf.getChi1())) {
             case_flags.add("CHI1");
         }
         for (JustinAccused accused : jaf.getAccused()) {
-            if ("Y" == accused.getIndigenous_yn()) {
+            if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
                  case_flags.add("Indigenous");
                  break;
             }
@@ -74,7 +76,7 @@ public class BusinessCourtCaseData {
         //if ("Y" == jaf.getIPV1()) { case_flags.add("K"); };
 
         List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
-        String earliest_proposed_appearance_date = jaf.getAccused().get(0).getProposed_appr_date();    
+        String earliest_proposed_appearance_date = jaf.getAccused().get(0).getProposed_appr_date();
 
 
         StringBuilder proposed_process_type_builder = new StringBuilder();
@@ -104,6 +106,7 @@ public class BusinessCourtCaseData {
             }
             accused_names.append(ja.getAccused_name());
         }
+        setProposed_process_type_list(proposed_process_type_builder.toString());
         setAccused_person(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
         setDems_case_name(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()-1));
@@ -242,7 +245,7 @@ public class BusinessCourtCaseData {
     public void setDems_case_name(String dems_case_name) {
         this.dems_case_name = dems_case_name;
     }
-  
+
     public List<BusinessCourtCaseAccused> getAccused_person() {
         return accused_person;
     }
@@ -251,5 +254,5 @@ public class BusinessCourtCaseData {
         this.accused_person = accused_person;
     }
 
-    
-}   
+
+}

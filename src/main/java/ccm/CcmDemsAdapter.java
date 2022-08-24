@@ -170,5 +170,29 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     //.toD("{{dems.host}}/org-units/1/cases")
     ;
+      
+    from("platform-http:/updateCourtCase")
+    .routeId("updateCourtCase")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing updateCourtCase request: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
+        DemsCreateCourtCaseData d = new DemsCreateCourtCaseData(b);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCreateCourtCaseData.class)
+    .log("DEMS-bound request data: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    //.toD("{{dems.host}}/org-units/1/cases")
+    .log("DEBUG: do nothing for now.")
+    ;
   }
 }

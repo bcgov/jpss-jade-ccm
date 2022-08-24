@@ -11,6 +11,9 @@ public class DemsAuthUsersList {
     private String rcc_id;
     private List<String> part_id_list;
 
+    public DemsAuthUsersList() {
+    }
+
     public DemsAuthUsersList(BusinessAuthUsersList b) {
       setRcc_id(b.getRcc_id());
       Iterator<BusinessAuthUser> i = b.getAuth_users_list().iterator();

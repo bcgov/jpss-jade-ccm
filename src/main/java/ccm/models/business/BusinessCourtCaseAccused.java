@@ -12,7 +12,6 @@ public class BusinessCourtCaseAccused {
     private Boolean indigenous_accused_yn;
     private String name_and_proposed_process_type;
 
-
     public BusinessCourtCaseAccused() {
     }
 

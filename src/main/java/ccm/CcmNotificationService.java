@@ -58,6 +58,8 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseChanged")
       .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_CREATED))
         .to("direct:processCourtCaseCreated")
+      .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_UPDATED))
+        .to("direct:processCourtCaseUpdated")
       .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_AUTH_LIST_CHANGED))
         .to("direct:processCourtCaseAuthListChanged")
       .otherwise()
@@ -111,7 +113,22 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Create court case in DEMS.  body = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
-    .log("Update court case auth list.")
+    ////.log("Update court case auth list.")
+    ////.to("direct:processCourtCaseAuthListChanged")
+    ;
+
+    from("direct:processCourtCaseUpdated")
+    .routeId("processCourtCaseUpdated")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
+    .log("Retrieve latest court case details from JUSTIN.")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
+    .log("Update court case in DEMS.  body = ${body}.")
+    .to("http://ccm-dems-adapter/updateCourtCase")
+    ////.log("Update court case auth list.")
     ////.to("direct:processCourtCaseAuthListChanged")
     ;
 

@@ -1,59 +1,53 @@
 package ccm.models.system.dems;
 
-import java.util.List;
-
 public class DemsFieldData {
+    private int id;
     private String name;
-    private String value;
-    private List<String> value_list;
+    private Object value;
 
-    public DemsFieldData(String name, String value, List<String> valueList) {
-        setName(name);
-
-        setValue(value);
-
-        setValue_list(valueList);
+    public DemsFieldData() {
     }
 
-    public DemsFieldData(String name, String value) {
+    public DemsFieldData(String name, Object value) {
         setName(name);
-
         setValue(value);
     }
 
-    public DemsFieldData(String name, List<String> valueList) {
-        setName(name);
-
-        setValue_list(valueList);
+    public DemsFieldData(int id, Object value) {
+        setId(id);
+        setValue(value);
     }
 
+    public DemsFieldData(int id, String name, Object value) {
+        setId(id);
+        setName(name);
+        setValue(value);
+    }
 
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+/*
     public String getName() {
         return name;
     }
-
+*/
     public void setName(String name) {
         this.name = name;
     }
 
-
-    public String getValue() {
+    public Object getValue() {
         return value;
     }
 
 
-    public void setValue(String value) {
+    public void setValue(Object value) {
         this.value = value;
-    }
-
-
-    public List<String> getValue_list() {
-        return value_list;
-    }
-
-
-    public void setValue_list(List<String> value_list) {
-        this.value_list = value_list;
     }
 
 }   

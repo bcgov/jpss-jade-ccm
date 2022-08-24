@@ -6,6 +6,8 @@ public class DemsCreateCourtCasePerson {
     private String unique_identifier;
     private String full_name;
 
+    public DemsCreateCourtCasePerson() {
+    }
 
     public DemsCreateCourtCasePerson(BusinessCourtCaseAccused ba) {
         setUnique_identifier(ba.getIdentifier());
