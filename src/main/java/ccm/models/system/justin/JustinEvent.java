@@ -5,6 +5,11 @@ public class JustinEvent {
   private int event_message_id;
   private String appl_application_cd;
   private String message_event_type_cd;
+  private String message_event_type_dsc;
+  private String process_retry_qty;
+  private String maximum_retry_qty;
+  private String process_status_cd;
+  private String process_status_dsc;
   private String event_dtm;
   private List<JustinEventDataElement> event_data;
 
@@ -15,6 +20,46 @@ public class JustinEvent {
     return EVENT_TYPE_AGEN_FILE.equals(getMessage_event_type_cd());
   }
   
+  public String getMessage_event_type_dsc() {
+    return message_event_type_dsc;
+  }
+
+  public void setMessage_event_type_dsc(String message_event_type_dsc) {
+    this.message_event_type_dsc = message_event_type_dsc;
+  }
+
+  public String getProcess_retry_qty() {
+    return process_retry_qty;
+  }
+
+  public void setProcess_retry_qty(String process_retry_qty) {
+    this.process_retry_qty = process_retry_qty;
+  }
+
+  public String getMaximum_retry_qty() {
+    return maximum_retry_qty;
+  }
+
+  public void setMaximum_retry_qty(String maximum_retry_qty) {
+    this.maximum_retry_qty = maximum_retry_qty;
+  }
+
+  public String getProcess_status_cd() {
+    return process_status_cd;
+  }
+
+  public void setProcess_status_cd(String process_status_cd) {
+    this.process_status_cd = process_status_cd;
+  }
+
+  public String getProcess_status_dsc() {
+    return process_status_dsc;
+  }
+
+  public void setProcess_status_dsc(String process_status_dsc) {
+    this.process_status_dsc = process_status_dsc;
+  }
+
   public boolean isAuthListEvent() {
     return EVENT_TYPE_AUTH_LIST.equals(getMessage_event_type_cd());
   }
