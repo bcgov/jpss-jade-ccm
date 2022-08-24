@@ -7,7 +7,13 @@ package ccm;
 //
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
+// camel-k: dependency=mvn:org.apache.camel.camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 import java.util.Calendar;
 
@@ -20,6 +26,7 @@ public class CcmLookupService extends RouteBuilder {
   public void configure() throws Exception {
     from("platform-http:/getCourtCaseDetails_old?httpMethodRestrict=GET")
     .routeId("getCourtCaseDetails_old")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -38,22 +45,30 @@ public class CcmLookupService extends RouteBuilder {
 
     from("platform-http:/getCourtCaseExists")
     .routeId("getCourtCaseExists")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     //.setProperty("name",simple("${header[number]}"))
     .log("Processing getCourtCaseExists request... number = ${header[number]}")
-    .to("http://ccm-dems-adapter/getCourtCaseExists?number=${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-dems-adapter/getCourtCaseExists")
+    .log("Lookup response = '${body}'")
     ;
 
     from("platform-http:/getCourtCaseDetails")
     .routeId("getCourtCaseDetails")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setProperty("name",simple("${header.number}"))
-    .log("Processing getCourtCaseDetails request... number = ${header[number]}")
-    .to("http://ccm-dems-adapter/getCourtCaseExists")
+    .setHeader("rcc_id").simple("${header[number]}")
+    .log("Processing getCourtCaseDetails request... rcc_id = ${header[rcc_id]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-adapter/getCourtCaseDetails")
+    .log("response from JUSTIN: ${body}")
     ;
   }
 }

@@ -1,5 +1,5 @@
 package ccm.models.system.justin;
-public class JustinEventData {
+public class JustinEventDataElement {
     private String data_element_nm;
     private String data_value_txt;
   

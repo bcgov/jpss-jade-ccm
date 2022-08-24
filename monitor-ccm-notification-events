@@ -1,0 +1,1 @@
+kamel log ccm-notification-service | grep "Event from Kafka "

@@ -8,14 +8,21 @@ import org.apache.camel.Processor;
 // 
 
 // camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka:camel-quarkus-jsonpath:camel-jackson:camel-splunk-hec
-// camel-k: trait=jvm.classpath=/etc/camel/resources/ccm-models.jar
+// camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
+// camel-k: dependency=mvn:org.apache.camel.camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.system.dems.DemsCreateCourtCaseData;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -32,9 +39,10 @@ public class CcmNotificationService extends RouteBuilder {
     // .log("body (after unmarshalling): '${body}'")
     // .to("kafka:{{kafka.topic.kpis.name}}");
 
-    from("kafka:{{kafka.topic.courtcases.name}}")
+    //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId("processCourtcaseEvents")
-    .log("Message received from Kafka : ${body}\n" + 
+    .log("Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -50,6 +58,8 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseChanged")
       .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_CREATED))
         .to("direct:processCourtCaseCreated")
+      .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_UPDATED))
+        .to("direct:processCourtCaseUpdated")
       .when(header("court_case_status").isEqualTo(BusinessCourtCaseEvent.STATUS_AUTH_LIST_CHANGED))
         .to("direct:processCourtCaseAuthListChanged")
       .otherwise()
@@ -57,9 +67,13 @@ public class CcmNotificationService extends RouteBuilder {
     ;
 
     from("direct:processCourtCaseChanged")
+    .routeId("processCourtCaseChanged")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
-    //.to("http://ccm-lookup-service/getCourtCaseExists?event_object_id=${header[event_object_id]}")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
@@ -67,7 +81,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         // hardcoding boolean to false for first implementation
         //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
-        boolean court_case_exists = false;
+        boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
@@ -85,37 +99,50 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .log("Generating derived court case event: ${body}")
-    .to("direct:processCourtCaseCreated")
+    .to("kafka:{{kafka.topic.courtcases.name}}")
     ;
 
     from("direct:processCourtCaseCreated")
+    .routeId("processCourtCaseCreated")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
     .log("Retrieve latest court case details from JUSTIN.")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseDetails")
-    .setHeader("courtCaseDetails")
-      .simple("${body}")
-    .log("Create court case in DEMS")
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
+    .log("Create court case in DEMS.  body = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
-    .log("Process court case auth list changed")
-    .to("direct:processCourtCaseAuthListChanged")
+    ////.log("Update court case auth list.")
+    ////.to("direct:processCourtCaseAuthListChanged")
+    ;
+
+    from("direct:processCourtCaseUpdated")
+    .routeId("processCourtCaseUpdated")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
+    .log("Retrieve latest court case details from JUSTIN.")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
+    .log("Update court case in DEMS.  body = ${body}.")
+    .to("http://ccm-dems-adapter/updateCourtCase")
+    ////.log("Update court case auth list.")
+    ////.to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
+    .routeId("processCourtCaseAuthListChanged")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
     ;
 
     from("direct:processUnknownStatus")
+    .routeId("processUnknownStatus")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processUnknownStatus.  event_object_id = ${header[event_object_id]}")
     ;
 
   }
-}
-
-// https://stackoverflow.com/questions/40756027/apache-camel-json-marshalling-to-pojo-java-bean
-class CourtFileApproved {
-  public String number;
-  public String created_datetime;
-  public String approved_datetime;
 }
