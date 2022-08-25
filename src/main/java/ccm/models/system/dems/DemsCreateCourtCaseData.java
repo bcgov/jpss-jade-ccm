@@ -46,7 +46,7 @@ public class DemsCreateCourtCaseData {
 
     public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
         setKey(bcc.getRcc_id());
-        setDescription(bcc.getDems_case_name());
+        setDescription("");
         setName(bcc.getDems_case_name());
         setTimeZoneId(PACIFIC_TIMEZONE);
         //setKey(key);

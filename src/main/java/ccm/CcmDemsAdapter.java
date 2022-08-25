@@ -22,8 +22,11 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.business.BusinessAuthUsersList;
 import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.system.dems.DemsAuthUsersList;
 import ccm.models.system.dems.DemsCreateCourtCaseData;
+import ccm.models.system.dems.DemsGroupMembersSyncData;
 
 import org.apache.camel.CamelException;
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -96,10 +99,17 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setBody().simple("{ \"message\": \"Authentication error.\" }")
         .log("Response: ${body}")
       .end();
-      
+
     from("platform-http:/getCourtCaseExists")
-    .routeId("getCourtCaseExists")
+      .routeId("getCourtCaseExists")
+      .to("direct:getCourtCaseExists")
+    ;
+      
+    from("direct:getCourtCaseExists")
+    .routeId("direct:getCourtCaseExists")
     .log("Processing getCourtCaseExists request (event_object_id=${header.event_object_id})...")
+    .setProperty("dems_org_unit_id").simple("1")
+    .setProperty("agency_file_id_dems_field_id").simple("" + DemsCreateCourtCaseData.FIELD_MAPPINGS.AGENCY_FILE_ID.getId())
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -108,50 +118,36 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     .setHeader("rcc_id").simple("${header.event_object_id}")
     .doTry()
-      .toD("{{dems.host}}/org-units/1/cases/12:${header.rcc_id}/id")
+      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.agency_file_id_dems_field_id}:${header.rcc_id}/id")
     //.doCatch(HttpOperationFailedException.class)
     .doCatch(Exception.class)
-    ////.onException(Exception.class)
-    ////  .handled(true)
-    ////.to("direct:testPathVar")
       .log("Exception: ${exception}")
       .log("Exchange: ${exchange}")
       .choice()
-        //.when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("404"))
         .when().simple("${exception.statusCode} == 404")
-          .log(LoggingLevel.INFO,"Record not found.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO,"Record not found (404).")
           ////.toD("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
-          .setBody(simple("{\"case_id\": \"123.1\"}"))
-          .unmarshal().json()
           .setBody(simple("{\"id\": \"\"}"))
-          //.setBody(simple("{\"id\": \"${body[case_id]}\"}"))
-          //.log("Response body: '${body}'")
         .endChoice()
         .otherwise()
-          .log(LoggingLevel.ERROR,"Unknown error.  HTTP response code = ${exception.statusCode}")
-          .setBody(simple("{\"id\": \"123\"}"))
+          .log(LoggingLevel.ERROR,"Unknown error.  Re-throw ${exception}")
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+              Exception e = exchange.getException();
+
+              throw e;
+            }
+          })
         .endChoice()
       .end()
-    .end()
-    ;
-
-    from("direct:testPathVar")
-    .routeId("testPathVar")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Processing testPathVar request (rcc_id=${header.rcc_id})...")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //.toD("{{dems.host}}/cases/rcc_id:${header.rcc_id}/id")
+    .endDoTry()
     ;
       
     from("platform-http:/createCourtCase")
     .routeId("createCourtCase")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing createCourtCase request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .process(new Processor() {
       public void process(Exchange exchange) {
@@ -168,13 +164,15 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //.toD("{{dems.host}}/org-units/1/cases")
+    //////////////////////////.toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
+    .log("Court caes created.")
     ;
       
     from("platform-http:/updateCourtCase")
     .routeId("updateCourtCase")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing updateCourtCase request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .process(new Processor() {
       public void process(Exchange exchange) {
@@ -191,8 +189,71 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //.toD("{{dems.host}}/org-units/1/cases")
-    .log("DEBUG: do nothing for now.")
+    //.toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
+    .log("Case update requested: do nothing for now.")
+    ;
+      
+    from("platform-http:/syncCaseUserList")
+    .routeId("syncCaseUserList")
+    .to("direct:syncCaseUserList");
+
+    from("direct:syncCaseUserList")
+    .routeId("direct-syncCaseUserList")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing syncCaseUserList request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
+    .unmarshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        BusinessAuthUsersList b = exchange.getIn().getBody(BusinessAuthUsersList.class);
+        DemsAuthUsersList da = new DemsAuthUsersList(b);
+        exchange.getMessage().setBody(da);
+        exchange.setProperty("event_object_id", b.getRcc_id());
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class)
+    .setProperty("demsAuthUserList").simple("${body}")
+    .log("DEMS-bound case users sync request data: '${body}'")
+    //
+    // retrieve case id using event_object_id
+    .removeHeader("event_object_id")
+    .setHeader("event_object_id").simple("${exchangeProperty.event_object_id}")
+    .log("Retrieving id for case with key = ${header.event_object_id}")
+    .to("direct:getCourtCaseExists")
+    .setProperty("dems_case_id").jsonpath("$.id")
+    .log("Case id retrieved: ${exchangeProperty.dems_case_id}")
+    //
+    // sync case users
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization", simple("Bearer " + "{{token.dems}}"))
+    .setBody(simple("${exchangeProperty.demsAuthUserList}"))
+    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
+    .log("Case users synchronized.")
+    //
+    // sync case group members
+    .setBody(simple("${exchangeProperty.demsAuthUserList}"))
+    .unmarshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class)
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        DemsAuthUsersList da = exchange.getIn().getBody(DemsAuthUsersList.class);
+        DemsGroupMembersSyncData dg = new DemsGroupMembersSyncData(da);
+        exchange.getMessage().setBody(dg);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsGroupMembersSyncData.class)
+    .log("DEMS-bound case group members sync request data: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization", simple("Bearer " + "{{token.dems}}"))
+    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/0/sync")
+    .log("Case group members synchronized.")
     ;
   }
 }

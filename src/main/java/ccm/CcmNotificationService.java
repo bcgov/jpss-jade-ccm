@@ -114,7 +114,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log("Create court case in DEMS.  body = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
     ////.log("Update court case auth list.")
-    ////.to("direct:processCourtCaseAuthListChanged")
+    .to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseUpdated")
@@ -136,6 +136,10 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId("processCourtCaseAuthListChanged")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseAuthList")
     ;
 
     from("direct:processUnknownStatus")
