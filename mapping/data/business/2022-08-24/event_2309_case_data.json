@@ -1,0 +1,53 @@
+{
+    "rcc_id": "50431.0734",
+    "agency_file_no": "22-8382",
+    "security_clearance_level": "8",
+    "synopsis": "Out believe has request not how comfort evident. Up delight cousins we feeling minutes. Genius has looked end piqued spring. Down has rose feel find man. Learning day desirous informed expenses material returned six the. She enabled invited exposed him another. Reasonably conviction solicitude me mr at discretion reasonable. Age out full gate bed day lose.\n\nSo if on advanced addition absolute received replying throwing he. Delighted consisted newspaper of unfeeling as neglected so. Tell size come hard mrs and four fond are. Of in commanded earnestly resources it. At quitting in strictly up wandered of relation answered felicity. Side need at in what dear ever upon if. Same down want joy neat ask pain help she. Alone three stuff use law walls fat asked. Near do that he help.",
+    "initiating_agency": "105: Kelowna Municipal RCMP",
+    "investigating_officer": "Rhodes, Christopher 1001",
+    "proposed_crown_office": "C402: Kelowna Crown Counsel",
+    "rcc_submit_date": "2022-07-22",
+    "assessment_crown_name": "OHarris, Debbie Nn",
+    "case_status_code": "ACT",
+    "file_note": null,
+    "charge": "CCC 102(7) Firearm: posession while prohibited 102(7), CCC 111(1) Firearm application",
+    "limitation_date": "2021-12-22",
+    "earliest_offence_date": "2021-01-01",
+    "earliest_proposed_appearance_date": null,
+    "proposed_process_type_list": "Peterson, Jeffrey Alan; Johnson, Kyle; Grant, Howard James",
+    "dems_case_name": "Peterson, Jeffrey Alan; Johnson, Kyle; Grant, Howard Jame",
+    "case_flags": [],
+    "accused_person": [
+        {
+            "identifier": "97877.0734",
+            "full_name": "Peterson, Jeffrey Alan",
+            "proposed_process_type": null,
+            "proposed_appearance_date": null,
+            "crown_decision_code": null,
+            "offence_date": null,
+            "indigenous_accused_yn": false,
+            "name_and_proposed_process_type": "Peterson, Jeffrey Alan"
+        },
+        {
+            "identifier": "99304.0734",
+            "full_name": "Johnson, Kyle",
+            "proposed_process_type": null,
+            "proposed_appearance_date": null,
+            "crown_decision_code": null,
+            "offence_date": null,
+            "indigenous_accused_yn": false,
+            "name_and_proposed_process_type": "Johnson, Kyle"
+        },
+        {
+            "identifier": "80095.0734",
+            "full_name": "Grant, Howard James",
+            "proposed_process_type": null,
+            "proposed_appearance_date": null,
+            "crown_decision_code": null,
+            "offence_date": null,
+            "indigenous_accused_yn": false,
+            "name_and_proposed_process_type": "Grant, Howard James"
+        }
+    ],
+    "case_decision_cd": "ACT"
+}

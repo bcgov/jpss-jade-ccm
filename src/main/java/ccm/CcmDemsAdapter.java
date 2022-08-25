@@ -28,6 +28,8 @@ import ccm.models.system.dems.DemsAuthUsersList;
 import ccm.models.system.dems.DemsCreateCourtCaseData;
 import ccm.models.system.dems.DemsGroupMembersSyncData;
 
+import java.util.logging.Logger;
+
 import org.apache.camel.CamelException;
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
@@ -120,7 +122,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .doTry()
       .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.agency_file_id_dems_field_id}:${header.rcc_id}/id")
     //.doCatch(HttpOperationFailedException.class)
-    .doCatch(Exception.class)
+    .doCatch(CamelException.class)
       .log("Exception: ${exception}")
       .log("Exchange: ${exchange}")
       .choice()
@@ -133,9 +135,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.ERROR,"Unknown error.  Re-throw ${exception}")
           .process(new Processor() {
             public void process(Exchange exchange) throws Exception {
-              Exception e = exchange.getException();
-
-              throw e;
+              throw exchange.getException();
             }
           })
         .endChoice()
@@ -164,8 +164,17 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    //////////////////////////.toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
-    .log("Court caes created.")
+    .doTry()
+      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR, "Exception: ${exception}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+          throw exchange.getException();
+        }
+      })
+    .endDoTry()
+    .log("Court case created.")
     ;
       
     from("platform-http:/updateCourtCase")

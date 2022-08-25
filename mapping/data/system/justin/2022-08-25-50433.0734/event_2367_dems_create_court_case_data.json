@@ -1,0 +1,61 @@
+{
+    "name": "Jones, Fred; Brown, Jac",
+    "key": "50433.0734",
+    "description": "",
+    "timeZoneId": "Pacific Standard Time",
+    "templateCase": "28",
+    "fields": [
+        {
+            "id": 12,
+            "value": "50433.0734"
+        },
+        {
+            "id": 3,
+            "value": "22-1234"
+        },
+        {
+            "id": 13,
+            "value": "2022-07-26"
+        },
+        {
+            "id": 9,
+            "value": "OHarris, Debbie Nn"
+        },
+        {
+            "id": 14,
+            "value": "ACT"
+        },
+        {
+            "id": 18,
+            "value": "CCC 334 Theft (5,000), CCC 102(6) Firearm: posession while prohibited 102(6)"
+        },
+        {
+            "id": 24,
+            "value": "105: Kelowna Municipal RCMP"
+        },
+        {
+            "id": 25,
+            "value": "Rhodes, Christopher 1001"
+        },
+        {
+            "id": 26,
+            "value": "C402: Kelowna Crown Counsel"
+        },
+        {
+            "id": 28,
+            "value": []
+        },
+        {
+            "id": 29,
+            "value": "2022-07-26"
+        },
+        {
+            "id": 30,
+            "value": null
+        },
+        {
+            "id": 31,
+            "value": "Jones, Fred; Brown, Jack"
+        }
+    ]
+}
