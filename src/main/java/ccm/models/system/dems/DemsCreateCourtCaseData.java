@@ -12,7 +12,7 @@ public class DemsCreateCourtCaseData {
     private String key;
     private String description;
     private String timeZoneId;
-    //private String templateCase;
+    private String templateCase;
     private List<DemsFieldData> fields;
 
     public enum FIELD_MAPPINGS {
@@ -51,7 +51,7 @@ public class DemsCreateCourtCaseData {
         setTimeZoneId(PACIFIC_TIMEZONE);
         //setKey(key);
         //setDescription(description);
-        //setTemplateCase(templateCase);
+        setTemplateCase("28");
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
         DemsFieldData agencyFileId = new DemsFieldData(FIELD_MAPPINGS.AGENCY_FILE_ID.getId(), bcc.getRcc_id());
@@ -118,13 +118,13 @@ public class DemsCreateCourtCaseData {
         this.timeZoneId = timeZoneId;
     }
 
-    // public String getTemplateCase() {
-    //     return templateCase;
-    // }
+    public String getTemplateCase() {
+        return templateCase;
+    }
 
-    // public void setTemplateCase(String templateCase) {
-    //     this.templateCase = templateCase;
-    // }
+    public void setTemplateCase(String templateCase) {
+        this.templateCase = templateCase;
+    }
 
     public List<DemsFieldData> getFields() {
         return fields;
