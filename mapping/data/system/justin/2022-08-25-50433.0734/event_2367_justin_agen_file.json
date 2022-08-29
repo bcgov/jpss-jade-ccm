@@ -1,0 +1,39 @@
+{
+    "rcc_id": "50433.0734",
+    "agency_file_no": "22-1234",
+    "security_clearance_level": "2",
+    "synopsis": "safdasd\nasfas\nasdfas",
+    "initiating_agency_name": "Kelowna Municipal RCMP",
+    "initiating_agency_identifier": "105",
+    "investigating_officer_name": "Rhodes, Christopher",
+    "investigating_officer_pin": "1001",
+    "rcc_submit_date": "2022-07-26",
+    "vul1": "N",
+    "chi1": "N",
+    "crn_decision_agency_identifier": "C402",
+    "crn_decision_agency_name": "Kelowna Crown Counsel",
+    "assessment_crown_name": "OHarris, Debbie Nn",
+    "assessment_crown_part_id": "11429.0026",
+    "case_decision_cd": "ACT",
+    "charge": "CCC 334 Theft (5,000), CCC 102(6) Firearm: posession while prohibited 102(6)",
+    "limitation_date": "2023-07-16",
+    "min_offence_date": "2022-07-26",
+    "accused": [
+        {
+            "part_id": "14912.0026",
+            "accused_name": "Jones, Fred",
+            "proposed_process_type": null,
+            "proposed_appr_date": null,
+            "indigenous_yn": "N",
+            "birth_date": "1962-08-23"
+        },
+        {
+            "part_id": "20564.0045",
+            "accused_name": "Brown, Jack",
+            "proposed_process_type": null,
+            "proposed_appr_date": null,
+            "indigenous_yn": "N",
+            "birth_date": null
+        }
+    ]
+}
