@@ -17,5 +17,15 @@ spec:
           namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: openshift-operators
+    - ports:
+        - protocol: TCP
+          port: 3888
+      from:
+        - podSelector:
+            matchLabels:
+              strimzi.io/kind: cluster-operator
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-operators
   policyTypes:
     - Ingress
