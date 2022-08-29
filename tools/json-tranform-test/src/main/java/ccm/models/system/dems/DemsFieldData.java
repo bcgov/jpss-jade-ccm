@@ -8,16 +8,6 @@ public class DemsFieldData {
     public DemsFieldData() {
     }
 
-    public DemsFieldData(String name, Object value) {
-        setName(name);
-        setValue(value);
-    }
-
-    public DemsFieldData(int id, Object value) {
-        setId(id);
-        setValue(value);
-    }
-
     public DemsFieldData(int id, String name, Object value) {
         setId(id);
         setName(name);
@@ -50,4 +40,4 @@ public class DemsFieldData {
         this.value = value;
     }
 
-}   
+}
