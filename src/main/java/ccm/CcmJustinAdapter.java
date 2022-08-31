@@ -25,9 +25,11 @@ import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
 import ccm.models.system.justin.JustinEventBatch;
+import ccm.models.business.BusinessAuthUsersList;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
 import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAuthUsersList;
 import ccm.models.system.justin.JustinEvent;
 
 class JustinEventBatchProcessor implements Processor {
@@ -136,20 +138,19 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
 
     from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
-    .routeId("loadSampleJustinEventBatchFromFile")
+    .routeId("requeueEvents")
     //.log("Processing file with content: ${body}")
     //.to("direct:processJustinEventBatch")
-    .to("direct:requeueEvent2045")
-    ;
-
-    from("direct:requeueEvent2045")
-    .routeId("requeueEvent2045")
-    .log("Re-queueing event 2045...")
+    .log("Re-queueing event(s)...")
     //.removeHeaders("*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("{{justin.host}}/requeueEventById?id=2045")
-    .to("{{justin.host}}/requeueEventById?id=2060")
+    //.to("{{justin.host}}/requeueEventById?id=2045")
+    //.to("{{justin.host}}/requeueEventById?id=2060")
+    //.to("{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
+    //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
+    .to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
+    //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")
@@ -158,10 +159,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/newEventsBatch") // mark all new events as "in progres"
-    .log("Marking all new events in JUSTIN as 'in progress': ${body}")
+    //.log("Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents") // retrieve all "in progress" events
-    .log("Processing in progress events from JUSTIN: ${body}")
+    //.log("Processing in progress events from JUSTIN: ${body}")
     .to("direct:processJustinEventBatch")
     ;
 
@@ -181,7 +182,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.to("direct:processNewJUSTINEvents");
-    .log("Processing new JUSTIN events: ${body}")
+    //.log("Processing new JUSTIN events: ${body}")
     //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
@@ -207,7 +208,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           .to("direct:processUnknownEvent")
         .endChoice()
       .end()
-      ;
+    ;
 
       //.to("direct:processOneJUSTINEvent");
     
@@ -232,7 +233,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .process(new JustinAgenFileEventProcessor())
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .setProperty("business_event").body()
-    .log("Generate converted business event: ${body}")
+    .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
@@ -299,14 +300,14 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/getCourtCaseDetails?httpMethodRestrict=GET")
     .routeId("getCourtCaseDetails")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseDetails request received. number = ${header.number}")
+    .log("getCourtCaseDetails request received. number = ${header[number]}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    //.setHeader("rcc_id", simple("${header.number}"))
-    .toD("{{justin.host}}/agencyFile?rcc_id=${header.number}")
+    .removeHeader("rcc_id")
+    .toD("{{justin.host}}/agencyFile?rcc_id=${header[number]}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAgencyFile.class)
     .process(new Processor() {
@@ -318,6 +319,30 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+    from("platform-http:/getCourtCaseAuthList?httpMethodRestrict=GET")
+    .routeId("getCourtCaseAuthList")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("getCaseAuthList request received. rcc_id = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .toD("{{justin.host}}/authUsers?rcc_id=${header.number}")
+    .log("Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinAuthUsersList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinAuthUsersList j = exchange.getIn().getBody(JustinAuthUsersList.class);
+        BusinessAuthUsersList b = new BusinessAuthUsersList(j);
+        exchange.getMessage().setBody(b, BusinessAuthUsersList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

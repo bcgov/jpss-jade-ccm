@@ -10,6 +10,7 @@ kamel -n cef5dd-dev run \
   --resource file:../../../../mapping/data/system/justin/sampleEventRecord.json \
   --property file:ccmJustinAdapter.properties \
   --profile openshift \
+  --trait environment.vars=TZ="Canada/Pacific" \
   --trait dependencies.enabled=true \
   --trait route.enabled=false \
   --trait service.node-port=false
@@ -18,6 +19,7 @@ kamel -n cef5dd-dev run \
   # --dependency github:agahchen/jpss-jade-ccm-models \
   # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
   # --resource file:../../mapping/justin2businessCourtCaseData.adm \
+  # --trait logging.level=DEBUG
 
 popd
 

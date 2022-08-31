@@ -111,10 +111,10 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .log("Create court case in DEMS.  body = ${body}.")
+    .log("Create court case in DEMS.  Court case data = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
-    ////.log("Update court case auth list.")
-    ////.to("direct:processCourtCaseAuthListChanged")
+    .log("Update court case auth list.")
+    .to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseUpdated")
@@ -126,16 +126,23 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .log("Update court case in DEMS.  body = ${body}.")
+    .log("Update court case in DEMS.  Court case data = ${body}.")
     .to("http://ccm-dems-adapter/updateCourtCase")
-    ////.log("Update court case auth list.")
-    ////.to("direct:processCourtCaseAuthListChanged")
+    /////.log("Update court case auth list.")
+    /////.to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
     .routeId("processCourtCaseAuthListChanged")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_object_id}")
+    .log("Retrieve court case auth list")
+    .to("http://ccm-lookup-service/getCourtCaseAuthList")
+    .log("Update court case auth list in DEMS")
+    .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
 
     from("direct:processUnknownStatus")

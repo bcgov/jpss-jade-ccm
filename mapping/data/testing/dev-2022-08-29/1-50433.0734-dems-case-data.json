@@ -1,0 +1,74 @@
+{
+    "name": "Jones, Fred; Brown, Jack",
+    "key": "50433.0734",
+    "description": null,
+    "timeZoneId": "Pacific Standard Time",
+    "templateCase": "28",
+    "fields": [
+        {
+            "id": 12,
+            "name": "Agency File ID",
+            "value": "50433.0734"
+        },
+        {
+            "id": 3,
+            "name": "Agency File No.",
+            "value": "22-1234"
+        },
+        {
+            "id": 13,
+            "name": "Submit Date",
+            "value": "2022-07-26"
+        },
+        {
+            "id": 9,
+            "name": "Assessment Crown",
+            "value": "OHarris, Debbie Nn"
+        },
+        {
+            "id": 14,
+            "name": "Case Decision",
+            "value": "ACT"
+        },
+        {
+            "id": 18,
+            "name": "Proposed Charges",
+            "value": "CCC 334 Theft (5,000), CCC 102(6) Firearm: posession while prohibited 102(6)"
+        },
+        {
+            "id": 24,
+            "name": "Initiating Agency",
+            "value": "105: Kelowna Municipal RCMP"
+        },
+        {
+            "id": 25,
+            "name": "Investigating Officer",
+            "value": "Rhodes, Christopher 1001"
+        },
+        {
+            "id": 26,
+            "name": "Proposed Crown Office",
+            "value": "C402: Kelowna Crown Counsel"
+        },
+        {
+            "id": 28,
+            "name": "Case Flags",
+            "value": []
+        },
+        {
+            "id": 29,
+            "name": "Offence Date (earliest)",
+            "value": "2022-07-26"
+        },
+        {
+            "id": 30,
+            "name": "Proposed App. Date (earliest)",
+            "value": null
+        },
+        {
+            "id": 31,
+            "name": "Proposed Process Type",
+            "value": "Jones, Fred; Brown, Jack"
+        }
+    ]
+}
