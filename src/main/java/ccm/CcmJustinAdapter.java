@@ -233,7 +233,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .process(new JustinAgenFileEventProcessor())
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .setProperty("business_event").body()
-    .log("Generate converted business event: ${body}")
+    .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")

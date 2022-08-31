@@ -111,9 +111,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .log("Create court case in DEMS.  body = ${body}.")
+    .log("Create court case in DEMS.  Court case data = ${body}.")
     .to("http://ccm-dems-adapter/createCourtCase")
-    ////.log("Update court case auth list.")
+    .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
     ;
 
@@ -126,10 +126,10 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .log("Update court case in DEMS.  body = ${body}.")
+    .log("Update court case in DEMS.  Court case data = ${body}.")
     .to("http://ccm-dems-adapter/updateCourtCase")
-    ////.log("Update court case auth list.")
-    .to("direct:processCourtCaseAuthListChanged")
+    /////.log("Update court case auth list.")
+    /////.to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
