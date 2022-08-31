@@ -1,9 +1,9 @@
 package ccm.models.system.dems;
 
-public class DemsCaseFlagFieldData {
+public class DemsSubsetFieldData {
     private int id;
 
-    public DemsCaseFlagFieldData(int id) {
+    public DemsSubsetFieldData(int id) {
         setId(id);
     }
 
