@@ -128,8 +128,8 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Update court case in DEMS.  Court case data = ${body}.")
     .to("http://ccm-dems-adapter/updateCourtCase")
-    /////.log("Update court case auth list.")
-    /////.to("direct:processCourtCaseAuthListChanged")
+    .log("Update court case auth list.")
+    .to("direct:processCourtCaseAuthListChanged")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
@@ -141,7 +141,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number").simple("${header.event_object_id}")
     .log("Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
-    .log("Update court case auth list in DEMS")
+    .log("Update court case auth list in DEMS.  Court case auth list = ${body}")
+    // work around -- not sure why body doesn't make it into dems-adapter
+    .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
 
