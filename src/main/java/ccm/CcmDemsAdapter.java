@@ -203,10 +203,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, DemsCreateCourtCaseData.class)
     .log("DEMS-bound request data: '${body}'")
+    .setProperty("update_data", simple("${body}"))
     // get case id
-    // ....
-    .setProperty("dems_case_id", simple("71"))
+    .setProperty("key", jsonpath("$.key"))
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
     // update case
+    .setBody(simple("${exchangeProperty.update_data}"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -219,12 +222,18 @@ public class CcmDemsAdapter extends RouteBuilder {
       
     from("platform-http:/syncCaseUserList")
     .routeId("syncCaseUserList")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("key", simple("${header.event_object_id}"))
+    //.setBody(simple("{\"rcc_id\":\"50433.0734\",\"auth_users_list\":[{\"part_id\":\"11429.0026\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85056.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85062.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85170.0734\",\"crown_agency\":null,\"user_name\":null}]}"))
+    .setBody(simple("${header.temp-body}"))
+    .removeHeader("temp-body")
+    .log("Processing syncCaseUserList request (event_object_id = ${exchangeProperty.event_object_id}): ${body}")
     .to("direct:syncCaseUserList");
 
     from("direct:syncCaseUserList")
     .routeId("direct-syncCaseUserList")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Processing syncCaseUserList request: ${body}")
+    .log("Processing direct-syncCaseUserList request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
     .process(new Processor() {
@@ -232,21 +241,16 @@ public class CcmDemsAdapter extends RouteBuilder {
         BusinessAuthUsersList b = exchange.getIn().getBody(BusinessAuthUsersList.class);
         DemsAuthUsersList da = new DemsAuthUsersList(b);
         exchange.getMessage().setBody(da);
-        exchange.setProperty("event_object_id", b.getRcc_id());
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class)
     .setProperty("demsAuthUserList").simple("${body}")
     .log("DEMS-bound case users sync request data: '${body}'")
-    //
-    // retrieve case id using event_object_id
-    .removeHeader("event_object_id")
-    .setHeader("event_object_id").simple("${exchangeProperty.event_object_id}")
-    .log("Retrieving id for case with key = ${header.event_object_id}")
-    .to("direct:getCourtCaseExists")
-    .setProperty("dems_case_id").jsonpath("$.id")
-    .log("Case id retrieved: ${exchangeProperty.dems_case_id}")
-    //
+    .setProperty("sync_data", simple("${body}"))
+    // get case id
+    // exchangeProperty.key already set
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
     // sync case users
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
