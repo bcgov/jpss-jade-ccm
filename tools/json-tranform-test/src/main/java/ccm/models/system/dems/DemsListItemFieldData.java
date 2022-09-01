@@ -1,9 +1,9 @@
 package ccm.models.system.dems;
 
-public class DemsSubsetFieldData {
+public class DemsListItemFieldData {
     private int id;
 
-    public DemsSubsetFieldData(int id) {
+    public DemsListItemFieldData(int id) {
         setId(id);
     }
 

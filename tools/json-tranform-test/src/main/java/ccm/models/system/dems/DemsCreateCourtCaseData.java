@@ -7,8 +7,10 @@ import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCreateCourtCaseData {
-	public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
+    public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
     public static final String TEMPLATE_CASE = "28";
+    public static final String COMMA_STRING = ",";
+    public static final String SEMICOLON_SPACE_STRING = "; ";
 
     private String name;
     private String key;
@@ -32,13 +34,13 @@ public class DemsCreateCourtCaseData {
         PROPOSED_APP_DATE(30, "Proposed App. Date (earliest)"),
         PROPOSED_PROCESS_TYPE(31, "Proposed Process Type");
 
-		private int id;
+        private int id;
         private String label;
 
-		private FIELD_MAPPINGS(int id, String label) {
-			this.id = id;
+        private FIELD_MAPPINGS(int id, String label) {
+            this.id = id;
             this.label = label;
-		}
+        }
 
         public int getId() {
             return id;
@@ -54,11 +56,11 @@ public class DemsCreateCourtCaseData {
         K(11),
         Indigenous(12);
 
-		private int id;
+        private int id;
 
-		private CASE_FLAG_FIELD_MAPPINGS(int id) {
-			this.id = id;
-		}
+        private CASE_FLAG_FIELD_MAPPINGS(int id) {
+            this.id = id;
+        }
 
         public int getId() {
             return id;
@@ -73,11 +75,11 @@ public class DemsCreateCourtCaseData {
         NAC(7),
         REF(8);
 
-		private int id;
+        private int id;
 
-		private CASE_DECISION_FIELD_MAPPINGS(int id) {
-			this.id = id;
-		}
+        private CASE_DECISION_FIELD_MAPPINGS(int id) {
+            this.id = id;
+        }
 
         public int getId() {
             return id;
@@ -92,43 +94,53 @@ public class DemsCreateCourtCaseData {
         for (BusinessCourtCaseAccused ba : bcc.getAccused_person()) {
             // Map 87
             if(accused_names.length() > 0) {
-                accused_names.append("; ");
+                accused_names.append(SEMICOLON_SPACE_STRING);
             }
-            accused_names.append(ba.getFull_name());
+            if(ba.getFull_name() != null && !ba.getFull_name().isEmpty()) {
+                // JADE-1470 surnames should be in all uppercase.
+                String[] names = ba.getFull_name().split(COMMA_STRING, 2);
+                if(names.length > 1) {
+                    accused_names.append(names[0].toUpperCase());
+                    accused_names.append(COMMA_STRING);
+                    accused_names.append(names[1]);
+                } else {
+                    accused_names.append(ba.getFull_name());
+                }
+            }
         }
         setName(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()));
         setTimeZoneId(PACIFIC_TIMEZONE);
-        //setKey(key);
-        //setDescription(description);
+        setKey(bcc.getRcc_id());
+        setDescription("");
         setTemplateCase(TEMPLATE_CASE);
 
 
         // Map any case flags that exist
-        List<DemsSubsetFieldData> caseFlagList = new ArrayList<DemsSubsetFieldData>();
+        List<DemsListItemFieldData> caseFlagList = new ArrayList<DemsListItemFieldData>();
         for (String caseFlag : bcc.getCase_flags()) {
             if(CASE_FLAG_FIELD_MAPPINGS.VUL1.name().equals(caseFlag)) {
-                caseFlagList.add(new DemsSubsetFieldData(CASE_FLAG_FIELD_MAPPINGS.VUL1.getId()));
+                caseFlagList.add(new DemsListItemFieldData(CASE_FLAG_FIELD_MAPPINGS.VUL1.getId()));
             } else if(CASE_FLAG_FIELD_MAPPINGS.CHI1.name().equals(caseFlag)) {
-                caseFlagList.add(new DemsSubsetFieldData(CASE_FLAG_FIELD_MAPPINGS.CHI1.getId()));
+                caseFlagList.add(new DemsListItemFieldData(CASE_FLAG_FIELD_MAPPINGS.CHI1.getId()));
             } else if(CASE_FLAG_FIELD_MAPPINGS.Indigenous.name().equals(caseFlag)) {
-                caseFlagList.add(new DemsSubsetFieldData(CASE_FLAG_FIELD_MAPPINGS.Indigenous.getId()));
+                caseFlagList.add(new DemsListItemFieldData(CASE_FLAG_FIELD_MAPPINGS.Indigenous.getId()));
             } else if(CASE_FLAG_FIELD_MAPPINGS.K.name().equals(caseFlag)) {
-                caseFlagList.add(new DemsSubsetFieldData(CASE_FLAG_FIELD_MAPPINGS.K.getId()));
+                caseFlagList.add(new DemsListItemFieldData(CASE_FLAG_FIELD_MAPPINGS.K.getId()));
             }
         }
-        DemsSubsetFieldData caseDecisionValue = null;
+        DemsListItemFieldData caseDecisionValue = null;
         if(CASE_DECISION_FIELD_MAPPINGS.ADV.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.ADV.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.ADV.getId());
         } else if(CASE_DECISION_FIELD_MAPPINGS.ACT.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.ACT.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.ACT.getId());
         } else if(CASE_DECISION_FIELD_MAPPINGS.RET.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.RET.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.RET.getId());
         } else if(CASE_DECISION_FIELD_MAPPINGS.ACL.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.ACL.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.ACL.getId());
         } else if(CASE_DECISION_FIELD_MAPPINGS.NAC.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.NAC.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.NAC.getId());
         } else if(CASE_DECISION_FIELD_MAPPINGS.REF.name().equals(bcc.getCase_decision_cd())) {
-            caseDecisionValue = new DemsSubsetFieldData(CASE_DECISION_FIELD_MAPPINGS.REF.getId());
+            caseDecisionValue = new DemsListItemFieldData(CASE_DECISION_FIELD_MAPPINGS.REF.getId());
         }
 
 
