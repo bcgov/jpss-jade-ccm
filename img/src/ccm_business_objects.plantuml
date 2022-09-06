@@ -1,0 +1,12 @@
+@startuml objects
+
+object "JUSTIN Agency File" as justin_agency_file
+object "JUSTIN Court File" as justin_court_file
+object "Common Court Case" as common_court_case
+object "DEMS Case" as dems_case
+
+justin_court_file o- "0..*" justin_agency_file
+justin_agency_file --> common_court_case
+common_court_case --> dems_case
+
+@enduml
