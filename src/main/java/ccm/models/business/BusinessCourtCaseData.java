@@ -65,45 +65,50 @@ public class BusinessCourtCaseData {
         if ("Y".equalsIgnoreCase(jaf.getChi1())) {
             case_flags.add("CHI1");
         }
-        for (JustinAccused accused : jaf.getAccused()) {
-            if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
-                 case_flags.add("Indigenous");
-                 break;
+        if(jaf.getAccused() != null) {
+            for (JustinAccused accused : jaf.getAccused()) {
+                if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
+                    case_flags.add("Indigenous");
+                    break;
+                }
             }
         }
+
         // TODO: need definition of intimate partner violence (MAP 74)
         //if ("Y" == jaf.getIPV1()) { case_flags.add("K"); };
 
         List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
-        String earliest_proposed_appearance_date = jaf.getAccused().get(0).getProposed_appr_date();
+        String earliest_proposed_appearance_date = null;
 
 
         StringBuilder proposed_process_type_builder = new StringBuilder();
         StringBuilder accused_names = new StringBuilder();
 
-        for (JustinAccused ja : jaf.getAccused()) {
+        if(jaf.getAccused() != null) {
+            for (JustinAccused ja : jaf.getAccused()) {
 
-            BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
-            accusedList.add(accused);
+                BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
+                accusedList.add(accused);
 
-            // Map 73
-            if(accused.getName_and_proposed_process_type() != null) {
-                if(proposed_process_type_builder.length() > 0) {
-                    proposed_process_type_builder.append("; ");
+                // Map 73
+                if(accused.getName_and_proposed_process_type() != null) {
+                    if(proposed_process_type_builder.length() > 0) {
+                        proposed_process_type_builder.append("; ");
+                    }
+                    proposed_process_type_builder.append(accused.getName_and_proposed_process_type());
                 }
-                proposed_process_type_builder.append(accused.getName_and_proposed_process_type());
-            }
 
-            // Map 72
-            if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
-                earliest_proposed_appearance_date = ja.getProposed_appr_date();
-            }
+                // Map 72
+                if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
+                    earliest_proposed_appearance_date = ja.getProposed_appr_date();
+                }
 
-            // Map 87
-            if(accused_names.length() > 0) {
-                accused_names.append("; ");
+                // Map 87
+                if(accused_names.length() > 0) {
+                    accused_names.append("; ");
+                }
+                accused_names.append(ja.getAccused_name());
             }
-            accused_names.append(ja.getAccused_name());
         }
         setProposed_process_type_list(proposed_process_type_builder.toString());
         setAccused_person(accusedList);
