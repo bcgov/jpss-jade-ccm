@@ -1,0 +1,40 @@
+{
+    "mdoc_justin_no": "39612",
+    "home_court_agency_name": "Kelowna Law Courts",
+    "home_court_agency_identifier": "4801",
+    "court_file_no": "1272021",
+    "type_reference": null,
+    "mdoc_seq_no": "25",
+    "kfile_yn": "N",
+    "court_level_cd": "P",
+    "court_class_cd": "A",
+    "file_designation": "SPC",
+    "sworn_date": null,
+    "approved_charges": "CCC 348(1)(a) Breaking and entering with intent, CCC 356(1)(a) Theft from mail",
+    "crown_election": "IND",
+    "mdocaccused": [
+        {
+            "part_id": "97735.0734",
+            "accused_name": "Soso, Sammy",
+            "indigenous_yn": "N",
+            "birth_date": null
+        }
+    ],
+    "related_rcc": [
+        {
+            "rcc_id": "50361.0734",
+            "agency_file_no": "RU-1272021",
+            "primary_yn": "N"
+        }
+    ],
+    "related_court_file": [
+        {
+            "mdoc_justin_no": "39509",
+            "mdoc_relation_type_cd": "C"
+        },
+        {
+            "mdoc_justin_no": "39581",
+            "mdoc_relation_type_cd": "C"
+        }
+    ]
+}

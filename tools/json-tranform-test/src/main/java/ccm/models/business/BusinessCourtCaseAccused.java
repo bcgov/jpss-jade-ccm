@@ -11,7 +11,10 @@ public class BusinessCourtCaseAccused {
     private String offence_date;
     private Boolean indigenous_accused_yn;
     private String name_and_proposed_process_type;
+    private String birth_date;
 
+    public BusinessCourtCaseAccused() {
+    }
 
     public BusinessCourtCaseAccused(JustinAccused ja) {
         setIdentifier(ja.getPart_id());
@@ -20,6 +23,7 @@ public class BusinessCourtCaseAccused {
         setProposed_appearance_date(ja.getProposed_appr_date());
         setCrown_decision_code(ja.getCrown_decision());
         setOffence_date(ja.getOffence_date());
+        setBirth_date(ja.getBirth_date());
 
         // Map 78
         if ("Y" == ja.getIndigenous_yn()) {
@@ -103,5 +107,12 @@ public class BusinessCourtCaseAccused {
         this.name_and_proposed_process_type = name_and_proposed_process_type;
     }
 
-    
+    public String getBirth_date() {
+        return birth_date;
+    }
+
+    public void setBirth_date(String birth_date) {
+        this.birth_date = birth_date;
+    }
+
 }
