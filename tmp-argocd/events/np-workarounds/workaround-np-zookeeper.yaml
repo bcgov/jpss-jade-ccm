@@ -17,5 +17,11 @@ spec:
           namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: openshift-operators
+    - ports:
+        - protocol: TCP
+          port: 2181
+    - ports:
+        - protocol: TCP
+          port: 3888
   policyTypes:
     - Ingress

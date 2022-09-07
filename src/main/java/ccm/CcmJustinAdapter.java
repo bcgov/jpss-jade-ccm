@@ -21,7 +21,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.component.kafka.KafkaConstants;
+//import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
 import ccm.models.system.justin.JustinEventBatch;
@@ -93,7 +93,7 @@ class JustinAgenFileEventProcessor implements Processor {
     BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
 
     exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
-    exchange.getMessage().setHeader(KafkaConstants.KEY, be.getEvent_object_id());
+    exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
   }
 }
 
@@ -103,15 +103,12 @@ class JustinAuthListEventProcessor implements Processor {
     // Insert code that gets executed *before* delegating
     // to the next processor in the chain.
 
-    String exchangeId = exchange.getExchangeId();
-    String messageId = exchange.getIn().getMessageId();
-
     JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
 
     BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
 
     exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
-    exchange.getMessage().setHeader(KafkaConstants.KEY, be.getEvent_object_id());
+    exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
   }
 }
 
