@@ -22,7 +22,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
-import ccm.models.system.dems.DemsCreateCourtCaseData;
+import ccm.models.system.dems.DemsCourtCaseData;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -142,7 +142,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log("Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
     .log("Update court case auth list in DEMS.  Court case auth list = ${body}")
-    // work around -- not sure why body doesn't make it into dems-adapter
+    // JADE-1489 work around -- not sure why body doesn't make it into dems-adapter
     .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;

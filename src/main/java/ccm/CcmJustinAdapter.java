@@ -146,8 +146,9 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.to("{{justin.host}}/requeueEventById?id=2060")
     //.to("{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
     //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
-    .to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
+    //.to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
     //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
+    .to("{{justin.host}}/requeueEventById?id=2367")// COURT_FILE 39857
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")

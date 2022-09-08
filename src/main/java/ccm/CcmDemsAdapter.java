@@ -25,7 +25,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.business.BusinessAuthUsersList;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.system.dems.DemsAuthUsersList;
-import ccm.models.system.dems.DemsCreateCourtCaseData;
+import ccm.models.system.dems.DemsCourtCaseData;
 import ccm.models.system.dems.DemsGroupMembersSyncData;
 
 import org.apache.camel.CamelException;
@@ -163,11 +163,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .process(new Processor() {
       public void process(Exchange exchange) {
         BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
-        DemsCreateCourtCaseData d = new DemsCreateCourtCaseData(b);
+        DemsCourtCaseData d = new DemsCourtCaseData(b);
         exchange.getMessage().setBody(d);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, DemsCreateCourtCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseData.class)
     .log("DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -197,11 +197,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .process(new Processor() {
       public void process(Exchange exchange) {
         BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
-        DemsCreateCourtCaseData d = new DemsCreateCourtCaseData(b);
+        DemsCourtCaseData d = new DemsCourtCaseData(b);
         exchange.getMessage().setBody(d);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, DemsCreateCourtCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseData.class)
     .log("DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id

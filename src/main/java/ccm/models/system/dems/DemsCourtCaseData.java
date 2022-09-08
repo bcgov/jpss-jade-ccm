@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsCreateCourtCaseData {
+public class DemsCourtCaseData {
     public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
     public static final String TEMPLATE_CASE = "28";
     public static final String COMMA_STRING = ",";
@@ -85,10 +85,10 @@ public class DemsCreateCourtCaseData {
             return id;
         }
     }
-    public DemsCreateCourtCaseData() {
+    public DemsCourtCaseData() {
     }
 
-    public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
+    public DemsCourtCaseData(BusinessCourtCaseData bcc) {
 
         StringBuilder accused_names = new StringBuilder();
         for (BusinessCourtCaseAccused ba : bcc.getAccused_person()) {
