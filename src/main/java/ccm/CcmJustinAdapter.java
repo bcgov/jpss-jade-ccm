@@ -72,6 +72,9 @@ class JustinEventBatchProcessor implements Processor {
         } else if (e.isAuthListEvent()) {
           // auth list changed.  Generate new business event.
           System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + be.getJustin_rcc_id() + "')..");
+        } else if (e.isCourtFileEvent()) {
+          // court file changed.  Generate new business event.
+          System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + be.getJustin_mdoc_no() + "')..");
         } else {
           System.out.println(" Unknown JUSTIN event type; Do nothing.");
         }
@@ -79,36 +82,6 @@ class JustinEventBatchProcessor implements Processor {
     }
 
     exchange.getMessage().setBody("OK");
-  }
-}
-
-class JustinAgenFileEventProcessor implements Processor {
-  @Override
-  public void process(Exchange exchange) throws Exception {
-    // Insert code that gets executed *before* delegating
-    // to the next processor in the chain.
-
-    JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-
-    BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
-
-    exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
-    exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
-  }
-}
-
-class JustinAuthListEventProcessor implements Processor {
-  @Override
-  public void process(Exchange exchange) throws Exception {
-    // Insert code that gets executed *before* delegating
-    // to the next processor in the chain.
-
-    JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-
-    BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
-
-    exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
-    exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
   }
 }
 
@@ -148,7 +121,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
     //.to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
     //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
-    .to("{{justin.host}}/requeueEventById?id=2367")// COURT_FILE 39857
+    .to("{{justin.host}}/requeueEventById?id=2451")// COURT_FILE 39857
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")
@@ -201,6 +174,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AUTH_LIST))
           .to("direct:processAuthListEvent")
         .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_COURT_FILE))
+          .to("direct:processCourtFileEvent")
+        .endChoice()
         .otherwise()
           .log("message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -228,7 +204,19 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setProperty("justin_event").body()
     .log("Processing AGEN_FILE event: ${exchangeProperty.justin_event}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
-    .process(new JustinAgenFileEventProcessor())
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // Insert code that gets executed *before* delegating
+        // to the next processor in the chain.
+    
+        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+    
+        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+    
+        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+      }})
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")
@@ -243,7 +231,46 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setProperty("justin_event").body()
     .log("Processing AUTH_LIST event: ${exchangeProperty.justin_event}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
-    .process(new JustinAuthListEventProcessor())
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // Insert code that gets executed *before* delegating
+        // to the next processor in the chain.
+    
+        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+    
+        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+    
+        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+      }})
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .setProperty("business_event").body()
+    .log("Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.courtcases.name}}")
+    .setBody(simple("${exchangeProperty.justin_event}"))
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:processCourtFileEvent")
+    .routeId("processCourtFileEvent")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .log("Processing COURT_FILE event: ${exchangeProperty.justin_event}")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // Insert code that gets executed *before* delegating
+        // to the next processor in the chain.
+    
+        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+    
+        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+    
+        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+      }})
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")

@@ -221,19 +221,19 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
       
     from("platform-http:/syncCaseUserList")
-    .routeId("syncCaseUserList")
+    .routeId("rest-syncCaseUserList")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("key", simple("${header.event_object_id}"))
     //.setBody(simple("{\"rcc_id\":\"50433.0734\",\"auth_users_list\":[{\"part_id\":\"11429.0026\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85056.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85062.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85170.0734\",\"crown_agency\":null,\"user_name\":null}]}"))
     .setBody(simple("${header.temp-body}"))
     .removeHeader("temp-body")
-    .log("Processing syncCaseUserList request (event_object_id = ${exchangeProperty.event_object_id}): ${body}")
+    .log("Processing rest-syncCaseUserList request (event_object_id = ${exchangeProperty.event_object_id}): ${body}")
     .to("direct:syncCaseUserList");
 
     from("direct:syncCaseUserList")
-    .routeId("direct-syncCaseUserList")
+    .routeId("syncCaseUserList")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Processing direct-syncCaseUserList request: ${body}")
+    .log("Processing syncCaseUserList request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
     .process(new Processor() {

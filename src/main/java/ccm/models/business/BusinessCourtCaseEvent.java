@@ -13,6 +13,7 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_rcc_id;
+  private String justin_mdoc_no;
 
   public static final String COURT_CASE_EVENT_VERSION = "1.0";
 
@@ -20,10 +21,12 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   public static final String STATUS_CREATED = "CREATED";
   public static final String STATUS_UPDATED = "UPDATED";
   public static final String STATUS_AUTH_LIST_CHANGED = "AUTH_LIST_CHANGED";
+  public static final String STATUS_METADATA_CHANGED = "METADATA_CHANGED";
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_RCC_ID = "RCC_ID";
+  public static final String JUSTIN_MDOC_NO = "MDOC_JUSTIN_NO";
 
   public BusinessCourtCaseEvent() {
     super.setEvent_version(COURT_CASE_EVENT_VERSION);
@@ -42,6 +45,9 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
       case JustinEvent.EVENT_TYPE_AUTH_LIST:
         setCourt_case_status(STATUS_AUTH_LIST_CHANGED);
         break;
+      case JustinEvent.EVENT_TYPE_COURT_FILE:
+        setCourt_case_status(STATUS_METADATA_CHANGED);
+        break;
     }
     
     Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
@@ -57,6 +63,9 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
           break;
         case JUSTIN_RCC_ID:
           setJustin_rcc_id(jed.getData_value_txt());
+          break;
+        case JUSTIN_MDOC_NO:
+          setJustin_mdoc_no(jed.getData_value_txt());
           break;
       }
     }
@@ -135,4 +144,14 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   public void setJustin_rcc_id(String justin_rcc_id) {
     this.justin_rcc_id = justin_rcc_id;
   }
+
+  public String getJustin_mdoc_no() {
+    return justin_mdoc_no;
+  }
+
+  public void setJustin_mdoc_no(String justin_mdoc_no) {
+    this.justin_mdoc_no = justin_mdoc_no;
+  }
+
+  
 }
