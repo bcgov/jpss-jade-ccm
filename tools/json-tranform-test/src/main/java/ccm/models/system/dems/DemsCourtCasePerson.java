@@ -2,12 +2,14 @@ package ccm.models.system.dems;
 
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsCreateCourtCasePerson {
+public class DemsCourtCasePerson {
     private String unique_identifier;
     private String full_name;
 
+    public DemsCourtCasePerson() {
+    }
 
-    public DemsCreateCourtCasePerson(BusinessCourtCaseAccused ba) {
+    public DemsCourtCasePerson(BusinessCourtCaseAccused ba) {
         setUnique_identifier(ba.getIdentifier());
         setFull_name(ba.getFull_name());
     }

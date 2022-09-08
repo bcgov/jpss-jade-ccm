@@ -7,7 +7,7 @@ import ccm.models.system.justin.JustinCourtFile;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BusinessCourtFileData {
+public class BusinessCourtCaseMetadataData {
   public static final String DASH_STRING = "-";
   public static final String COLON_STRING = "-";
   public static final String YES_STRING = "Y";
@@ -29,12 +29,12 @@ public class BusinessCourtFileData {
 
   private List<BusinessCourtCaseAccused> accused_person;
   private List<BusinessCourtCaseData> related_agency_file;
-  private List<BusinessCourtFileData> related_court_file;
+  private List<BusinessCourtCaseMetadataData> related_court_file;
 
-  public BusinessCourtFileData() {
+  public BusinessCourtCaseMetadataData() {
   }
 
-  public BusinessCourtFileData(JustinCourtFile jcf) {
+  public BusinessCourtCaseMetadataData(JustinCourtFile jcf) {
       setCourt_file_id(jcf.getMdoc_justin_no());
       setCourt_file_no(jcf.getCourt_file_no());
       setCourt_file_type_reference(jcf.getType_reference());
@@ -105,12 +105,12 @@ public class BusinessCourtFileData {
       setRelated_agency_file(agencyList);
 
 
-      List<BusinessCourtFileData> relatedList = new ArrayList<BusinessCourtFileData>();
+      List<BusinessCourtCaseMetadataData> relatedList = new ArrayList<BusinessCourtCaseMetadataData>();
 
       if(jcf.getRelated_court_file() != null) {
         for (JustinCourtFile rjcf : jcf.getRelated_court_file()) {
 
-          BusinessCourtFileData related = new BusinessCourtFileData(rjcf);
+          BusinessCourtCaseMetadataData related = new BusinessCourtCaseMetadataData(rjcf);
           relatedList.add(related);
         }
       }
@@ -234,10 +234,10 @@ public class BusinessCourtFileData {
   public void setRelated_agency_file(List<BusinessCourtCaseData> related_agency_file) {
     this.related_agency_file = related_agency_file;
   }
-  public List<BusinessCourtFileData> getRelated_court_file() {
+  public List<BusinessCourtCaseMetadataData> getRelated_court_file() {
     return related_court_file;
   }
-  public void setRelated_court_file(List<BusinessCourtFileData> related_court_file) {
+  public void setRelated_court_file(List<BusinessCourtCaseMetadataData> related_court_file) {
     this.related_court_file = related_court_file;
   }
 
