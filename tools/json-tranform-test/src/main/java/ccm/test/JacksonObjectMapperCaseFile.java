@@ -21,8 +21,8 @@ import ccm.models.system.justin.JustinCrownAssignments;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseAccused;
-import ccm.models.business.BusinessCourtFileData;
-import ccm.models.system.dems.DemsCreateCourtCaseData;
+import ccm.models.business.BusinessCourtCaseMetadataData;
+import ccm.models.system.dems.DemsCourtCaseData;
 import ccm.models.system.dems.DemsFieldData;
 
 
@@ -49,10 +49,10 @@ public class JacksonObjectMapperCaseFile {
 		System.out.println("JustinCourtFile JSON is\n"+stringFile);
 
 
-		BusinessCourtFileData businessFile = new BusinessCourtFileData(courtFile);
+		BusinessCourtCaseMetadataData businessFile = new BusinessCourtCaseMetadataData(courtFile);
 
 		objectMapper.writeValue(stringFile2, businessFile);
-		System.out.println("\n\nBusinessCourtFileData JSON is\n"+stringFile2);
+		System.out.println("\n\nBusinessCourtCaseMetadataData JSON is\n"+stringFile2);
 
 /*
 
@@ -66,7 +66,7 @@ public class JacksonObjectMapperCaseFile {
 
 		StringWriter stringFile4 = new StringWriter();
 		objectMapper.writeValue(stringFile4, crownAssignments);
-		System.out.println("JustinCrownAssignments JSON is\n"+stringFile4);
+		System.out.println("\n\n\n\nJustinCrownAssignments JSON is\n"+stringFile4);
 
 		stringFile.close();
 		stringFile2.close();

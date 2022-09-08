@@ -15,9 +15,14 @@ public class JustinEvent {
 
   public static final String EVENT_TYPE_AGEN_FILE = "AGEN_FILE";
   public static final String EVENT_TYPE_AUTH_LIST = "AUTH_LIST";
+  public static final String EVENT_TYPE_COURT_FILE = "COURT_FILE";
 
   public boolean isAgenFileEvent() {
     return EVENT_TYPE_AGEN_FILE.equals(getMessage_event_type_cd());
+  }  
+  
+  public boolean isCourtFileEvent() {
+    return EVENT_TYPE_COURT_FILE.equals(getMessage_event_type_cd());
   }
   
   public String getMessage_event_type_dsc() {

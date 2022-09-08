@@ -4,9 +4,10 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsCreateCourtCaseData {
+public class DemsCourtCaseData {
     public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
     public static final String TEMPLATE_CASE = "28";
     public static final String COMMA_STRING = ",";
@@ -32,7 +33,19 @@ public class DemsCreateCourtCaseData {
         CASE_FLAGS(28, "Case Flags"),
         OFFENCE_DATE(29, "Offence Date (earliest)"),
         PROPOSED_APP_DATE(30, "Proposed App. Date (earliest)"),
-        PROPOSED_PROCESS_TYPE(31, "Proposed Process Type");
+        PROPOSED_PROCESS_TYPE(31, "Proposed Process Type"),
+        MDOC_JUSTIN_NO(15, "Court File Unique ID"),
+        CROWN_ELECTION(16, "Crown Election"),
+        COURT_FILE_LEVEL(17, "Court File Level"),
+        CLASS(19, "Class"),
+        DESIGNATION(20, "Designation"),
+        SWORN_DATE(21, "Sworn Date"),
+        APPROVED_CHARGES(22, "Approved Charges"),
+        COURT_FILE_NO(23, "Court File No."),
+        COURT_HOME_REG(27, "Court Home Registry"),
+        RMS_PROC_STAT(32, "RMS Processing Status"),
+        ASSIGNED_LEGAL_STAFF(33, "Assigned Legal Staff"),
+        ASSIGNED_CROWN(17, "Assigned Crown");
 
         private int id;
         private String label;
@@ -85,10 +98,10 @@ public class DemsCreateCourtCaseData {
             return id;
         }
     }
-    public DemsCreateCourtCaseData() {
+    public DemsCourtCaseData() {
     }
 
-    public DemsCreateCourtCaseData(BusinessCourtCaseData bcc) {
+    public DemsCourtCaseData(BusinessCourtCaseData bcc) {
 
         StringBuilder accused_names = new StringBuilder();
         for (BusinessCourtCaseAccused ba : bcc.getAccused_person()) {
@@ -174,6 +187,44 @@ public class DemsCreateCourtCaseData {
         fieldData.add(proposedAppDate);
         fieldData.add(proposedProcessType);
         setFields(fieldData);
+
+    }
+
+    public DemsCourtCaseData(BusinessCourtCaseData bcc, BusinessCourtCaseMetadataData bccm) {
+        this(bcc);
+        /*MDOC_JUSTIN_NO(15, "Court File Unique ID"),
+        CROWN_ELECTION(16, "Crown Election"),
+        COURT_FILE_LEVEL(17, "Court File Level"),
+        CLASS(19, "Class"),
+        DESIGNATION(20, "Designation"),
+        SWORN_DATE(21, "Sworn Date"),
+        APPROVED_CHARGES(22, "Approved Charges"),
+        COURT_HOME_REG(27, "Court Home Registry"),
+        RMS_PROC_STAT(32, "RMS Processing Status"),
+        ASSIGNED_LEGAL_STAFF(33, "Assigned Legal Staff"),
+        ASSIGNED_CROWN(17, "Assigned Crown"); */
+        DemsFieldData courtFileId = new DemsFieldData(FIELD_MAPPINGS.MDOC_JUSTIN_NO.getId(), FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), bccm.getCourt_file_id());
+        DemsFieldData crownElection = new DemsFieldData(FIELD_MAPPINGS.CROWN_ELECTION.getId(), FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), bccm.getAnticipated_crown_election());
+        DemsFieldData courtFileLevel = new DemsFieldData(FIELD_MAPPINGS.COURT_FILE_LEVEL.getId(), FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), bccm.getCourt_file_level());
+        DemsFieldData fileClass = new DemsFieldData(FIELD_MAPPINGS.CLASS.getId(), FIELD_MAPPINGS.CLASS.getLabel(), bccm.getCourt_file_class());
+        DemsFieldData designation = new DemsFieldData(FIELD_MAPPINGS.DESIGNATION.getId(), FIELD_MAPPINGS.DESIGNATION.getLabel(), bccm.getCourt_file_designation());
+        DemsFieldData swornDate = new DemsFieldData(FIELD_MAPPINGS.SWORN_DATE.getId(), FIELD_MAPPINGS.SWORN_DATE.getLabel(), bccm.getCourt_file_sworn_date());
+        DemsFieldData approvedCharges = new DemsFieldData(FIELD_MAPPINGS.APPROVED_CHARGES.getId(), FIELD_MAPPINGS.APPROVED_CHARGES.getLabel(), bccm.getOffence_description_list());
+        DemsFieldData courtFileNo = new DemsFieldData(FIELD_MAPPINGS.COURT_FILE_NO.getId(), FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), bccm.getCourt_file_number_seq_type());
+        DemsFieldData courtHomeReg = new DemsFieldData(FIELD_MAPPINGS.COURT_HOME_REG.getId(), FIELD_MAPPINGS.COURT_HOME_REG.getLabel(), bccm.getCourt_home_registry());
+        //DemsFieldData rmsProcStatus = new DemsFieldData(FIELD_MAPPINGS.RMS_PROC_STAT.getId(), FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
+        //DemsFieldData assignedLegalStaff = new DemsFieldData(FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getId(), FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
+
+        List<DemsFieldData> fieldData = this.getFields();
+        fieldData.add(courtFileId);
+        fieldData.add(crownElection);
+        fieldData.add(courtFileLevel);
+        fieldData.add(fileClass);
+        fieldData.add(designation);
+        fieldData.add(swornDate);
+        fieldData.add(approvedCharges);
+        fieldData.add(courtFileNo);
+        fieldData.add(courtHomeReg);
 
     }
 
