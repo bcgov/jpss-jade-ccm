@@ -24,6 +24,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.business.BusinessAuthUsersList;
 import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.system.dems.DemsAuthUsersList;
 import ccm.models.system.dems.DemsCourtCaseData;
 import ccm.models.system.dems.DemsGroupMembersSyncData;
@@ -198,6 +199,43 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
         DemsCourtCaseData d = new DemsCourtCaseData(b);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseData.class)
+    .log("DEMS-bound request data: '${body}'")
+    .setProperty("update_data", simple("${body}"))
+    // get case id
+    .setProperty("key", jsonpath("$.key"))
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
+    // update case
+    .setBody(simple("${exchangeProperty.update_data}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .log("Court case updated.")
+    ;
+      
+    from("platform-http:/updateCourtCaseWithMetadata")
+    .routeId("updateCourtCaseWithMetadata")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing updateCourtCaseWithMetadata request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .setProperty("CourtCase").body()
+    .setBody(simple("${header.metadata_data}"))
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
+    .setProperty("CourtCaseMetadata").body()
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        BusinessCourtCaseData bcc = exchange.getProperty("CourtCase", BusinessCourtCaseData.class);
+        BusinessCourtCaseMetadataData bcm = exchange.getProperty("CourtCaseMetadata", BusinessCourtCaseMetadataData.class);
+        DemsCourtCaseData d = new DemsCourtCaseData(bcc);
         exchange.getMessage().setBody(d);
       }
     })

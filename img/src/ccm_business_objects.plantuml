@@ -22,4 +22,8 @@ business_court_case_metadata --> dems_court_case
 business_court_case_appearance --> "?" dems_court_case
 business_court_case_crown_assignment --> "?" dems_court_case
 
+caption
+Prepared by David Agahchen | Updated September 8, 2022
+end caption
+
 @enduml

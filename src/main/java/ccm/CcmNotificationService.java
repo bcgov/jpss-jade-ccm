@@ -20,8 +20,11 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseMetadataEvent;
+import ccm.models.system.dems.DemsCourtCaseData;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -106,6 +109,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
+        be.setEvent_source(BusinessCourtCaseEvent.SOURCE_JADE_CCM);
         be.setEvent_object_id(event_object_id);
         be.setJustin_rcc_id(event_object_id);
 
@@ -181,6 +185,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         // hardcoding conversion from STATUS_CHANGED to STATUS_UPDATED for first implementation
         be.setEvent_status(BusinessCourtCaseMetadataEvent.STATUS_UPDATED);
+        be.setEvent_source(BusinessCourtCaseMetadataEvent.SOURCE_JADE_CCM);
 
         ex.getMessage().setBody(be);
       }
@@ -197,6 +202,20 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_object_id]}"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
     .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .setProperty("related_agency_file")
+      .jsonpath("$.related_agency_file")
+    .log("Related agency file: ${exchangeProperty.related_agency_file}")
+    .setHeader("metadata_data").body()
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setProperty("rcc_id")
+        .jsonpath("$.rcc_id")
+      .log("Found related court case. Rcc_id: ${exchangeProperty.rcc_id}")
+      .setHeader("name", simple("${exchangeProperty.rcc_id}"))
+      .to("http://ccm-lookup-service/getCourtCaseDetails")
+      .log("Update court case in DEMS.  Court case data = ${body}.")
+      .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+    .end()
     ;
 
     from("direct:processUnknownStatus")
