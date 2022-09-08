@@ -28,8 +28,11 @@ import ccm.models.system.justin.JustinEventBatch;
 import ccm.models.business.BusinessAuthUsersList;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
+import ccm.models.business.BusinessCourtCaseMetadataData;
+import ccm.models.business.BusinessCourtCaseMetadataEvent;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.system.justin.JustinEvent;
 
 class JustinEventBatchProcessor implements Processor {
@@ -64,17 +67,18 @@ class JustinEventBatchProcessor implements Processor {
       for (JustinEvent e: jeb.getEvents()) {
         System.out.print("Processing JUSTIN event " + e.getEvent_message_id() + " (" + e.getMessage_event_type_cd() + ").");
 
-        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(e);
-
         if (e.isAgenFileEvent()) {
           // court case changed.  generate new business event.
-          System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + be.getJustin_rcc_id() + "')..");
+          BusinessCourtCaseEvent bce = new BusinessCourtCaseEvent(e);
+          System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
         } else if (e.isAuthListEvent()) {
           // auth list changed.  Generate new business event.
-          System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + be.getJustin_rcc_id() + "')..");
+          BusinessCourtCaseEvent bce = new BusinessCourtCaseEvent(e);
+          System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
         } else if (e.isCourtFileEvent()) {
           // court file changed.  Generate new business event.
-          System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + be.getJustin_mdoc_no() + "')..");
+          BusinessCourtCaseMetadataEvent bcme = new BusinessCourtCaseMetadataEvent(e);
+          System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + bcme.getJustin_mdoc_no() + "')..");
         } else {
           System.out.println(" Unknown JUSTIN event type; Do nothing.");
         }
@@ -266,15 +270,15 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")
-    .to("kafka:{{kafka.topic.courtcases.name}}")
+    .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
     ;
@@ -350,7 +354,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/getCourtCaseAuthList?httpMethodRestrict=GET")
     .routeId("getCourtCaseAuthList")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCaseAuthList request received. rcc_id = ${header.number}")
+    .log("getCourtCaseAuthList request received. rcc_id = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -368,6 +372,30 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
+    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+    from("platform-http:/getCourtCaseMetadata?httpMethodRestrict=GET")
+    .routeId("getCourtCaseMetadata")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("getCourtCaseMetadata request received. mdoc_no = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .toD("{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
+    .log("Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinCourtFile.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinCourtFile j = exchange.getIn().getBody(JustinCourtFile.class);
+        BusinessCourtCaseMetadataData b = new BusinessCourtCaseMetadataData(j);
+        exchange.getMessage().setBody(b, BusinessCourtCaseMetadataData.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

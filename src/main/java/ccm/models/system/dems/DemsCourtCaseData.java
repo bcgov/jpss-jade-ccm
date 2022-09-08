@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCourtCaseData {
@@ -175,6 +176,10 @@ public class DemsCourtCaseData {
         fieldData.add(proposedProcessType);
         setFields(fieldData);
 
+    }
+
+    public DemsCourtCaseData(BusinessCourtCaseData bcc, BusinessCourtCaseMetadataData bccm) {
+        this(bcc);
     }
 
 
