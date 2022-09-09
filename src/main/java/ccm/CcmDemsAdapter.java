@@ -225,6 +225,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId("updateCourtCaseWithMetadata")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing updateCourtCaseWithMetadata request: ${body}")
+    .log("metadata_data: ${header.metadata_data}")
     .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .setProperty("CourtCase").body()
@@ -235,7 +236,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         BusinessCourtCaseData bcc = exchange.getProperty("CourtCase", BusinessCourtCaseData.class);
         BusinessCourtCaseMetadataData bcm = exchange.getProperty("CourtCaseMetadata", BusinessCourtCaseMetadataData.class);
-        DemsCourtCaseData d = new DemsCourtCaseData(bcc);
+        DemsCourtCaseData d = new DemsCourtCaseData(bcc, bcm);
         exchange.getMessage().setBody(d);
       }
     })

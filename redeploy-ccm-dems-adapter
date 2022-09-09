@@ -12,7 +12,8 @@ kamel -n cef5dd-dev run \
   --trait service.node-port=false \
   --trait route.tls-termination=edge \
   --trait route.tls-insecure-edge-termination-policy=Redirect \
-  --trait route.host=ccm-dems-adapter-dev.apps.silver.devops.gov.bc.ca
+  --trait route.host=ccm-dems-adapter-dev.apps.silver.devops.gov.bc.ca \
+  --trait logging.level=DEBUG
 
   #--trait dependencies.enabled=true \
   #--trait route.enabled=false \

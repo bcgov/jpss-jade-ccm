@@ -167,7 +167,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log("Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
     .log("Update court case auth list in DEMS.  Court case auth list = ${body}")
-    // JADE-1489 work around -- not sure why body doesn't make it into dems-adapter
+    // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
@@ -200,21 +200,27 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseUpdated.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
     .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
-    .setProperty("related_agency_file")
-      .jsonpath("$.related_agency_file")
-    .log("Related agency file: ${exchangeProperty.related_agency_file}")
-    .setHeader("metadata_data").body()
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    //   accessible in the split() block through exchange properties unless converted to String first.
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id")
         .jsonpath("$.rcc_id")
-      .log("Found related court case. Rcc_id: ${exchangeProperty.rcc_id}")
-      .setHeader("name", simple("${exchangeProperty.rcc_id}"))
+      .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+      .log("Found related court case. Rcc_id: ${header.number}")
       .to("http://ccm-lookup-service/getCourtCaseDetails")
       .log("Update court case in DEMS.  Court case data = ${body}.")
+      .setHeader("metadata_data", simple("${exchangeProperty.metadata_data}"))
+      .log("header.metadata_data = ${header.metadata_data}")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+      .removeHeader("metadata_data")
     .end()
     ;
 

@@ -1,0 +1,2 @@
+export TITLEPREFIX="DEMS Adapter   "
+kamel log ccm-dems-adapter | grep -v " DEBUG"

@@ -125,7 +125,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
     //.to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
     //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
-    .to("{{justin.host}}/requeueEventById?id=2451")// COURT_FILE 39857
+    //.to("{{justin.host}}/requeueEventById?id=2451") // COURT_FILE 39857
+
+    // JSIT Sep 8
+    //.to("{{justin.host}}/requeueEventById?id=2581") // AGEN_FILE 49408.0734 (case name: YOYO, Yammy; SOSO, Yolando ...)
+    //.to("{{justin.host}}/requeueEventById?id=2590") // AGEN_FILE 50448.0734 (case name: VADER, Darth)
+    .to("{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")
@@ -171,6 +176,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .log("Event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      .log("TEST exchangeProperty.numOfEvents: ${exchangeProperty.numOfEvents}")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.EVENT_TYPE_AGEN_FILE))
           .to("direct:processAgenFileEvent")
@@ -375,7 +381,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
-    from("platform-http:/getCourtCaseMetadata?httpMethodRestrict=GET")
+    from("platform-http:/getCourtCaseMetadata")
     .routeId("getCourtCaseMetadata")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("getCourtCaseMetadata request received. mdoc_no = ${header.number}")
