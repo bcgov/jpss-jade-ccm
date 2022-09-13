@@ -16,6 +16,19 @@ JADE-CCM integrates between a court case managmeent system (JUSTIN), a digital e
 
 JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
 
+## Integrated Development Environment (IDE) and Extensions
+
+JADE-CCM is developed using the Visual Studio Code IDE.  The freely downloadable IDE tool can be downloaded from Microsoft's official web site: https://code.visualstudio.com .  For Apple Mac developers, you can also install the tool via Homebrew (https://brew.sh) and the cask formulae https://formulae.brew.sh/cask/visual-studio-code#default .
+
+Core extensions:
+
+* Extension Pack for Apache Camel by Red Hat
+
+Additional, development and diagramming extensions:
+
+* PlantUML
+* Draw.io Integratoin
+
 ## Known Re-Queuable JUSTIN Change Notifications in Dev
 
 The following re-queuable Dev JUSTIN change notifications will be used to support "create case in DEMS" (5.2.1) and "sync user list in DEMS" (5.3.1) functional development.
