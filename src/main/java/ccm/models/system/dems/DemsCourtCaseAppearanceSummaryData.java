@@ -7,7 +7,7 @@ import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsCourtCaseAppearanceData {
+public class DemsCourtCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
