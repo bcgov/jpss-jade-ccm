@@ -10,6 +10,9 @@ public class BusinessAuthUsersList {
     private String rcc_id;
     private List<BusinessAuthUser> auth_users_list;
 
+    public BusinessAuthUsersList() {
+    }
+
     public BusinessAuthUsersList(JustinAuthUsersList jal) {
       setRcc_id(jal.getRcc_id());
 

@@ -1,6 +1,6 @@
 package ccm.models.system.justin;
 
-public class JustinCrownAssignment {
+public class JustinCrownAssignmentData {
   private String agency_name;
   private String agency_identifier;
   private String part_id;

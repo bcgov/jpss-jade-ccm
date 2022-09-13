@@ -17,11 +17,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import ccm.models.system.justin.JustinCourtFile;
-import ccm.models.system.justin.JustinCrownAssignments;
+import ccm.models.system.justin.JustinCrownAssignmentList;
+import ccm.models.system.justin.JustinCrownAssignmentData;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.business.BusinessCourtCaseMetadataData;
+import ccm.models.business.BusinessCourtCaseCrownAssignmentList;
+import ccm.models.business.BusinessCourtCaseCrownAssignmentData;
 import ccm.models.system.dems.DemsCourtCaseData;
 import ccm.models.system.dems.DemsFieldData;
 
@@ -62,11 +65,15 @@ public class JacksonObjectMapperCaseFile {
 		System.out.println("\n\nDemsCreateCourtCase JSON is\n"+stringFile3);
 
 */
-		JustinCrownAssignments crownAssignments = objectMapper.readValue(jsonAssignmentData, JustinCrownAssignments.class);
+		JustinCrownAssignmentList crownAssignments = objectMapper.readValue(jsonAssignmentData, JustinCrownAssignmentList.class);
+		BusinessCourtCaseCrownAssignmentList businessAssignment = new BusinessCourtCaseCrownAssignmentList(crownAssignments);
 
 		StringWriter stringFile4 = new StringWriter();
 		objectMapper.writeValue(stringFile4, crownAssignments);
 		System.out.println("\n\n\n\nJustinCrownAssignments JSON is\n"+stringFile4);
+
+		objectMapper.writeValue(stringFile3, businessAssignment);
+		System.out.println("\n\nBusinessCourtCaseCrownAssignmentList JSON is\n"+stringFile3);
 
 		stringFile.close();
 		stringFile2.close();
