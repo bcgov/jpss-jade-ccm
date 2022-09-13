@@ -7,7 +7,7 @@ import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsCourtCaseMetedataData {
+public class DemsCourtCaseAppearanceData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
@@ -140,30 +140,6 @@ public class DemsCourtCaseMetedataData {
 
     public void setKey(String key) {
         this.key = key;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getTimeZoneId() {
-        return timeZoneId;
-    }
-
-    public void setTimeZoneId(String timeZoneId) {
-        this.timeZoneId = timeZoneId;
-    }
-
-    public String getTemplateCase() {
-        return templateCase;
-    }
-
-    public void setTemplateCase(String templateCase) {
-        this.templateCase = templateCase;
     }
 
     public List<DemsFieldData> getFields() {
