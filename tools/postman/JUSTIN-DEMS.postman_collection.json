@@ -100,7 +100,7 @@
 					"raw": "{\r\n \"event_message_id\":\"2003\",\r\n \"is_success\":\"T\"\r\n}"
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/eventStatus",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/eventStatus?event_message_id=2397&is_success=T",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -116,6 +116,16 @@
 						"dems",
 						"v1",
 						"eventStatus"
+					],
+					"query": [
+						{
+							"key": "event_message_id",
+							"value": "2397"
+						},
+						{
+							"key": "is_success",
+							"value": "T"
+						}
 					]
 				}
 			},
@@ -295,7 +305,7 @@
 					"raw": "{\r\n \"from_dt\":\"18-MAY-2022\",\r\n \"to_dt\":\"19-MAY-2022\",\r\n \"system\":\"DEMS\"\r\n}"
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsByDtRange",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsByDtRange?from_dt=2022-05-25 00:00:00&to_dt=2022-05-26 00:00:00&system=DEMS",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -315,18 +325,15 @@
 					"query": [
 						{
 							"key": "from_dt",
-							"value": "2022-05-18 00:00:00",
-							"disabled": true
+							"value": "2022-05-25 00:00:00"
 						},
 						{
 							"key": "to_dt",
-							"value": "2022-05-19 00:00:00",
-							"disabled": true
+							"value": "2022-05-26 00:00:00"
 						},
 						{
 							"key": "system",
-							"value": "DEMS",
-							"disabled": true
+							"value": "DEMS"
 						}
 					]
 				}
@@ -335,11 +342,23 @@
 		},
 		{
 			"name": "agencyFile",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
 			"request": {
 				"method": "GET",
 				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/agencyFile?rcc_id=50419.0734&guid=E15638C7794E64E8E05400144FFBC109",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/agencyFile?rcc_id=50431.0734",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -359,11 +378,7 @@
 					"query": [
 						{
 							"key": "rcc_id",
-							"value": "50419.0734"
-						},
-						{
-							"key": "guid",
-							"value": "E15638C7794E64E8E05400144FFBC109"
+							"value": "50431.0734"
 						}
 					]
 				},
@@ -377,7 +392,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/authUsers?rcc_id=50419.0734",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/authUsers?rcc_id=50431.0734",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -397,7 +412,7 @@
 					"query": [
 						{
 							"key": "rcc_id",
-							"value": "50419.0734"
+							"value": "50431.0734"
 						}
 					]
 				},

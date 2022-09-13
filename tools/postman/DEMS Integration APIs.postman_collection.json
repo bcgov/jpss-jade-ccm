@@ -119,7 +119,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
+									"value": "{{DEMS-Token}}",
 									"type": "string"
 								}
 							]
@@ -128,7 +128,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"David Case API Test 4\",\r\n  \"description\": \"Second case creation API test\",\r\n  \"timeZone\": \"Pacific Standard Time\"\r\n}",
+							"raw": "{\r\n    \"name\": \"Frank, Joe Mike John - 5\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"description\": \"\",\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"templateCase\": \"28\",\r\n    \"fields\": [\r\n        {\r\n            \"id\": 12,\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 3,\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -136,7 +136,7 @@
 							}
 						},
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -148,6 +148,8 @@
 							"path": [
 								"api",
 								"v1",
+								"org-units",
+								"1",
 								"cases"
 							]
 						}
@@ -167,11 +169,11 @@
 								}
 							]
 						},
-						"method": "POST",
+						"method": "PUT",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"David Case API Test 4\",\r\n  \"description\": \"Second case creation API test\",\r\n  \"timeZone\": \"Pacific Standard Time\"\r\n}",
+							"raw": "{\r\n    \"id\": 78,\r\n    \"name\": \"Frank, Joe Mike John - 5.1\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"caseNumber\": null,\r\n    \"description\": \"\",\r\n    \"category\": null,\r\n    \"status\": \"Active\",\r\n    \"cfsLocationType\": 1,\r\n    \"showCfsLocation\": true,\r\n    \"exportTempPath\": \"C:\\\\eDiscovery\\\\Temp\",\r\n    \"stagingAreaPath\": \"\\\\edt-mapleimp-poc-edtdems-staging\\\\Source/Site01_Case0078\",\r\n    \"stagingAreaPathNote\": \"The staging area is in Amazon S3: \\\\edt-mapleimp-poc-edtdems-staging\\\\Source/Site01_Case0078\",\r\n    \"stagingAreaPathDisabled\": true,\r\n    \"generateThumbnails\": true,\r\n    \"useDocIdForDownloads\": false,\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"timeZone\": {\r\n        \"id\": \"Pacific Standard Time\",\r\n        \"hasIanaId\": false,\r\n        \"displayName\": \"(UTC-08:00) Pacific Time (Los Angeles)\",\r\n        \"standardName\": \"Pacific Standard Time\",\r\n        \"daylightName\": \"Pacific Daylight Time\",\r\n        \"baseUtcOffset\": \"-08:00:00\",\r\n        \"supportsDaylightSavingTime\": true\r\n    },\r\n    \"removeGeneratedFiles\": false,\r\n    \"searchHistoryRetention\": 1000,\r\n    \"fields\": [\r\n        {\r\n            \"id\": 3,\r\n            \"name\": \"Agency File No.\",\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 7,\r\n            \"name\": \"Disclosure Status\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"name\": \"Assessment Crown\",\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 12,\r\n            \"name\": \"Agency File ID\",\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"name\": \"Submit Date\",\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"name\": \"Case Decision\",\r\n            \"value\": {\"id\": 4, \"name\": \"ACT\"}\r\n        },\r\n        {\r\n            \"id\": 15,\r\n            \"name\": \"Court File Unique ID\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 16,\r\n            \"name\": \"Crown Election\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 17,\r\n            \"name\": \"Court File Level\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"name\": \"Proposed Charges\",\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 19,\r\n            \"name\": \"Class\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 20,\r\n            \"name\": \"Designation\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 21,\r\n            \"name\": \"Sworn Date\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 22,\r\n            \"name\": \"Approved Charges\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 23,\r\n            \"name\": \"Court File No.\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"name\": \"Initiating Agency\",\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"name\": \"Investigating Officer\",\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"name\": \"Proposed Crown Office\",\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 27,\r\n            \"name\": \"Court Home Registry\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 28,\r\n            \"name\": \"Case Flags\",\r\n            \"value\": [\r\n                {\r\n                    \"id\": 9,\r\n                    \"name\": \"VUL1\"\r\n                }\r\n            ]\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"name\": \"Offence Date (earliest)\",\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"name\": \"Proposed App. Date (earliest)\",\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"name\": \"Proposed Process Type\",\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        },\r\n        {\r\n            \"id\": 32,\r\n            \"name\": \"RMS Processing Status\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 33,\r\n            \"name\": \"Assigned Legal Staff\",\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 34,\r\n            \"name\": \"Assigned Crown\",\r\n            \"value\": null\r\n        }\r\n    ],\r\n    \"cfsLocation\": \"C:\\\\eDiscovery\\\\Store\",\r\n    \"cfsLocationS3\": \"\\\\edt-mapleimp-poc-edtdems-cfs\\\\CFS\",\r\n    \"dateFormat\": \"d MMM yyyy\",\r\n    \"showMilliseconds\": false\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -179,7 +181,7 @@
 							}
 						},
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/78",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -191,7 +193,8 @@
 							"path": [
 								"api",
 								"v1",
-								"cases"
+								"cases",
+								"78"
 							]
 						}
 					},
@@ -199,21 +202,28 @@
 				},
 				{
 					"name": "GetCaseList",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
+									"value": "{{DEMS-Token}}",
 									"type": "string"
 								}
 							]
 						},
 						"method": "GET",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/list",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -225,6 +235,8 @@
 							"path": [
 								"api",
 								"v1",
+								"org-units",
+								"1",
 								"cases",
 								"list"
 							]
@@ -248,7 +260,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/50433.0734/id",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -260,8 +272,11 @@
 							"path": [
 								"api",
 								"v1",
+								"org-units",
+								"1",
 								"cases",
-								"list"
+								"50433.0734",
+								"id"
 							]
 						}
 					},
@@ -283,7 +298,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/80",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -296,7 +311,7 @@
 								"api",
 								"v1",
 								"cases",
-								"list"
+								"80"
 							]
 						}
 					},
@@ -315,10 +330,19 @@
 								}
 							]
 						},
-						"method": "GET",
+						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"keyField\": \"key\",\r\n  \"values\": [\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/groups/1/sync",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -331,7 +355,10 @@
 								"api",
 								"v1",
 								"cases",
-								"list"
+								"58",
+								"groups",
+								"1",
+								"sync"
 							]
 						}
 					},
@@ -353,7 +380,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/52",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -365,8 +392,10 @@
 							"path": [
 								"api",
 								"v1",
+								"org-units",
+								"1",
 								"cases",
-								"list"
+								"52"
 							]
 						}
 					},
@@ -388,7 +417,48 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/site/fields?organisationalUnitId=1",
+							"protocol": "https",
+							"host": [
+								"346n1v5oeh",
+								"execute-api",
+								"ca-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"site",
+								"fields"
+							],
+							"query": [
+								{
+									"key": "organisationalUnitId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCaseSchema",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/28/schema",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -401,17 +471,10 @@
 								"api",
 								"v1",
 								"cases",
-								"list"
+								"28",
+								"schema"
 							]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "GetCaseSchema",
-					"request": {
-						"method": "GET",
-						"header": []
 					},
 					"response": []
 				},
@@ -428,10 +491,19 @@
 								}
 							]
 						},
-						"method": "GET",
+						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"userKeys\": [\r\n    \"85064.0734\"\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/list",
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/case-users/sync",
 							"protocol": "https",
 							"host": [
 								"346n1v5oeh",
@@ -444,7 +516,9 @@
 								"api",
 								"v1",
 								"cases",
-								"list"
+								"58",
+								"case-users",
+								"sync"
 							]
 						}
 					},
