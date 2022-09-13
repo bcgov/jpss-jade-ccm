@@ -192,17 +192,7 @@ public class DemsCourtCaseData {
 
     public DemsCourtCaseData(BusinessCourtCaseData bcc, BusinessCourtCaseMetadataData bccm) {
         this(bcc);
-        /*MDOC_JUSTIN_NO(15, "Court File Unique ID"),
-        CROWN_ELECTION(16, "Crown Election"),
-        COURT_FILE_LEVEL(17, "Court File Level"),
-        CLASS(19, "Class"),
-        DESIGNATION(20, "Designation"),
-        SWORN_DATE(21, "Sworn Date"),
-        APPROVED_CHARGES(22, "Approved Charges"),
-        COURT_HOME_REG(27, "Court Home Registry"),
-        RMS_PROC_STAT(32, "RMS Processing Status"),
-        ASSIGNED_LEGAL_STAFF(33, "Assigned Legal Staff"),
-        ASSIGNED_CROWN(17, "Assigned Crown"); */
+
         DemsFieldData courtFileId = new DemsFieldData(FIELD_MAPPINGS.MDOC_JUSTIN_NO.getId(), FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), bccm.getCourt_file_id());
         DemsFieldData crownElection = new DemsFieldData(FIELD_MAPPINGS.CROWN_ELECTION.getId(), FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), bccm.getAnticipated_crown_election());
         DemsFieldData courtFileLevel = new DemsFieldData(FIELD_MAPPINGS.COURT_FILE_LEVEL.getId(), FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), bccm.getCourt_file_level());

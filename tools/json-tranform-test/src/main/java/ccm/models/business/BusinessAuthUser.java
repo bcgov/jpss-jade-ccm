@@ -8,6 +8,9 @@ public class BusinessAuthUser {
     private String crown_agency;
     private String user_name;
 
+    public BusinessAuthUser() {
+    }
+
     public BusinessAuthUser(JustinAuthUser ja) {
       setPart_id(ja.getPart_id());
       setCrown_agency(ja.getCrown_agency());

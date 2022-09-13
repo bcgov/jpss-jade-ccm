@@ -40,7 +40,7 @@ public class JacksonObjectMapperJustin {
 
 		//convert json string to object
 		JustinAgencyFile agencyFile = objectMapper.readValue(jsonData, JustinAgencyFile.class);
-		JustinCourtFile courtFile = objectMapper.readValue(jsonData, JustinCourtFile.class);
+		JustinCourtFile courtFile = objectMapper.readValue(jsonCourtFileData, JustinCourtFile.class);
 		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
 
