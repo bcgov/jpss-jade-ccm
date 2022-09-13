@@ -118,7 +118,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     .doTry()
-      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id")
+      // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
+      //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
+      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?httpClient.soTimeout=30")
+      .setProperty("id", jsonpath("$.id"))
+      .log("Case found. Id = ${exchangeProperty.id}")
     //.doCatch(HttpOperationFailedException.class)
     .doCatch(CamelException.class)
       .log("Exception: ${exception}")

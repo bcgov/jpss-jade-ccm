@@ -2,8 +2,8 @@
 
 object "JUSTIN Agency File" as justin_agency_file
 object "JUSTIN Court File" as justin_court_file
-object "JUSTIN Crown Assignment" as justin_crown_assignment
 object "JUSTIN Court Appearance" as justin_appearance
+object "JUSTIN Crown Assignment" as justin_crown_assignment
 object "Business Court Case" as business_court_case
 object "Business Court Case Metadata" as business_court_case_metadata
 object "Business Court Case Appearance" as business_court_case_appearance

@@ -27,7 +27,11 @@ Core extensions:
 Additional, development and diagramming extensions:
 
 * PlantUML
-* Draw.io Integratoin
+* Draw.io Integration
+
+## Java
+
+JADE-CCM is built on Camel K, and requires compilation of the Plain-Old Java Object (POJO) data models using OpenJDK 11.
 
 ## Known Re-Queuable JUSTIN Change Notifications in Dev
 
@@ -79,23 +83,6 @@ Working directory: tools/postman
 | Postman Collection | DEMS Integration APIs.postman_collection.json | An IDS team-managed collection of DEMS, ISL and JUSTIN APIs |
 | Postman Environment Settings | Dev.postman_environment.json | An IDS team-managed environment settings file for Dev |
 | Postman Collection | JUSTIN-DEMS.postman_collection.json | An NTTData team-managed collection of JUSTIN APIs, downloaded from NTTData story ticket [BCPSDEMS-218](https://justice.gov.bc.ca/jira/browse/BCPSDEMS-218) (Develop AgencyFile.GET) | 
-
-## Download and Run Atlasmap Mapping UI
-
-AtlasMap provides a GUI to define JSON to JSON transformation.  The map can then be used in a Camel component.
-
-Documentation: https://docs.atlasmap.io/#quickstart
-
-Using with Camel 3 including example: https://docs.atlasmap.io/#running-with-apache-camel-3-x
-
-Version used: 2.3.18
-
-JUSTIN Sample JSON files as Atlasmap source: tools/atlasmap/justin-sample-data/*
-
-Steps
-
-* Execute: java -jar tools/atlasmap/lib/atlasmap-standalone-2.3.18.jar
-* Open URL: http://localhost:8585
 
 
 ## Guides

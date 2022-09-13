@@ -170,7 +170,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:processCourtCaseMetadataChanged")
     .routeId("processCourtCaseMetadataChanged")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseUpdated.  event_object_id = ${header[event_object_id]}")
+    .log("processCourtCaseMetadataChanged.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
