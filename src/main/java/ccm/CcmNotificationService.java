@@ -20,11 +20,8 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseEvent;
-import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseMetadataEvent;
-import ccm.models.system.dems.DemsCourtCaseData;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -56,13 +53,13 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("event")
       .simple("${body}")
     .choice()
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS_CHANGED))
+      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.CHANGED))
         .to("direct:processCourtCaseChanged")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS_CREATED))
+      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.CREATED))
         .to("direct:processCourtCaseCreated")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS_UPDATED))
+      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.UPDATED))
         .to("direct:processCourtCaseUpdated")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS_AUTH_LIST_CHANGED))
+      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.AUTH_LIST_CHANGED))
         .to("direct:processCourtCaseAuthListChanged")
       .otherwise()
         .to("direct:processUnknownStatus");
@@ -82,10 +79,8 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("event")
       .simple("${body}")
     .choice()
-      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS_CHANGED))
+      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS.CHANGED))
         .to("direct:processCourtCaseMetadataChanged")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS_UPDATED))
-        .to("direct:processCourtCaseMetadataUpdated")
       .otherwise()
         .to("direct:processUnknownStatus");
     ;
@@ -109,14 +104,14 @@ public class CcmNotificationService extends RouteBuilder {
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
-        be.setEvent_source(BusinessCourtCaseEvent.SOURCE_JADE_CCM);
+        be.setEvent_source(BusinessCourtCaseEvent.SOURCE.JADE_CCM.toString());
         be.setEvent_object_id(event_object_id);
         be.setJustin_rcc_id(event_object_id);
 
         if (court_case_exists) {
-          be.setEvent_status(BusinessCourtCaseEvent.STATUS_UPDATED);
+          be.setEvent_status(BusinessCourtCaseEvent.STATUS.UPDATED.toString());
         } else {
-          be.setEvent_status(BusinessCourtCaseEvent.STATUS_CREATED);
+          be.setEvent_status(BusinessCourtCaseEvent.STATUS.CREATED.toString());
         }
 
         ex.getMessage().setBody(be);
@@ -174,29 +169,6 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("direct:processCourtCaseMetadataChanged")
     .routeId("processCourtCaseMetadataChanged")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        BusinessCourtCaseMetadataEvent be = ex.getIn().getBody(BusinessCourtCaseMetadataEvent.class);
-
-        // hardcoding conversion from STATUS_CHANGED to STATUS_UPDATED for first implementation
-        be.setEvent_status(BusinessCourtCaseMetadataEvent.STATUS_UPDATED);
-        be.setEvent_source(BusinessCourtCaseMetadataEvent.SOURCE_JADE_CCM);
-
-        ex.getMessage().setBody(be);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
-    .log("Generating derived court case event: ${body}")
-    .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
-    ;
-
-    from("direct:processCourtCaseMetadataUpdated")
-    .routeId("processCourtCaseMetadataUpdated")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processCourtCaseUpdated.  event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))

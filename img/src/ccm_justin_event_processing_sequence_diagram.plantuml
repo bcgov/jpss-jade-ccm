@@ -3,6 +3,7 @@
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
 collections court_cases_topic as "Court Case Events"
+collections court_case_metadatas_topic as "Court Case Metadata Events"
 participant case_notification_service as "Case Notification Service"
 participant case_lookup_service as "Case Lookup Service"
 participant d_adapter as "DEMS Adapter"
@@ -28,6 +29,12 @@ loop Every 5 minutes
             j_adapter ->o court_cases_topic: Produce court case changed event
         else AUTH_LIST changed event
             j_adapter ->o court_cases_topic: Produce court case auth list changed event
+        else COURT_FILE changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case metadata changed event
+        else APPR changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case appearance data changed event
+        else CROWN_ASGN changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case crown assignment data changed event
         else Other business event
             j_adapter -> j_adapter: No operation (future functionality)
         end
@@ -66,6 +73,6 @@ end
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated August 23, 2022
+Prepared by David Agahchen | Updated September 12, 2022
 end caption
 @enduml
