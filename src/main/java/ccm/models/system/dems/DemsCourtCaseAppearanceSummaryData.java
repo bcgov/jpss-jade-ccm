@@ -12,10 +12,10 @@ public class DemsCourtCaseAppearanceSummaryData {
     private String key;
     private List<DemsFieldData> fields;
 
-    public DemsCourtCaseAppearanceData() {
+    public DemsCourtCaseAppearanceSummaryData() {
     }
 
-    public DemsCourtCaseAppearanceData(String key, String name, BusinessCourtAppearanceSummary bcas) {
+    public DemsCourtCaseAppearanceSummaryData(String key, String name, BusinessCourtAppearanceSummary bcas) {
         setName(name.substring(0, name.length() > 255 ? 254 : name.length()));
         setKey(key);
 
