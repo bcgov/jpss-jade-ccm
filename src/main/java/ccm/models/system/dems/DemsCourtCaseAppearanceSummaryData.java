@@ -4,7 +4,7 @@ import java.util.List;
 
 import ccm.models.business.BusinessCourtAppearanceSummary;
 
-public class DemsCourtCaseAppearanceData {
+public class DemsCourtCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
