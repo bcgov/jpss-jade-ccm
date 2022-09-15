@@ -5,22 +5,22 @@ import java.util.ArrayList;
 import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtAppearanceSummary;
 
-public class BusinessCourtAppearanceSummaryList {
+public class BusinessCourtCaseAppearanceSummaryList {
   private String mdoc_justin_no;
 
-  private List<BusinessCourtAppearanceSummary> apprsummary;
+  private List<BusinessCourtCaseAppearanceSummary> apprsummary;
 
-  public BusinessCourtAppearanceSummaryList() {
+  public BusinessCourtCaseAppearanceSummaryList() {
   }
 
-  public BusinessCourtAppearanceSummaryList(JustinCourtAppearanceSummaryList jasl) {
+  public BusinessCourtCaseAppearanceSummaryList(JustinCourtAppearanceSummaryList jasl) {
     setMdoc_justin_no(jasl.getMdoc_justin_no());
 
-    List<BusinessCourtAppearanceSummary> appearanceList = new ArrayList<BusinessCourtAppearanceSummary>();
+    List<BusinessCourtCaseAppearanceSummary> appearanceList = new ArrayList<BusinessCourtCaseAppearanceSummary>();
 
     if(jasl.getApprsummary() != null) {
       for (JustinCourtAppearanceSummary jas : jasl.getApprsummary()) {
-        BusinessCourtAppearanceSummary bcas = new BusinessCourtAppearanceSummary(jas);
+        BusinessCourtCaseAppearanceSummary bcas = new BusinessCourtCaseAppearanceSummary(jas);
         appearanceList.add(bcas);
       }
     }
@@ -35,10 +35,10 @@ public class BusinessCourtAppearanceSummaryList {
     this.mdoc_justin_no = mdoc_justin_no;
   }
 
-  public List<BusinessCourtAppearanceSummary> getApprsummary() {
+  public List<BusinessCourtCaseAppearanceSummary> getApprsummary() {
     return apprsummary;
   }
-  public void setApprsummary(List<BusinessCourtAppearanceSummary> apprsummary) {
+  public void setApprsummary(List<BusinessCourtCaseAppearanceSummary> apprsummary) {
     this.apprsummary = apprsummary;
   }
 

@@ -1,0 +1,23 @@
+{
+    "mdoc_justin_no": "39154",
+    "crown_assignment": [
+        {
+            "agency_name": "Kelowna Crown Counsel",
+            "agency_identifier": "C402",
+            "part_id": "11429.0026",
+            "crown_staff_name": "OHarris, Debbie Nn",
+            "assign_type_code": "ALL",
+            "assigned_date": "2021-03-09",
+            "end_date": null
+        },
+        {
+            "agency_name": "Kelowna Crown Counsel",
+            "agency_identifier": "C402",
+            "part_id": "85150.0734",
+            "crown_staff_name": "Brown, Zara",
+            "assign_type_code": "LST",
+            "assigned_date": "2021-03-10",
+            "end_date": null
+        }
+    ]
+}

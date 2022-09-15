@@ -1,5 +1,6 @@
 package ccm.models.system.dems;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import ccm.models.business.BusinessCourtCaseCrownAssignmentList;
@@ -16,15 +17,16 @@ public class DemsCourtCaseCrownAssignmentData {
     }
 
     public DemsCourtCaseCrownAssignmentData(String key, String name, BusinessCourtCaseCrownAssignmentList bccca) {
-        setName(name.substring(0, name.length() > 255 ? 254 : name.length()));
         setKey(key);
+        setName(name);
 
         DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), bccca.getCrownAssignmentList());
         DemsFieldData assignedLegalStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getId(), DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccca.getLegalStaffAssignmentList());
 
-        List<DemsFieldData> fieldData = this.getFields();
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(assignedCrown);
         fieldData.add(assignedLegalStaff);
+        setFields(fieldData);
 
     }
 

@@ -51,7 +51,7 @@ public class BusinessCourtCaseMetadataEvent extends BusinessBaseEvent {
       case APPR:
         setEvent_status(STATUS.APPEARANCE_CHANGED.toString());
         break;
-      case CROWN_ASGN:
+      case CRN_ASSIGN:
         setEvent_status(STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
         break;
       default:

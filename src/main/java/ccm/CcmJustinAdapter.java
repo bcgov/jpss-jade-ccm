@@ -24,16 +24,8 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
-import ccm.models.system.justin.JustinEventBatch;
-import ccm.models.business.BusinessAuthUsersList;
-import ccm.models.business.BusinessCourtCaseData;
-import ccm.models.business.BusinessCourtCaseEvent;
-import ccm.models.business.BusinessCourtCaseMetadataData;
-import ccm.models.business.BusinessCourtCaseMetadataEvent;
-import ccm.models.system.justin.JustinAgencyFile;
-import ccm.models.system.justin.JustinAuthUsersList;
-import ccm.models.system.justin.JustinCourtFile;
-import ccm.models.system.justin.JustinEvent;
+import ccm.models.business.*;
+import ccm.models.system.justin.*;
 
 class JustinEventBatchProcessor implements Processor {
 
@@ -130,7 +122,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     // JSIT Sep 8
     //.to("{{justin.host}}/requeueEventById?id=2581") // AGEN_FILE 49408.0734 (case name: YOYO, Yammy; SOSO, Yolando ...)
     //.to("{{justin.host}}/requeueEventById?id=2590") // AGEN_FILE 50448.0734 (case name: VADER, Darth)
-    .to("{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
+    //.to("{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
+
+    //.to("{{justin.host}}/requeueEventById?id=2362") // AGEN_FILE 50431.0734
+    .to("{{justin.host}}/requeueEventById?id=2320") // COURT_FILE 39849 (RCC_ID 50431.0734)
+    //.to("{{justin.host}}/requeueEventById?id=2327") // APPR (mdoc no 39849; RCC_ID = 50431.0734)
+    //.to("{{justin.host}}/requeueEventById?id=2321") // CRN_ASSIGN (mdoc no 39849; RCC_ID 50431.0734)
     ;
 
     from("timer://simpleTimer?period={{notification.check.frequency}}")
@@ -176,7 +173,6 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .log("Event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
-      .log("TEST exchangeProperty.numOfEvents: ${exchangeProperty.numOfEvents}")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
@@ -188,10 +184,10 @@ public class CcmJustinAdapter extends RouteBuilder {
           .to("direct:processCourtFileEvent")
         .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.APPR))
-          .to("direct:processCourtFileEvent")
+          .to("direct:processApprEvent")
         .endChoice()
-        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.CROWN_ASGN))
-          .to("direct:processCourtFileEvent")
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.CRN_ASSIGN))
+          .to("direct:processCrnAssignEvent")
         .endChoice()
         .otherwise()
           .log("message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
@@ -289,6 +285,58 @@ public class CcmJustinAdapter extends RouteBuilder {
       }})
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
     .setProperty("business_event").body()
+    .log("Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
+    .setBody(simple("${exchangeProperty.justin_event}"))
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:processApprEvent")
+    .routeId("processApprEvent")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .log("Processing APPR event: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // Insert code that gets executed *before* delegating
+        // to the next processor in the chain.
+    
+        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+    
+        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
+    
+        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+      }})
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
+    .log("Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
+    .setBody(simple("${exchangeProperty.justin_event}"))
+    .to("direct:confirmEventProcessed")
+    ;
+
+    from("direct:processCrnAssignEvent")
+    .routeId("processCrnAssignEvent")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .log("Processing CRN_ASSIGN event: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // Insert code that gets executed *before* delegating
+        // to the next processor in the chain.
+    
+        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+    
+        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
+    
+        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+      }})
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
@@ -408,6 +456,54 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
+    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+    from("platform-http:/getCourtCaseAppearanceSummaryList")
+    .routeId("getCourtCaseAppearanceSummaryList")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .toD("{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
+    .log("Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinCourtAppearanceSummaryList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinCourtAppearanceSummaryList j = exchange.getIn().getBody(JustinCourtAppearanceSummaryList.class);
+        BusinessCourtCaseAppearanceSummaryList b = new BusinessCourtCaseAppearanceSummaryList(j);
+        exchange.getMessage().setBody(b, BusinessCourtCaseAppearanceSummaryList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseAppearanceSummaryList.class)
+    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+    from("platform-http:/getCourtCaseCrownAssignmentList")
+    .routeId("getCourtCaseCrownAssignmentList")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .toD("{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
+    .log("Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinCrownAssignmentList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinCrownAssignmentList j = exchange.getIn().getBody(JustinCrownAssignmentList.class);
+        BusinessCourtCaseCrownAssignmentList b = new BusinessCourtCaseCrownAssignmentList(j);
+        exchange.getMessage().setBody(b, BusinessCourtCaseCrownAssignmentList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseCrownAssignmentList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

@@ -2,7 +2,7 @@ package ccm.models.business;
 
 import ccm.models.system.justin.JustinCourtAppearanceSummary;
 
-public class BusinessCourtAppearanceSummary {
+public class BusinessCourtCaseAppearanceSummary {
   private String initial_appr_dt;
   private String initial_appr_rsn_cd;
   private String next_appr_dt;
@@ -10,10 +10,10 @@ public class BusinessCourtAppearanceSummary {
   private String trial_start_appr_dt;
   private String trial_start_appr_rsn_cd;
 
-  public BusinessCourtAppearanceSummary() {
+  public BusinessCourtCaseAppearanceSummary() {
   }
 
-  public BusinessCourtAppearanceSummary(JustinCourtAppearanceSummary jaf) {
+  public BusinessCourtCaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
     setInitial_appr_dt(jaf.getInitial_appr_dt());
     setInitial_appr_rsn_cd(jaf.getInitial_appr_rsn_cd());
     setNext_appr_dt(jaf.getNext_appr_dt());

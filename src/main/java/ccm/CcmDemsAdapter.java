@@ -22,12 +22,8 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.business.BusinessAuthUsersList;
-import ccm.models.business.BusinessCourtCaseData;
-import ccm.models.business.BusinessCourtCaseMetadataData;
-import ccm.models.system.dems.DemsAuthUsersList;
-import ccm.models.system.dems.DemsCourtCaseData;
-import ccm.models.system.dems.DemsGroupMembersSyncData;
+import ccm.models.business.*;
+import ccm.models.system.dems.*;
 
 import org.apache.camel.CamelException;
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -61,6 +57,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     from("platform-http:/v1/version?httpMethodRestrict=GET")
     .routeId("version")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("version query request received")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -83,6 +80,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     from("platform-http:/dems/v1/version?httpMethodRestrict=GET")
     .routeId("DEMS version")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("DEMS version query request received")
     .choice()
       .when(simple("${header.authorization} == 'Bearer {{token.adapter}}'"))
@@ -103,12 +101,15 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     from("platform-http:/getCourtCaseExists")
       .routeId("getCourtCaseExists")
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.event_object_id}"))
       .to("direct:getCourtCaseIdByKey")
     ;
       
+    // IN: exchangeProperty.key
     from("direct:getCourtCaseIdByKey")
     .routeId("direct:getCourtCaseIdByKey")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing getCourtCaseIdByKey request (key=${exchangeProperty.key})...")
     .setProperty("dems_org_unit_id").simple("1")
     .removeHeader("CamelHttpUri")
@@ -145,8 +146,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .endDoTry()
     ;
       
+    // IN: exchangeProperty.id
     from("direct:getCourtCaseDataById")
     .routeId("direct:getCourtCaseDataById")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing getCourtCaseDataById request (id=${exchangeProperty.id})...")
     .setProperty("dems_org_unit_id").simple("1")
     .removeHeader("CamelHttpUri")
@@ -158,6 +161,29 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("{{dems.host}}/cases/${exchangeProperty.id}")
     .log("Retrieved court case data by id: ${body}")
     ;
+
+    // IN: exchangeProperty.key
+    // OUT: JSON
+    from("direct:getCourtCaseDataByKey")
+    .routeId("direct:getCourtCaseDataByKey")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing getCourtCaseDataByKey")
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("id", jsonpath("$.id"))
+    .to("direct:getCourtCaseDataById")
+    ;
+
+    // IN: exchangeProperty.key
+    // OUT: String
+    from("direct:getCourtCaseNameByKey")
+    .routeId("direct:getCourtCaseNameByKey")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing getCourtCaseNameByKey")
+    .to("direct:getCourtCaseDataByKey")
+    .setProperty("courtCaseName",jsonpath("$.name"))
+    .log("DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtCaseName}")
+    .setBody(simple("${exchangeProperty.courtCaseName}"))
+    ;
       
     from("platform-http:/createCourtCase")
     .routeId("createCourtCase")
@@ -166,6 +192,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .process(new Processor() {
+      @Override
       public void process(Exchange exchange) {
         BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
         DemsCourtCaseData d = new DemsCourtCaseData(b);
@@ -200,6 +227,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("dems_org_unit_id").simple("1")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
     .process(new Processor() {
+      @Override
       public void process(Exchange exchange) {
         BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
         DemsCourtCaseData d = new DemsCourtCaseData(b);
@@ -225,26 +253,117 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Court case updated.")
     ;
       
+    // IN: header.rcc_id
     from("platform-http:/updateCourtCaseWithMetadata")
     .routeId("updateCourtCaseWithMetadata")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing updateCourtCaseWithMetadata request: ${body}")
-    .log("metadata_data: ${header.metadata_data}")
     .setProperty("dems_org_unit_id").simple("1")
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
-    .setProperty("CourtCase").body()
-    .setBody(simple("${header.metadata_data}"))
+    .setProperty("key", simple("${header.rcc_id}"))
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
     .setProperty("CourtCaseMetadata").body()
+    // retrieve court case name from DEMS
+    .to("direct:getCourtCaseNameByKey")
+    .setProperty("courtCaseName",simple("${bodyAs(String)}"))
+    .log("getCourtCaseNameByKey: ${exchangeProperty.courtCaseName}")
+    // generate DEMS court case metatdata
     .process(new Processor() {
+      @Override
       public void process(Exchange exchange) {
-        BusinessCourtCaseData bcc = exchange.getProperty("CourtCase", BusinessCourtCaseData.class);
+        String key = exchange.getProperty("key", String.class);
+        String courtCaseName = exchange.getProperty("courtCaseName", String.class);
         BusinessCourtCaseMetadataData bcm = exchange.getProperty("CourtCaseMetadata", BusinessCourtCaseMetadataData.class);
-        DemsCourtCaseData d = new DemsCourtCaseData(bcc, bcm);
+        DemsCourtCaseMetadataData d = new DemsCourtCaseMetadataData(key, courtCaseName, bcm);
         exchange.getMessage().setBody(d);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseMetadataData.class)
+    .log("DEMS-bound request data: '${body}'")
+    .setProperty("update_data", simple("${body}"))
+    // get case id
+    .setProperty("key", jsonpath("$.key"))
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
+    // update case
+    .setBody(simple("${exchangeProperty.update_data}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .log("Court case updated.")
+    ;
+      
+    // IN: header.rcc_id
+    from("platform-http:/updateCourtCaseWithAppearanceSummary")
+    .routeId("updateCourtCaseWithAppearanceSummary")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing updateCourtCaseWithAppearanceSummary request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
+    .setProperty("key", simple("${header.rcc_id}"))
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAppearanceSummaryList.class)
+    .setProperty("business_data").body()
+    // retrieve court case name from DEMS
+    .to("direct:getCourtCaseNameByKey")
+    .setProperty("courtCaseName",simple("${bodyAs(String)}"))
+    .log("getCourtCaseNameByKey: ${exchangeProperty.courtCaseName}")
+    // generate DEMS court case appearance summary
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String key = exchange.getProperty("key", String.class);
+        String courtCaseName = exchange.getProperty("courtCaseName", String.class);
+        BusinessCourtCaseAppearanceSummaryList b = exchange.getProperty("business_data", BusinessCourtCaseAppearanceSummaryList.class);
+        DemsCourtCaseAppearanceSummaryData d = new DemsCourtCaseAppearanceSummaryData(key, courtCaseName, b);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseAppearanceSummaryData.class)
+    .log("DEMS-bound request data: '${body}'")
+    .setProperty("update_data", simple("${body}"))
+    // get case id
+    .setProperty("key", jsonpath("$.key"))
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
+    // update case
+    .setBody(simple("${exchangeProperty.update_data}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .log("Court case updated.")
+    ;
+      
+    // IN: header.rcc_id
+    from("platform-http:/updateCourtCaseWithCrownAssignmentData")
+    .routeId("updateCourtCaseWithCrownAssignmentData")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing updateCourtCaseWithCrownAssignmentData request: ${body}")
+    .setProperty("dems_org_unit_id").simple("1")
+    .setProperty("key", simple("${header.rcc_id}"))
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseCrownAssignmentList.class)
+    .setProperty("business_data").body()
+    // retrieve court case name from DEMS
+    .to("direct:getCourtCaseNameByKey")
+    .setProperty("courtCaseName",simple("${bodyAs(String)}"))
+    .log("getCourtCaseNameByKey: ${exchangeProperty.courtCaseName}")
+    // generate DEMS court case crown assignment data
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String key = exchange.getProperty("key", String.class);
+        String courtCaseName = exchange.getProperty("courtCaseName", String.class);
+        BusinessCourtCaseCrownAssignmentList b = exchange.getProperty("business_data", BusinessCourtCaseCrownAssignmentList.class);
+        DemsCourtCaseCrownAssignmentData d = new DemsCourtCaseCrownAssignmentData(key, courtCaseName, b);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseCrownAssignmentData.class)
     .log("DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id

@@ -19,8 +19,8 @@ public class DemsCourtCaseMetadataData {
     }
 
     public DemsCourtCaseMetadataData(String key, String name, BusinessCourtCaseMetadataData bccm) {
-        setName(name.substring(0, name.length() > 255 ? 254 : name.length()));
         setKey(key);
+        setName(name);
 
         DemsFieldData courtFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getId(), DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), bccm.getCourt_file_id());
         DemsFieldData crownElection = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getId(), DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), bccm.getAnticipated_crown_election());
@@ -34,7 +34,7 @@ public class DemsCourtCaseMetadataData {
         //DemsFieldData rmsProcStatus = new DemsFieldData(FIELD_MAPPINGS.RMS_PROC_STAT.getId(), FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new DemsFieldData(FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getId(), FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
 
-        List<DemsFieldData> fieldData = this.getFields();
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(courtFileId);
         fieldData.add(crownElection);
         fieldData.add(courtFileLevel);
@@ -45,6 +45,7 @@ public class DemsCourtCaseMetadataData {
         fieldData.add(courtFileNo);
         fieldData.add(courtHomeReg);
 
+        setFields(fieldData);
     }
 
 

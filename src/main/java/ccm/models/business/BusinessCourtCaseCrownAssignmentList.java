@@ -6,7 +6,7 @@ import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinCrownAssignmentData;
 
 public class BusinessCourtCaseCrownAssignmentList {
-  public static final String DASH_STRING = " , ";
+  public static final String DASH_STRING = " - ";
   public static final String SEMICOLON_STRING = "; ";
   public static final String ASSIGNMENT_TYPE_LST = "LST";
 

@@ -28,3 +28,6 @@ hs_err_pid*
 
 # APS Gatway config folder
 gateway/.env
+
+# Ignore MacOS-specific system folders
+**/.DS_Store
