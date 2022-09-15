@@ -21,7 +21,7 @@ public class DemsFieldData {
         CLASS(19, "Class"),
         DESIGNATION(20, "Designation"),
         SWORN_DATE(21, "Sworn Date"),
-        APPROVED_CHARGES(22, "Approved Charges"),
+        CHARGES(45, "Charges"),
         COURT_FILE_NO(23, "Court File No."),
         COURT_HOME_REG(27, "Court Home Registry"),
         RMS_PROC_STAT(32, "RMS Processing Status"),

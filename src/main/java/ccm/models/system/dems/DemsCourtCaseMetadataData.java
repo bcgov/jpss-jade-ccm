@@ -28,7 +28,7 @@ public class DemsCourtCaseMetadataData {
         DemsFieldData fileClass = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CLASS.getId(), DemsFieldData.FIELD_MAPPINGS.CLASS.getLabel(), bccm.getCourt_file_class());
         DemsFieldData designation = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DESIGNATION.getId(), DemsFieldData.FIELD_MAPPINGS.DESIGNATION.getLabel(), bccm.getCourt_file_designation());
         DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), bccm.getCourt_file_sworn_date());
-        DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.APPROVED_CHARGES.getId(), DemsFieldData.FIELD_MAPPINGS.APPROVED_CHARGES.getLabel(), bccm.getOffence_description_list());
+        DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getId(), DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), bccm.getOffence_description_list());
         DemsFieldData courtFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), bccm.getCourt_file_number_seq_type());
         DemsFieldData courtHomeReg = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG.getLabel(), bccm.getCourt_home_registry());
         //DemsFieldData rmsProcStatus = new DemsFieldData(FIELD_MAPPINGS.RMS_PROC_STAT.getId(), FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
