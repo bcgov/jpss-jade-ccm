@@ -19,11 +19,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinCourtFile;
+import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseMetadataData;
-import ccm.models.business.BusinessCourtCaseAccused;
 import ccm.models.system.dems.DemsCourtCaseData;
-import ccm.models.system.dems.DemsFieldData;
+import ccm.models.system.dems.DemsCourtCaseMetadataData;
+import ccm.models.system.dems.DemsParticipantData;
 
 
 public class JacksonObjectMapperJustin {
@@ -47,8 +48,9 @@ public class JacksonObjectMapperJustin {
 		StringWriter stringFile = new StringWriter();
 		StringWriter stringFileC = new StringWriter();
 		StringWriter stringFile2 = new StringWriter();
-		StringWriter stringFile2C = new StringWriter();
 		StringWriter stringFile3 = new StringWriter();
+		StringWriter stringFile3C = new StringWriter();
+		StringWriter stringFile3P = new StringWriter();
 
 		objectMapper.writeValue(stringFile, agencyFile);
 		objectMapper.writeValue(stringFileC, courtFile);
@@ -63,18 +65,26 @@ public class JacksonObjectMapperJustin {
 		System.out.println("\n\nBusinessCourtCaseData JSON is\n"+stringFile2);
 
 
-
-		DemsCourtCaseData demsCaseFile = new DemsCourtCaseData(businessFile, businessCaseFile);
+		DemsCourtCaseData demsCaseFile = new DemsCourtCaseData(businessFile);
+		DemsCourtCaseMetadataData demsCaseMetadata = new DemsCourtCaseMetadataData("test", "value", businessCaseFile);
 
 		objectMapper.writeValue(stringFile3, demsCaseFile);
 		System.out.println("\n\nDemsCreateCourtCase JSON is\n"+stringFile3);
+		objectMapper.writeValue(stringFile3C, demsCaseMetadata);
+		System.out.println("\n\nDemsCreateCourtCaseMetadata JSON is\n"+stringFile3C);
 
-
-
+		for (BusinessCourtCaseAccused ba : businessFile.getAccused_person()) {
+			DemsParticipantData person = new DemsParticipantData(ba);
+			objectMapper.writeValue(stringFile3P, person);
+		}
+		System.out.println("\n\nDemsParticipantData JSON is\n"+stringFile3P);
 
 		stringFile.close();
+		stringFileC.close();
 		stringFile2.close();
 		stringFile3.close();
+		stringFile3C.close();
+		stringFile3P.close();
 
 	}
 

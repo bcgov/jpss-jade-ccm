@@ -15,38 +15,46 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
   private String justin_guid;
   private String justin_rcc_id;
 
-  public static final String COURT_CASE_EVENT_VERSION = "1.0";
-
-  public static final String STATUS_CHANGED = "CHANGED";
-  public static final String STATUS_CREATED = "CREATED";
-  public static final String STATUS_UPDATED = "UPDATED";
-  public static final String STATUS_AUTH_LIST_CHANGED = "AUTH_LIST_CHANGED";
-
-  public static final String SOURCE_JUSTIN = "JUSTIN";
-  public static final String SOURCE_JADE_CCM = "JADE-CCM";
+  public static final String EVENT_VERSION = "1.0";
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
-  public static final String JUSTIN_RCC_ID = "RCC_ID";
+  public static final String JUSTIN_RCC_ID = "RCC_ID";  
+
+  public enum SOURCE {
+    JUSTIN,
+    JADE_CCM
+  }
+  
+  public enum STATUS {
+    CHANGED,
+    CREATED,
+    UPDATED,
+    AUTH_LIST_CHANGED;
+  }
 
   public BusinessCourtCaseEvent() {
-    super.setEvent_version(COURT_CASE_EVENT_VERSION);
+    super.setEvent_version(EVENT_VERSION);
   }
 
   public BusinessCourtCaseEvent(JustinEvent je) {
     this();
 
-    setEvent_source(SOURCE_JUSTIN);
+    setEvent_source(SOURCE.JUSTIN.toString());
 
     setJustin_event_message_id(je.getEvent_message_id());
     setJustin_message_event_type_cd(je.getMessage_event_type_cd());
 
-    switch(je.getMessage_event_type_cd()) {
-      case JustinEvent.EVENT_TYPE_AGEN_FILE:
-        setEvent_status(STATUS_CHANGED);
+    switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
+      case AGEN_FILE:
+        setEvent_status(STATUS.CHANGED.toString());
         break;
-      case JustinEvent.EVENT_TYPE_AUTH_LIST:
-        setEvent_status(STATUS_AUTH_LIST_CHANGED);
+      case AUTH_LIST:
+        setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
+        break;
+      default:
+        // unknown status
+        setEvent_status("");
         break;
     }
     

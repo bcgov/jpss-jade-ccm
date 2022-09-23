@@ -31,17 +31,12 @@ public class DemsCourtCaseData {
             if(accused_names.length() > 0) {
                 accused_names.append(SEMICOLON_SPACE_STRING);
             }
-            if(ba.getFull_name() != null && !ba.getFull_name().isEmpty()) {
+            if(ba.getSurname() != null && !ba.getSurname().isEmpty()) {
                 // JADE-1470 surnames should be in all uppercase.
-                String[] names = ba.getFull_name().split(COMMA_STRING, 2);
-                if(names.length > 1) {
-                    accused_names.append(names[0].toUpperCase());
-                    accused_names.append(COMMA_STRING);
-                    accused_names.append(names[1]);
-                } else {
-                    accused_names.append(ba.getFull_name());
-                }
-            }
+                accused_names.append(ba.getSurname().toUpperCase());
+                accused_names.append(COMMA_STRING);
+                accused_names.append(ba.getFirst_name());
+           }
         }
         setName(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()));
         setTimeZoneId(PACIFIC_TIMEZONE);

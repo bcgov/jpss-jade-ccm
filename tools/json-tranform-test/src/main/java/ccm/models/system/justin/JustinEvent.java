@@ -13,16 +13,32 @@ public class JustinEvent {
   private String event_dtm;
   private List<JustinEventDataElement> event_data;
 
-  public static final String EVENT_TYPE_AGEN_FILE = "AGEN_FILE";
-  public static final String EVENT_TYPE_AUTH_LIST = "AUTH_LIST";
-  public static final String EVENT_TYPE_COURT_FILE = "COURT_FILE";
+  public enum STATUS {
+    AGEN_FILE,
+    AUTH_LIST,
+    COURT_FILE,
+    APPR,
+    CRN_ASSIGN;
+  }
 
   public boolean isAgenFileEvent() {
-    return EVENT_TYPE_AGEN_FILE.equals(getMessage_event_type_cd());
+    return STATUS.AGEN_FILE.equals(getMessage_event_type_cd());
   }  
   
   public boolean isCourtFileEvent() {
-    return EVENT_TYPE_COURT_FILE.equals(getMessage_event_type_cd());
+    return STATUS.COURT_FILE.equals(getMessage_event_type_cd());
+  }
+
+  public boolean isAuthListEvent() {
+    return STATUS.AUTH_LIST.equals(getMessage_event_type_cd());
+  }
+
+  public boolean isApprEvent() {
+    return STATUS.APPR.equals(getMessage_event_type_cd());
+  }
+
+  public boolean isCrownAsgnEvent() {
+    return STATUS.CRN_ASSIGN.equals(getMessage_event_type_cd());
   }
   
   public String getMessage_event_type_dsc() {
@@ -63,10 +79,6 @@ public class JustinEvent {
 
   public void setProcess_status_dsc(String process_status_dsc) {
     this.process_status_dsc = process_status_dsc;
-  }
-
-  public boolean isAuthListEvent() {
-    return EVENT_TYPE_AUTH_LIST.equals(getMessage_event_type_cd());
   }
 
   public int getEvent_message_id() {
