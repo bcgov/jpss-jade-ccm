@@ -445,5 +445,55 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/0/sync")
     .log("Case group members synchronized.")
     ;
+
+
+    from("platform-http:/getParticipantExists")
+      .routeId("getParticipantExists")
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .setProperty("key", simple("${header.event_object_id}"))
+      .to("direct:getParticipantByKey")
+    ;
+      
+    // IN: exchangeProperty.key
+    from("direct:getParticipantByKey")
+    .routeId("direct:getParticipantByKey")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing getParticipantByKey request (key=${exchangeProperty.key})...")
+    .setProperty("dems_org_unit_id").simple("1")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .doTry()
+      // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
+      //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
+      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${exchangeProperty.key}/id?httpClient.soTimeout=30")
+      .setProperty("id", jsonpath("$.id"))
+      .log("Participant found. Id = ${exchangeProperty.id}")
+    //.doCatch(HttpOperationFailedException.class)
+    .doCatch(CamelException.class)
+      .log("Exception: ${exception}")
+      .log("Exchange: ${exchange}")
+      .choice()
+        .when().simple("${exception.statusCode} == 404")
+          .log(LoggingLevel.INFO,"Record not found (404).")
+          ////.toD("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
+          .setBody(simple("{\"id\": \"\"}"))
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR,"Unknown error.  Re-throw ${exception}")
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+              throw exchange.getException();
+            }
+          })
+        .endChoice()
+      .end()
+    .endDoTry()
+    ;
+    
+
   }
 }

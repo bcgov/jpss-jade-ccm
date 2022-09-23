@@ -2,7 +2,7 @@ package ccm.models.system.dems;
 
 public class DemsFieldData {
     public enum FIELD_MAPPINGS {
-        PART_ID(1, "PartID"),
+        PART_ID(2, "PartID"),
         AGENCY_FILE_ID(12, "Agency File ID"),
         AGENCY_FILE_NO(3, "Agency File No."),
         SUBMIT_DATE(13, "Submit Date"),
@@ -35,7 +35,7 @@ public class DemsFieldData {
         FIRST_TRIAL_DT(41, "First Trial Date"),
         FIRST_TRIAL_REASON(42, "First Trial Date Reason"),
         ASSIGNED_CROWN_NAME(43, "Assigned Crown Name"),
-        DATE_OF_BIRTH(1212, "DOB");
+        DATE_OF_BIRTH(35, "DOB");
 
         private int id;
         private String label;
