@@ -113,10 +113,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.to("{{justin.host}}/requeueEventById?id=2045")
     //.to("{{justin.host}}/requeueEventById?id=2060")
-    //.to("{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
-    //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
-    //.to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
-    //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
+    .to("{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
+    .to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
+    .to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
+    .to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
     //.to("{{justin.host}}/requeueEventById?id=2451") // COURT_FILE 39857
 
     // JSIT Sep 8

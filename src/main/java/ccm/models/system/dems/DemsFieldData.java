@@ -35,7 +35,7 @@ public class DemsFieldData {
         FIRST_TRIAL_DT(41, "First Trial Date"),
         FIRST_TRIAL_REASON(42, "First Trial Date Reason"),
         ASSIGNED_CROWN_NAME(43, "Assigned Crown Name"),
-        DATE_OF_BIRTH(35, "DOB");
+        DATE_OF_BIRTH(35, "Date Of Birth");
 
         private int id;
         private String label;

@@ -5,14 +5,13 @@ import java.util.ArrayList;
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsParticipantData {
-    public static final String ACTIVE_STATUS = "Active";
 
     private String key;
     private String name;
     private String firstName;
     private String lastName;
     private List<DemsFieldData> fields;
-    private String status;
+    private DemsAddressData address;
 
     public DemsParticipantData() {
     }
@@ -22,17 +21,19 @@ public class DemsParticipantData {
         setName(ba.getFull_name());
         setLastName(ba.getSurname());
         setFirstName(ba.getFirst_name());
-        setStatus(ACTIVE_STATUS);
-
-        DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());
-        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+        DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());
+        if(ba.getBirth_date() != null) {
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
+
+            fieldData.add(dob);
+        }
+
         fieldData.add(partId);
-        fieldData.add(dob);
 
         setFields(fieldData);
-
+        setAddress(new DemsAddressData(null));
     }
 
     public String getKey() {
@@ -75,12 +76,12 @@ public class DemsParticipantData {
         this.fields = fields;
     }
 
-    public String getStatus() {
-        return status;
+    public DemsAddressData getAddress() {
+        return address;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setAddress(DemsAddressData address) {
+        this.address = address;
     }
 
 }

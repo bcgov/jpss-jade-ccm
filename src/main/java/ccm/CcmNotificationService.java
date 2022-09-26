@@ -135,7 +135,16 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Create court case in DEMS.  Court case data = ${body}.")
+    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
     .to("http://ccm-dems-adapter/createCourtCase")
+    .log("Create participants")
+    .setBody(simple("${exchangeProperty.courtcase_data}"))
+    .split()
+      .jsonpathWriteAsString("$.accused_person")
+      .setHeader("key", jsonpath("$.identifier"))
+      .log("Found accused participant. Key: ${header.number}")
+      .to("direct:processAccusedPerson")
+    .end()
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
     ;
@@ -150,7 +159,16 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number").simple("${header.event_object_id}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Update court case in DEMS.  Court case data = ${body}.")
+    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
     .to("http://ccm-dems-adapter/updateCourtCase")
+    .log("Create participants")
+    .setBody(simple("${exchangeProperty.courtcase_data}"))
+    .split()
+      .jsonpathWriteAsString("$.accused_person")
+      .setHeader("key", jsonpath("$.identifier"))
+      .log("Found accused participant. Key: ${header.number}")
+      .to("direct:processAccusedPerson")
+    .end()
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
     ;
@@ -244,6 +262,53 @@ public class CcmNotificationService extends RouteBuilder {
       .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
     .end()
     ;
+
+    from("direct:processAccusedPerson")
+    .routeId("processAccusedPerson")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("processAccusedPerson.  key = ${header[key]}")
+    .setProperty("person_data", simple("${bodyAs(String)}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("key").simple("${header.key}")
+    .log("Retrieve court case auth list")
+    .to("http://ccm-lookup-service/getPersonExists")
+    .unmarshal().json()
+    .setProperty("personFound").simple("${body[id]}")
+    .setHeader("key").simple("${header.key}")
+    .setBody(simple("${exchangeProperty.person_data}"))
+    .choice()
+      .when(simple("${exchangeProperty.personFound} == ''"))
+        .to("direct:processPersonCreated")
+      .endChoice()
+      //.otherwise()
+      //  .to("direct:processPersonUpdated")
+      //.endChoice()
+    ;
+
+
+    from("direct:processPersonCreated")
+    .routeId("processPersonCreated")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("processPersonCreated.  key = ${header[key]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("key").simple("${header.key}")
+    .log("Create Person in DEMS.  Person data = ${body}.")
+    .to("http://ccm-dems-adapter/createPerson")
+    ;
+
+    from("direct:processPersonUpdated")
+    .routeId("processPersonUpdated")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("processPersonUpdated.  key = ${header[key]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("key").simple("${header.key}")
+    .log("Update court case in DEMS.  Person data = ${body}.")
+    .to("http://ccm-dems-adapter/updatePerson")
+    ;
+
 
     from("direct:processUnknownStatus")
     .routeId("processUnknownStatus")
