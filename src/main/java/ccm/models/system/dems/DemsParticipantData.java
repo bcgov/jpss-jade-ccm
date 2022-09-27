@@ -20,7 +20,7 @@ public class DemsParticipantData {
         setKey(ba.getIdentifier());
         setName(ba.getFull_name());
         setLastName(ba.getSurname());
-        setFirstName(ba.getFirst_name());
+        setFirstName(ba.getGiven_1_name());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());

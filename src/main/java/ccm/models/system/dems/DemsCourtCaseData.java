@@ -12,6 +12,7 @@ public class DemsCourtCaseData {
     public static final String TEMPLATE_CASE = "28";
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
+    public static final String SPACE_STRING = " ";
 
     private String name;
     private String key;
@@ -35,7 +36,15 @@ public class DemsCourtCaseData {
                 // JADE-1470 surnames should be in all uppercase.
                 accused_names.append(ba.getSurname().toUpperCase());
                 accused_names.append(COMMA_STRING);
-                accused_names.append(ba.getFirst_name());
+                accused_names.append(ba.getGiven_1_name());
+                if(ba.getGiven_2_name() != null) {
+                    accused_names.append(SPACE_STRING);
+                    accused_names.append(ba.getGiven_2_name());
+                }
+                if(ba.getGiven_3_name() != null) {
+                    accused_names.append(SPACE_STRING);
+                    accused_names.append(ba.getGiven_3_name());
+                }
            }
         }
         setName(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()));
