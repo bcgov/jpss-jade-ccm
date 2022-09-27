@@ -72,6 +72,9 @@ public class BusinessCourtCaseMetadataData {
       if (YES_STRING.equalsIgnoreCase(jcf.getChi1())) {
           case_flags.add("CHI1");
       }
+      if(YES_STRING.equalsIgnoreCase(jcf.getKfile_yn())) {
+        case_flags.add("K");
+      }
       if(jcf.getMdocaccused() != null) {
         for (JustinAccused accused : jcf.getMdocaccused()) {
             if (YES_STRING.equalsIgnoreCase(accused.getIndigenous_yn())) {

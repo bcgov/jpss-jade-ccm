@@ -494,7 +494,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .endDoTry()
     ;
 
-    
+
     from("platform-http:/createPerson")
     .routeId("createPerson")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -530,7 +530,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .endDoTry()
     .log("Person created.")
     ;
-      
+
     from("platform-http:/updatePerson")
     .routeId("updatePerson")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -559,6 +559,48 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
     .log("Person updated.")
     ;
+
+
+
+    from("platform-http:/addParticipantToCase")
+    .routeId("addParticipantToCase")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing addParticipantToCase request: ${body}")
+    .setProperty("participantType").simple("Accused")
+    .setProperty("key").simple("${header.key}")
+    .setProperty("courtCaseId").simple("${header.courtCaseId}")
+    .setProperty("PersonData").body()
+    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAccused.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String key = exchange.getProperty("key", String.class);
+        String participantType = exchange.getProperty("participantType", String.class);
+        DemsCourtCaseParticipantData d = new DemsCourtCaseParticipantData(key, participantType);
+        exchange.getMessage().setBody(d);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCourtCaseParticipantData.class)
+    .log("DEMS-bound request data: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .doTry()
+      .toD("{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR, "Exception: ${exception}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+          throw exchange.getException();
+        }
+      })
+    .endDoTry()
+    .log("Person added to case.")
+    ;
+      
 
 
   }

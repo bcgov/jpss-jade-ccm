@@ -1,2 +1,4 @@
 export TITLEPREFIX="DEMS Adapter   "
+
+echo -ne "\e]0;DEMS Adapter\a"
 kamel log ccm-dems-adapter

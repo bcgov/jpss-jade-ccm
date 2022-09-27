@@ -1,2 +1,4 @@
 export TITLEPREFIX="JUSTIN Adapter   "
+echo -ne "\e]0;JUSTIN Adapter\a"
+
 kamel log ccm-justin-adapter

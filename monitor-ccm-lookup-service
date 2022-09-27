@@ -1,2 +1,3 @@
 export TITLEPREFIX="Lookup Service   "
+echo -ne "\e]0;Lookup Service\a"
 kamel log ccm-lookup-service
