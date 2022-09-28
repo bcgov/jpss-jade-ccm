@@ -25,6 +25,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.business.*;
 import ccm.models.system.dems.*;
 
+import java.util.ArrayList;
 import org.apache.camel.CamelException;
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
@@ -491,8 +492,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("key").simple("${header.key}")
     .log("Check whether person exists in DEMS")
     .to("direct:getPersonExists")
+    .log("${body}")
     .unmarshal().json()
     .setProperty("personFound").simple("${body[id]}")
+    .setHeader("organizationId").jsonpath("$.orgs[0].organisationId", true)
     .setHeader("key").simple("${header.key}")
     .setHeader("courtCaseId").simple("${header.courtCaseId}")
     .setBody(simple("${exchangeProperty.person_data}"))
@@ -500,9 +503,12 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.personFound} == ''"))
         .to("direct:createPerson")
       .endChoice()
-      //.otherwise()
-      //  .to("direct:processPersonUpdated")
-      //.endChoice()
+      .otherwise()
+        .log("PersonId: ${exchangeProperty.personFound}")
+        .setHeader("personId").simple("${exchangeProperty.personFound}")
+        .log("OrganizationId: ${exchangeProperty.organizationId}")
+        .to("direct:updatePerson")
+      .endChoice()
       .end()
     .setHeader("key").simple("${header.key}")
     .setHeader("courtCaseId").simple("${header.courtCaseId}")
@@ -593,17 +599,29 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Person created.")
     ;
 
+    // IN: header.key
+    // IN: header.personId
+    // IN: header.organizationId
     from("direct:updatePerson")
     .routeId("updatePerson")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing updatePerson request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
+    .setProperty("PersonData").body()
+    .setProperty("personId").simple("${header[personId]}")
+    .setProperty("organizationId").simple("${header[organizationId]}")
     .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAccused.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         BusinessCourtCaseAccused b = exchange.getIn().getBody(BusinessCourtCaseAccused.class);
         DemsParticipantData d = new DemsParticipantData(b);
+        String personId = exchange.getProperty("personId", String.class);
+        String organizationId = exchange.getProperty("organizationId", String.class);
+        d.setId(personId);
+        DemsOrganisationData o = new DemsOrganisationData(organizationId);
+        d.setOrgs(new ArrayList<DemsOrganisationData>());
+        d.getOrgs().add(o);
         exchange.getMessage().setBody(d);
       }
     })

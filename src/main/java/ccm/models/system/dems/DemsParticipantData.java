@@ -6,12 +6,14 @@ import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsParticipantData {
 
+    private String id;
     private String key;
     private String name;
     private String firstName;
     private String lastName;
     private List<DemsFieldData> fields;
     private DemsAddressData address;
+    private List<DemsOrganisationData> orgs;
 
     public DemsParticipantData() {
     }
@@ -26,7 +28,6 @@ public class DemsParticipantData {
         DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());
         if(ba.getBirth_date() != null) {
             DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
-
             fieldData.add(dob);
         }
 
@@ -34,6 +35,14 @@ public class DemsParticipantData {
 
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getKey() {
@@ -82,6 +91,14 @@ public class DemsParticipantData {
 
     public void setAddress(DemsAddressData address) {
         this.address = address;
+    }
+
+    public List<DemsOrganisationData> getOrgs() {
+        return orgs;
+    }
+
+    public void setOrgs(List<DemsOrganisationData> orgs) {
+        this.orgs = orgs;
     }
 
 }
