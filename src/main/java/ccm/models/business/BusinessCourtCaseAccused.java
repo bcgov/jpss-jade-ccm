@@ -3,8 +3,14 @@ package ccm.models.business;
 import ccm.models.system.justin.JustinAccused;
 
 public class BusinessCourtCaseAccused {
+    public static final String COMMA_STRING = ",";
+
     private String identifier;
     private String full_name;
+    private String surname;
+    private String given_1_name;
+    private String given_2_name;
+    private String given_3_name;
     private String proposed_process_type;
     private String proposed_appearance_date;
     private String crown_decision_code;
@@ -19,6 +25,10 @@ public class BusinessCourtCaseAccused {
     public BusinessCourtCaseAccused(JustinAccused ja) {
         setIdentifier(ja.getPart_id());
         setFull_name(ja.getAccused_name());
+        setSurname(ja.getAccused_surname_nm());
+        setGiven_1_name(ja.getAccused_given_1_nm());
+        setGiven_2_name(ja.getAccused_given_2_nm());
+        setGiven_3_name(ja.getAccused_given_3_nm());
         setProposed_process_type(ja.getProposed_process_type());
         setProposed_appearance_date(ja.getProposed_appr_date());
         setCrown_decision_code(ja.getCrown_decision());
@@ -28,9 +38,9 @@ public class BusinessCourtCaseAccused {
         // Map 78
         if ("Y" == ja.getIndigenous_yn()) {
             setIndigenous_accused_yn(true);
-       } else {
+        } else {
             setIndigenous_accused_yn(false);
-       }
+        }
 
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
@@ -57,6 +67,38 @@ public class BusinessCourtCaseAccused {
 
     public void setFull_name(String full_name) {
         this.full_name = full_name;
+    }
+
+    public String getGiven_1_name() {
+        return given_1_name;
+    }
+
+    public void setGiven_1_name(String given_1_name) {
+        this.given_1_name = given_1_name;
+    }
+
+    public String getGiven_2_name() {
+        return given_2_name;
+    }
+
+    public void setGiven_2_name(String given_2_name) {
+        this.given_2_name = given_2_name;
+    }
+
+    public String getGiven_3_name() {
+        return given_3_name;
+    }
+
+    public void setGiven_3_name(String given_3_name) {
+        this.given_3_name = given_3_name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public void setSurname(String surname) {
+        this.surname = surname;
     }
 
     public String getProposed_process_type() {

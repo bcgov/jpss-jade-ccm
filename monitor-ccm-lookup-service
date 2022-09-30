@@ -1,2 +1,22 @@
+ns_set="cef5dd"
+
+if [ "$1" = "" ] || [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+echo "`basename $0` to $ns ..."
+
 export TITLEPREFIX="Lookup Service   "
-kamel log ccm-lookup-service
+echo -ne "\e]0;Lookup Service\a"
+kamel -n $ns log ccm-lookup-service

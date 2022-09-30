@@ -3,8 +3,12 @@ package ccm.models.business;
 import ccm.models.system.justin.JustinAccused;
 
 public class BusinessCourtCaseAccused {
+    public static final String COMMA_STRING = ",";
+
     private String identifier;
     private String full_name;
+    private String first_name;
+    private String surname;
     private String proposed_process_type;
     private String proposed_appearance_date;
     private String crown_decision_code;
@@ -25,6 +29,17 @@ public class BusinessCourtCaseAccused {
         setOffence_date(ja.getOffence_date());
         setBirth_date(ja.getBirth_date());
 
+        if(ja.getAccused_name() != null && !ja.getAccused_name().isEmpty()) {
+            String[] names = ja.getAccused_name().split(COMMA_STRING, 2);
+            if(names.length > 1) {
+                setSurname(names[0]);
+                setFirst_name(names[1]);
+            } else {
+                // in case there's no "surname, given name" set-up, just assume the entire name is a surname.
+                setSurname(ja.getAccused_name());
+            }
+        }
+
         // Map 78
         if ("Y" == ja.getIndigenous_yn()) {
             setIndigenous_accused_yn(true);
@@ -33,12 +48,12 @@ public class BusinessCourtCaseAccused {
        }
 
         StringBuilder name_process = new StringBuilder();
-        if(ja.getAccused_name() != null) {
-            name_process.append(ja.getAccused_name());
-        }
         if(ja.getProposed_process_type() != null) {
-            name_process.append(" ");
             name_process.append(ja.getProposed_process_type());
+        }
+        if(ja.getAccused_name() != null) {
+            name_process.append(" ");
+            name_process.append(ja.getAccused_name());
         }
         setName_and_proposed_process_type(name_process.toString());
     }
@@ -57,6 +72,22 @@ public class BusinessCourtCaseAccused {
 
     public void setFull_name(String full_name) {
         this.full_name = full_name;
+    }
+
+    public String getFirst_name() {
+        return first_name;
+    }
+
+    public void setFirst_name(String first_name) {
+        this.first_name = first_name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public void setSurname(String surname) {
+        this.surname = surname;
     }
 
     public String getProposed_process_type() {
