@@ -26,6 +26,13 @@ hs_err_pid*
 .vscode
 .vscode/
 
+# Target folder
+target/
+
+# json-transform-test
+tools/json-transform-test/.settings
+tools/json-transform-test/.project
+
 # APS Gatway config folder
 gateway/.env
 
