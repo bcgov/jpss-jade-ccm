@@ -24,10 +24,6 @@ kamel -n $ns run \
   CcmDemsAdapter.java \
   --resource file:../../../../classes/ccm-models.jar \
 kamel -n $ns run \
-=======
-kamel -n cef5dd-dev delete ccm-dems-adapter
-kamel -n cef5dd-dev run \
->>>>>>> origin/feature/scenario-5.4.x-elaine
   CcmDemsAdapter.java \
   --resource file:../../../../classes/ccm-models.jar \
   --property file:ccmDemsAdapter.properties \
@@ -36,7 +32,7 @@ kamel -n cef5dd-dev run \
   --profile openshift \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false
-  
+
   #--trait route.tls-termination=edge \
   #--trait route.tls-insecure-edge-termination-policy=Redirect \
   #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \  
