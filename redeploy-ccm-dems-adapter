@@ -1,8 +1,38 @@
+ns_set="cef5dd"
+
+if [ "$1" = "" ] || [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+echo "`basename $0` to $ns ..."
+
 pushd src/main/java/ccm
 
-kamel -n cef5dd-dev delete ccm-dems-adapter
-kamel -n cef5dd-dev run CcmDemsAdapter.java  --resource file:../../../../classes/ccm-models.jar  --property file:ccmDemsAdapter.properties  --config secret:dems-secrets  --config secret:dems-edge-adapter-secrets  --profile openshift  --trait environment.vars=TZ="Canada/Pacific"  --trait service.node-port=false  --trait route.tls-termination=edge  --trait route.tls-insecure-edge-termination-policy=Redirect  --trait route.host=ccm-dems-adapter-dev.apps.silver.devops.gov.bc.ca 
-  
+kamel -n $ns delete ccm-dems-adapter
+kamel -n $ns run \
+  CcmDemsAdapter.java \
+  --resource file:../../../../classes/ccm-models.jar \
+  --property file:ccmDemsAdapter.properties \
+  --config secret:dems-secrets \
+  --config secret:dems-edge-adapter-secrets \
+  --profile openshift \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait service.node-port=false \
+  --trait route.tls-termination=edge \
+  --trait route.tls-insecure-edge-termination-policy=Redirect
+
+  #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \  
   #--trait logging.level=DEBUG \
   #--trait dependencies.enabled=true \
   #--trait route.enabled=false \
@@ -10,4 +40,4 @@ kamel -n cef5dd-dev run CcmDemsAdapter.java  --resource file:../../../../classes
 
 popd
 
-# kamel -n cef5dd-dev log ccm-dems-adapter
+# kamel -n cef5dd-test log ccm-dems-adapter

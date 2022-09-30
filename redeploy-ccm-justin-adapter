@@ -1,7 +1,26 @@
+ns_set="cef5dd"
+
+if [ "$1" = "" ] || [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+echo "`basename $0` to $ns ..."
+
 pushd src/main/java/ccm
 
-kamel -n cef5dd-dev delete ccm-justin-adapter
-kamel -n cef5dd-dev run \
+kamel -n $ns delete ccm-justin-adapter
+kamel -n $ns run \
   CcmJustinAdapter.java \
   --resource file:../../../../classes/ccm-models.jar \
   --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
@@ -23,4 +42,4 @@ kamel -n cef5dd-dev run \
 
 popd
 
-# kamel -n cef5dd-dev log ccm-justin-adapter
+# kamel -n cef5dd-test log ccm-justin-adapter

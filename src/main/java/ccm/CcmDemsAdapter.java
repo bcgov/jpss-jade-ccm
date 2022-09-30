@@ -506,7 +506,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .otherwise()
         .log("PersonId: ${exchangeProperty.personFound}")
         .setHeader("personId").simple("${exchangeProperty.personFound}")
-        .log("OrganizationId: ${exchangeProperty.organizationId}")
+        .log("OrganizationId: ${header.organizationId}")
         .to("direct:updatePerson")
       .endChoice()
       .end()

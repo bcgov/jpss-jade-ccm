@@ -31,6 +31,7 @@ target/
 
 # json-transform-test
 tools/json-transform-test/.settings
+tools/json-transform-test/.settings/**
 tools/json-transform-test/.project
 
 # APS Gatway config folder
