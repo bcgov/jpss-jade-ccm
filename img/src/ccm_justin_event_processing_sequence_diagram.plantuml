@@ -4,24 +4,20 @@ participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
 collections court_cases_topic as "Court Case Events"
 collections court_case_metadatas_topic as "Court Case Metadata Events"
-participant case_notification_service as "Case Notification Service"
-participant case_lookup_service as "Case Lookup Service"
-participant d_adapter as "DEMS Adapter"
-participant d_interface as "DEMS Interface"
 
 title
-JADE-CCM JUSTIN Event Processing Sequence Diagram
+CCM JUSTIN Event Processing Sequence Diagram
 end title
 
 autonumber
 
 activate j_adapter
 loop Every 5 minutes
-    j_adapter-> j_interface: Mark all new business events as "in progress"
+    j_adapter-> j_interface: Mark all new JUSTIN events as "in progress"
     activate j_interface
     j_interface --> j_adapter: Acknowledgement
-    j_adapter-> j_interface: Retrieve all in progress business events
-    j_interface --> j_adapter: List of business events
+    j_adapter-> j_interface: Retrieve all in progress JUSTIN events
+    j_interface --> j_adapter: List of JUSTIN events
     deactivate j_interface
     loop For every business event
         j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
@@ -38,7 +34,7 @@ loop Every 5 minutes
         else Other business event
             j_adapter -> j_adapter: No operation (future functionality)
         end
-        j_adapter -> j_interface: Set event processed successfully
+        j_adapter -> j_interface: Mark event as processed
         activate j_interface
         j_interface --> j_adapter: Acknowledgement
         deactivate j_interface
@@ -46,49 +42,7 @@ loop Every 5 minutes
 end
 deactivate j_adapter
 
-court_cases_topic o-> case_notification_service: Process court case CHANGED event
-activate case_notification_service
-case_notification_service -> case_lookup_service: Check case exists
-activate case_lookup_service
-note over case_lookup_service, d_adapter
-Integration assumption: DEMS is the system-of-record
-for whether a court case already exists or not
-end note
-case_lookup_service -> d_adapter: Check case exists in DEMS
-activate d_adapter
-d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-d_adapter -> d_interface: Check case exists in DEMS
-activate d_interface
-d_interface --> d_adapter: Response
-deactivate d_interface
-d_adapter --> case_lookup_service: Response
-deactivate d_adapter
-case_lookup_service --> case_notification_service: Response
-deactivate case_lookup_service
-alt New court case
-    case_notification_service ->o court_cases_topic: Produce court case CREATED event
-else Existing court case
-    case_notification_service ->o court_cases_topic: Produce court case UPDATED event
-end
-deactivate case_notification_service
-
-court_cases_topic o-> case_notification_service: Process court case AUTH_LIST_CHANGED event
-activate case_notification_service
-deactivate case_notification_service
-
-court_case_metadatas_topic o-> case_notification_service: Process court case metadata CHANGED event
-activate case_notification_service
-deactivate case_notification_service
-
-court_case_metadatas_topic o-> case_notification_service: Process court case metadata APPEARANCE_CHANGED event
-activate case_notification_service
-deactivate case_notification_service
-
-court_case_metadatas_topic o-> case_notification_service: Process court case CROWN_ASSIGNMENT_CHANGED event
-activate case_notification_service
-deactivate case_notification_service
-
 caption
-Prepared by David Agahchen | Updated September 15, 2022
+Prepared by David Agahchen | Updated September 30, 2022
 end caption
 @enduml

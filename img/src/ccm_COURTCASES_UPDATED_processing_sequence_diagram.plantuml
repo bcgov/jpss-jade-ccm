@@ -9,7 +9,7 @@ participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
 title
-JADE-CCM Case Updated Event Processing Sequence Diagram
+CCM CourtCases UPDATED Event Processing Sequence Diagram
 end title
 
 autonumber
@@ -40,6 +40,31 @@ d_adapter -> d_interface: Update case in DEMS
 activate d_interface
 d_interface --> d_adapter: Updated
 deactivate d_interface
+
+loop For every accused partipant
+    d_adapter -> d_interface: Check if participant exists
+    activate d_interface
+    d_interface --> d_adapter: participant id if exists
+    deactivate d_interface
+    alt New participant
+        d_adapter -> d_interface: Create new participant
+        activate d_interface
+        d_interface --> d_adapter: Created
+        deactivate d_interface
+    else Existing participant
+        d_adapter -> d_interface: Update existing participant
+        activate d_interface
+        d_interface --> d_adapter: Updated
+        deactivate d_interface
+    end
+    d_adapter -> d_interface: Add participant to case
+    activate d_interface
+    d_interface --> d_adapter: Acknowledged
+    deactivate d_interface
+end
+
+d_adapter --> case_notification_service: Created
+
 d_adapter --> case_notification_service: Updated
 deactivate d_adapter
 
@@ -67,6 +92,7 @@ d_adapter -> d_interface: Sync case users in DEMS
 activate d_interface
 d_interface --> d_adapter: Acknowledged
 deactivate d_interface
+
 d_adapter --> case_notification_service: Acknowledged
 deactivate d_adapter
 
@@ -83,6 +109,6 @@ deactivate d_adapter
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated September 15, 2022
+Prepared by David Agahchen | Updated September 30, 2022
 end caption
 @enduml
