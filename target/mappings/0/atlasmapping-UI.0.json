@@ -1,0 +1,37 @@
+{
+  "AtlasMapping" : {
+    "jsonType" : "io.atlasmap.v2.AtlasMapping",
+    "dataSource" : [ {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "agencyFile-56e80bb1-237e-424f-ab6c-a83d31257559",
+      "name" : "agencyFile",
+      "description" : "Source document agencyFile type: JSON",
+      "uri" : "atlas:json:agencyFile-56e80bb1-237e-424f-ab6c-a83d31257559",
+      "dataSourceType" : "SOURCE"
+    }, {
+      "jsonType" : "io.atlasmap.json.v2.JsonDataSource",
+      "id" : "courtCaseData-aacbf474-1c64-4037-9904-9de2f4310412",
+      "name" : "courtCaseData",
+      "description" : "Target document courtCaseData type: JSON",
+      "uri" : "atlas:json:courtCaseData-aacbf474-1c64-4037-9904-9de2f4310412",
+      "dataSourceType" : "TARGET"
+    } ],
+    "mappings" : {
+      "mapping" : [ ]
+    },
+    "lookupTables" : {
+      "lookupTable" : [ ]
+    },
+    "constants" : {
+      "constant" : [ {
+        "name" : "VUL1",
+        "value" : "VUL1",
+        "fieldType" : "STRING"
+      } ]
+    },
+    "properties" : {
+      "property" : [ ]
+    },
+    "name" : "UI.0"
+  }
+}

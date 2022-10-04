@@ -1,0 +1,29 @@
+@startuml ccm_business_objects
+
+object "JUSTIN Agency File" as justin_agency_file
+object "JUSTIN Court File" as justin_court_file
+object "JUSTIN Court Appearance" as justin_appearance
+object "JUSTIN Crown Assignment" as justin_crown_assignment
+object "Business Court Case" as business_court_case
+object "Business Court Case Metadata" as business_court_case_metadata
+object "Business Court Case Appearance" as business_court_case_appearance
+object "Business Court Case Crown Assignment" as business_court_case_crown_assignment
+object "DEMS Court Case?" as dems_court_case
+
+justin_agency_file o- "0..*"  justin_court_file
+justin_court_file -o "0..*" justin_appearance
+justin_court_file -o "0..*" justin_crown_assignment
+justin_agency_file --> business_court_case
+justin_court_file --> business_court_case_metadata
+justin_crown_assignment --> business_court_case_crown_assignment
+justin_appearance --> business_court_case_appearance
+business_court_case --> dems_court_case
+business_court_case_metadata --> dems_court_case
+business_court_case_appearance --> "?" dems_court_case
+business_court_case_crown_assignment --> "?" dems_court_case
+
+caption
+Prepared by David Agahchen | Updated September 8, 2022
+end caption
+
+@enduml

@@ -1,0 +1,21 @@
+{
+    "id": 78,
+    "caseNumber": null,
+    "category": null,
+    "status": "Active",
+    "cfsLocationType": 1,
+    "showCfsLocation": true,
+    "exportTempPath": "C:\\eDiscovery\\Temp",
+    "stagingAreaPath": "\\edt-mapleimp-poc-edtdems-staging\\Source/Site01_Case0078",
+    "stagingAreaPathNote": "The staging area is in Amazon S3: \\edt-mapleimp-poc-edtdems-staging\\Source/Site01_Case0078",
+    "stagingAreaPathDisabled": true,
+    "generateThumbnails": true,
+    "useDocIdForDownloads": false,
+    "timeZone",
+    "removeGeneratedFiles": false,
+    "searchHistoryRetention": 1000,
+    "cfsLocation": "C:\\eDiscovery\\Store",
+    "cfsLocationS3": "\\edt-mapleimp-poc-edtdems-cfs\\CFS",
+    "dateFormat": "d MMM yyyy",
+    "showMilliseconds": false
+}

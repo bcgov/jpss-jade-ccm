@@ -1,0 +1,48 @@
+@startuml
+'hide footbox
+participant j_interface as "JUSTIN Interface"
+participant j_adapter as "JUSTIN Adapter"
+collections court_cases_topic as "Court Case Events"
+collections court_case_metadatas_topic as "Court Case Metadata Events"
+
+title
+CCM JUSTIN Event Processing Sequence Diagram
+end title
+
+autonumber
+
+activate j_adapter
+loop Every 5 minutes
+    j_adapter-> j_interface: Mark all new JUSTIN events as "in progress"
+    activate j_interface
+    j_interface --> j_adapter: Acknowledgement
+    j_adapter-> j_interface: Retrieve all in progress JUSTIN events
+    j_interface --> j_adapter: List of JUSTIN events
+    deactivate j_interface
+    loop For every business event
+        j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+        alt AGEN_FILE event
+            j_adapter ->o court_cases_topic: Produce court case CHANGED event
+        else AUTH_LIST changed event
+            j_adapter ->o court_cases_topic: Produce court case AUTH_LIST_CHANGED event
+        else COURT_FILE changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case metadata CHANGED event
+        else APPR changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case metadata APPEARANCE_CHANGED event
+        else CRN_ASSIGN changed event
+            j_adapter ->o court_case_metadatas_topic: Produce court case metadata CROWN_ASSIGNMENT_CHANGED event
+        else Other business event
+            j_adapter -> j_adapter: No operation (future functionality)
+        end
+        j_adapter -> j_interface: Mark event as processed
+        activate j_interface
+        j_interface --> j_adapter: Acknowledgement
+        deactivate j_interface
+    end
+end
+deactivate j_adapter
+
+caption
+Prepared by David Agahchen | Updated September 30, 2022
+end caption
+@enduml

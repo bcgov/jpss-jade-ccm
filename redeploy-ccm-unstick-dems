@@ -1,0 +1,37 @@
+pushd src/main/java/ccm
+
+kamel -n cef5dd-dev delete ccm-notification-service
+
+sleep 2
+
+kamel -n cef5dd-dev delete ccm-dems-adapter
+
+sleep 3
+
+kamel -n cef5dd-dev run \
+  CcmDemsAdapter.java \
+  --resource file:../../../../classes/ccm-models.jar \
+  --property file:ccmDemsAdapter.properties \
+  --config secret:dems-secrets \
+  --config secret:dems-edge-adapter-secrets \
+  --profile openshift \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait service.node-port=false \
+  --trait route.tls-termination=edge \
+  --trait route.tls-insecure-edge-termination-policy=Redirect \
+  --trait route.host=ccm-dems-adapter-dev.apps.silver.devops.gov.bc.ca 
+
+sleep 20
+
+kamel -n cef5dd-dev run \
+  CcmNotificationService.java \
+  --resource file:../../../../classes/ccm-models.jar \
+  --property file:ccmNotificationService.properties \
+  --profile openshift \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait service.node-port=false \
+  --trait route.enabled=false
+
+
+popd
+

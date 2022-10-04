@@ -1,0 +1,1175 @@
+{
+	"info": {
+		"_postman_id": "2ba4acf7-101b-4b2a-9974-e0881bde2725",
+		"name": "DEMS Integration APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "DEMS",
+			"item": [
+				{
+					"name": "Case",
+					"item": [
+						{
+							"name": "GetCaseIdByKey",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/50433.0734/id",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"cases",
+										"50433.0734",
+										"id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseList",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/list",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"cases",
+										"list"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseDataById",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"91"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "CreateCase - PST",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Frank, Joe Mike John - 5\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"description\": \"\",\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"templateCase\": \"28\",\r\n    \"fields\": [\r\n        {\r\n            \"id\": 12,\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 3,\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"cases"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddParticipantToCase",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"personIdOrKey\" : \"DA.accused.1\",\r\n  \"participantType\": \"Accused\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91/participants",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"91",
+										"participants"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdateCase - PST",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"court_file_id\":\"39867\",\"court_file_no\":\"798441\",\"court_file_type_reference\":null,\"anticipated_crown_election\":\"IND\",\"court_file_seq_no\":\"1\",\"court_file_level\":\"P\",\"court_file_class\":\"A\",\"court_file_designation\":\"SA\",\"court_file_sworn_date\":\"2022-09-22\",\"offence_description_list\":\"CCC 344(1)(a) commit robbery use restricted/prohibited firearm\",\"court_file_number_seq_type\":\"798441-1-null\",\"court_home_registry\":\"4801-Kelowna Law Courts\",\"case_flags\":[],\"accused_person\":[{\"identifier\":\"73638.0734\",\"full_name\":\"Roberts, John\",\"proposed_process_type\":null,\"proposed_appearance_date\":null,\"crown_decision_code\":null,\"offence_date\":null,\"indigenous_accused_yn\":false,\"name_and_proposed_process_type\":\" Roberts, John\",\"birth_date\":\"1966-12-12\"}],\"related_agency_file\":[{\"rcc_id\":\"50450.0734\",\"agency_file_no\":\"22-472027\",\"security_clearance_level\":null,\"synopsis\":null,\"initiating_agency\":null,\"investigating_officer\":null,\"proposed_crown_office\":null,\"rcc_submit_date\":null,\"assessment_crown_name\":null,\"case_status_code\":null,\"file_note\":null,\"charge\":null,\"limitation_date\":null,\"earliest_offence_date\":null,\"earliest_proposed_appearance_date\":null,\"proposed_process_type_list\":\"\",\"case_flags\":[],\"accused_person\":[],\"case_decision_cd\":null}],\"related_court_file\":[]}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"91"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GroupMembersSync",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"keyField\": \"key\",\r\n  \"values\": [\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/groups/1/sync",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"58",
+										"groups",
+										"1",
+										"sync"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "CaseUsersSync",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"userKeys\": [\r\n    \"85064.0734\"\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/case-users/sync",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"58",
+										"case-users",
+										"sync"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseSchema",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/28/schema",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"28",
+										"schema"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseParticipants",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/91/participants?participantType=Accused",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"cases",
+										"91",
+										"participants"
+									],
+									"query": [
+										{
+											"key": "participantType",
+											"value": "Accused"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteCase",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/52",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"cases",
+										"52"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Person",
+					"item": [
+						{
+							"name": "CreatePerson",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"key\": \"DA.accused.2\",\r\n  \"name\": \"Accused Two Person 1900-01-01\",\r\n  \"firstName\": \"Accused\",\r\n  \"lastName\": \"Person\",\r\n  \"address\": {\r\n      \"email\": null\r\n  },\r\n  \"fields\": [\r\n    {\r\n      \"id\": 35,\r\n      \"name\": \"Date of Birth\",\r\n      \"value\": \"1900-01-01\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"persons"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdatePerson",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"id\": 8,\r\n    \"key\": \"DA.accused.2\",\r\n    \"name\": \"Accused Person\",\r\n    \"title\": null,\r\n    \"firstName\": \"Accused\",\r\n    \"lastName\": \"Person\",\r\n    \"address\": {\r\n        \"id\": 8,\r\n        \"email\": null,\r\n        \"mobile\": null,\r\n        \"phone\": null,\r\n        \"postalAddress\": null,\r\n        \"postalAddressAsJson\": null,\r\n        \"isPrivate\": false\r\n    },\r\n    \"orgs\": [\r\n        {\r\n            \"organisationId\": 7,\r\n            \"personId\": 8,\r\n            \"organisationTypeId\": 1,\r\n            \"organisationMemberId\": 8,\r\n            \"startDateTime\": \"2022-09-23T18:32:33.787\",\r\n            \"endDateTime\": null,\r\n            \"status\": \"Active\"\r\n        }\r\n    ],\r\n    \"cases\": [],\r\n    \"settings\": {\r\n        \"col2\": [],\r\n        \"col35\": [],\r\n        \"col35Date\": []\r\n    },\r\n    \"fields\": [],\r\n    \"displayName\": \"Accused Two Person\",\r\n    \"organisationTypeId\": 1,\r\n    \"permissions\": null,\r\n    \"status\": \"Active\",\r\n    \"organisationalUnitId\": 1\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.2",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"persons",
+										"DA.accused.2"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetPerson",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Frank, Joe Mike John - 5\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"description\": \"\",\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"templateCase\": \"28\",\r\n    \"fields\": [\r\n        {\r\n            \"id\": 12,\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 3,\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.2",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"org-units",
+										"1",
+										"persons",
+										"DA.accused.2"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GetVersion",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/version",
+							"protocol": "https",
+							"host": [
+								"346n1v5oeh",
+								"execute-api",
+								"ca-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetHealth",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/health",
+							"protocol": "https",
+							"host": [
+								"346n1v5oeh",
+								"execute-api",
+								"ca-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetSwagger",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/swagger/index.html",
+							"protocol": "https",
+							"host": [
+								"346n1v5oeh",
+								"execute-api",
+								"ca-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"swagger",
+								"index.html"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCustomFields",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/site/fields?organisationalUnitId=1",
+							"protocol": "https",
+							"host": [
+								"346n1v5oeh",
+								"execute-api",
+								"ca-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"api",
+								"v1",
+								"site",
+								"fields"
+							],
+							"query": [
+								{
+									"key": "organisationalUnitId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "ISL-DEMS-Adapter",
+			"item": [
+				{
+					"name": "GetVersion",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "WQBI1PxcVbgTSklhLljJE92SY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ccm-dems-edge-adapter-dev.apps.silver.devops.gov.bc.ca/v1/version",
+							"protocol": "https",
+							"host": [
+								"ccm-dems-edge-adapter-dev",
+								"apps",
+								"silver",
+								"devops",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetDEMSVersionViaAdapter",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "WQBI1PxcVbgTSklhLljJE92SY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ccm-dems-edge-adapter-dev.apps.silver.devops.gov.bc.ca/dems/v1/version",
+							"protocol": "https",
+							"host": [
+								"ccm-dems-edge-adapter-dev",
+								"apps",
+								"silver",
+								"devops",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"dems",
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "JUSTIN",
+			"item": [
+				{
+					"name": "health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "newEventsBatch",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/newEventsBatch",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"newEventsBatch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "inProgressEvents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"inProgressEvents"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "eventStatus",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"event_message_id\":\"2005\",\r\n \"is_success\":\"F\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/eventStatus",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"eventStatus"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "queueEvents",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/queueEvents",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"queueEvents"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "eventByIdOrGuid",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "event",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventById",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2003",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventById"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "2003",
+									"description": "event_message_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventsLast1Hour",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"system\":\"DEMS\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast1Hour",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsLast1Hour"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "2003",
+									"description": "event_message_id",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventsLast24Hours",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"system\":\"DEMS\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast24Hours",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsLast24Hours"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventSByDateRange Copy",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"from_dt\":\"18-MAY-2022\",\r\n \"to_dt\":\"19-MAY-2022\",\r\n \"system\":\"DEMS\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsByDtRange",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsByDtRange"
+							],
+							"query": [
+								{
+									"key": "from_dt",
+									"value": "2022-05-18 00:00:00",
+									"disabled": true
+								},
+								{
+									"key": "to_dt",
+									"value": "2022-05-19 00:00:00",
+									"disabled": true
+								},
+								{
+									"key": "system",
+									"value": "DEMS",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{DEMS-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

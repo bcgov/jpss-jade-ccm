@@ -1,0 +1,26 @@
+pushd src/main/java/TestDataProcessor
+
+\rm models.jar
+javac TestData.java
+jar cvf models.jar *.class
+
+kamel -n cef5dd-dev delete test-data-processor
+kamel -n cef5dd-dev run \
+  TestDataProcessor.java \
+  --resource file:../../mapping/system/justin/testData.json \
+  --resource file:../../mapping/justin2businessCourtCaseData.adm \
+  --resource file:models.jar \
+  --property file:application.properties \
+  --profile openshift \
+  --trait dependencies.enabled=true \
+  --trait route.enabled=false \
+  --trait service.node-port=false
+  # --dev
+  # --dependency file://./models.jar \
+  # --dependency github:agahchen/jpss-jade-ccm-models/1.0.0 \
+  # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
+  # --trait jvm.classpath=/etc/camel/resources/models.jar \
+
+popd
+
+kamel -n cef5dd-dev log test-data-processor

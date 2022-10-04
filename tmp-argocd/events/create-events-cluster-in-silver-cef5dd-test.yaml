@@ -35,13 +35,15 @@ spec:
     resources:
       limits:
         memory: 2Gi
+        cpu: 0.25
       requests:
         memory: 2Gi
+        cpu: 0.25
     storage:
       deleteClaim: true
       size: 5Gi
       type: persistent-claim
-      class: netapp-file-standard
+      class: netapp-block-standard
     template:
       statefulset:
         metadata:
@@ -62,13 +64,15 @@ spec:
     resources:
       limits:
         memory: 1Gi
+        cpu: 0.25
       requests:
         memory: 1Gi
+        cpu: 0.25
     storage:
       deleteClaim: false
       size: 1Gi
       type: persistent-claim
-      class: netapp-file-standard
+      class: netapp-block-standard
     template:
       statefulset:
         metadata:

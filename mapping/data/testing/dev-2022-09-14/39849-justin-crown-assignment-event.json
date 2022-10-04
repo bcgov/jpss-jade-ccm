@@ -1,0 +1,20 @@
+{
+    "event_message_id": 2321,
+    "appl_application_cd": "DEMS",
+    "message_event_type_cd": "CRN_ASSIGN",
+    "event_dtm": "2022-09-14 23:07",
+    "event_data": [
+        {
+            "data_element_nm": "FETCHED_DATE",
+            "data_value_txt": "NULL"
+        },
+        {
+            "data_element_nm": "GUID",
+            "data_value_txt": "E46BCC70C7E32134E05400144FFBC109"
+        },
+        {
+            "data_element_nm": "MDOC_JUSTIN_NO",
+            "data_value_txt": "39849"
+        }
+    ]
+}
