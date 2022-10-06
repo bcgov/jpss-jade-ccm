@@ -3,9 +3,7 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.business.BusinessCourtCaseData;
 import ccm.models.business.BusinessCourtCaseMetadataData;
-import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCourtCaseMetadataData {
     public static final String COMMA_STRING = ",";
@@ -22,6 +20,20 @@ public class DemsCourtCaseMetadataData {
         setKey(key);
         setName(name);
 
+        // Map any case flags that exist
+        List<DemsListItemFieldData> caseFlagList = new ArrayList<DemsListItemFieldData>();
+        for (String caseFlag : bccm.getCase_flags()) {
+            if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.name().equals(caseFlag)) {
+                caseFlagList.add(new DemsListItemFieldData(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getId()));
+            } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.name().equals(caseFlag)) {
+                caseFlagList.add(new DemsListItemFieldData(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getId()));
+            } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.name().equals(caseFlag)) {
+                caseFlagList.add(new DemsListItemFieldData(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getId()));
+            } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.name().equals(caseFlag)) {
+                caseFlagList.add(new DemsListItemFieldData(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getId()));
+            }
+        }
+
         DemsFieldData courtFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getId(), DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), bccm.getCourt_file_id());
         DemsFieldData crownElection = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getId(), DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), bccm.getAnticipated_crown_election());
         DemsFieldData courtFileLevel = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_LEVEL.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), bccm.getCourt_file_level());
@@ -31,8 +43,11 @@ public class DemsCourtCaseMetadataData {
         DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getId(), DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), bccm.getOffence_description_list());
         DemsFieldData courtFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), bccm.getCourt_file_number_seq_type());
         DemsFieldData courtHomeReg = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG.getLabel(), bccm.getCourt_home_registry());
+        DemsFieldData courtHomeRegName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG_NAME.getLabel(), bccm.getCourt_home_registry_name());
+        DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getId(), DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
         //DemsFieldData rmsProcStatus = new DemsFieldData(FIELD_MAPPINGS.RMS_PROC_STAT.getId(), FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new DemsFieldData(FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getId(), FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
+        DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), bccm.getAccused_names());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(courtFileId);
@@ -44,6 +59,9 @@ public class DemsCourtCaseMetadataData {
         fieldData.add(approvedCharges);
         fieldData.add(courtFileNo);
         fieldData.add(courtHomeReg);
+        fieldData.add(courtHomeRegName);
+        fieldData.add(caseFlags);
+        fieldData.add(accusedName);
 
         setFields(fieldData);
     }

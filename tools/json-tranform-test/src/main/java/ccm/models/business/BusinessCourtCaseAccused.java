@@ -7,8 +7,10 @@ public class BusinessCourtCaseAccused {
 
     private String identifier;
     private String full_name;
-    private String first_name;
     private String surname;
+    private String given_1_name;
+    private String given_2_name;
+    private String given_3_name;
     private String proposed_process_type;
     private String proposed_appearance_date;
     private String crown_decision_code;
@@ -23,29 +25,22 @@ public class BusinessCourtCaseAccused {
     public BusinessCourtCaseAccused(JustinAccused ja) {
         setIdentifier(ja.getPart_id());
         setFull_name(ja.getAccused_name());
+        setSurname(ja.getAccused_surname_nm());
+        setGiven_1_name(ja.getAccused_given_1_nm());
+        setGiven_2_name(ja.getAccused_given_2_nm());
+        setGiven_3_name(ja.getAccused_given_3_nm());
         setProposed_process_type(ja.getProposed_process_type());
         setProposed_appearance_date(ja.getProposed_appr_date());
         setCrown_decision_code(ja.getCrown_decision());
         setOffence_date(ja.getOffence_date());
         setBirth_date(ja.getBirth_date());
 
-        if(ja.getAccused_name() != null && !ja.getAccused_name().isEmpty()) {
-            String[] names = ja.getAccused_name().split(COMMA_STRING, 2);
-            if(names.length > 1) {
-                setSurname(names[0]);
-                setFirst_name(names[1]);
-            } else {
-                // in case there's no "surname, given name" set-up, just assume the entire name is a surname.
-                setSurname(ja.getAccused_name());
-            }
-        }
-
         // Map 78
         if ("Y" == ja.getIndigenous_yn()) {
             setIndigenous_accused_yn(true);
-       } else {
+        } else {
             setIndigenous_accused_yn(false);
-       }
+        }
 
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
@@ -74,12 +69,28 @@ public class BusinessCourtCaseAccused {
         this.full_name = full_name;
     }
 
-    public String getFirst_name() {
-        return first_name;
+    public String getGiven_1_name() {
+        return given_1_name;
     }
 
-    public void setFirst_name(String first_name) {
-        this.first_name = first_name;
+    public void setGiven_1_name(String given_1_name) {
+        this.given_1_name = given_1_name;
+    }
+
+    public String getGiven_2_name() {
+        return given_2_name;
+    }
+
+    public void setGiven_2_name(String given_2_name) {
+        this.given_2_name = given_2_name;
+    }
+
+    public String getGiven_3_name() {
+        return given_3_name;
+    }
+
+    public void setGiven_3_name(String given_3_name) {
+        this.given_3_name = given_3_name;
     }
 
     public String getSurname() {

@@ -44,6 +44,7 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
 
     setJustin_event_message_id(je.getEvent_message_id());
     setJustin_message_event_type_cd(je.getMessage_event_type_cd());
+    setJustin_event_dtm(je.getEvent_dtm());
 
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
       case AGEN_FILE:

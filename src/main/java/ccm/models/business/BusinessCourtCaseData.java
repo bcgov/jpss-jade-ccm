@@ -26,6 +26,7 @@ public class BusinessCourtCaseData {
 
     private String earliest_proposed_appearance_date;
     private String proposed_process_type_list;
+    private String accused_names;
 
     private List<String> case_flags;
 
@@ -110,12 +111,15 @@ public class BusinessCourtCaseData {
                 if(accused_names.length() > 0) {
                     accused_names.append("; ");
                 }
-                accused_names.append(ja.getAccused_name());
+                accused_names.append(ja.getAccused_given_1_nm());
+                accused_names.append(" ");
+                accused_names.append(ja.getAccused_surname_nm());
             }
         }
         setProposed_process_type_list(proposed_process_type_builder.toString());
         setAccused_person(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
+        setAccused_names(accused_names.toString());
     }
 
     public String getRcc_id() {
@@ -250,6 +254,14 @@ public class BusinessCourtCaseData {
 
     public void setAccused_person(List<BusinessCourtCaseAccused> accused_person) {
         this.accused_person = accused_person;
+    }
+
+    public String getAccused_names() {
+        return accused_names;
+    }
+
+    public void setAccused_names(String accused_names) {
+        this.accused_names = accused_names;
     }
 
 
