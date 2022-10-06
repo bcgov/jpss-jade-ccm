@@ -104,6 +104,7 @@ public class DemsCourtCaseData {
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), bcc.getEarliest_proposed_appearance_date());
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), bcc.getProposed_process_type_list());
         DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), bcc.getLimitation_date());
+        DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), bcc.getAccused_names());
 
         fieldData.add(agencyFileId);
         fieldData.add(agencyFileNo);
@@ -119,6 +120,7 @@ public class DemsCourtCaseData {
         fieldData.add(proposedAppDate);
         fieldData.add(proposedProcessType);
         fieldData.add(limitationDate);
+        fieldData.add(accusedName);
         setFields(fieldData);
 
     }

@@ -25,6 +25,7 @@ public class BusinessCourtCaseMetadataData {
   private String court_file_number_seq_type;
   private String court_home_registry;
   private String court_home_registry_name;
+  private String accused_names;
   //private String rms_processing_status;
   private List<String> case_flags;
 
@@ -91,16 +92,24 @@ public class BusinessCourtCaseMetadataData {
       }
 
       List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
+      StringBuilder accused_names = new StringBuilder();
 
       if(jcf.getMdocaccused() != null) {
         for (JustinAccused ja : jcf.getMdocaccused()) {
 
           BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
           accusedList.add(accused);
+          // Map 87
+          if(accused_names.length() > 0) {
+              accused_names.append("; ");
+          }
+          accused_names.append(ja.getAccused_given_1_nm());
+          accused_names.append(" ");
+          accused_names.append(ja.getAccused_surname_nm());
         }
       }
       setAccused_person(accusedList);
-
+      setAccused_names(accused_names.toString());
 
       List<BusinessCourtCaseData> agencyList = new ArrayList<BusinessCourtCaseData>();
 
@@ -237,6 +246,14 @@ public class BusinessCourtCaseMetadataData {
 
   public void setCase_flags(List<String> case_flags) {
     this.case_flags = case_flags;
+  }
+
+  public String getAccused_names() {
+    return accused_names;
+  }
+
+  public void setAccused_names(String accused_names) {
+    this.accused_names = accused_names;
   }
 
   public List<BusinessCourtCaseAccused> getAccused_person() {
