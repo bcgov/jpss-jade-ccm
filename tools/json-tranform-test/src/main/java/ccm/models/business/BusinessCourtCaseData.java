@@ -65,6 +65,9 @@ public class BusinessCourtCaseData {
         if ("Y".equalsIgnoreCase(jaf.getChi1())) {
             case_flags.add("CHI1");
         }
+        if ("Y".equalsIgnoreCase(jaf.getKfile_yn())) {
+            case_flags.add("K");
+        }
         if(jaf.getAccused() != null) {
             for (JustinAccused accused : jaf.getAccused()) {
                 if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {

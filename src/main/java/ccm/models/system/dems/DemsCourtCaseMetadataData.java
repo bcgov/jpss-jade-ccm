@@ -22,7 +22,7 @@ public class DemsCourtCaseMetadataData {
 
         // Map any case flags that exist
         List<DemsListItemFieldData> caseFlagList = new ArrayList<DemsListItemFieldData>();
-        for (String caseFlag : bcc.getCase_flags()) {
+        for (String caseFlag : bccm.getCase_flags()) {
             if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.name().equals(caseFlag)) {
                 caseFlagList.add(new DemsListItemFieldData(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getId()));
             } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.name().equals(caseFlag)) {

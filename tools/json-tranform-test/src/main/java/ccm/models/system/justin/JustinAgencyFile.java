@@ -12,6 +12,7 @@ public class JustinAgencyFile {
   private String investigating_officer_name;
   private String investigating_officer_pin;
   private String rcc_submit_date;
+  private String kfile_yn;
   private String vul1;
   private String chi1;
   private String crn_decision_agency_identifier;
@@ -91,6 +92,14 @@ public class JustinAgencyFile {
 
   public void setRcc_submit_date(String rcc_submit_date) {
     this.rcc_submit_date = rcc_submit_date;
+  }
+
+  public String getKfile_yn() {
+    return kfile_yn;
+  }
+
+  public void setKfile_yn(String kfile_yn) {
+    this.kfile_yn = kfile_yn;
   }
 
   public String getVul1() {

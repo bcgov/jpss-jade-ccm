@@ -1,11 +1,17 @@
 package ccm.models.business;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class BusinessBaseEvent {
     private String event_dtm;
     private String event_version;
     private String event_object_id;
 
     public BusinessBaseEvent() {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH;mm:ss");
+        Date date = new Date();
+        this.event_dtm = formatter.format(date);
     }
 
     public BusinessBaseEvent(BusinessBaseEvent another) {
