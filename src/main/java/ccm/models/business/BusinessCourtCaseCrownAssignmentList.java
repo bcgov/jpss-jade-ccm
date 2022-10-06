@@ -40,10 +40,10 @@ public class BusinessCourtCaseCrownAssignmentList {
 
         }
 
-    /*
-    Legal Staff Name and Assignment List: For every crown assignment If($MAPID45="LST" then "$MAPID44 - $MAPID45")	Jones, Keith - LST; Smith, John - LST
-    Crown Name and Assignment List: For every crown assignment If($MAPID45!="LST" then "$MAPID44 - $MAPID45")	Rhodes, Matt - AHR; Brown, James - B
-    */
+        /*
+        Legal Staff Name and Assignment List: For every crown assignment If($MAPID45="LST" then "$MAPID44 - $MAPID45")	Jones, Keith - LST; Smith, John - LST
+        Crown Name and Assignment List: For every crown assignment If($MAPID45!="LST" then "$MAPID44 - $MAPID45")	Rhodes, Matt - AHR; Brown, James - B
+        */
         if(ASSIGNMENT_TYPE_LST.equals(jas.getAssign_type_code())) {
           if(legalStaffAssignments.length() > 0) {
             legalStaffAssignments.append(SEMICOLON_STRING);

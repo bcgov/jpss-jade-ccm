@@ -50,7 +50,7 @@ public class DemsCourtCaseData {
             String truncatedCaseName = accused_names.substring(0, 251);
             accused_names = new StringBuilder();
             accused_names.append(truncatedCaseName);
-            accused_names.append("space...");
+            accused_names.append(" ...");
         }
         setName(accused_names.toString());
         setTimeZoneId(PACIFIC_TIMEZONE);

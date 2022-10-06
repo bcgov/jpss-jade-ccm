@@ -64,7 +64,7 @@ public class BusinessCourtCaseMetadataData {
       //"$MAPID62- $MAPID29"
       StringBuilder courtHomeReg = new StringBuilder();
       courtHomeReg.append(jcf.getHome_court_agency_identifier());
-      courtHomeReg.append(DASH_STRING);
+      courtHomeReg.append(COLON_STRING);
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
       setCourt_home_registry_name(jcf.getHome_court_agency_name());
@@ -101,7 +101,7 @@ public class BusinessCourtCaseMetadataData {
           accusedList.add(accused);
           // Map 87
           if(accused_names.length() > 0) {
-              accused_names.append("; ");
+              accused_names.append(", ");
           }
           accused_names.append(ja.getAccused_given_1_nm());
           accused_names.append(" ");

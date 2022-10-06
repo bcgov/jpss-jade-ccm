@@ -20,18 +20,32 @@ public class DemsParticipantData {
 
     public DemsParticipantData(BusinessCourtCaseAccused ba) {
         setKey(ba.getIdentifier());
-        setName(ba.getFull_name());
+        setName(ba.getName());
         setLastName(ba.getSurname());
         setFirstName(ba.getGiven_1_name());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());
         if(ba.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
             fieldData.add(dob);
         }
+        if(ba.getGiven_2_name() != null) {
+            DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
+            fieldData.add(given2);
+        }
+        if(ba.getGiven_3_name() != null) {
+            DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
+            fieldData.add(given3);
+        }
 
-        fieldData.add(partId);
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
+            ba.getGiven_1_name() + 
+            (ba.getGiven_2_name() != null ? " " + ba.getGiven_2_name() : "" ) +
+            (ba.getGiven_3_name() != null ? " " + ba.getGiven_3_name() : "" ) + 
+            " " + ba.getSurname()
+            );
+
+        fieldData.add(fullName);
 
         setFields(fieldData);
         setAddress(new DemsAddressData(null));

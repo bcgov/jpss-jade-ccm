@@ -36,7 +36,10 @@ public class DemsFieldData {
         FIRST_TRIAL_DT(41, "First Trial Date"),
         FIRST_TRIAL_REASON(42, "First Trial Date Reason"),
         ASSIGNED_CROWN_NAME(43, "Assigned Crown Name"),
-        DATE_OF_BIRTH(35, "Date Of Birth"),
+        PERSON_DATE_OF_BIRTH(35, "Date Of Birth"),
+        PERSON_GIVEN_NAME_2(51, "Given Name 2"),
+        PERSON_GIVEN_NAME_3(52, "Given Name 3"),
+        PERSON_FULL_NAME(54, "Full Name"),
         ACCUSED_FULL_NAME(47, "Accused Full Name"),
         LIMITATION_DATE(46, "Limitation Date");
 
