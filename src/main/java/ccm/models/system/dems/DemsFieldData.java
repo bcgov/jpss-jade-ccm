@@ -28,7 +28,7 @@ public class DemsFieldData {
         COURT_HOME_REG_NAME(44, "Court Home Registry Name"),
         RMS_PROC_STAT(32, "RMS Processing Status"),
         ASSIGNED_LEGAL_STAFF(33, "Assigned Legal Staff"),
-        ASSIGNED_CROWN(17, "Assigned Crown"),
+        ASSIGNED_CROWN(34, "Assigned Crown"),
         INITIAL_APP_DT(37, "Initial App. Date"),
         INITIAL_APP_REASON(38, "Initial App. Date Reason"),
         NEXT_APP_DT(39, "Next App. Date"),
