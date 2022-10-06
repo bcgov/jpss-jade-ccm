@@ -1,0 +1,29 @@
+@startjson
+{
+  "key": "DA.accused.7",
+  "name": "Accused The Seventh Person 1900-01-07",
+  "firstName": "Accused",
+  "lastName": "Person",
+  "address": {
+      "email": null
+  },
+  "fields": [
+    {
+      "name": "Date of Birth",
+      "value": "1900-01-01"
+    },
+    {
+      "name": "Given Name 2",
+      "value": "The"
+    },
+    {
+      "name": "Given Name 3",
+      "value": "Seventh"
+    },
+    {
+      "name": "Full Name",
+      "value": "Accused The Seventh Person"
+    }
+  ]
+}
+@endjson

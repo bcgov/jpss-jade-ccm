@@ -1,0 +1,33 @@
+@startjson
+{
+    "rcc_id": "50448.0734",
+    "agency_file_no": "RU-982022",
+    "security_clearance_level": "2",
+    "synopsis": "Syn is here",
+    "initiating_agency_name": "Kelowna Municipal RCMP",
+    "initiating_agency_identifier": "105",
+    "investigating_officer_name": "Rhodes, Christopher",
+    "investigating_officer_pin": "1001",
+    "rcc_submit_date": "2022-09-08",
+    "vul1": "N",
+    "chi1": "N",
+    "crn_decision_agency_identifier": "C402",
+    "crn_decision_agency_name": "Kelowna Crown Counsel",
+    "assessment_crown_name": "OHarris, Debbie Nn",
+    "assessment_crown_part_id": "11429.0026",
+    "case_decision_cd": "ACT",
+    "charge": "CCC 348(1)(a) Breaking and entering with intent",
+    "limitation_date": null,
+    "min_offence_date": "2022-09-08",
+    "accused": [
+        {
+            "part_id": "78158.0734",
+            "accused_name": "Vader, Darth",
+            "proposed_process_type": "WRR",
+            "proposed_appr_date": null,
+            "indigenous_yn": "N",
+            "birth_date": "1979-06-15"
+        }
+    ]
+}
+@endjson

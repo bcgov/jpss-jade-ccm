@@ -8,7 +8,7 @@ object "Business Court Case" as business_court_case
 object "Business Court Case Metadata" as business_court_case_metadata
 object "Business Court Case Appearance" as business_court_case_appearance
 object "Business Court Case Crown Assignment" as business_court_case_crown_assignment
-object "DEMS Court Case?" as dems_court_case
+object "DEMS Case?" as dems_court_case
 
 justin_agency_file o- "0..*"  justin_court_file
 justin_court_file -o "0..*" justin_appearance
