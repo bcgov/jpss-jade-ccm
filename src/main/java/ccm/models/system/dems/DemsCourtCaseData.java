@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.business.BusinessCourtCaseData;
-import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCourtCaseData {
@@ -47,7 +46,13 @@ public class DemsCourtCaseData {
                 }
            }
         }
-        setName(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()));
+        if(accused_names.length() > 251) {
+            String truncatedCaseName = accused_names.substring(0, 251);
+            accused_names = new StringBuilder();
+            accused_names.append(truncatedCaseName);
+            accused_names.append("space...");
+        }
+        setName(accused_names.toString());
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(bcc.getRcc_id());
         setDescription("");
@@ -98,6 +103,7 @@ public class DemsCourtCaseData {
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), bcc.getEarliest_offence_date());
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), bcc.getEarliest_proposed_appearance_date());
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), bcc.getProposed_process_type_list());
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), bcc.getLimitation_date());
 
         fieldData.add(agencyFileId);
         fieldData.add(agencyFileNo);
@@ -112,6 +118,7 @@ public class DemsCourtCaseData {
         fieldData.add(offenceDate);
         fieldData.add(proposedAppDate);
         fieldData.add(proposedProcessType);
+        fieldData.add(limitationDate);
         setFields(fieldData);
 
     }

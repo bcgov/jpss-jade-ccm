@@ -24,6 +24,7 @@ public class BusinessCourtCaseMetadataData {
   private String offence_description_list;
   private String court_file_number_seq_type;
   private String court_home_registry;
+  private String court_home_registry_name;
   //private String rms_processing_status;
   private List<String> case_flags;
 
@@ -49,18 +50,23 @@ public class BusinessCourtCaseMetadataData {
       //"$MAPID30-$MAPID33-$MAPID31"
       StringBuilder fileSeqNoType = new StringBuilder();
       fileSeqNoType.append(jcf.getCourt_file_no());
-      fileSeqNoType.append(DASH_STRING);
-      fileSeqNoType.append(jcf.getMdoc_seq_no());
-      fileSeqNoType.append(DASH_STRING);
-      fileSeqNoType.append(jcf.getType_reference());
+      if(jcf.getMdoc_seq_no() != null) {
+        fileSeqNoType.append(DASH_STRING);
+        fileSeqNoType.append(jcf.getMdoc_seq_no());
+      }
+      if(jcf.getType_reference() != null) {
+        fileSeqNoType.append(DASH_STRING);
+        fileSeqNoType.append(jcf.getType_reference());
+      }
       setCourt_file_number_seq_type(fileSeqNoType.toString());
 
-      //"$MAPID62: $MAPID29"
+      //"$MAPID62- $MAPID29"
       StringBuilder courtHomeReg = new StringBuilder();
       courtHomeReg.append(jcf.getHome_court_agency_identifier());
-      courtHomeReg.append(COLON_STRING);
+      courtHomeReg.append(DASH_STRING);
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
+      setCourt_home_registry_name(jcf.getHome_court_agency_name());
 
 
       //[(If $MAPID81=Y then add "VUL1"), (If $MAPID80=Y then add "CHI1"), (If $MAPID82=Y then add "K", (If $MAPID79=Y then add "Indigenous"]
@@ -215,6 +221,14 @@ public class BusinessCourtCaseMetadataData {
 
   public void setCourt_home_registry(String court_home_registry) {
     this.court_home_registry = court_home_registry;
+  }
+
+  public String getCourt_home_registry_name() {
+    return court_home_registry_name;
+  }
+
+  public void setCourt_home_registry_name(String court_home_registry_name) {
+    this.court_home_registry_name = court_home_registry_name;
   }
 
   public List<String> getCase_flags() {
