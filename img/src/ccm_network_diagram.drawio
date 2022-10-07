@@ -40,13 +40,13 @@
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-52" value="" style="image;html=1;image=img/lib/clip_art/networking/Firewall_02_128x128.png" parent="1" vertex="1">
                     <mxGeometry x="1377" y="360" width="80" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-84" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=18;startArrow=none;startFill=0;strokeColor=#000000;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="mLAZWL-NmnEjI0Y1Mdo3-61" edge="1" target="36">
+                <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-84" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=18;startArrow=none;startFill=0;strokeColor=#000000;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="mLAZWL-NmnEjI0Y1Mdo3-61" target="36" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1721.02" y="490.5999999999999" as="targetPoint"/>
+                        <mxPoint x="1721.02" y="521.5999999999999" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-61" value="" style="image;html=1;image=img/lib/clip_art/networking/Firewall_02_128x128.png" parent="1" vertex="1">
-                    <mxGeometry x="1602.01" y="507.5" width="80" height="80" as="geometry"/>
+                    <mxGeometry x="1602.01" y="538.5" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-68" value="Cloud" style="html=1;strokeColor=none;fillColor=#0079D6;labelPosition=center;verticalLabelPosition=middle;verticalAlign=top;align=center;fontSize=12;outlineConnect=0;spacingTop=-6;fontColor=#FFFFFF;sketch=0;shape=mxgraph.sitemap.cloud;" parent="1" vertex="1">
                     <mxGeometry x="861" y="359.5" width="140" height="89" as="geometry"/>
@@ -81,28 +81,28 @@
                     <mxGeometry x="1640" y="294" width="250" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-83" value="&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;JUSTIN Database&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;&amp;amp;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;Object Store&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
-                    <mxGeometry x="1691" y="454" width="150" height="45" as="geometry"/>
+                    <mxGeometry x="1691" y="485" width="150" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-106" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=18;startArrow=none;startFill=0;strokeColor=#000000;" parent="1" source="mLAZWL-NmnEjI0Y1Mdo3-52" target="mLAZWL-NmnEjI0Y1Mdo3-105" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-89" value="" style="image;html=1;image=img/lib/clip_art/computers/Server_Tower_128x128.png;fontSize=18;" parent="1" vertex="1">
-                    <mxGeometry x="1217" y="360" width="80" height="80" as="geometry"/>
+                    <mxGeometry x="1270" y="360" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-91" value="&lt;div style=&quot;font-size: 20px&quot;&gt;&lt;span style=&quot;font-weight: 400&quot;&gt;&lt;font style=&quot;font-size: 20px&quot;&gt;Sector Secure&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 20px&quot;&gt;&lt;span style=&quot;font-weight: 400&quot;&gt;&lt;font style=&quot;font-size: 20px&quot;&gt;Service&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 20px&quot;&gt;&lt;span style=&quot;font-weight: 400&quot;&gt;&lt;font style=&quot;font-size: 20px&quot;&gt;Gateway&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=left;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
-                    <mxGeometry x="1263" y="294" width="97" height="66" as="geometry"/>
+                    <mxGeometry x="1195" y="332.5" width="97" height="66" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-103" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=18;startArrow=classic;startFill=1;endArrow=none;strokeColor=#000000;" parent="1" source="mLAZWL-NmnEjI0Y1Mdo3-61" target="mLAZWL-NmnEjI0Y1Mdo3-105" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1667.77" y="541.5294117647061" as="sourcePoint"/>
-                        <mxPoint x="1576" y="542.5" as="targetPoint"/>
+                        <mxPoint x="1667.77" y="572.5294117647061" as="sourcePoint"/>
+                        <mxPoint x="1576" y="573.5" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-104" value="&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;JUSTIN&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;Application&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;Modules&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
-                    <mxGeometry x="1494.77" y="402" width="105.23" height="104" as="geometry"/>
+                    <mxGeometry x="1494.77" y="433" width="105.23" height="104" as="geometry"/>
                 </mxCell>
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-105" value="" style="image;html=1;image=img/lib/clip_art/computers/Server_Tower_128x128.png;fontSize=18;" parent="1" vertex="1">
-                    <mxGeometry x="1497.77" y="507.5" width="80" height="80" as="geometry"/>
+                    <mxGeometry x="1497.77" y="538.5" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=18;startArrow=none;startFill=0;strokeColor=#000000;endArrow=classic;endFill=1;exitX=0.007;exitY=0.74;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="30" target="mLAZWL-NmnEjI0Y1Mdo3-68" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -121,7 +121,7 @@
                     <mxGeometry x="1385" y="811" width="257" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="33" value="" style="image;html=1;image=img/lib/clip_art/networking/Firewall_02_128x128.png" parent="1" vertex="1">
-                    <mxGeometry x="1297" y="489" width="80" height="80" as="geometry"/>
+                    <mxGeometry x="1292" y="489" width="80" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=18;startArrow=none;startFill=0;strokeColor=#000000;endArrow=classic;endFill=1;exitX=0.997;exitY=0.74;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="30" target="33" edge="1">
                     <mxGeometry relative="1" as="geometry">
@@ -130,7 +130,7 @@
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="36" value="" style="shape=datastore;whiteSpace=wrap;html=1;fontSize=48;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
-                    <mxGeometry x="1730" y="517" width="60" height="60" as="geometry"/>
+                    <mxGeometry x="1730" y="548" width="60" height="60" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
