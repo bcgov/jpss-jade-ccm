@@ -1,5 +1,3 @@
 @startjson
-{
-    "something": "here"
-}
+{"identifier":"68556.0734","name":"Jones, Michael","surname":"Jones","given_1_name":"Michael","given_2_name":null,"given_3_name":null,"proposed_process_type":"AN","proposed_appearance_date":"2022-10-15","crown_decision_code":null,"offence_date":null,"indigenous_accused_yn":false,"name_and_proposed_process_type":"AN Jones, Michael","birth_date":"1980-03-10"}
 @endjson

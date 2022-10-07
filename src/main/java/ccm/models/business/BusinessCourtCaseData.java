@@ -103,7 +103,9 @@ public class BusinessCourtCaseData {
                 }
 
                 // Map 72
-                if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
+                if (earliest_proposed_appearance_date == null) {
+                    earliest_proposed_appearance_date = ja.getProposed_appr_date();
+                } else if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
                     earliest_proposed_appearance_date = ja.getProposed_appr_date();
                 }
 

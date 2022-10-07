@@ -41,7 +41,7 @@ public class DemsFieldData {
         PERSON_GIVEN_NAME_3(52, "Given Name 3"),
         PERSON_FULL_NAME(54, "Full Name"),
         ACCUSED_FULL_NAME(47, "Accused Full Name"),
-        LIMITATION_DATE(46, "Limitation Date");
+        LIMITATION_DATE(55, "Limitation Date");
 
         private int id;
         private String label;

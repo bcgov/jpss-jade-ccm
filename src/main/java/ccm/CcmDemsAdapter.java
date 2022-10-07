@@ -574,11 +574,11 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         BusinessCourtCaseAccused b = exchange.getIn().getBody(BusinessCourtCaseAccused.class);
-        DemsParticipantData d = new DemsParticipantData(b);
+        DemsPersonData d = new DemsPersonData(b);
         exchange.getMessage().setBody(d);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, DemsParticipantData.class)
+    .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
     .log("DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -615,7 +615,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         BusinessCourtCaseAccused b = exchange.getIn().getBody(BusinessCourtCaseAccused.class);
-        DemsParticipantData d = new DemsParticipantData(b);
+        DemsPersonData d = new DemsPersonData(b);
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);
         d.setId(personId);
@@ -625,7 +625,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         exchange.getMessage().setBody(d);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, DemsParticipantData.class)
+    .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
     .log("DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // update case
