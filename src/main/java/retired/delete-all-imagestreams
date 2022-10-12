@@ -1,3 +1,0 @@
-oc delete imagestream --all
-oc delete build --all
-oc delete buildconfig --all

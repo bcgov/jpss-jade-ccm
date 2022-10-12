@@ -20,6 +20,7 @@ public class JustinAgencyFile {
   private String assessment_crown_name;
   private String assessment_crown_part_id;
   private String case_decision_cd;
+  private String rcc_state_cd;
 
   private String note_to_file;
 
@@ -212,6 +213,14 @@ public class JustinAgencyFile {
 
   public void setPrimary_yn(String primary_yn) {
     this.primary_yn = primary_yn;
+  }
+
+  public String getRcc_state_cd() {
+    return rcc_state_cd;
+  }
+
+  public void setRcc_state_cd(String rcc_state_cd) {
+    this.rcc_state_cd = rcc_state_cd;
   }
 
 }

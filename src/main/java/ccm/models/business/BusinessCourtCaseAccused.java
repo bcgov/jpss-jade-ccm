@@ -17,7 +17,9 @@ public class BusinessCourtCaseAccused {
     private String offence_date;
     private Boolean indigenous_accused_yn;
     private String name_and_proposed_process_type;
-    private String birth_date;
+    private String birth_date;  
+    private Boolean hroip_yn;
+    private Boolean do_lto_yn;
 
     public BusinessCourtCaseAccused() {
     }
@@ -36,11 +38,10 @@ public class BusinessCourtCaseAccused {
         setBirth_date(ja.getBirth_date());
 
         // Map 78
-        if ("Y" == ja.getIndigenous_yn()) {
-            setIndigenous_accused_yn(true);
-        } else {
-            setIndigenous_accused_yn(false);
-        }
+        setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y" == ja.getIndigenous_yn());
+            
+        setHroip_yn(ja.getHroip_yn() != null && "Y" == ja.getHroip_yn());
+        setDo_lto_yn(ja.getDo_lto_yn() != null && "Y" == ja.getDo_lto_yn());
 
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
@@ -157,4 +158,20 @@ public class BusinessCourtCaseAccused {
         this.birth_date = birth_date;
     }
 
+    public Boolean getHroip_yn() {
+        return hroip_yn;
+    }
+
+    public void setHroip_yn(Boolean hroip_yn) {
+        this.hroip_yn = hroip_yn;
+    }
+
+    public Boolean getDo_lto_yn() {
+        return do_lto_yn;
+    }
+
+    public void setDo_lto_yn(Boolean do_lto_yn) {
+        this.do_lto_yn = do_lto_yn;
+    }
+    
 }

@@ -25,25 +25,23 @@ public class DemsPersonData {
         setFirstName(ba.getGiven_1_name());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        if(ba.getBirth_date() != null && ba.getBirth_date().length() > 0) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
-            fieldData.add(dob);
-        }
-        if(ba.getGiven_2_name() != null && ba.getGiven_2_name().length() > 0) {
-            DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
-            fieldData.add(given2);
-        }
-        if(ba.getGiven_3_name() != null && ba.getGiven_3_name().length() > 0) {
-            DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
-            fieldData.add(given3);
-        }
+        
+        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
+        fieldData.add(dob);
+        
+        DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
+        fieldData.add(given2);
 
-        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getId(), DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
+        DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
+        fieldData.add(given3);
+
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
             ba.getGiven_1_name() + 
             (ba.getGiven_2_name() != null && ba.getGiven_2_name().length() > 0 ? " " + ba.getGiven_2_name() : "" ) +
             (ba.getGiven_3_name() != null && ba.getGiven_3_name().length() > 0 ? " " + ba.getGiven_3_name() : "" ) + 
             " " + ba.getSurname()
             );
+
         fieldData.add(fullName);
 
         setFields(fieldData);

@@ -3,52 +3,66 @@ package ccm.models.system.dems;
 public class DemsListItemFieldData {
 
     public enum CASE_FLAG_FIELD_MAPPINGS {
-        VUL1(9),
-        CHI1(10),
-        K(11),
-        Indigenous(12);
+        // VUL1(9),
+        // CHI1(10),
+        // K(11),
+        // Indigenous(12);
 
-        private int id;
+        VUL1("VUL1"),
+        CHI1("CHI1"),
+        K("K"),
+        Indigenous("Indigenous");
 
-        private CASE_FLAG_FIELD_MAPPINGS(int id) {
-            this.id = id;
+        private String name;
+
+        public String getName() {
+            return name;
         }
 
-        public int getId() {
-            return id;
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        private CASE_FLAG_FIELD_MAPPINGS(String name) {
+            this.name = name;
         }
     }
 
     public enum CASE_DECISION_FIELD_MAPPINGS {
-        ADV(3),
-        ACT(4),
-        RET(5),
-        ACL(6),
-        NAC(7),
-        REF(8);
+        ADV("ADV"),
+        ACT("ACT"),
+        RET("RET"),
+        ACL("ACL"),
+        NAC("NAC"),
+        REF("REF");
 
-        private int id;
+        private String name;
 
-        private CASE_DECISION_FIELD_MAPPINGS(int id) {
-            this.id = id;
+        public String getName() {
+            return name;
         }
 
-        public int getId() {
-            return id;
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        private CASE_DECISION_FIELD_MAPPINGS(String name) {
+            this.name = name;
         }
     }
-    private int id;
 
-    public DemsListItemFieldData(int id) {
-        setId(id);
+    private String name;
+
+    public String getName() {
+        return name;
     }
 
-    public int getId() {
-        return id;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public DemsListItemFieldData(String name) {
+        setName(name);
     }
 
 }   

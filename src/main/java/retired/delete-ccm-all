@@ -1,6 +1,0 @@
-kamel -n cef5dd-dev delete ccm-dems-edge-adapter
-kamel -n cef5dd-dev delete ccm-dems-mock-app
-kamel -n cef5dd-dev delete ccm-justin-mock-app
-kamel -n cef5dd-dev delete ccm-justin-utility-adapter
-kamel -n cef5dd-dev delete ccm-notification-service
-kamel -n cef5dd-dev delete ccm-lookup-service

@@ -18,6 +18,7 @@ public class BusinessCourtCaseData {
 
     private String assessment_crown_name;
     private String case_status_code;
+    private String rcc_state_code;
     private String file_note;
 
     private String charge;
@@ -264,6 +265,14 @@ public class BusinessCourtCaseData {
 
     public void setAccused_names(String accused_names) {
         this.accused_names = accused_names;
+    }
+
+    public String getRcc_state_code() {
+        return rcc_state_code;
+    }
+
+    public void setRcc_state_code(String rcc_state_code) {
+        this.rcc_state_code = rcc_state_code;
     }
 
 
