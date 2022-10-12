@@ -1,8 +1,0 @@
-@startjson
-{
-    "type": "DbUpdateException",
-    "title": "Internal Server Error",
-    "status": 500,
-    "instance": "POST /api/v1/org-units/1/persons"
-}
-@endjson

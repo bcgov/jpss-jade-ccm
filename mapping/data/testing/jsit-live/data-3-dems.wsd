@@ -1,3 +1,0 @@
-@startjson
-{"id":"37","key":"68556.0734","name":"Jones, Michael","firstName":"Michael","lastName":"Jones","fields":[{"id":35,"name":"Date Of Birth","value":"1980-03-10"},{"id":54,"name":"Full Name","value":"Michael Jones"}],"address":{"email":null},"orgs":[{"organisationId":"30"}]}
-@endjson
