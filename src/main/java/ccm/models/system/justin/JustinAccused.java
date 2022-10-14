@@ -15,6 +15,9 @@ public class JustinAccused {
   private String indigenous_yn;
   private String birth_date;
   
+  private String hroip_yn;
+  private String do_lto_yn;
+  
   public String getPart_id() {
     return part_id;
   }
@@ -88,5 +91,16 @@ public class JustinAccused {
   public void setBirth_date(String birth_date) {
     this.birth_date = birth_date;
   }
-
+  public String getHroip_yn() {
+    return hroip_yn;
+  }
+  public void setHroip_yn(String hroip_yn) {
+    this.hroip_yn = hroip_yn;
+  }
+  public String getDo_lto_yn() {
+    return do_lto_yn;
+  }
+  public void setDo_lto_yn(String do_lto_yn) {
+    this.do_lto_yn = do_lto_yn;
+  }
 }

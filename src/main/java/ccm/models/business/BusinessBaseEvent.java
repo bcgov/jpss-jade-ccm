@@ -9,7 +9,7 @@ public class BusinessBaseEvent {
     private String event_object_id;
 
     public BusinessBaseEvent() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH;mm:ss");
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date date = new Date();
         this.event_dtm = formatter.format(date);
     }

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 import ccm.models.business.BusinessCourtCaseAccused;
 
-public class DemsParticipantData {
+public class DemsPersonData {
 
     private String id;
     private String key;
@@ -15,24 +15,35 @@ public class DemsParticipantData {
     private DemsAddressData address;
     private List<DemsOrganisationData> orgs;
 
-    public DemsParticipantData() {
+    public DemsPersonData() {
     }
 
-    public DemsParticipantData(BusinessCourtCaseAccused ba) {
+    public DemsPersonData(BusinessCourtCaseAccused ba) {
         setKey(ba.getIdentifier());
-        setName(ba.getFull_name());
         setLastName(ba.getSurname());
         setFirstName(ba.getGiven_1_name());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        DemsFieldData partId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PART_ID.getId(), DemsFieldData.FIELD_MAPPINGS.PART_ID.getLabel(), ba.getIdentifier());
-        if(ba.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getId(), DemsFieldData.FIELD_MAPPINGS.DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
-            fieldData.add(dob);
-        }
+        
+        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
+        fieldData.add(dob);
+        
+        DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
+        fieldData.add(given2);
 
-        fieldData.add(partId);
+        DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
+        fieldData.add(given3);
 
+        String concatenated_name_string = ba.getGiven_1_name() + 
+            (ba.getGiven_2_name() != null && ba.getGiven_2_name().length() > 0 ? " " + ba.getGiven_2_name() : "" ) +
+            (ba.getGiven_3_name() != null && ba.getGiven_3_name().length() > 0 ? " " + ba.getGiven_3_name() : "" ) + 
+            " " + ba.getSurname();
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
+            concatenated_name_string);
+
+        fieldData.add(fullName);
+
+        setName(concatenated_name_string);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
     }

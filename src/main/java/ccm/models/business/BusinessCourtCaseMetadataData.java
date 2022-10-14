@@ -24,12 +24,17 @@ public class BusinessCourtCaseMetadataData {
   private String offence_description_list;
   private String court_file_number_seq_type;
   private String court_home_registry;
+  private String court_home_registry_name;
+  private String accused_names;
   //private String rms_processing_status;
   private List<String> case_flags;
 
   private List<BusinessCourtCaseAccused> accused_person;
   private List<BusinessCourtCaseData> related_agency_file;
   private List<BusinessCourtCaseMetadataData> related_court_file;
+
+  private String approving_crown_agency_name;
+  private String approving_crown_agency_ident;
 
   public BusinessCourtCaseMetadataData() {
   }
@@ -49,18 +54,23 @@ public class BusinessCourtCaseMetadataData {
       //"$MAPID30-$MAPID33-$MAPID31"
       StringBuilder fileSeqNoType = new StringBuilder();
       fileSeqNoType.append(jcf.getCourt_file_no());
-      fileSeqNoType.append(DASH_STRING);
-      fileSeqNoType.append(jcf.getMdoc_seq_no());
-      fileSeqNoType.append(DASH_STRING);
-      fileSeqNoType.append(jcf.getType_reference());
+      if(jcf.getMdoc_seq_no() != null) {
+        fileSeqNoType.append(DASH_STRING);
+        fileSeqNoType.append(jcf.getMdoc_seq_no());
+      }
+      if(jcf.getType_reference() != null) {
+        fileSeqNoType.append(DASH_STRING);
+        fileSeqNoType.append(jcf.getType_reference());
+      }
       setCourt_file_number_seq_type(fileSeqNoType.toString());
 
-      //"$MAPID62: $MAPID29"
+      //"$MAPID62- $MAPID29"
       StringBuilder courtHomeReg = new StringBuilder();
       courtHomeReg.append(jcf.getHome_court_agency_identifier());
       courtHomeReg.append(COLON_STRING);
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
+      setCourt_home_registry_name(jcf.getHome_court_agency_name());
 
 
       //[(If $MAPID81=Y then add "VUL1"), (If $MAPID80=Y then add "CHI1"), (If $MAPID82=Y then add "K", (If $MAPID79=Y then add "Indigenous"]
@@ -85,16 +95,24 @@ public class BusinessCourtCaseMetadataData {
       }
 
       List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
+      StringBuilder accused_names = new StringBuilder();
 
       if(jcf.getMdocaccused() != null) {
         for (JustinAccused ja : jcf.getMdocaccused()) {
 
           BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
           accusedList.add(accused);
+          // Map 87
+          if(accused_names.length() > 0) {
+              accused_names.append(", ");
+          }
+          accused_names.append(ja.getAccused_given_1_nm());
+          accused_names.append(" ");
+          accused_names.append(ja.getAccused_surname_nm());
         }
       }
       setAccused_person(accusedList);
-
+      setAccused_names(accused_names.toString());
 
       List<BusinessCourtCaseData> agencyList = new ArrayList<BusinessCourtCaseData>();
 
@@ -118,6 +136,22 @@ public class BusinessCourtCaseMetadataData {
         }
       }
       setRelated_court_file(relatedList);
+
+
+      if(jcf.getApproving_crown_agency_name() != null) {
+        String approving_crown_name = jcf.getApproving_crown_agency_name();
+
+          int index_crown_consel = approving_crown_name.indexOf("Crown Counsel");
+
+          // MAP 69
+          if (index_crown_consel >= 0) {
+              // removing the suffix string
+              approving_crown_name = approving_crown_name.substring(0, index_crown_consel);
+          }
+
+          setApproving_crown_agency_name(approving_crown_name);
+      }
+      setApproving_crown_agency_ident(jcf.getApproving_crown_agency_ident());
 
   }
 
@@ -217,12 +251,28 @@ public class BusinessCourtCaseMetadataData {
     this.court_home_registry = court_home_registry;
   }
 
+  public String getCourt_home_registry_name() {
+    return court_home_registry_name;
+  }
+
+  public void setCourt_home_registry_name(String court_home_registry_name) {
+    this.court_home_registry_name = court_home_registry_name;
+  }
+
   public List<String> getCase_flags() {
     return case_flags;
   }
 
   public void setCase_flags(List<String> case_flags) {
     this.case_flags = case_flags;
+  }
+
+  public String getAccused_names() {
+    return accused_names;
+  }
+
+  public void setAccused_names(String accused_names) {
+    this.accused_names = accused_names;
   }
 
   public List<BusinessCourtCaseAccused> getAccused_person() {
@@ -242,6 +292,22 @@ public class BusinessCourtCaseMetadataData {
   }
   public void setRelated_court_file(List<BusinessCourtCaseMetadataData> related_court_file) {
     this.related_court_file = related_court_file;
+  }
+
+  public String getApproving_crown_agency_name() {
+    return approving_crown_agency_name;
+  }
+
+  public void setApproving_crown_agency_name(String approving_crown_agency_name) {
+    this.approving_crown_agency_name = approving_crown_agency_name;
+  }
+
+  public String getApproving_crown_agency_ident() {
+    return approving_crown_agency_ident;
+  }
+
+  public void setApproving_crown_agency_ident(String approving_crown_agency_ident) {
+    this.approving_crown_agency_ident = approving_crown_agency_ident;
   }
 
 }

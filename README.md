@@ -16,6 +16,33 @@ JADE-CCM integrates between a court case managmeent system (JUSTIN), a digital e
 
 JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
 
+The technical architecture diagram is created using the Draw.io diagramming tool.
+
+## Sequence Diagrams
+
+JADE-CCM sequence diagrams are created using the PlantUML sequence diagramming tool.
+
+| Link to diagram (and source file) |
+| --- |
+|[JUSTIN Events](img/ccm_justin_event_processing_sequence_diagram.png) ([source](img/src/ccm_justin_event_processing_sequence_diagram.plantuml))|
+|[CourtCase:AUTH_LIST_CHANGED](img/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.plantuml))|
+|[CourtCase:CHANGED](img/ccm_COURTCASES_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_CHANGED_processing_sequence_diagram.plantuml))|
+|[CourtCase:CREATED](img/ccm_COURTCASES_CREATED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_CREATED_processing_sequence_diagram.plantuml))|
+|[CourtCase:UPDATED](img/ccm_COURTCASES_UPDATED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_UPDATED_processing_sequence_diagram.plantuml))|
+|[CourtCaseMetadata:APPEARANCE_CHANGED](img/ccm_COURTCASE_METADATAS_APPEARANCE_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_APPEARANCE_CHANGED_processing_sequence_diagram.plantuml))|
+|[CourtCaseMetadata:CHANGED](img/ccm_COURTCASE_METADATAS_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_CHANGED_processing_sequence_diagram.plantuml))|
+|[CourtCaseMetadata:CROWN_ASSIGNMENT_CHANGED](img/ccm_COURTCASE_METADATAS_CROWN_ASSIGNMENT_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_CROWN_ASSIGNMENT_CHANGED_processing_sequence_diagram.plantuml))|
+
+## State Diagrams
+
+JADE-CCM state diagrams are created using the PlantUML state diagramming tool.  PlantUML state diagrams are redenered using the GrpahViz dot rendering program.
+
+| Link to diagram (and source file) |
+| --- |
+|[DEMS Case State Diagram](img/ccm_dems_case_state_diagram.png) ([source](img/src/ccm_dems_case_state_diagram.plantuml))|
+
+Installation instructions for GraphViz dot is available [here](https://plantuml.com/graphviz-dot).
+
 ## Integrated Development Environment (IDE) and Extensions
 
 JADE-CCM is developed using the Visual Studio Code IDE.  The freely downloadable IDE tool can be downloaded from Microsoft's official web site: https://code.visualstudio.com .  For Apple Mac developers, you can also install the tool via Homebrew (https://brew.sh) and the cask formulae https://formulae.brew.sh/cask/visual-studio-code#default .
@@ -28,6 +55,10 @@ Additional, development and diagramming extensions:
 
 * PlantUML
 * Draw.io Integration
+
+Note:
+
+PlantUML requires a separate installation of GraphViz dot in order to render network graphs, such as state diagrams.  See installation instructions mentioend in the "State Diagrams" section above.
 
 ## Java
 

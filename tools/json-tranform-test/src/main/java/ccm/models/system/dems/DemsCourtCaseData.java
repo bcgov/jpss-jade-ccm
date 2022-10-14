@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.business.BusinessCourtCaseData;
-import ccm.models.business.BusinessCourtCaseMetadataData;
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCourtCaseData {
@@ -12,6 +11,7 @@ public class DemsCourtCaseData {
     public static final String TEMPLATE_CASE = "28";
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
+    public static final String SPACE_STRING = " ";
 
     private String name;
     private String key;
@@ -35,10 +35,24 @@ public class DemsCourtCaseData {
                 // JADE-1470 surnames should be in all uppercase.
                 accused_names.append(ba.getSurname().toUpperCase());
                 accused_names.append(COMMA_STRING);
-                accused_names.append(ba.getFirst_name());
+                accused_names.append(ba.getGiven_1_name());
+                if(ba.getGiven_2_name() != null) {
+                    accused_names.append(SPACE_STRING);
+                    accused_names.append(ba.getGiven_2_name());
+                }
+                if(ba.getGiven_3_name() != null) {
+                    accused_names.append(SPACE_STRING);
+                    accused_names.append(ba.getGiven_3_name());
+                }
            }
         }
-        setName(accused_names.substring(0, accused_names.length() > 255 ? 254 : accused_names.length()));
+        if(accused_names.length() > 251) {
+            String truncatedCaseName = accused_names.substring(0, 251);
+            accused_names = new StringBuilder();
+            accused_names.append(truncatedCaseName);
+            accused_names.append("space...");
+        }
+        setName(accused_names.toString());
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(bcc.getRcc_id());
         setDescription("");
@@ -89,6 +103,7 @@ public class DemsCourtCaseData {
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), bcc.getEarliest_offence_date());
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), bcc.getEarliest_proposed_appearance_date());
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getId(), DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), bcc.getProposed_process_type_list());
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getId(), DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), bcc.getLimitation_date());
 
         fieldData.add(agencyFileId);
         fieldData.add(agencyFileNo);
@@ -103,6 +118,7 @@ public class DemsCourtCaseData {
         fieldData.add(offenceDate);
         fieldData.add(proposedAppDate);
         fieldData.add(proposedProcessType);
+        fieldData.add(limitationDate);
         setFields(fieldData);
 
     }

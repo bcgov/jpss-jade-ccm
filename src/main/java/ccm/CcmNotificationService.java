@@ -213,7 +213,7 @@ public class CcmNotificationService extends RouteBuilder {
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.number}")
+      .log("Found related court case. Rcc_id: ${header.rcc_id}")
       .setBody(simple("${exchangeProperty.business_data}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))

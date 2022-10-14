@@ -2,6 +2,10 @@ package ccm.models.system.justin;
 public class JustinAccused {
   private String part_id;
   private String accused_name;
+  private String accused_surname_nm;
+  private String accused_given_1_nm;
+  private String accused_given_2_nm;
+  private String accused_given_3_nm;
   private String proposed_process_type;
   private String proposed_appr_date;
 
@@ -22,6 +26,30 @@ public class JustinAccused {
   }
   public void setAccused_name(String accused_name) {
     this.accused_name = accused_name;
+  }
+  public String getAccused_surname_nm() {
+    return accused_surname_nm;
+  }
+  public void setAccused_surname_nm(String accused_surname_nm) {
+    this.accused_surname_nm = accused_surname_nm;
+  }
+  public String getAccused_given_1_nm() {
+    return accused_given_1_nm;
+  }
+  public void setAccused_given_1_nm(String accused_given_1_nm) {
+    this.accused_given_1_nm = accused_given_1_nm;
+  }
+  public String getAccused_given_2_nm() {
+    return accused_given_2_nm;
+  }
+  public void setAccused_given_2_nm(String accused_given_2_nm) {
+    this.accused_given_2_nm = accused_given_2_nm;
+  }
+  public String getAccused_given_3_nm() {
+    return accused_given_3_nm;
+  }
+  public void setAccused_given_3_nm(String accused_given_3_nm) {
+    this.accused_given_3_nm = accused_given_3_nm;
   }
   public String getProposed_process_type() {
     return proposed_process_type;
@@ -60,5 +88,5 @@ public class JustinAccused {
   public void setBirth_date(String birth_date) {
     this.birth_date = birth_date;
   }
-  
+
 }
