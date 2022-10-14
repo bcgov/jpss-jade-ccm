@@ -6,7 +6,7 @@ public class BusinessCourtCaseAccused {
     public static final String COMMA_STRING = ",";
 
     private String identifier;
-    private String name;
+    private String full_name;
     private String surname;
     private String given_1_name;
     private String given_2_name;
@@ -26,7 +26,7 @@ public class BusinessCourtCaseAccused {
 
     public BusinessCourtCaseAccused(JustinAccused ja) {
         setIdentifier(ja.getPart_id());
-        setName(ja.getAccused_name());
+        setFull_name(ja.getAccused_name());
         setSurname(ja.getAccused_surname_nm());
         setGiven_1_name(ja.getAccused_given_1_nm());
         setGiven_2_name(ja.getAccused_given_2_nm());
@@ -62,12 +62,12 @@ public class BusinessCourtCaseAccused {
         this.identifier = identifier;
     }
 
-    public String getName() {
-        return name;
+    public String getFull_name() {
+        return full_name;
     }
 
-    public void setName(String full_name) {
-        this.name = full_name;
+    public void setFull_name(String full_name) {
+        this.full_name = full_name;
     }
 
     public String getGiven_1_name() {

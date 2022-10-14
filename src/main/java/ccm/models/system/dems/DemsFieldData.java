@@ -82,7 +82,8 @@ public class DemsFieldData {
         PERSON_GIVEN_NAME_3("Given Name 3"),
         PERSON_FULL_NAME("Full Name"),
         ACCUSED_FULL_NAME("Accused Full Name"),
-        LIMITATION_DATE("Limitation Date");
+        LIMITATION_DATE("Limitation Date"),
+        CROWN_OFFICE("Crown Office");
 
         private String label;
 

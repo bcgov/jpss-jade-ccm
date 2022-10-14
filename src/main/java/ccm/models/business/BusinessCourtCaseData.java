@@ -8,7 +8,7 @@ import ccm.models.system.justin.JustinAgencyFile;
 
 public class BusinessCourtCaseData {
     private String rcc_id;
-    private String agency_file_no;
+    private String agency_file;
     private String security_clearance_level;
     private String synopsis;
     private String initiating_agency;
@@ -38,7 +38,7 @@ public class BusinessCourtCaseData {
 
     public BusinessCourtCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
-        setAgency_file_no(jaf.getAgency_file_no());
+        setAgency_file(jaf.getInitiating_agency_identifier() + ":" + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());
         setSynopsis(jaf.getSynopsis());
         if(jaf.getInitiating_agency_identifier() != null) {
@@ -49,7 +49,17 @@ public class BusinessCourtCaseData {
         }
         setRcc_submit_date(jaf.getRcc_submit_date());
         if(jaf.getCrn_decision_agency_identifier() != null) {
-            setProposed_crown_office(jaf.getCrn_decision_agency_identifier() + ": " + jaf.getCrn_decision_agency_name());
+            String crn_decision_agency_name = jaf.getCrn_decision_agency_name();
+
+            int index_crown_consel = crn_decision_agency_name.indexOf("Crown Counsel");
+
+            // MAP 69
+            if (index_crown_consel >= 0) {
+                // removing the suffix string
+                crn_decision_agency_name = crn_decision_agency_name.substring(0, index_crown_consel);
+            }
+
+            setProposed_crown_office(jaf.getCrn_decision_agency_identifier() + ": " + crn_decision_agency_name);
         }
 
         setAssessment_crown_name(jaf.getAssessment_crown_name());
@@ -71,11 +81,33 @@ public class BusinessCourtCaseData {
             case_flags.add("K");
         }
         if(jaf.getAccused() != null) {
+            boolean hasIndigenous = false;
+            boolean hasHroip = false;
+            boolean hasDoLto = false;
+
             for (JustinAccused accused : jaf.getAccused()) {
-                if ("Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
-                    case_flags.add("Indigenous");
+                if (accused.getIndigenous_yn() != null && "Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
+                    hasIndigenous = true;
                     break;
                 }
+                if (accused.getHroip_yn() != null && "Y".equalsIgnoreCase(accused.getHroip_yn())) {
+                    hasIndigenous = true;
+                    break;
+                }
+                if (accused.getDo_lto_yn() != null && "Y".equalsIgnoreCase(accused.getDo_lto_yn())) {
+                    hasIndigenous = true;
+                    break;
+                }
+            }
+
+            if (hasIndigenous) {
+                case_flags.add("Indigenous");
+            }
+            if (hasHroip) {
+                case_flags.add("HROIP");
+            }
+            if (hasDoLto) {
+                case_flags.add("DO/LTO");
             }
         }
 
@@ -131,11 +163,11 @@ public class BusinessCourtCaseData {
     public void setRcc_id(String rcc_id) {
         this.rcc_id = rcc_id;
     }
-    public String getAgency_file_no() {
-        return agency_file_no;
+    public String getAgency_file() {
+        return agency_file;
     }
-    public void setAgency_file_no(String agency_file_no) {
-        this.agency_file_no = agency_file_no;
+    public void setAgency_file(String agency_file) {
+        this.agency_file = agency_file;
     }
     public String getSecurity_clearance_level() {
         return security_clearance_level;

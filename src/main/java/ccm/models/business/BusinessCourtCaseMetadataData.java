@@ -33,6 +33,9 @@ public class BusinessCourtCaseMetadataData {
   private List<BusinessCourtCaseData> related_agency_file;
   private List<BusinessCourtCaseMetadataData> related_court_file;
 
+  private String approving_crown_agency_name;
+  private String approving_crown_agency_ident;
+
   public BusinessCourtCaseMetadataData() {
   }
 
@@ -133,6 +136,22 @@ public class BusinessCourtCaseMetadataData {
         }
       }
       setRelated_court_file(relatedList);
+
+
+      if(jcf.getApproving_crown_agency_name() != null) {
+        String approving_crown_name = jcf.getApproving_crown_agency_name();
+
+          int index_crown_consel = approving_crown_name.indexOf("Crown Counsel");
+
+          // MAP 69
+          if (index_crown_consel >= 0) {
+              // removing the suffix string
+              approving_crown_name = approving_crown_name.substring(0, index_crown_consel);
+          }
+
+          setApproving_crown_agency_name(approving_crown_name);
+      }
+      setApproving_crown_agency_ident(jcf.getApproving_crown_agency_ident());
 
   }
 
@@ -273,6 +292,22 @@ public class BusinessCourtCaseMetadataData {
   }
   public void setRelated_court_file(List<BusinessCourtCaseMetadataData> related_court_file) {
     this.related_court_file = related_court_file;
+  }
+
+  public String getApproving_crown_agency_name() {
+    return approving_crown_agency_name;
+  }
+
+  public void setApproving_crown_agency_name(String approving_crown_agency_name) {
+    this.approving_crown_agency_name = approving_crown_agency_name;
+  }
+
+  public String getApproving_crown_agency_ident() {
+    return approving_crown_agency_ident;
+  }
+
+  public void setApproving_crown_agency_ident(String approving_crown_agency_ident) {
+    this.approving_crown_agency_ident = approving_crown_agency_ident;
   }
 
 }

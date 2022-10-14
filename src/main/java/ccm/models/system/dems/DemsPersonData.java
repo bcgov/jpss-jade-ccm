@@ -20,7 +20,6 @@ public class DemsPersonData {
 
     public DemsPersonData(BusinessCourtCaseAccused ba) {
         setKey(ba.getIdentifier());
-        setName(ba.getName());
         setLastName(ba.getSurname());
         setFirstName(ba.getGiven_1_name());
 
@@ -35,15 +34,16 @@ public class DemsPersonData {
         DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
         fieldData.add(given3);
 
-        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
-            ba.getGiven_1_name() + 
+        String concatenated_name_string = ba.getGiven_1_name() + 
             (ba.getGiven_2_name() != null && ba.getGiven_2_name().length() > 0 ? " " + ba.getGiven_2_name() : "" ) +
             (ba.getGiven_3_name() != null && ba.getGiven_3_name().length() > 0 ? " " + ba.getGiven_3_name() : "" ) + 
-            " " + ba.getSurname()
-            );
+            " " + ba.getSurname();
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
+            concatenated_name_string);
 
         fieldData.add(fullName);
 
+        setName(concatenated_name_string);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
     }

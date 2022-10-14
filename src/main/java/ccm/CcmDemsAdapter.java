@@ -104,12 +104,13 @@ public class CcmDemsAdapter extends RouteBuilder {
       .routeId("getCourtCaseExists")
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.event_object_id}"))
+      .log("Key = ${exchangeProperty.key}")
       .to("direct:getCourtCaseIdByKey")
     ;
       
     // IN: exchangeProperty.key
-    from("direct:getCourtCaseIdByKey")
-    .routeId("direct:getCourtCaseIdByKey")
+    from("direct:getCourtCaseIdByKeyOrig")
+    .routeId("direct:getCourtCaseIdByKeyOrig")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing getCourtCaseIdByKey request (key=${exchangeProperty.key})...")
     .setProperty("dems_org_unit_id").simple("1")
@@ -145,6 +146,33 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .end()
     .endDoTry()
+    ;
+
+    // IN: exchangeProeprty.key
+    from("direct:getCourtCaseIdByKey")
+    .routeId("direct:getCourtCaseIdByKey")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("New direct:getCourtCaseIdByKey route. key = ${exchangeProperty.key}.")
+    .setProperty("dems_org_unit_id").simple("1")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 404")
+        .setProperty("id", simple(""))
+        .setBody(simple("{\"id\": \"\"}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .log("Case not found.")
+      .endChoice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        .setProperty("id", jsonpath("$.id"))
+        .log("Case found. Id = ${exchangeProperty.id}")
+      .endChoice()
+    .end()
     ;
       
     // IN: exchangeProperty.id

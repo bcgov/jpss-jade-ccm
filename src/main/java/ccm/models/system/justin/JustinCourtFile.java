@@ -20,6 +20,8 @@ public class JustinCourtFile {
   private String mdoc_relation_type_cd;
   private String vul1;
   private String chi1;
+  private String approving_crown_agency_name;
+  private String approving_crown_agency_ident;
 
   private List<JustinAccused> mdocaccused;
   private List<JustinAgencyFile> related_rcc;
@@ -138,6 +140,18 @@ public class JustinCourtFile {
   }
   public void setRelated_court_file(List<JustinCourtFile> related_court_file) {
     this.related_court_file = related_court_file;
+  }
+  public String getApproving_crown_agency_name() {
+    return approving_crown_agency_name;
+  }
+  public void setApproving_crown_agency_name(String approving_crown_agency_name) {
+    this.approving_crown_agency_name = approving_crown_agency_name;
+  }
+  public String getApproving_crown_agency_ident() {
+    return approving_crown_agency_ident;
+  }
+  public void setApproving_crown_agency_ident(String approving_crown_agency_ident) {
+    this.approving_crown_agency_ident = approving_crown_agency_ident;
   }
 
 }
