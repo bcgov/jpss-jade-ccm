@@ -22,7 +22,7 @@ The technical architecture diagram is created using the Draw.io diagramming tool
 
 JADE-CCM sequence diagrams are created using the PlantUML sequence diagramming tool.
 
-| Sequence Diagram |
+| Link to diagram (and source file) |
 | --- |
 |[JUSTIN Events](img/ccm_justin_event_processing_sequence_diagram.png) ([source](img/src/ccm_justin_event_processing_sequence_diagram.plantuml))|
 |[CourtCase:AUTH_LIST_CHANGED](img/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.plantuml))|
@@ -37,7 +37,7 @@ JADE-CCM sequence diagrams are created using the PlantUML sequence diagramming t
 
 JADE-CCM state diagrams are created using the PlantUML state diagramming tool.  PlantUML state diagrams are redenered using the GrpahViz dot rendering program.
 
-| State Diagram |
+| Link to diagram (and source file) |
 | --- |
 |[DEMS Case State Diagram](img/ccm_dems_case_state_diagram.png) ([source](img/src/ccm_dems_case_state_diagram.plantuml))|
 
