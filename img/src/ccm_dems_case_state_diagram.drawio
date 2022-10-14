@@ -1,0 +1,203 @@
+<mxfile host="65bd71144e" scale="1" border="10">
+    <diagram id="wtpW2Wg1tJhml4J0sdit" name="Page-1">
+        <mxGraphModel dx="1744" dy="1381" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="48" value="As a &lt;b&gt;Charge Assessment Case&lt;/b&gt;" style="shape=umlFrame;whiteSpace=wrap;html=1;width=260;height=30;" parent="1" vertex="1">
+                    <mxGeometry x="205" y="75" width="450" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="43" value="" style="ellipse;html=1;shape=startState;fillColor=#000000;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="75" y="130" width="30" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="45" value="Charge Assessment Case Created" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fontColor=#000000;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="125" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="45" target="52" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="310" y="325" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="54" value="Updating charge &lt;br&gt;assessment" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="46" vertex="1" connectable="0">
+                    <mxGeometry x="0.0091" y="3" relative="1" as="geometry">
+                        <mxPoint x="37" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="49" value="As an &lt;b&gt;Approved for Court Case&amp;nbsp;&lt;/b&gt;" style="shape=umlFrame;whiteSpace=wrap;html=1;width=260;height=30;" parent="1" vertex="1">
+                    <mxGeometry x="205" y="835" width="450" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="50" value="Converting to an &lt;b&gt;Approved Court Case&lt;/b&gt;" style="shape=umlFrame;whiteSpace=wrap;html=1;width=260;height=30;" parent="1" vertex="1">
+                    <mxGeometry x="205" y="437" width="450" height="320" as="geometry"/>
+                </mxCell>
+                <mxCell id="52" value="Charge Assessment&lt;br&gt;Case Updated" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fontColor=#000000;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="275" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="53" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="52" target="68" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="95" y="475" as="targetPoint"/>
+                        <mxPoint x="665" y="805" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="55" value="Approving charge assessment" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="53" vertex="1" connectable="0">
+                    <mxGeometry x="-0.5487" y="-2" relative="1" as="geometry">
+                        <mxPoint x="2" y="41" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="56" value="Approved Court Case Updated" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fontColor=#000000;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="940" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="57" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=1;exitY=0;exitDx=0;exitDy=0;" parent="1" source="56" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="385" y="975" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="575" y="940"/>
+                            <mxPoint x="575" y="975"/>
+                            <mxPoint x="385" y="975"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="84" value="Adding / updating records for &lt;br&gt;merged charge assesments" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="57" vertex="1" connectable="0">
+                    <mxGeometry x="-0.0732" y="-1" relative="1" as="geometry">
+                        <mxPoint x="-59" y="13" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="58" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="708" y="571" width="30" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="52" target="58" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="-35" y="505" as="targetPoint"/>
+                        <mxPoint x="135" y="319" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="63" value="Charge assessment not approved" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="60" vertex="1" connectable="0">
+                    <mxGeometry x="-0.0632" relative="1" as="geometry">
+                        <mxPoint x="-88" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="61" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="43" target="45" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="35" y="315" as="targetPoint"/>
+                        <mxPoint x="105" y="245" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="64" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="45" target="58" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="35" y="650" as="targetPoint"/>
+                        <mxPoint x="275" y="305" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="65" value="Charge assessment not approved" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="64" vertex="1" connectable="0">
+                    <mxGeometry x="-0.0632" relative="1" as="geometry">
+                        <mxPoint x="-145" y="-12" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="66" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;" parent="1" source="52" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="265" y="315" as="targetPoint"/>
+                        <mxPoint x="275" y="275" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="85" y="275"/>
+                            <mxPoint x="85" y="315"/>
+                            <mxPoint x="265" y="315"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="67" value="Updating charge&lt;br&gt;assessment" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="66" vertex="1" connectable="0">
+                    <mxGeometry x="-0.0632" relative="1" as="geometry">
+                        <mxPoint x="50" y="13" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="68" value="Primary charge assessment?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="485" width="120" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="69" value="no" style="edgeStyle=orthogonalEdgeStyle;html=1;align=left;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="68" target="71" edge="1">
+                    <mxGeometry x="-1" relative="1" as="geometry">
+                        <mxPoint x="465" y="795" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="70" value="yes" style="edgeStyle=orthogonalEdgeStyle;html=1;align=left;verticalAlign=top;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="68" target="73" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="405" y="695" as="targetPoint"/>
+                        <mxPoint x="325" y="585" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="71" value="Charge Assessment Merged (inactive)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fontColor=#000000;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="495" y="510" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="73" value="Approved Court Case&lt;br&gt;Established" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fontColor=#000000;fillColor=#ffffc0;strokeColor=#ff0000;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="685" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="74" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="73" target="56" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="345" y="730" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="83" value="Updating approved court case" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="74" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2" y="3" relative="1" as="geometry">
+                        <mxPoint y="-12" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="80" style="html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" source="77" target="71" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" value="&lt;ul&gt;&lt;li&gt;Primary Approved Court Case specified&lt;/li&gt;&lt;li&gt;DEMS Case Status set to &quot;Inactive&quot;&amp;nbsp;&lt;/li&gt;&lt;/ul&gt;" style="shape=note;strokeWidth=1;fontSize=14;size=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#666600;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="395" y="601" width="270" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="81" style="html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;dashed=1;exitX=0.855;exitY=0.991;exitDx=0;exitDy=0;exitPerimeter=0;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" source="82" target="73" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="315" y="605" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="82" value="&lt;ul&gt;&lt;li&gt;Court Case Unique ID specified&lt;/li&gt;&lt;li&gt;Records merged from non-primary charge assessments in the same approved court case&lt;/li&gt;&lt;/ul&gt;" style="shape=note;strokeWidth=1;fontSize=14;size=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#666600;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="585" width="270" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="85" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" parent="1" source="56" target="56" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="275" y="980" as="targetPoint"/>
+                        <mxPoint x="275" y="940" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="105" y="940"/>
+                            <mxPoint x="105" y="980"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="86" value="Adding / updating records for &lt;br&gt;approved court case" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="85" vertex="1" connectable="0">
+                    <mxGeometry x="-0.0632" relative="1" as="geometry">
+                        <mxPoint x="50" y="9" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="89" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;align=left;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.7;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="71" target="58">
+                    <mxGeometry x="-0.9291" y="6" relative="1" as="geometry">
+                        <mxPoint x="505" y="540" as="targetPoint"/>
+                        <mxPoint x="395" y="540" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="90" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;align=left;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="73" target="58">
+                    <mxGeometry x="-0.9291" y="6" relative="1" as="geometry">
+                        <mxPoint x="695" y="595" as="targetPoint"/>
+                        <mxPoint x="589" y="560" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="91" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;align=left;verticalAlign=bottom;endArrow=open;endSize=8;strokeColor=#ff0000;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="56" target="58">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="745" y="645" as="targetPoint"/>
+                        <mxPoint x="395" y="650" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="325" y="1000"/>
+                            <mxPoint x="723" y="1000"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="92" value="&lt;span style=&quot;font-weight: 400 ; font-size: 29px&quot;&gt;DEMS Case Business State Diagram&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=29;fontStyle=1;verticalAlign=middle;align=center;rounded=1;labelBackgroundColor=none;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="160" y="16" width="530" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="93" value="Prepared By David Agahchen&amp;nbsp; |&amp;nbsp; Created October 14, 2022" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="123" y="1044" width="590" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
