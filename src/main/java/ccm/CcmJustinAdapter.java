@@ -536,28 +536,8 @@ public class CcmJustinAdapter extends RouteBuilder {
         ex.getMessage().setBody(be, BusinessSplunkEvent.class);
       }
     })
-    //.setBody().simple("{\"event_dtm\":\"2022-10-17 01:15:00\",\"event_version\":\"1.0\",\"event_message\":\"some message\"\n}")
     .marshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
-    .log("about to process message: '${body}'")
-    /*.log("about to process message: '${body}'")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        //BusinessSplunkEvent se = ex.getIn().getBody(BusinessSplunkEvent.class);
-        //BusinessSplunkData bd = new BusinessSplunkData(se);
-        BusinessSplunkData bd = new BusinessSplunkData();
-        bd.setEvent("some message");
-        bd.setSourcetype("manual");
-        ex.getMessage().setBody(bd);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, BusinessSplunkData.class)
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
-    .setBody().simple("{\"event\":\"some message\",\"sourcetype\":\"manual\"}"))*/
     .log("Logging event to splunk body: ${body}")
-    //.to("{{splunk.host}}")
-    //.log("Generating derived splunk event: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
 
