@@ -18,7 +18,7 @@ public class BusinessCourtCaseData {
 
     private String assessment_crown_name;
     private String case_status_code;
-    private String rcc_state_code;
+    private String rcc_status_code;
     private String file_note;
 
     private String charge;
@@ -155,6 +155,21 @@ public class BusinessCourtCaseData {
         setAccused_person(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
         setAccused_names(accused_names.toString());
+
+        switch (jaf.getRcc_state_cd()) {
+        case "ACT":
+            setRcc_status_code("Received");
+            break;
+        case "CLS":
+            setRcc_status_code("Close");
+            break;
+        case "FIN":
+            setRcc_status_code("Finish");
+            break;
+        case "RET":
+            setRcc_status_code("Return");
+            break;    
+        }
     }
 
     public String getRcc_id() {
@@ -299,12 +314,12 @@ public class BusinessCourtCaseData {
         this.accused_names = accused_names;
     }
 
-    public String getRcc_state_code() {
-        return rcc_state_code;
+    public String getRcc_status_code() {
+        return rcc_status_code;
     }
 
-    public void setRcc_state_code(String rcc_state_code) {
-        this.rcc_state_code = rcc_state_code;
+    public void setRcc_status_code(String rcc_status_code) {
+        this.rcc_status_code = rcc_status_code;
     }
 
 

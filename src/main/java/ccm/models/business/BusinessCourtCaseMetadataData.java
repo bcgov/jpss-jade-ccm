@@ -25,6 +25,7 @@ public class BusinessCourtCaseMetadataData {
   private String court_file_number_seq_type;
   private String court_home_registry;
   private String court_home_registry_name;
+  private String court_home_registry_identifier;
   private String accused_names;
   //private String rms_processing_status;
   private List<String> case_flags;
@@ -71,6 +72,7 @@ public class BusinessCourtCaseMetadataData {
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
       setCourt_home_registry_name(jcf.getHome_court_agency_name());
+      setCourt_home_registry_identifier(jcf.getHome_court_agency_identifier());
 
 
       //[(If $MAPID81=Y then add "VUL1"), (If $MAPID80=Y then add "CHI1"), (If $MAPID82=Y then add "K", (If $MAPID79=Y then add "Indigenous"]
@@ -257,6 +259,14 @@ public class BusinessCourtCaseMetadataData {
 
   public void setCourt_home_registry_name(String court_home_registry_name) {
     this.court_home_registry_name = court_home_registry_name;
+  }
+
+  public String getCourt_home_registry_identifier() {
+    return court_home_registry_identifier;
+  }
+
+  public void setCourt_home_registry_identifier(String court_home_registry_identifier) {
+    this.court_home_registry_identifier = court_home_registry_identifier;
   }
 
   public List<String> getCase_flags() {

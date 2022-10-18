@@ -2,6 +2,8 @@ package ccm.models.system.dems;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Date;
+
 import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsPersonData {
@@ -110,6 +112,14 @@ public class DemsPersonData {
 
     public void setOrgs(List<DemsOrganisationData> orgs) {
         this.orgs = orgs;
+    }
+
+    public String getUTCDateTimeFromBCDateTime(String bcDateTime) {
+        String utcDateTime = bcDateTime;
+
+        // convertsion TBD
+
+        return utcDateTime;
     }
 
 }
