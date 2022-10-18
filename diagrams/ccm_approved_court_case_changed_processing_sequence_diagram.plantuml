@@ -2,24 +2,24 @@
 'hide footbox
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections court_case_metadatas_topic as "Court Case Metadata Events"
-participant case_notification_service as "Case Notification Service"
-participant case_lookup_service as "Case Lookup Service"
+collections approved_court_case_topic as "Approved Court Case Events"
+participant notification_service as "Notification Service"
+participant lookup_service as "Case Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
 title
-CCM CourtCaseMetadatas CHANGED Event Processing Sequence Diagram
+CCM Approved Court Case CHANGED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-court_case_metadatas_topic o-> case_notification_service: Process court case metadata CHANGED event
-activate case_notification_service
+approved_court_case_topic o-> notification_service: Process Approved Court CAse CHANGED event
+activate notification_service
 
-case_notification_service -> case_lookup_service: Retrieve court case metadata details
-activate case_lookup_service
-case_lookup_service -> j_adapter: Retrieve court case metadata details from JUSTIN
+notification_service -> lookup_service: Retrieve Approved Court CAse details
+activate lookup_service
+lookup_service -> j_adapter: Retrieve Approved Court CAse details from JUSTIN
 
 activate j_adapter
 j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
@@ -28,13 +28,13 @@ activate j_interface
 j_interface --> j_adapter: Court file details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> case_lookup_service: Court case metadata details
+j_adapter --> lookup_service: Approved Court CAse details
 deactivate j_adapter
 
-case_lookup_service --> case_notification_service: Court case metadata details
-deactivate case_lookup_service
+lookup_service --> notification_service: Approved Court CAse details
+deactivate lookup_service
 
-case_notification_service -> d_adapter: Update court case
+notification_service -> d_adapter: Update court case
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
 d_adapter -> d_interface: Update case in DEMS
@@ -64,13 +64,13 @@ loop For every accused partipant
     deactivate d_interface
 end
 
-d_adapter --> case_notification_service: Updated
+d_adapter --> notification_service: Updated
 
 deactivate d_adapter
 
-deactivate case_notification_service
+deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated September 30, 2022
+Prepared by David Agahchen | Updated October 17, 2022
 end caption
 @enduml

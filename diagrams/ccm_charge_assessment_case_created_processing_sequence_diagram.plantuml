@@ -2,19 +2,19 @@
 'hide footbox
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections court_cases_topic as "Court Case Events"
-participant case_notification_service as "Case Notification Service"
-participant case_lookup_service as "Case Lookup Service"
+collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+participant case_notification_service as "Notification Service"
+participant case_lookup_service as "Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
 title
-CCM CourtCases CREATED Event Processing Sequence Diagram
+CCM Charge Assessment Case CREATED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-court_cases_topic o-> case_notification_service : Process CREATED event
+charge_assessment_cases_topic o-> case_notification_service : Process CREATED event
 activate case_notification_service
 case_notification_service -> case_lookup_service: Retrieve court case details
 activate case_lookup_service
@@ -108,6 +108,6 @@ deactivate d_adapter
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated September 30, 2022
+Prepared by David Agahchen | Updated October 17, 2022
 end caption
 @enduml

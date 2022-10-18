@@ -2,8 +2,8 @@
 'hide footbox
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections court_cases_topic as "Court Case Events"
-collections court_case_metadatas_topic as "Court Case Metadata Events"
+collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections approved_court_cases_topic as "Approved Court Case Events"
 
 title
 CCM JUSTIN Event Processing Sequence Diagram
@@ -22,15 +22,15 @@ loop Every 5 minutes
     loop For every business event
         j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
         alt AGEN_FILE event
-            j_adapter ->o court_cases_topic: Produce court case CHANGED event
+            j_adapter ->o charge_assessment_cases_topic: Produce CHANGED event
         else AUTH_LIST changed event
-            j_adapter ->o court_cases_topic: Produce court case AUTH_LIST_CHANGED event
+            j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
         else COURT_FILE changed event
-            j_adapter ->o court_case_metadatas_topic: Produce court case metadata CHANGED event
+            j_adapter ->o approved_court_cases_topic: Produce CHANGED event
         else APPR changed event
-            j_adapter ->o court_case_metadatas_topic: Produce court case metadata APPEARANCE_CHANGED event
+            j_adapter ->o approved_court_cases_topic: Produce APPEARANCE_CHANGED event
         else CRN_ASSIGN changed event
-            j_adapter ->o court_case_metadatas_topic: Produce court case metadata CROWN_ASSIGNMENT_CHANGED event
+            j_adapter ->o approved_court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
         else Other business event
             j_adapter -> j_adapter: No operation (future functionality)
         end
@@ -43,6 +43,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated September 30, 2022
+Prepared by David Agahchen | Updated October 17, 2022
 end caption
 @enduml
