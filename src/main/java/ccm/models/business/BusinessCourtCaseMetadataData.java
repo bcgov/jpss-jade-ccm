@@ -87,14 +87,16 @@ public class BusinessCourtCaseMetadataData {
       if(YES_STRING.equalsIgnoreCase(jcf.getKfile_yn())) {
         case_flags.add("K");
       }
-      if(jcf.getMdocaccused() != null) {
-        for (JustinAccused accused : jcf.getMdocaccused()) {
-            if (YES_STRING.equalsIgnoreCase(accused.getIndigenous_yn())) {
-                case_flags.add("Indigenous");
-                break;
-            }
-        }
-      }
+
+      // Removed per BCPSDEMS-550 (and sub-task BCPSDEMS-552)
+      // if(jcf.getMdocaccused() != null) {
+      //   for (JustinAccused accused : jcf.getMdocaccused()) {
+      //       if (YES_STRING.equalsIgnoreCase(accused.getIndigenous_yn())) {
+      //           case_flags.add("Indigenous");
+      //           break;
+      //       }
+      //   }
+      // }
 
       List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
       StringBuilder accused_names = new StringBuilder();
