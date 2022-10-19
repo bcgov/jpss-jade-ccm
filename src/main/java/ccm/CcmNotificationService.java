@@ -123,6 +123,8 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseChanged")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseCreated")
@@ -139,6 +141,8 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/createCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCreated")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseUpdated")
@@ -155,6 +159,8 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/updateCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseUpdated")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseAuthListChanged")
@@ -170,6 +176,8 @@ public class CcmNotificationService extends RouteBuilder {
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAuthListChanged")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseMetadataChanged")
@@ -193,6 +201,8 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
     .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseMetadataChanged")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseAppearanceChanged")
@@ -219,6 +229,8 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
     .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAppearanceChanged")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtCaseCrownAssignmentChanged")
@@ -245,6 +257,8 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
     .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCrownAssignmentChanged")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processUnknownStatus")
@@ -252,6 +266,27 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("processUnknownStatus.  event_object_id = ${header[event_object_id]}")
     ;
+
+
+    from("direct:logSplunkEvent")
+    .routeId("logSplunkEvent")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("splunk_event", simple("${bodyAs(String)}"))
+    .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
+        be.setSource("ccm-notification-service");
+
+        ex.getMessage().setBody(be, BusinessSplunkEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
+    .log("Logging event to splunk body: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+
 
   }
 }

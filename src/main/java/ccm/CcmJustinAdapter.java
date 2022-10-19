@@ -13,6 +13,7 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
@@ -243,6 +244,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
+    .setBody().simple("CCM Justin splunk adapter call: processAgenFileEvent")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processAuthListEvent")
@@ -270,6 +273,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
+    .setBody().simple("CCM Justin splunk adapter call: processAuthListEvent")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCourtFileEvent")
@@ -297,6 +302,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
+    .setBody().simple("CCM Justin splunk adapter call: processCourtFileEvent")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processApprEvent")
@@ -323,6 +330,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
+    .setBody().simple("CCM Justin splunk adapter call: processApprEvent")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processCrnAssignEvent")
@@ -349,6 +358,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
     .to("direct:confirmEventProcessed")
+    .setBody().simple("CCM Justin splunk adapter call: processCrnAssignEvent")
+    .to("direct:logSplunkEvent")
     ;
 
     from("direct:processUnknownEvent")
@@ -514,5 +525,29 @@ public class CcmJustinAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseCrownAssignmentList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
+
+
+    from("direct:logSplunkEvent")
+    .routeId("logSplunkEvent")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("splunk_event", simple("${bodyAs(String)}"))
+    .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
+        be.setSource("ccm-justin-adapter");
+
+        ex.getMessage().setBody(be, BusinessSplunkEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
+    .log("Logging event to splunk body: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+
+
+
+
   }
 }
