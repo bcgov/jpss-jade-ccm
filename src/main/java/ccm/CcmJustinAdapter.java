@@ -532,6 +532,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange ex) {
         BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
+        be.setSource("CcmJustinAdapter");
 
         ex.getMessage().setBody(be, BusinessSplunkEvent.class);
       }

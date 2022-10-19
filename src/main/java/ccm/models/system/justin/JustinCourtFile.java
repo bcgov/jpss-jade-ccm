@@ -16,6 +16,8 @@ public class JustinCourtFile {
   private String sworn_date;
   private String approved_charges;
   private String crown_election;
+  private String approving_crown_agency_name;
+  private String approving_crown_agency_ident;
 
   private String mdoc_relation_type_cd;
   private String vul1;
@@ -102,6 +104,18 @@ public class JustinCourtFile {
   }
   public void setCrown_election(String crown_election) {
     this.crown_election = crown_election;
+  }
+  public String getApproving_crown_agency_name() {
+    return approving_crown_agency_name;
+  }
+  public void setApproving_crown_agency_name(String approving_crown_agency_name) {
+    this.approving_crown_agency_name = approving_crown_agency_name;
+  }
+  public String getApproving_crown_agency_ident() {
+    return approving_crown_agency_ident;
+  }
+  public void setApproving_crown_agency_ident(String approving_crown_agency_ident) {
+    this.approving_crown_agency_ident = approving_crown_agency_ident;
   }
   public String getMdoc_relation_type_cd() {
     return mdoc_relation_type_cd;

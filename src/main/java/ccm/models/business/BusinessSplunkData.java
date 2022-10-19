@@ -1,6 +1,8 @@
 package ccm.models.business;
 
 public class BusinessSplunkData {
+    public static final String DEFAULT_SOURCE_TYPE = "manual";
+
     private String event;
     private String sourcetype;
 
@@ -9,7 +11,11 @@ public class BusinessSplunkData {
 
     public BusinessSplunkData(BusinessSplunkEvent se) {
         setEvent(se.getEvent_message());
-        setSourcetype("manual");
+        if(se.getSource() != null) {
+            setSourcetype(se.getSource());
+        } else {
+            setSourcetype(DEFAULT_SOURCE_TYPE);
+        }
     }
 
     public String getEvent() {
