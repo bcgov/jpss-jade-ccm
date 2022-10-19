@@ -277,7 +277,7 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange ex) {
         BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
-        be.setSource("CcmNotificationService");
+        be.setSource("ccm-notification-service");
 
         ex.getMessage().setBody(be, BusinessSplunkEvent.class);
       }

@@ -51,8 +51,8 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     .log("Generating derived data: ${body}")
-    .to("https://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
-    //.to("{{splunk.host}}")
+    //.to("https://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
+    .toD("{{splunk.host}}")
     ;
 
 /*
