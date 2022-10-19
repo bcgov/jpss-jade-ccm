@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ccm.models.business.BusinessCourtCaseAppearanceSummaryList;
+import ccm.utils.DateTimeConverter;
 import ccm.models.business.BusinessCourtCaseAppearanceSummary;
 
 public class DemsCourtCaseAppearanceSummaryData {
@@ -24,11 +25,11 @@ public class DemsCourtCaseAppearanceSummaryData {
         if (b != null && b.getApprsummary() != null && b.getApprsummary().size() > 0) {
             BusinessCourtCaseAppearanceSummary bcas = b.getApprsummary().get(0);
 
-            DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), bcas.getInitial_appr_dt());
+            DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcas.getInitial_appr_dt()));
             DemsFieldData initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), bcas.getInitial_appr_rsn_cd());
-            DemsFieldData nextApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_DT.getLabel(), bcas.getNext_appr_dt());
+            DemsFieldData nextApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_DT.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcas.getNext_appr_dt()));
             DemsFieldData nextApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_REASON.getLabel(), bcas.getNext_appr_rsn_cd());
-            DemsFieldData trialStartApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_DT.getLabel(), bcas.getTrial_start_appr_dt());
+            DemsFieldData trialStartApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_DT.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcas.getTrial_start_appr_dt()));
             DemsFieldData trialStartApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_REASON.getLabel(), bcas.getTrial_start_appr_rsn_cd());
 
             List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();

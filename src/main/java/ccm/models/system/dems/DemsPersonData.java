@@ -2,9 +2,9 @@ package ccm.models.system.dems;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Date;
 
 import ccm.models.business.BusinessCourtCaseAccused;
+import ccm.utils.DateTimeConverter;
 
 public class DemsPersonData {
 
@@ -27,7 +27,7 @@ public class DemsPersonData {
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
-        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ba.getBirth_date());
+        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(ba.getBirth_date()));
         fieldData.add(dob);
         
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
@@ -36,16 +36,17 @@ public class DemsPersonData {
         DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
         fieldData.add(given3);
 
-        String concatenated_name_string = ba.getGiven_1_name() + 
-            (ba.getGiven_2_name() != null && ba.getGiven_2_name().length() > 0 ? " " + ba.getGiven_2_name() : "" ) +
-            (ba.getGiven_3_name() != null && ba.getGiven_3_name().length() > 0 ? " " + ba.getGiven_3_name() : "" ) + 
-            " " + ba.getSurname();
-        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), 
-            concatenated_name_string);
+        String fullGivenNamesAndLastNameString = generateFullGivenNamesAndLastNameFromAccused(ba);
+
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), fullGivenNamesAndLastNameString);
+
+        DemsFieldData fullNameAndBirth = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME_AND_BIRTH.getLabel(),
+            fullGivenNamesAndLastNameString + "  (" + ba.getBirth_date() + ")");
 
         fieldData.add(fullName);
+        fieldData.add(fullNameAndBirth);
 
-        setName(concatenated_name_string);
+        setName(fullGivenNamesAndLastNameString);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
     }
@@ -114,12 +115,12 @@ public class DemsPersonData {
         this.orgs = orgs;
     }
 
-    public String getUTCDateTimeFromBCDateTime(String bcDateTime) {
-        String utcDateTime = bcDateTime;
+    public static String generateFullGivenNamesAndLastNameFromAccused(BusinessCourtCaseAccused accused) {
+        String concatenated_name_string = accused.getGiven_1_name() + 
+            (accused.getGiven_2_name() != null && accused.getGiven_2_name().length() > 0 ? " " + accused.getGiven_2_name() : "" ) +
+            (accused.getGiven_3_name() != null && accused.getGiven_3_name().length() > 0 ? " " + accused.getGiven_3_name() : "" ) + 
+            " " + accused.getSurname();
 
-        // convertsion TBD
-
-        return utcDateTime;
+        return concatenated_name_string;
     }
-
 }

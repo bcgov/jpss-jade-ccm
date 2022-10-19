@@ -27,11 +27,10 @@ public class BusinessCourtCaseData {
 
     private String earliest_proposed_appearance_date;
     private String proposed_process_type_list;
-    private String accused_names;
 
     private List<String> case_flags;
 
-    private List<BusinessCourtCaseAccused> accused_person;
+    private List<BusinessCourtCaseAccused> accused_persons;
 
     public BusinessCourtCaseData() {
     }
@@ -119,7 +118,6 @@ public class BusinessCourtCaseData {
 
 
         StringBuilder proposed_process_type_builder = new StringBuilder();
-        StringBuilder accused_names = new StringBuilder();
 
         if(jaf.getAccused() != null) {
             for (JustinAccused ja : jaf.getAccused()) {
@@ -141,20 +139,11 @@ public class BusinessCourtCaseData {
                 } else if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
                     earliest_proposed_appearance_date = ja.getProposed_appr_date();
                 }
-
-                // Map 87
-                if(accused_names.length() > 0) {
-                    accused_names.append("; ");
-                }
-                accused_names.append(ja.getAccused_given_1_nm());
-                accused_names.append(" ");
-                accused_names.append(ja.getAccused_surname_nm());
             }
         }
         setProposed_process_type_list(proposed_process_type_builder.toString());
-        setAccused_person(accusedList);
+        setAccused_persons(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
-        setAccused_names(accused_names.toString());
 
         switch (jaf.getRcc_state_cd()) {
         case "ACT":
@@ -298,20 +287,12 @@ public class BusinessCourtCaseData {
         this.proposed_process_type_list = proposed_process_type_list;
     }
 
-    public List<BusinessCourtCaseAccused> getAccused_person() {
-        return accused_person;
+    public List<BusinessCourtCaseAccused> getAccused_persons() {
+        return accused_persons;
     }
 
-    public void setAccused_person(List<BusinessCourtCaseAccused> accused_person) {
-        this.accused_person = accused_person;
-    }
-
-    public String getAccused_names() {
-        return accused_names;
-    }
-
-    public void setAccused_names(String accused_names) {
-        this.accused_names = accused_names;
+    public void setAccused_persons(List<BusinessCourtCaseAccused> accused_persons) {
+        this.accused_persons = accused_persons;
     }
 
     public String getRcc_status_code() {
