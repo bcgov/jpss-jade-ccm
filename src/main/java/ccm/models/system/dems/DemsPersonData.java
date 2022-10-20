@@ -27,7 +27,7 @@ public class DemsPersonData {
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
-        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(ba.getBirth_date()));
+        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
         fieldData.add(dob);
         
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
@@ -38,13 +38,10 @@ public class DemsPersonData {
 
         String fullGivenNamesAndLastNameString = generateFullGivenNamesAndLastNameFromAccused(ba);
 
-        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), fullGivenNamesAndLastNameString);
-
-        DemsFieldData fullNameAndBirth = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME_AND_BIRTH.getLabel(),
+        DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(),
             fullGivenNamesAndLastNameString + "  (" + ba.getBirth_date() + ")");
 
         fieldData.add(fullName);
-        fieldData.add(fullNameAndBirth);
 
         setName(fullGivenNamesAndLastNameString);
         setFields(fieldData);

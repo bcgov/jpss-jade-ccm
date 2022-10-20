@@ -97,7 +97,7 @@ public class DemsCourtCaseData {
 
         DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), bcc.getRcc_id());
         DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), bcc.getAgency_file());
-        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcc.getRcc_submit_date()));
+        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getRcc_submit_date()));
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), bcc.getAssessment_crown_name());
         
         // BCPSDEMS-503/BCPSDEMS-553 Oct 13 JSIT: workaround to allow update case to function properly
@@ -114,10 +114,10 @@ public class DemsCourtCaseData {
         if (caseFlagList != null && !caseFlagList.isEmpty()) {
             caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
         }
-        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcc.getEarliest_offence_date()));
-        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcc.getEarliest_proposed_appearance_date()));
+        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getEarliest_offence_date()));
+        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getEarliest_proposed_appearance_date()));
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), bcc.getProposed_process_type_list());
-        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateString(bcc.getLimitation_date()));
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getLimitation_date()));
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), bcc.getRcc_status_code());
 
         StringBuilder accused_name_list = new StringBuilder();

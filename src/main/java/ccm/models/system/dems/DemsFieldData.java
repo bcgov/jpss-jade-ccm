@@ -82,7 +82,6 @@ public class DemsFieldData {
         PERSON_GIVEN_NAME_2("Given Name 2"),
         PERSON_GIVEN_NAME_3("Given Name 3"),
         PERSON_FULL_NAME("Full Name"),
-        PERSON_FULL_NAME_AND_BIRTH("Full Name and Birth"),
         ACCUSED_FULL_NAME("Accused Full Name"),
         LIMITATION_DATE("Limitation Date"),
         CROWN_OFFICE("Crown Office"),
