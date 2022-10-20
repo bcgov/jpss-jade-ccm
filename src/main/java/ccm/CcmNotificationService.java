@@ -156,6 +156,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Update court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+    //.to("http://ccm-dems-adapter/updateCourtCase?httpClient.connectTimeout=1&httpClient.connectionRequestTimeout=1&httpClient.socketTimeout=1")
     .to("http://ccm-dems-adapter/updateCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
