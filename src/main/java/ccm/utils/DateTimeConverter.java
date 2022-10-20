@@ -7,7 +7,7 @@ import java.time.format.DateTimeParseException;
 
 public class DateTimeConverter {
 
-    // in bcDateTimeString format: "yyyy-MM-dd HH:mm:ss"
+    // in bcDateTimeString format: "yyyy-MM-dd" or "yyyy-MM-dd HH:mm:ss"
     // out format: "yyyy-MM-dd HH:mm:ss"
     public static String convertToUtcFromBCDateTimeString(String bcDateTimeString) throws DateTimeParseException {
         // Java 8 - Convert Date Time From One Timezone To Another
@@ -15,19 +15,25 @@ public class DateTimeConverter {
 
         String utcDateTimeString = null;
 
-        ZonedDateTime zonedBCDateTime = ZonedDateTime.parse(bcDateTimeString + " PT", 
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"));
+        // preprocess input date/time string.
+        if (bcDateTimeString != null) {
+            String bcDateTimeWithTimeZoneString = null;
+            if (bcDateTimeString.length() > 10) {
+                // this is a date+time.  Add BC timezone to string.
+                bcDateTimeWithTimeZoneString = bcDateTimeString + " PT";
+            } else {
+                // this is a date.  add default time and BC timezone to string.
+                bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00 PT";
+            }
 
-        utcDateTimeString = zonedBCDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            ZonedDateTime zonedBCDateTime = ZonedDateTime.parse(bcDateTimeWithTimeZoneString, 
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"));
+
+            utcDateTimeString = zonedBCDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
 
         return utcDateTimeString;
-    }    
-    
-    // in bcDateString format: "yyyy-MM-dd"
-    // out format: "yyyy-MM-dd HH:mm:ss"
-    public static String convertToUtcFromBCDateString(String bcDateString) throws DateTimeParseException {
-        return convertToUtcFromBCDateTimeString(bcDateString + " 00:00:00");
     }
 
     public static void main(String[] args) {
@@ -43,10 +49,16 @@ public class DateTimeConverter {
         System.out.println("BC date/time PST : " + bcDateTimeString2);
         System.out.println("UTC date/time : " + utcDateTimeString2);
 
-        String bcDateString3 = "2000-12-03";
-        String utcDateString3 = DateTimeConverter.convertToUtcFromBCDateString(bcDateString3);
+        String bcDateTimeString3 = "2000-12-03";
+        String utcDateTimeString3 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString3);
         System.out.println("");
-        System.out.println("BC date PST : " + bcDateString3);
-        System.out.println("UTC date/time : " + utcDateString3);
+        System.out.println("BC date PST : " + bcDateTimeString3);
+        System.out.println("UTC date/time : " + utcDateTimeString3);
+
+        String bcDateTimeString4 = null;
+        String utcDateTimeString4 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString4);
+        System.out.println("");
+        System.out.println("BC date PST : " + bcDateTimeString4);
+        System.out.println("UTC date/time : " + utcDateTimeString4);
 	}
 }
