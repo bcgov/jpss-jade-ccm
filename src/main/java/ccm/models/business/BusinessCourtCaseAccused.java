@@ -38,10 +38,10 @@ public class BusinessCourtCaseAccused {
         setBirth_date(ja.getBirth_date());
 
         // Map 78
-        setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y" == ja.getIndigenous_yn());
+        setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
             
-        setHroip_yn(ja.getHroip_yn() != null && "Y" == ja.getHroip_yn());
-        setDo_lto_yn(ja.getDo_lto_yn() != null && "Y" == ja.getDo_lto_yn());
+        setHroip_yn(ja.getHroip_yn() != null && "Y".equalsIgnoreCase(ja.getHroip_yn()));
+        setDo_lto_yn(ja.getDo_lto_yn() != null && "Y".equalsIgnoreCase(ja.getDo_lto_yn()));
 
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
