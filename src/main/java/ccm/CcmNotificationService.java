@@ -181,30 +181,10 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:logSplunkEvent")
     ;
 
-    from("direct:processCourtCaseMetadataChanged")
-    .routeId("processCourtCaseMetadataChanged")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseMetadataChanged.  event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
-    //   accessible in the split() block through exchange properties unless converted to String first.
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .split()
-      .jsonpathWriteAsString("$.related_agency_file")
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.number}")
-      .setBody(simple("${exchangeProperty.metadata_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-    .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseMetadataChanged")
-    .to("direct:logSplunkEvent")
-    ;
+    // POC code - Experiment with moving a route definition into a dedicated route registration method for ease of code isolation and development
+    // naming convention:
+    //   * method name is the route id
+    processCourtCaseMetadataChanged();
 
     from("direct:processCourtCaseAppearanceChanged")
     .routeId("processCourtCaseAppearanceChanged")
@@ -252,7 +232,7 @@ public class CcmNotificationService extends RouteBuilder {
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.number}")
+      .log("Found related court case. Rcc_id: ${header.rcc_id}")
       .setBody(simple("${exchangeProperty.business_data}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -289,5 +269,35 @@ public class CcmNotificationService extends RouteBuilder {
     ;
 
 
+  }
+
+  private void processCourtCaseMetadataChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_object_id = ${header[event_object_id]}")
+    .setHeader("number", simple("${header[event_object_id]}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseMetadata")
+    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    //   accessible in the split() block through exchange properties unless converted to String first.
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setHeader("rcc_id", jsonpath("$.rcc_id"))
+      .log("Found related court case. Rcc_id: ${header.rcc_id}")
+      .setBody(simple("${exchangeProperty.metadata_data}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+    .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseMetadataChanged")
+    .to("direct:logSplunkEvent")
+    ;
   }
 }

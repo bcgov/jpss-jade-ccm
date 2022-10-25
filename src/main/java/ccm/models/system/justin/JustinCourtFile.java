@@ -24,8 +24,8 @@ public class JustinCourtFile {
   private String approving_crown_agency_ident;
 
   private List<JustinAccused> mdocaccused;
-  private List<JustinAgencyFile> related_rcc;
-  private List<JustinCourtFile> related_court_file;
+  private List<JustinAgencyFileRef> related_rcc;
+  private List<JustinCourtFileRef> related_court_file;
 
   public String getMdoc_justin_no() {
     return mdoc_justin_no;
@@ -129,16 +129,16 @@ public class JustinCourtFile {
   public void setMdocaccused(List<JustinAccused> mdocaccused) {
     this.mdocaccused = mdocaccused;
   }
-  public List<JustinAgencyFile> getRelated_rcc() {
+  public List<JustinAgencyFileRef> getRelated_rcc() {
     return related_rcc;
   }
-  public void setRelated_rcc(List<JustinAgencyFile> related_rcc) {
+  public void setRelated_rcc(List<JustinAgencyFileRef> related_rcc) {
     this.related_rcc = related_rcc;
   }
-  public List<JustinCourtFile> getRelated_court_file() {
+  public List<JustinCourtFileRef> getRelated_court_file() {
     return related_court_file;
   }
-  public void setRelated_court_file(List<JustinCourtFile> related_court_file) {
+  public void setRelated_court_file(List<JustinCourtFileRef> related_court_file) {
     this.related_court_file = related_court_file;
   }
   public String getApproving_crown_agency_name() {

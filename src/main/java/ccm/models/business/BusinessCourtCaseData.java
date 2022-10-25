@@ -134,19 +134,21 @@ public class BusinessCourtCaseData {
         setAccused_persons(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
 
-        switch (jaf.getRcc_state_cd()) {
-        case "ACT":
-            setRcc_status_code("Received");
-            break;
-        case "CLS":
-            setRcc_status_code("Close");
-            break;
-        case "FIN":
-            setRcc_status_code("Finish");
-            break;
-        case "RET":
-            setRcc_status_code("Return");
-            break;    
+        if (jaf.getRcc_state_cd() != null) {
+            switch (jaf.getRcc_state_cd()) {
+            case "ACT":
+                setRcc_status_code("Received");
+                break;
+            case "CLS":
+                setRcc_status_code("Close");
+                break;
+            case "FIN":
+                setRcc_status_code("Finish");
+                break;
+            case "RET":
+                setRcc_status_code("Return");
+                break;    
+            }
         }
     }
 

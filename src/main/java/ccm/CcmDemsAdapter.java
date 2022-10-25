@@ -152,7 +152,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:getCourtCaseIdByKey")
     .routeId("direct:getCourtCaseIdByKey")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("New direct:getCourtCaseIdByKey route. key = ${exchangeProperty.key}.")
+    .log("New direct:getCourtCaseIdByKey route. key = ${exchangeProperty.key}...")
     .setProperty("dems_org_unit_id").simple("1")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
