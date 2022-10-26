@@ -38,6 +38,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     from("direct:processSplunkEvent")
     .routeId("processSplunkEvent")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing splunk data: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
     .process(new Processor() {
       @Override
@@ -51,7 +52,6 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     .log("Generating derived data: ${body}")
-    //.to("https://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
     .toD("{{splunk.host}}")
     ;
 
