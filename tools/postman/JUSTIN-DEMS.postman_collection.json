@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "7598144f-9576-40ab-b2ee-cddc61ed5bdd",
+		"_postman_id": "3cbef8a6-55fe-41eb-b1cd-09bda88d5da0",
 		"name": "JUSTIN-DEMS",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -182,7 +182,29 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": ""
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/event?event_message_id=2988",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"event"
+					],
+					"query": [
+						{
+							"key": "event_message_id",
+							"value": "2988"
+						}
+					]
 				}
 			},
 			"response": []
@@ -197,7 +219,7 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2003",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=3015",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -217,7 +239,7 @@
 					"query": [
 						{
 							"key": "id",
-							"value": "2003",
+							"value": "3015",
 							"description": "event_message_id"
 						}
 					]
@@ -358,7 +380,7 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/agencyFile?rcc_id=50431.0734",
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/agencyFile?rcc_id=50453.0734",
 					"protocol": "https",
 					"host": [
 						"dev",
@@ -378,7 +400,7 @@
 					"query": [
 						{
 							"key": "rcc_id",
-							"value": "50431.0734"
+							"value": "50453.0734"
 						}
 					]
 				},
@@ -417,6 +439,105 @@
 					]
 				},
 				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "courtFile",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/courtFile?mdoc_justin_no=39888",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"courtFile"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "39888"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "apprSummary",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/apprSummary?mdoc_justin_no=39869",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"apprSummary"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "39869"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crownAssignments",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/crownAssignments?mdoc_justin_no=39869",
+					"protocol": "https",
+					"host": [
+						"dev",
+						"jag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"ords",
+						"devj",
+						"justinords",
+						"dems",
+						"v1",
+						"crownAssignments"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "39869"
+						}
+					]
+				}
 			},
 			"response": []
 		}

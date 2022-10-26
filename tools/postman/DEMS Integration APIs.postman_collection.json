@@ -17,7 +17,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/50433.0734/id",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/50454.0734/id",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -32,7 +32,7 @@
 										"org-units",
 										"1",
 										"cases",
-										"50433.0734",
+										"50454.0734",
 										"id"
 									]
 								}
@@ -79,7 +79,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/138",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -92,7 +92,7 @@
 										"api",
 										"v1",
 										"cases",
-										"91"
+										"138"
 									]
 								}
 							},
@@ -105,7 +105,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"name\": \"Frank, Joe Mike John - 5\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"description\": \"\",\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"templateCase\": \"28\",\r\n    \"fields\": [\r\n        {\r\n            \"id\": 12,\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 3,\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        }\r\n    ]\r\n}",
+									"raw": "{\"name\":\"THOMAS,Kelly; WONG,Neal\",\"key\":\"50454.0734\",\"description\":\"\",\"timeZoneId\":\"Pacific Standard Time\",\"templateCase\":\"28\",\"fields\":[{\"id\":12,\"name\":\"Agency File ID\",\"value\":\"50454.0734\"},{\"id\":3,\"name\":\"Agency File No.\",\"value\":\"22-472033\"},{\"id\":13,\"name\":\"Submit Date\",\"value\":\"2022-09-29\"},{\"id\":9,\"name\":\"Assessment Crown\",\"value\":\"Garrison, Dave\"},{\"id\":14,\"name\":\"Case Decision\",\"value\":null},{\"id\":18,\"name\":\"Proposed Charges\",\"value\":\"CCC 220(a) Cause death by criminal negligence using a firearm\"},{\"id\":24,\"name\":\"Initiating Agency\",\"value\":\"105: Kelowna Municipal RCMP\"},{\"id\":25,\"name\":\"Investigating Officer\",\"value\":\"Rhodes, Christopher 1001\"},{\"id\":26,\"name\":\"Proposed Crown Office\",\"value\":\"C402: Kelowna Crown Counsel\"},{\"id\":28,\"name\":\"Case Flags\",\"value\":[]},{\"id\":29,\"name\":\"Offence Date (earliest)\",\"value\":\"2022-08-20\"},{\"id\":30,\"name\":\"Proposed App. Date (earliest)\",\"value\":null},{\"id\":31,\"name\":\"Proposed Process Type\",\"value\":\"AN Thomas, Kelly;  Wong, Neal\"}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -140,7 +140,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n  \"personIdOrKey\" : \"DA.accused.1\",\r\n  \"participantType\": \"Accused\"\r\n}",
+									"raw": "{\r\n  \"personIdOrKey\" : \"DA.accused.4\",\r\n  \"participantType\": \"Accused\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -175,7 +175,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\"court_file_id\":\"39867\",\"court_file_no\":\"798441\",\"court_file_type_reference\":null,\"anticipated_crown_election\":\"IND\",\"court_file_seq_no\":\"1\",\"court_file_level\":\"P\",\"court_file_class\":\"A\",\"court_file_designation\":\"SA\",\"court_file_sworn_date\":\"2022-09-22\",\"offence_description_list\":\"CCC 344(1)(a) commit robbery use restricted/prohibited firearm\",\"court_file_number_seq_type\":\"798441-1-null\",\"court_home_registry\":\"4801-Kelowna Law Courts\",\"case_flags\":[],\"accused_person\":[{\"identifier\":\"73638.0734\",\"full_name\":\"Roberts, John\",\"proposed_process_type\":null,\"proposed_appearance_date\":null,\"crown_decision_code\":null,\"offence_date\":null,\"indigenous_accused_yn\":false,\"name_and_proposed_process_type\":\" Roberts, John\",\"birth_date\":\"1966-12-12\"}],\"related_agency_file\":[{\"rcc_id\":\"50450.0734\",\"agency_file_no\":\"22-472027\",\"security_clearance_level\":null,\"synopsis\":null,\"initiating_agency\":null,\"investigating_officer\":null,\"proposed_crown_office\":null,\"rcc_submit_date\":null,\"assessment_crown_name\":null,\"case_status_code\":null,\"file_note\":null,\"charge\":null,\"limitation_date\":null,\"earliest_offence_date\":null,\"earliest_proposed_appearance_date\":null,\"proposed_process_type_list\":\"\",\"case_flags\":[],\"accused_person\":[],\"case_decision_cd\":null}],\"related_court_file\":[]}",
+									"raw": "{\n    \"name\": \"JONES,Willie; THOMAS,James Anthony\",\n    \"key\": \"50453.0734\",\n    \"description\": \"\",\n    \"timeZoneId\": \"Pacific Standard Time\",\n    \"templateCase\": \"28\",\n    \"fields\": [\n        {\n            \"name\": \"Agency File ID\",\n            \"value\": \"50453.0734\"\n        },\n        {\n            \"name\": \"Agency File No.\",\n            \"value\": \"105:22-472028\"\n        },\n        {\n            \"name\": \"Submit Date\",\n            \"value\": \"2022-09-27\"\n        },\n        {\n            \"name\": \"Assessment Crown\",\n            \"value\": \"Garrison, Dave\"\n        },\n        {\n            \"name\": \"Proposed Charges\",\n            \"value\": \"CCC 344(1)(b) Robbery, CCC 231 1 St Murder\"\n        },\n        {\n            \"name\": \"Initiating Agency\",\n            \"value\": \"105: Kelowna Municipal RCMP\"\n        },\n        {\n            \"name\": \"Investigating Officer\",\n            \"value\": \"Rhodes, Christopher 1001\"\n        },\n        {\n            \"name\": \"Case Flags\",\n            \"value\": [\n                {\n                    \"id\": 12\n                }\n            ]\n        },\n        {\n            \"name\": \"Offence Date (earliest)\",\n            \"value\": \"2022-01-05\"\n        },\n        {\n            \"name\": \"Proposed App. Date (earliest)\",\n            \"value\": null\n        },\n        {\n            \"name\": \"Proposed Process Type\",\n            \"value\": \"AN Jones, Willie;  Thomas, James Anthony\"\n        },\n        {\n            \"name\": \"Limitation Date\",\n            \"value\": null\n        },\n        {\n            \"name\": \"Accused Full Name\",\n            \"value\": \"Willie Jones; James Thomas\"\n        },\n        {\n            \"name\": \"RCC Status\",\n            \"value\": \"Received\"\n        }\n    ]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -183,7 +183,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/99",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -196,7 +196,7 @@
 										"api",
 										"v1",
 										"cases",
-										"91"
+										"99"
 									]
 								}
 							},
@@ -317,7 +317,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/91/participants?participantType=Accused",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91/participants?participantType=Accused",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -329,8 +329,6 @@
 									"path": [
 										"api",
 										"v1",
-										"org-units",
-										"1",
 										"cases",
 										"91",
 										"participants"
@@ -358,10 +356,35 @@
 										}
 									]
 								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/96",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"96"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "FindCaseIdsByCustomFields",
+							"request": {
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/52",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder/id",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -376,7 +399,8 @@
 										"org-units",
 										"1",
 										"cases",
-										"52"
+										"45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder",
+										"id"
 									]
 								}
 							},
@@ -424,7 +448,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n  \"key\": \"DA.accused.2\",\r\n  \"name\": \"Accused Two Person 1900-01-01\",\r\n  \"firstName\": \"Accused\",\r\n  \"lastName\": \"Person\",\r\n  \"address\": {\r\n      \"email\": null\r\n  },\r\n  \"fields\": [\r\n    {\r\n      \"id\": 35,\r\n      \"name\": \"Date of Birth\",\r\n      \"value\": \"1900-01-01\"\r\n    }\r\n  ]\r\n}",
+									"raw": "{\r\n  \"key\": \"DA.accused.8\",\r\n  \"name\": \"Accused The Eighth Person 1900-01-08\",\r\n  \"firstName\": \"Accused\",\r\n  \"lastName\": \"Person\",\r\n  \"address\": {\r\n      \"email\": null\r\n  },\r\n  \"fields\": [\r\n    {\r\n      \"name\": \"Date of Birth\",\r\n      \"value\": \"1900-01-08\"\r\n    },\r\n    {\r\n      \"name\": \"Given Name 2\",\r\n      \"value\": \"The\"\r\n    },\r\n    {\r\n      \"name\": \"Given Name 3\",\r\n      \"value\": \"Eighth\"\r\n    },\r\n    {\r\n      \"name\": \"Full Name\",\r\n      \"value\": \"Accused The Eighth Person\"\r\n    }\r\n  ]\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -469,7 +493,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"id\": 8,\r\n    \"key\": \"DA.accused.2\",\r\n    \"name\": \"Accused Person\",\r\n    \"title\": null,\r\n    \"firstName\": \"Accused\",\r\n    \"lastName\": \"Person\",\r\n    \"address\": {\r\n        \"id\": 8,\r\n        \"email\": null,\r\n        \"mobile\": null,\r\n        \"phone\": null,\r\n        \"postalAddress\": null,\r\n        \"postalAddressAsJson\": null,\r\n        \"isPrivate\": false\r\n    },\r\n    \"orgs\": [\r\n        {\r\n            \"organisationId\": 7,\r\n            \"personId\": 8,\r\n            \"organisationTypeId\": 1,\r\n            \"organisationMemberId\": 8,\r\n            \"startDateTime\": \"2022-09-23T18:32:33.787\",\r\n            \"endDateTime\": null,\r\n            \"status\": \"Active\"\r\n        }\r\n    ],\r\n    \"cases\": [],\r\n    \"settings\": {\r\n        \"col2\": [],\r\n        \"col35\": [],\r\n        \"col35Date\": []\r\n    },\r\n    \"fields\": [],\r\n    \"displayName\": \"Accused Two Person\",\r\n    \"organisationTypeId\": 1,\r\n    \"permissions\": null,\r\n    \"status\": \"Active\",\r\n    \"organisationalUnitId\": 1\r\n}",
+									"raw": "{\"id\":\"36\",\"key\":\"64945.0002\",\"name\":\"Willie Jones\",\"firstName\":\"Willie\",\"lastName\":\"Jones\",\"fields\":[{\"name\":\"Date Of Birth\",\"value\":null},{\"name\":\"Given Name 2\",\"value\":null},{\"name\":\"Given Name 3\",\"value\":null},{\"name\":\"Full Name\",\"value\":\"Willie Jones\"}],\"address\":{\"email\":null},\"orgs\":[{\"organisationId\":\"29\"}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -477,7 +501,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.2",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/64945.0002",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -492,7 +516,7 @@
 										"org-units",
 										"1",
 										"persons",
-										"DA.accused.2"
+										"64945.0002"
 									]
 								}
 							},
@@ -504,21 +528,11 @@
 								"disableBodyPruning": true
 							},
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"name\": \"Frank, Joe Mike John - 5\",\r\n    \"key\": \"50442.0734.5\",\r\n    \"description\": \"\",\r\n    \"timeZoneId\": \"Pacific Standard Time\",\r\n    \"templateCase\": \"28\",\r\n    \"fields\": [\r\n        {\r\n            \"id\": 12,\r\n            \"value\": \"50442.0734.5\"\r\n        },\r\n        {\r\n            \"id\": 3,\r\n            \"value\": \"22-472002\"\r\n        },\r\n        {\r\n            \"id\": 13,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 9,\r\n            \"value\": \"Garrison, Dave\"\r\n        },\r\n        {\r\n            \"id\": 14,\r\n            \"value\": null\r\n        },\r\n        {\r\n            \"id\": 18,\r\n            \"value\": \"CCC 344 Robbery, CCC 134 Statements not specially permitted\"\r\n        },\r\n        {\r\n            \"id\": 24,\r\n            \"value\": \"105: Kelowna Municipal RCMP\"\r\n        },\r\n        {\r\n            \"id\": 25,\r\n            \"value\": \"Rhodes, Christopher 1001\"\r\n        },\r\n        {\r\n            \"id\": 26,\r\n            \"value\": \"C402: Kelowna Crown Counsel\"\r\n        },\r\n        {\r\n            \"id\": 29,\r\n            \"value\": \"2022-08-25\"\r\n        },\r\n        {\r\n            \"id\": 30,\r\n            \"value\": \"2022-08-26\"\r\n        },\r\n        {\r\n            \"id\": 31,\r\n            \"value\": \"Frank, Joe Mike John AN\"\r\n        }\r\n    ]\r\n}",
+									"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -526,7 +540,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.2",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.5",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -541,7 +555,7 @@
 										"org-units",
 										"1",
 										"persons",
-										"DA.accused.2"
+										"DA.accused.5"
 									]
 								}
 							},

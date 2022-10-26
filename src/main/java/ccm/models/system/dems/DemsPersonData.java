@@ -27,8 +27,12 @@ public class DemsPersonData {
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
-        DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
-        fieldData.add(dob);
+        // BCPSDEMS-602 - workaround to not provide the field data if date is null
+        if (ba.getBirth_date() != null) {
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
+            fieldData.add(dob);
+        }
+        
         
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
         fieldData.add(given2);

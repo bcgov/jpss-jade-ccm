@@ -14,11 +14,11 @@ public class BusinessCourtCaseAppearanceSummary {
   }
 
   public BusinessCourtCaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
-    setInitial_appr_dtm(jaf.getInitial_appr_dt());
+    setInitial_appr_dtm(jaf.getInitial_appr_dtm());
     setInitial_appr_rsn_cd(jaf.getInitial_appr_rsn_cd());
-    setNext_appr_dtm(jaf.getNext_appr_dt());
+    setNext_appr_dtm(jaf.getNext_appr_dtm());
     setNext_appr_rsn_cd(jaf.getNext_appr_rsn_cd());
-    setTrial_start_appr_dtm(jaf.getTrial_start_appr_dt());
+    setTrial_start_appr_dtm(jaf.getTrial_start_appr_dtm());
     setTrial_start_appr_rsn_cd(jaf.getTrial_start_appr_rsn_cd());
   }
 

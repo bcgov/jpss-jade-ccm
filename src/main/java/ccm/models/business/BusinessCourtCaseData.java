@@ -37,7 +37,7 @@ public class BusinessCourtCaseData {
 
     public BusinessCourtCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
-        setAgency_file(jaf.getInitiating_agency_identifier() + ":" + jaf.getAgency_file_no());
+        setAgency_file(jaf.getInitiating_agency_identifier() + ": " + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());
         setSynopsis(jaf.getSynopsis());
         if(jaf.getInitiating_agency_identifier() != null) {
@@ -55,7 +55,7 @@ public class BusinessCourtCaseData {
             // MAP 69
             if (index_crown_consel >= 0) {
                 // removing the suffix string
-                crn_decision_agency_name = crn_decision_agency_name.substring(0, index_crown_consel);
+                crn_decision_agency_name = crn_decision_agency_name.substring(0, index_crown_consel).trim();
             }
 
             setProposed_crown_office(jaf.getCrn_decision_agency_identifier() + ": " + crn_decision_agency_name);
@@ -79,39 +79,9 @@ public class BusinessCourtCaseData {
         if ("Y".equalsIgnoreCase(jaf.getKfile_yn())) {
             case_flags.add("K");
         }
-        if(jaf.getAccused() != null) {
-            boolean hasIndigenous = false;
-            boolean hasHroip = false;
-            boolean hasDoLto = false;
-
-            for (JustinAccused accused : jaf.getAccused()) {
-                if (accused.getIndigenous_yn() != null && "Y".equalsIgnoreCase(accused.getIndigenous_yn())) {
-                    hasIndigenous = true;
-                    break;
-                }
-                if (accused.getHroip_yn() != null && "Y".equalsIgnoreCase(accused.getHroip_yn())) {
-                    hasIndigenous = true;
-                    break;
-                }
-                if (accused.getDo_lto_yn() != null && "Y".equalsIgnoreCase(accused.getDo_lto_yn())) {
-                    hasIndigenous = true;
-                    break;
-                }
-            }
-
-            if (hasIndigenous) {
-                case_flags.add("Indigenous");
-            }
-            if (hasHroip) {
-                case_flags.add("HROIP");
-            }
-            if (hasDoLto) {
-                case_flags.add("DO/LTO");
-            }
-        }
 
         // TODO: need definition of intimate partner violence (MAP 74)
-        //if ("Y" == jaf.getIPV1()) { case_flags.add("K"); };
+        //if ("Y".equalsIgnoreCase(jaf.getIPV1())) { case_flags.add("K"); };
 
         List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
         String earliest_proposed_appearance_date = null;
@@ -120,6 +90,10 @@ public class BusinessCourtCaseData {
         StringBuilder proposed_process_type_builder = new StringBuilder();
 
         if(jaf.getAccused() != null) {
+            boolean hasIndigenous = false;
+            boolean hasHroip = false;
+            boolean hasDoLto = false;
+
             for (JustinAccused ja : jaf.getAccused()) {
 
                 BusinessCourtCaseAccused accused = new BusinessCourtCaseAccused(ja);
@@ -139,13 +113,28 @@ public class BusinessCourtCaseData {
                 } else if (earliest_proposed_appearance_date != null && ja.getProposed_appr_date() != null && earliest_proposed_appearance_date.compareTo(ja.getProposed_appr_date()) > 0) {
                     earliest_proposed_appearance_date = ja.getProposed_appr_date();
                 }
+
+                if (!hasIndigenous && accused.getIndigenous_accused_yn()) {
+                    case_flags.add("Indigenous");
+                    hasIndigenous = true;
+                }
+
+                if (!hasHroip && accused.getHroip_yn()) {
+                    case_flags.add("HROIP");
+                    hasHroip = true;
+                }
+
+                if (!hasDoLto && accused.getDo_lto_yn()) {
+                    case_flags.add("DO/LTO");
+                    hasDoLto = true;
+                }
             }
         }
         setProposed_process_type_list(proposed_process_type_builder.toString());
         setAccused_persons(accusedList);
         setEarliest_proposed_appearance_date(earliest_proposed_appearance_date);
 
-        if(jaf.getRcc_state_cd() != null) {
+        if (jaf.getRcc_state_cd() != null) {
             switch (jaf.getRcc_state_cd()) {
             case "ACT":
                 setRcc_status_code("Received");

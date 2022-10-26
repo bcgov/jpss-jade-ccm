@@ -7,6 +7,7 @@ public class BusinessBaseEvent {
     private String event_dtm;
     private String event_version;
     private String event_object_id;
+    private BusinessEventErrorData event_error_data;
 
     public BusinessBaseEvent() {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -37,5 +38,13 @@ public class BusinessBaseEvent {
     }
     public void setEvent_dtm(String event_dtm) {
         this.event_dtm = event_dtm;
+    }
+
+    public BusinessEventErrorData getEvent_error_data() {
+        return event_error_data;
+    }
+
+    public void setEvent_error_data(BusinessEventErrorData event_error_data) {
+        this.event_error_data = event_error_data;
     }
 }

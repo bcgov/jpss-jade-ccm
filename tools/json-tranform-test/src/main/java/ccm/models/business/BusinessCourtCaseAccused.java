@@ -36,7 +36,7 @@ public class BusinessCourtCaseAccused {
         setBirth_date(ja.getBirth_date());
 
         // Map 78
-        if ("Y" == ja.getIndigenous_yn()) {
+        if ("Y".equalsIgnoreCase(ja.getIndigenous_yn())) {
             setIndigenous_accused_yn(true);
         } else {
             setIndigenous_accused_yn(false);
