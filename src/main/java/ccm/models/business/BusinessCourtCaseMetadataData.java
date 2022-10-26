@@ -136,7 +136,7 @@ public class BusinessCourtCaseMetadataData {
           // MAP 69
           if (index_crown_consel >= 0) {
               // removing the suffix string
-              approving_crown_name = approving_crown_name.substring(0, index_crown_consel);
+              approving_crown_name = approving_crown_name.substring(0, index_crown_consel).trim();
           }
 
           setApproving_crown_agency_name(approving_crown_name);
