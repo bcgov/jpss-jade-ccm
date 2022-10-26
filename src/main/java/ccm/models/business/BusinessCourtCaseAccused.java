@@ -38,20 +38,18 @@ public class BusinessCourtCaseAccused {
         setBirth_date(ja.getBirth_date());
 
         // Map 78
-        setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y" == ja.getIndigenous_yn());
+        setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
             
-        setHroip_yn(ja.getHroip_yn() != null && "Y" == ja.getHroip_yn());
-        setDo_lto_yn(ja.getDo_lto_yn() != null && "Y" == ja.getDo_lto_yn());
+        setHroip_yn(ja.getHroip_yn() != null && "Y".equalsIgnoreCase(ja.getHroip_yn()));
+        setDo_lto_yn(ja.getDo_lto_yn() != null && "Y".equalsIgnoreCase(ja.getDo_lto_yn()));
 
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
             name_process.append(ja.getProposed_process_type());
-        }
-        if(ja.getAccused_name() != null) {
-            name_process.append(" ");
+            name_process.append(" - ");
             name_process.append(ja.getAccused_name());
+            setName_and_proposed_process_type(name_process.toString());
         }
-        setName_and_proposed_process_type(name_process.toString());
     }
 
     public String getIdentifier() {

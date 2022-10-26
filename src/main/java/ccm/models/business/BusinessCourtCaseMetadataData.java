@@ -1,7 +1,7 @@
 package ccm.models.business;
 
 import ccm.models.system.justin.JustinAccused;
-import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAgencyFileRef;
 import ccm.models.system.justin.JustinCourtFile;
 
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.List;
 
 public class BusinessCourtCaseMetadataData {
   public static final String DASH_STRING = "-";
-  public static final String COLON_STRING = "-";
+  public static final String COLON_STRING = ":";
   public static final String YES_STRING = "Y";
 
   private String court_file_id;
@@ -30,9 +30,8 @@ public class BusinessCourtCaseMetadataData {
   //private String rms_processing_status;
   private List<String> case_flags;
 
-  private List<BusinessCourtCaseAccused> accused_person;
-  private List<BusinessCourtCaseData> related_agency_file;
-  private List<BusinessCourtCaseMetadataData> related_court_file;
+  private List<BusinessCourtCaseAccused> accused_persons;
+  private List<BusinessCourtCaseDataRef> related_agency_file;
 
   private String approving_crown_agency_name;
   private String approving_crown_agency_ident;
@@ -68,7 +67,7 @@ public class BusinessCourtCaseMetadataData {
       //"$MAPID62- $MAPID29"
       StringBuilder courtHomeReg = new StringBuilder();
       courtHomeReg.append(jcf.getHome_court_agency_identifier());
-      courtHomeReg.append(COLON_STRING);
+      courtHomeReg.append(COLON_STRING + " ");
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
       setCourt_home_registry_name(jcf.getHome_court_agency_name());
@@ -115,32 +114,19 @@ public class BusinessCourtCaseMetadataData {
           accused_names.append(ja.getAccused_surname_nm());
         }
       }
-      setAccused_person(accusedList);
+      setAccused_persons(accusedList);
       setAccused_names(accused_names.toString());
 
-      List<BusinessCourtCaseData> agencyList = new ArrayList<BusinessCourtCaseData>();
+      List<BusinessCourtCaseDataRef> agencyList = new ArrayList<BusinessCourtCaseDataRef>();
 
       if(jcf.getRelated_rcc() != null) {
-        for (JustinAgencyFile jaf : jcf.getRelated_rcc()) {
+        for (JustinAgencyFileRef jafr : jcf.getRelated_rcc()) {
 
-          BusinessCourtCaseData agency = new BusinessCourtCaseData(jaf);
-          agencyList.add(agency);
+          BusinessCourtCaseDataRef agencyRef = new BusinessCourtCaseDataRef(jafr);
+          agencyList.add(agencyRef);
         }
       }
       setRelated_agency_file(agencyList);
-
-
-      List<BusinessCourtCaseMetadataData> relatedList = new ArrayList<BusinessCourtCaseMetadataData>();
-
-      if(jcf.getRelated_court_file() != null) {
-        for (JustinCourtFile rjcf : jcf.getRelated_court_file()) {
-
-          BusinessCourtCaseMetadataData related = new BusinessCourtCaseMetadataData(rjcf);
-          relatedList.add(related);
-        }
-      }
-      setRelated_court_file(relatedList);
-
 
       if(jcf.getApproving_crown_agency_name() != null) {
         String approving_crown_name = jcf.getApproving_crown_agency_name();
@@ -150,7 +136,7 @@ public class BusinessCourtCaseMetadataData {
           // MAP 69
           if (index_crown_consel >= 0) {
               // removing the suffix string
-              approving_crown_name = approving_crown_name.substring(0, index_crown_consel);
+              approving_crown_name = approving_crown_name.substring(0, index_crown_consel).trim();
           }
 
           setApproving_crown_agency_name(approving_crown_name);
@@ -287,23 +273,17 @@ public class BusinessCourtCaseMetadataData {
     this.accused_names = accused_names;
   }
 
-  public List<BusinessCourtCaseAccused> getAccused_person() {
-    return accused_person;
+  public List<BusinessCourtCaseAccused> getAccused_persons() {
+    return accused_persons;
   }
-  public void setAccused_person(List<BusinessCourtCaseAccused> accused_person) {
-    this.accused_person = accused_person;
+  public void setAccused_persons(List<BusinessCourtCaseAccused> accused_person) {
+    this.accused_persons = accused_person;
   }
-  public List<BusinessCourtCaseData> getRelated_agency_file() {
+  public List<BusinessCourtCaseDataRef> getRelated_agency_file() {
     return related_agency_file;
   }
-  public void setRelated_agency_file(List<BusinessCourtCaseData> related_agency_file) {
+  public void setRelated_agency_file(List<BusinessCourtCaseDataRef> related_agency_file) {
     this.related_agency_file = related_agency_file;
-  }
-  public List<BusinessCourtCaseMetadataData> getRelated_court_file() {
-    return related_court_file;
-  }
-  public void setRelated_court_file(List<BusinessCourtCaseMetadataData> related_court_file) {
-    this.related_court_file = related_court_file;
   }
 
   public String getApproving_crown_agency_name() {

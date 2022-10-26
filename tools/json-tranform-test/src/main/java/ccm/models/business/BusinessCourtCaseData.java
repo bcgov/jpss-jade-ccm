@@ -78,7 +78,7 @@ public class BusinessCourtCaseData {
         }
 
         // TODO: need definition of intimate partner violence (MAP 74)
-        //if ("Y" == jaf.getIPV1()) { case_flags.add("K"); };
+        //if ("Y".equalsIgnoreCase(jaf.getIPV1())) { case_flags.add("K"); };
 
         List<BusinessCourtCaseAccused> accusedList = new ArrayList<BusinessCourtCaseAccused>();
         String earliest_proposed_appearance_date = null;
