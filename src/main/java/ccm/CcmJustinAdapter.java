@@ -243,8 +243,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
+    .setProperty("event_message_id")
+      .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setBody().simple("CCM Justin splunk adapter call: processAgenFileEvent")
+    .setBody().simple("${routeId}")
     .to("direct:logSplunkEvent")
     ;
 
@@ -272,8 +274,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
+    .setProperty("event_message_id")
+      .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setBody().simple("CCM Justin splunk adapter call: processAuthListEvent")
+    .setBody().simple("${routeId}")
     .to("direct:logSplunkEvent")
     ;
 
@@ -301,8 +305,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
+    .setProperty("event_message_id")
+      .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setBody().simple("CCM Justin splunk adapter call: processCourtFileEvent")
+    .setBody().simple("${routeId}")
     .to("direct:logSplunkEvent")
     ;
 
@@ -329,8 +335,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
+    .setProperty("event_message_id")
+      .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setBody().simple("CCM Justin splunk adapter call: processApprEvent")
+    .setBody().simple("${routeId}")
     .to("direct:logSplunkEvent")
     ;
 
@@ -357,8 +365,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
+    .setProperty("event_message_id")
+      .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setBody().simple("CCM Justin splunk adapter call: processCrnAssignEvent")
+    .setBody().simple("${routeId}")
     .to("direct:logSplunkEvent")
     ;
 
@@ -532,11 +542,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("splunk_event", simple("${bodyAs(String)}"))
     .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
+    .log("Message event ${exchangeProperty.event_message_id}")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
         BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
         be.setSource("ccm-justin-adapter");
+        be.setEvent_object_id(ex.getProperty("event_message_id").toString());
 
         ex.getMessage().setBody(be, BusinessSplunkEvent.class);
       }
