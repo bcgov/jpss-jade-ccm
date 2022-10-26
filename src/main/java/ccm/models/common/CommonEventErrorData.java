@@ -1,20 +1,15 @@
-package ccm.models.business;
+package ccm.models.common;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-public class BusinessEventErrorData {
+public class CommonEventErrorData {
     private String error_dtm;
     private String error_code;
     private String error_details;
 
-    public BusinessEventErrorData() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
-        this.error_dtm = formatter.format(date);
+    public CommonEventErrorData() {
+        setError_dtm(CommonBaseEvent.util_generateCurrentDtm());
     }
 
-    public BusinessEventErrorData(BusinessEventErrorData another) {
+    public CommonEventErrorData(CommonEventErrorData another) {
         this.error_dtm = another.error_dtm;
         this.error_code = another.error_code;
         this.error_details = another.error_details;

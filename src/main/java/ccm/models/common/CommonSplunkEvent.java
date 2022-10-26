@@ -1,17 +1,17 @@
-package ccm.models.business;
+package ccm.models.common;
 
 
-public class BusinessSplunkEvent extends BusinessBaseEvent {
+public class CommonSplunkEvent extends CommonBaseEvent {
   private String event_message;
   private String source;
 
   public static final String EVENT_VERSION = "1.0";
 
-  public BusinessSplunkEvent() {
+  public CommonSplunkEvent() {
     super.setEvent_version(EVENT_VERSION);
   }
 
-  public BusinessSplunkEvent(String event_message) {
+  public CommonSplunkEvent(String event_message) {
     this();
     setEvent_message(event_message);
   }

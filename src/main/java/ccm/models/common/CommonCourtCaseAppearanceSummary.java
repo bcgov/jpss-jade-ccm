@@ -1,8 +1,8 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import ccm.models.system.justin.JustinCourtAppearanceSummary;
 
-public class BusinessCourtCaseAppearanceSummary {
+public class CommonCourtCaseAppearanceSummary {
   private String initial_appr_dtm;
   private String initial_appr_rsn_cd;
   private String next_appr_dtm;
@@ -10,10 +10,10 @@ public class BusinessCourtCaseAppearanceSummary {
   private String trial_start_appr_dtm;
   private String trial_start_appr_rsn_cd;
 
-  public BusinessCourtCaseAppearanceSummary() {
+  public CommonCourtCaseAppearanceSummary() {
   }
 
-  public BusinessCourtCaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
+  public CommonCourtCaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
     setInitial_appr_dtm(jaf.getInitial_appr_dtm());
     setInitial_appr_rsn_cd(jaf.getInitial_appr_rsn_cd());
     setNext_appr_dtm(jaf.getNext_appr_dtm());

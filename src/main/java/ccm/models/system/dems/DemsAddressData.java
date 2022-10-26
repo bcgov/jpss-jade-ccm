@@ -1,9 +1,5 @@
 package ccm.models.system.dems;
 
-import java.util.List;
-import java.util.ArrayList;
-import ccm.models.business.BusinessCourtCaseAccused;
-
 public class DemsAddressData {
 
     private String email;

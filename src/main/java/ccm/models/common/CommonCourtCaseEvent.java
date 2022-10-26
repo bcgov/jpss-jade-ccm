@@ -1,10 +1,10 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class BusinessCourtCaseEvent extends BusinessBaseEvent {
+public class CommonCourtCaseEvent extends CommonBaseEvent {
   private String event_status;
   private String event_source;
 
@@ -33,11 +33,11 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
     AUTH_LIST_CHANGED;
   }
 
-  public BusinessCourtCaseEvent() {
+  public CommonCourtCaseEvent() {
     super.setEvent_version(EVENT_VERSION);
   }
 
-  public BusinessCourtCaseEvent(JustinEvent je) {
+  public CommonCourtCaseEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -79,8 +79,8 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
     setEvent_object_id(getJustin_rcc_id());
   }
 
-  public BusinessCourtCaseEvent(String event_source, BusinessCourtCaseEvent another) {
-    super((BusinessBaseEvent)another);
+  public CommonCourtCaseEvent(String event_source, CommonCourtCaseEvent another) {
+    super((CommonBaseEvent)another);
 
     setEvent_source(event_source);
 
@@ -93,8 +93,8 @@ public class BusinessCourtCaseEvent extends BusinessBaseEvent {
     this.justin_rcc_id = another.justin_rcc_id;
   }
 
-  public BusinessCourtCaseEvent copy(String event_source) {
-    return new BusinessCourtCaseEvent(event_source, this);
+  public CommonCourtCaseEvent copy(String event_source) {
+    return new CommonCourtCaseEvent(event_source, this);
   }
 
   public String getEvent_status() {

@@ -3,7 +3,7 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.business.BusinessCourtCaseMetadataData;
+import ccm.models.common.CommonCourtCaseMetadataData;
 import ccm.utils.DateTimeConverter;
 
 public class DemsCourtCaseMetadataData {
@@ -17,7 +17,7 @@ public class DemsCourtCaseMetadataData {
     public DemsCourtCaseMetadataData() {
     }
 
-    public DemsCourtCaseMetadataData(String key, String name, BusinessCourtCaseMetadataData bccm) {
+    public DemsCourtCaseMetadataData(String key, String name, CommonCourtCaseMetadataData bccm) {
         setKey(key);
         setName(name);
 

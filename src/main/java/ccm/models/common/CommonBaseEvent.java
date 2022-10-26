@@ -1,21 +1,19 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class BusinessBaseEvent {
+public class CommonBaseEvent {
     private String event_dtm;
     private String event_version;
     private String event_object_id;
-    private BusinessEventErrorData event_error_data;
+    private CommonEventErrorData event_error_data;
 
-    public BusinessBaseEvent() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
-        this.event_dtm = formatter.format(date);
+    public CommonBaseEvent() {
+        this.event_dtm = util_generateCurrentDtm();
     }
 
-    public BusinessBaseEvent(BusinessBaseEvent another) {
+    public CommonBaseEvent(CommonBaseEvent another) {
         this.event_object_id = another.event_object_id;
         this.event_dtm = another.event_dtm;
         this.event_version = another.event_version;
@@ -40,11 +38,18 @@ public class BusinessBaseEvent {
         this.event_dtm = event_dtm;
     }
 
-    public BusinessEventErrorData getEvent_error_data() {
+    public CommonEventErrorData getEvent_error_data() {
         return event_error_data;
     }
 
-    public void setEvent_error_data(BusinessEventErrorData event_error_data) {
+    public void setEvent_error_data(CommonEventErrorData event_error_data) {
         this.event_error_data = event_error_data;
+    }
+
+    public static String util_generateCurrentDtm() {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+        
+        return formatter.format(date);
     }
 }

@@ -1,11 +1,11 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import java.util.List;
 import java.util.ArrayList;
 import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinCrownAssignmentData;
 
-public class BusinessCourtCaseCrownAssignmentList {
+public class CommonCourtCaseCrownAssignmentList {
   public static final String DASH_STRING = " - ";
   public static final String SEMICOLON_STRING = "; ";
   public static final String COMMA_STRING = ", ";
@@ -16,16 +16,16 @@ public class BusinessCourtCaseCrownAssignmentList {
   private String crownAssignmentList;
   private String crownAssignmentName;
 
-  private List<BusinessCourtCaseCrownAssignmentData> crown_assignment;
+  private List<CommonCourtCaseCrownAssignmentData> crown_assignment;
 
-  public BusinessCourtCaseCrownAssignmentList() {
+  public CommonCourtCaseCrownAssignmentList() {
   }
 
-  public BusinessCourtCaseCrownAssignmentList(JustinCrownAssignmentList jasl) {
+  public CommonCourtCaseCrownAssignmentList(JustinCrownAssignmentList jasl) {
     setMdoc_justin_no(jasl.getMdoc_justin_no());
 
 
-    List<BusinessCourtCaseCrownAssignmentData> appearanceList = new ArrayList<BusinessCourtCaseCrownAssignmentData>();
+    List<CommonCourtCaseCrownAssignmentData> appearanceList = new ArrayList<CommonCourtCaseCrownAssignmentData>();
     
     StringBuilder legalStaffAssignments = new StringBuilder();
     StringBuilder crownAssignments = new StringBuilder();
@@ -33,7 +33,7 @@ public class BusinessCourtCaseCrownAssignmentList {
 
     if(jasl.getCrown_assignment() != null) {
       for (JustinCrownAssignmentData jas : jasl.getCrown_assignment()) {
-        BusinessCourtCaseCrownAssignmentData bcas = new BusinessCourtCaseCrownAssignmentData(jas);
+        CommonCourtCaseCrownAssignmentData bcas = new CommonCourtCaseCrownAssignmentData(jas);
         appearanceList.add(bcas);
 
         if(jas.getAssign_type_code() != null) {
@@ -113,10 +113,10 @@ public class BusinessCourtCaseCrownAssignmentList {
     this.crownAssignmentName = crownAssignmentName;
   }
 
-  public List<BusinessCourtCaseCrownAssignmentData> getCrown_assignment() {
+  public List<CommonCourtCaseCrownAssignmentData> getCrown_assignment() {
     return crown_assignment;
   }
-  public void setCrown_assignment(List<BusinessCourtCaseCrownAssignmentData> crown_assignment) {
+  public void setCrown_assignment(List<CommonCourtCaseCrownAssignmentData> crown_assignment) {
     this.crown_assignment = crown_assignment;
   }
 

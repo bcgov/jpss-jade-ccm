@@ -1,4 +1,4 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,20 +6,20 @@ import java.util.List;
 import ccm.models.system.justin.JustinAuthUser;
 import ccm.models.system.justin.JustinAuthUsersList;
 
-public class BusinessAuthUsersList {
+public class CommonAuthUsersList {
     private String rcc_id;
-    private List<BusinessAuthUser> auth_users_list;
+    private List<CommonAuthUser> auth_users_list;
 
-    public BusinessAuthUsersList() {
+    public CommonAuthUsersList() {
     }
 
-    public BusinessAuthUsersList(JustinAuthUsersList jal) {
+    public CommonAuthUsersList(JustinAuthUsersList jal) {
       setRcc_id(jal.getRcc_id());
 
-      List<BusinessAuthUser> l = new ArrayList<BusinessAuthUser>();
+      List<CommonAuthUser> l = new ArrayList<CommonAuthUser>();
       
       for (JustinAuthUser ja : jal.getAuthuserslist()) {
-        BusinessAuthUser ba = new BusinessAuthUser(ja);
+        CommonAuthUser ba = new CommonAuthUser(ja);
         l.add(ba);
       }
 
@@ -34,11 +34,11 @@ public class BusinessAuthUsersList {
       this.rcc_id = rcc_id;
     }
 
-    public List<BusinessAuthUser> getAuth_users_list() {
+    public List<CommonAuthUser> getAuth_users_list() {
       return auth_users_list;
     }
 
-    public void setAuth_users_list(List<BusinessAuthUser> auth_users_list) {
+    public void setAuth_users_list(List<CommonAuthUser> auth_users_list) {
       this.auth_users_list = auth_users_list;
     }
 

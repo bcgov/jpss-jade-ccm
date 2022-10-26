@@ -1,8 +1,8 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import ccm.models.system.justin.JustinCrownAssignmentData;
 
-public class BusinessCourtCaseCrownAssignmentData {
+public class CommonCourtCaseCrownAssignmentData {
   private String agency_name;
   private String agency_identifier;
   private String part_id;
@@ -12,10 +12,10 @@ public class BusinessCourtCaseCrownAssignmentData {
   private String end_date;
 
 
-  public BusinessCourtCaseCrownAssignmentData() {
+  public CommonCourtCaseCrownAssignmentData() {
   }
 
-  public BusinessCourtCaseCrownAssignmentData(JustinCrownAssignmentData jasl) {
+  public CommonCourtCaseCrownAssignmentData(JustinCrownAssignmentData jasl) {
     setAgency_name(jasl.getAgency_name());
     setAgency_identifier(jasl.getAgency_identifier());
     setPart_id(jasl.getPart_id());

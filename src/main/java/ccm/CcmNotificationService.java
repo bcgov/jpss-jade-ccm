@@ -20,7 +20,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.business.*;
+import ccm.models.common.*;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -52,13 +52,13 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("event")
       .simple("${body}")
     .choice()
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.CHANGED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseEvent.STATUS.CHANGED))
         .to("direct:processCourtCaseChanged")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.CREATED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseEvent.STATUS.CREATED))
         .to("direct:processCourtCaseCreated")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.UPDATED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseEvent.STATUS.UPDATED))
         .to("direct:processCourtCaseUpdated")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseEvent.STATUS.AUTH_LIST_CHANGED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseEvent.STATUS.AUTH_LIST_CHANGED))
         .to("direct:processCourtCaseAuthListChanged")
       .otherwise()
         .to("direct:processUnknownStatus");
@@ -78,11 +78,11 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("event")
       .simple("${body}")
     .choice()
-      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS.CHANGED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseMetadataEvent.STATUS.CHANGED))
         .to("direct:processCourtCaseMetadataChanged")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS.APPEARANCE_CHANGED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseMetadataEvent.STATUS.APPEARANCE_CHANGED))
         .to("direct:processCourtCaseAppearanceChanged")
-      .when(header("event_status").isEqualTo(BusinessCourtCaseMetadataEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
+      .when(header("event_status").isEqualTo(CommonCourtCaseMetadataEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
         .to("direct:processCourtCaseCrownAssignmentChanged")
       .otherwise()
         .to("direct:processUnknownStatus");
@@ -99,7 +99,7 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent();
+        CommonCourtCaseEvent be = new CommonCourtCaseEvent();
 
         // hardcoding boolean to false for first implementation
         //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
@@ -107,20 +107,20 @@ public class CcmNotificationService extends RouteBuilder {
 
         String event_object_id = ex.getIn().getHeader("event_object_id").toString();
 
-        be.setEvent_source(BusinessCourtCaseEvent.SOURCE.JADE_CCM.toString());
+        be.setEvent_source(CommonCourtCaseEvent.SOURCE.JADE_CCM.toString());
         be.setEvent_object_id(event_object_id);
         be.setJustin_rcc_id(event_object_id);
 
         if (court_case_exists) {
-          be.setEvent_status(BusinessCourtCaseEvent.STATUS.UPDATED.toString());
+          be.setEvent_status(CommonCourtCaseEvent.STATUS.UPDATED.toString());
         } else {
-          be.setEvent_status(BusinessCourtCaseEvent.STATUS.CREATED.toString());
+          be.setEvent_status(CommonCourtCaseEvent.STATUS.CREATED.toString());
         }
 
         ex.getMessage().setBody(be);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseEvent.class)
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
     .setBody().simple("CCM Notification splunk adapter call: processCourtCaseChanged")
@@ -257,13 +257,13 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
+        CommonSplunkEvent be = new CommonSplunkEvent(ex.getProperty("splunk_event").toString());
         be.setSource("ccm-notification-service");
 
-        ex.getMessage().setBody(be, BusinessSplunkEvent.class);
+        ex.getMessage().setBody(be, CommonSplunkEvent.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
     .log("Logging event to splunk body: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;

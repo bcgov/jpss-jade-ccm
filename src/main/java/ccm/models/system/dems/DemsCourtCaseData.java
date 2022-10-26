@@ -3,9 +3,9 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.business.BusinessCourtCaseData;
+import ccm.models.common.CommonCourtCaseAccused;
+import ccm.models.common.CommonCourtCaseData;
 import ccm.utils.DateTimeConverter;
-import ccm.models.business.BusinessCourtCaseAccused;
 
 public class DemsCourtCaseData {
     public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
@@ -24,10 +24,10 @@ public class DemsCourtCaseData {
     public DemsCourtCaseData() {
     }
 
-    public DemsCourtCaseData(BusinessCourtCaseData bcc) {
+    public DemsCourtCaseData(CommonCourtCaseData bcc) {
 
         StringBuilder case_name = new StringBuilder();
-        for (BusinessCourtCaseAccused ba : bcc.getAccused_persons()) {
+        for (CommonCourtCaseAccused ba : bcc.getAccused_persons()) {
             // Map 87
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
@@ -116,7 +116,7 @@ public class DemsCourtCaseData {
         StringBuilder accused_name_list = new StringBuilder();
 
         if(bcc.getAccused_persons() != null) {
-            for (BusinessCourtCaseAccused accused : bcc.getAccused_persons()) {
+            for (CommonCourtCaseAccused accused : bcc.getAccused_persons()) {
                 // Map 101
                 if(accused_name_list.length() > 0) {
                     accused_name_list.append(", ");

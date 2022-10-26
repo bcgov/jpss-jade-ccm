@@ -3,7 +3,7 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.business.BusinessCourtCaseAccused;
+import ccm.models.common.CommonCourtCaseAccused;
 import ccm.utils.DateTimeConverter;
 
 public class DemsPersonData {
@@ -20,7 +20,7 @@ public class DemsPersonData {
     public DemsPersonData() {
     }
 
-    public DemsPersonData(BusinessCourtCaseAccused ba) {
+    public DemsPersonData(CommonCourtCaseAccused ba) {
         setKey(ba.getIdentifier());
         setLastName(ba.getSurname());
         setFirstName(ba.getGiven_1_name());
@@ -116,7 +116,7 @@ public class DemsPersonData {
         this.orgs = orgs;
     }
 
-    public static String generateFullGivenNamesAndLastNameFromAccused(BusinessCourtCaseAccused accused) {
+    public static String generateFullGivenNamesAndLastNameFromAccused(CommonCourtCaseAccused accused) {
         String concatenated_name_string = accused.getGiven_1_name() + 
             (accused.getGiven_2_name() != null && accused.getGiven_2_name().length() > 0 ? " " + accused.getGiven_2_name() : "" ) +
             (accused.getGiven_3_name() != null && accused.getGiven_3_name().length() > 0 ? " " + accused.getGiven_3_name() : "" ) + 

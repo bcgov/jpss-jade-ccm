@@ -3,9 +3,9 @@ package ccm.models.system.dems;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.business.BusinessCourtCaseAppearanceSummaryList;
+import ccm.models.common.CommonCourtCaseAppearanceSummary;
+import ccm.models.common.CommonCourtCaseAppearanceSummaryList;
 import ccm.utils.DateTimeConverter;
-import ccm.models.business.BusinessCourtCaseAppearanceSummary;
 
 public class DemsCourtCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
@@ -18,12 +18,12 @@ public class DemsCourtCaseAppearanceSummaryData {
     public DemsCourtCaseAppearanceSummaryData() {
     }
 
-    public DemsCourtCaseAppearanceSummaryData(String key, String name, BusinessCourtCaseAppearanceSummaryList b) {
+    public DemsCourtCaseAppearanceSummaryData(String key, String name, CommonCourtCaseAppearanceSummaryList b) {
         setKey(key);
         setName(name);
 
         if (b != null && b.getApprsummary() != null && b.getApprsummary().size() > 0) {
-            BusinessCourtCaseAppearanceSummary bcas = b.getApprsummary().get(0);
+            CommonCourtCaseAppearanceSummary bcas = b.getApprsummary().get(0);
 
             DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcas.getInitial_appr_dtm()));
             DemsFieldData initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), bcas.getInitial_appr_rsn_cd());

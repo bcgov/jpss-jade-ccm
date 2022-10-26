@@ -25,7 +25,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
-import ccm.models.business.*;
+import ccm.models.common.*;
 import ccm.models.system.justin.*;
 
 class JustinEventBatchProcessor implements Processor {
@@ -62,15 +62,15 @@ class JustinEventBatchProcessor implements Processor {
 
         if (e.isAgenFileEvent()) {
           // court case changed.  generate new business event.
-          BusinessCourtCaseEvent bce = new BusinessCourtCaseEvent(e);
+          CommonCourtCaseEvent bce = new CommonCourtCaseEvent(e);
           System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
         } else if (e.isAuthListEvent()) {
           // auth list changed.  Generate new business event.
-          BusinessCourtCaseEvent bce = new BusinessCourtCaseEvent(e);
+          CommonCourtCaseEvent bce = new CommonCourtCaseEvent(e);
           System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
         } else if (e.isCourtFileEvent()) {
           // court file changed.  Generate new business event.
-          BusinessCourtCaseMetadataEvent bcme = new BusinessCourtCaseMetadataEvent(e);
+          CommonCourtCaseMetadataEvent bcme = new CommonCourtCaseMetadataEvent(e);
           System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + bcme.getJustin_mdoc_no() + "')..");
         } else {
           System.out.println(" Unknown JUSTIN event type; Do nothing.");
@@ -233,12 +233,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+        CommonCourtCaseEvent be = new CommonCourtCaseEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setBody(be, CommonCourtCaseEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
@@ -264,12 +264,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseEvent be = new BusinessCourtCaseEvent(je);
+        CommonCourtCaseEvent be = new CommonCourtCaseEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseEvent.class);
+        exchange.getMessage().setBody(be, CommonCourtCaseEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcases.name}}")
@@ -295,12 +295,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
+        CommonCourtCaseMetadataEvent be = new CommonCourtCaseMetadataEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
+        exchange.getMessage().setBody(be, CommonCourtCaseMetadataEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseMetadataEvent.class)
     .setProperty("business_event").body()
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
@@ -326,12 +326,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
+        CommonCourtCaseMetadataEvent be = new CommonCourtCaseMetadataEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
+        exchange.getMessage().setBody(be, CommonCourtCaseMetadataEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseMetadataEvent.class)
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
@@ -356,12 +356,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     
         JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
     
-        BusinessCourtCaseMetadataEvent be = new BusinessCourtCaseMetadataEvent(je);
+        CommonCourtCaseMetadataEvent be = new CommonCourtCaseMetadataEvent(je);
     
-        exchange.getMessage().setBody(be, BusinessCourtCaseMetadataEvent.class);
+        exchange.getMessage().setBody(be, CommonCourtCaseMetadataEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
       }})
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseMetadataEvent.class)
     .log("Generate converted business event: ${body}")
     .to("kafka:{{kafka.topic.courtcase-metadatas.name}}")
     .setBody(simple("${exchangeProperty.justin_event}"))
@@ -432,11 +432,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinAgencyFile j = exchange.getIn().getBody(JustinAgencyFile.class);
-        BusinessCourtCaseData b = new BusinessCourtCaseData(j);
-        exchange.getMessage().setBody(b, BusinessCourtCaseData.class);
+        CommonCourtCaseData b = new CommonCourtCaseData(j);
+        exchange.getMessage().setBody(b, CommonCourtCaseData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseData.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
@@ -456,11 +456,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinAuthUsersList j = exchange.getIn().getBody(JustinAuthUsersList.class);
-        BusinessAuthUsersList b = new BusinessAuthUsersList(j);
-        exchange.getMessage().setBody(b, BusinessAuthUsersList.class);
+        CommonAuthUsersList b = new CommonAuthUsersList(j);
+        exchange.getMessage().setBody(b, CommonAuthUsersList.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
+    .marshal().json(JsonLibrary.Jackson, CommonAuthUsersList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
@@ -480,11 +480,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinCourtFile j = exchange.getIn().getBody(JustinCourtFile.class);
-        BusinessCourtCaseMetadataData b = new BusinessCourtCaseMetadataData(j);
-        exchange.getMessage().setBody(b, BusinessCourtCaseMetadataData.class);
+        CommonCourtCaseMetadataData b = new CommonCourtCaseMetadataData(j);
+        exchange.getMessage().setBody(b, CommonCourtCaseMetadataData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseMetadataData.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
@@ -504,11 +504,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinCourtAppearanceSummaryList j = exchange.getIn().getBody(JustinCourtAppearanceSummaryList.class);
-        BusinessCourtCaseAppearanceSummaryList b = new BusinessCourtCaseAppearanceSummaryList(j);
-        exchange.getMessage().setBody(b, BusinessCourtCaseAppearanceSummaryList.class);
+        CommonCourtCaseAppearanceSummaryList b = new CommonCourtCaseAppearanceSummaryList(j);
+        exchange.getMessage().setBody(b, CommonCourtCaseAppearanceSummaryList.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseAppearanceSummaryList.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseAppearanceSummaryList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
@@ -528,11 +528,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinCrownAssignmentList j = exchange.getIn().getBody(JustinCrownAssignmentList.class);
-        BusinessCourtCaseCrownAssignmentList b = new BusinessCourtCaseCrownAssignmentList(j);
-        exchange.getMessage().setBody(b, BusinessCourtCaseCrownAssignmentList.class);
+        CommonCourtCaseCrownAssignmentList b = new CommonCourtCaseCrownAssignmentList(j);
+        exchange.getMessage().setBody(b, CommonCourtCaseCrownAssignmentList.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessCourtCaseCrownAssignmentList.class)
+    .marshal().json(JsonLibrary.Jackson, CommonCourtCaseCrownAssignmentList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
@@ -546,14 +546,14 @@ public class CcmJustinAdapter extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        BusinessSplunkEvent be = new BusinessSplunkEvent(ex.getProperty("splunk_event").toString());
+        CommonSplunkEvent be = new CommonSplunkEvent(ex.getProperty("splunk_event").toString());
         be.setSource("ccm-justin-adapter");
         be.setEvent_object_id(ex.getProperty("event_message_id").toString());
 
-        ex.getMessage().setBody(be, BusinessSplunkEvent.class);
+        ex.getMessage().setBody(be, CommonSplunkEvent.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
     .log("Logging event to splunk body: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;

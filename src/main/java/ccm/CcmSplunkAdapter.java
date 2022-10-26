@@ -18,7 +18,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import ccm.models.business.*;
+
+import ccm.models.common.*;
 
 
 public class CcmSplunkAdapter extends RouteBuilder {
@@ -39,16 +40,16 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .routeId("processSplunkEvent")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing splunk data: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, BusinessSplunkEvent.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        BusinessSplunkEvent se = ex.getIn().getBody(BusinessSplunkEvent.class);
-        BusinessSplunkData bd = new BusinessSplunkData(se);
+        CommonSplunkEvent se = ex.getIn().getBody(CommonSplunkEvent.class);
+        CommonSplunkData bd = new CommonSplunkData(se);
         ex.getMessage().setBody(bd);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, BusinessSplunkData.class)
+    .marshal().json(JsonLibrary.Jackson, CommonSplunkData.class)
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     .log("Generating derived data: ${body}")

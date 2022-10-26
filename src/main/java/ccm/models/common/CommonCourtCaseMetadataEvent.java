@@ -1,10 +1,10 @@
-package ccm.models.business;
+package ccm.models.common;
 
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class BusinessCourtCaseMetadataEvent extends BusinessBaseEvent {
+public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
   private String event_status;
   private String event_source;
 
@@ -32,11 +32,11 @@ public class BusinessCourtCaseMetadataEvent extends BusinessBaseEvent {
     CROWN_ASSIGNMENT_CHANGED
   }
 
-  public BusinessCourtCaseMetadataEvent() {
+  public CommonCourtCaseMetadataEvent() {
     super.setEvent_version(EVENT_VERSION);
   }
 
-  public BusinessCourtCaseMetadataEvent(JustinEvent je) {
+  public CommonCourtCaseMetadataEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -81,8 +81,8 @@ public class BusinessCourtCaseMetadataEvent extends BusinessBaseEvent {
     setEvent_object_id(getJustin_mdoc_no());
   }
 
-  public BusinessCourtCaseMetadataEvent(String event_source, BusinessCourtCaseMetadataEvent another) {
-    super((BusinessBaseEvent)another);
+  public CommonCourtCaseMetadataEvent(String event_source, CommonCourtCaseMetadataEvent another) {
+    super((CommonBaseEvent)another);
 
     this.event_status = another.event_status;
     this.event_source = event_source;
@@ -94,8 +94,8 @@ public class BusinessCourtCaseMetadataEvent extends BusinessBaseEvent {
     this.justin_mdoc_no = another.justin_mdoc_no;
   }
 
-  public BusinessCourtCaseMetadataEvent copy(String event_source) {
-    return new BusinessCourtCaseMetadataEvent(event_source, this);
+  public CommonCourtCaseMetadataEvent copy(String event_source) {
+    return new CommonCourtCaseMetadataEvent(event_source, this);
   }
 
   public String getEvent_status() {

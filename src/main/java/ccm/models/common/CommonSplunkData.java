@@ -1,6 +1,6 @@
-package ccm.models.business;
+package ccm.models.common;
 
-public class BusinessSplunkData {
+public class CommonSplunkData {
     public static final String DEFAULT_SOURCE_TYPE = "manual";
     public static final String MESSAGE_ID = "Message Id : ";
     public static final String SPACE = " ";
@@ -9,10 +9,10 @@ public class BusinessSplunkData {
     private String event;
     private String sourcetype;
 
-    public BusinessSplunkData() {
+    public CommonSplunkData() {
     }
 
-    public BusinessSplunkData(BusinessSplunkEvent se) {
+    public CommonSplunkData(CommonSplunkEvent se) {
 
         StringBuilder eventMessage = new StringBuilder();
         setMessageId(se.getEvent_object_id());
