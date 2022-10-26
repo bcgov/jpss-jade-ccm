@@ -46,12 +46,10 @@ public class BusinessCourtCaseAccused {
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
             name_process.append(ja.getProposed_process_type());
-        }
-        if(ja.getAccused_name() != null) {
-            name_process.append(" ");
+            name_process.append(" - ");
             name_process.append(ja.getAccused_name());
+            setName_and_proposed_process_type(name_process.toString());
         }
-        setName_and_proposed_process_type(name_process.toString());
     }
 
     public String getIdentifier() {

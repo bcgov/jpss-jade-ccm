@@ -43,15 +43,11 @@ public class DemsCourtCaseMetadataData {
         DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bccm.getCourt_file_sworn_date()));
         DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), bccm.getOffence_description_list());
         DemsFieldData courtFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), bccm.getCourt_file_number_seq_type());
-        DemsFieldData courtFileDetails = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_DETAILS.getLabel(), bccm.getCourt_home_registry_identifier() + ":" + bccm.getCourt_file_number_seq_type());
+        DemsFieldData courtFileDetails = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_DETAILS.getLabel(), bccm.getCourt_home_registry_identifier() + ": " + bccm.getCourt_file_number_seq_type());
         DemsFieldData courtHomeReg = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG.getLabel(), bccm.getCourt_home_registry());
         DemsFieldData courtHomeRegName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_HOME_REG_NAME.getLabel(), bccm.getCourt_home_registry_name());
         
-        // BCPSDEMS-503/BCPSDEMS-553 Oct 13 JSIT: workaround to allow update case to function properly
-        DemsFieldData caseFlags = null;
-        if (caseFlagList != null && !caseFlagList.isEmpty()) {
-            caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
-        }
+        DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
         //DemsFieldData rmsProcStatus = new FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
         DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), bccm.getAccused_names());
@@ -69,9 +65,7 @@ public class DemsCourtCaseMetadataData {
         fieldData.add(courtFileDetails);
         fieldData.add(courtHomeReg);
         fieldData.add(courtHomeRegName);
-        if (caseFlags != null) {
-            fieldData.add(caseFlags);
-        }
+        fieldData.add(caseFlags);
         fieldData.add(accusedName);
         fieldData.add(crownOffice);
 

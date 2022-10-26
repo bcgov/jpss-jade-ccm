@@ -37,7 +37,7 @@ public class BusinessCourtCaseData {
 
     public BusinessCourtCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
-        setAgency_file(jaf.getInitiating_agency_identifier() + ":" + jaf.getAgency_file_no());
+        setAgency_file(jaf.getInitiating_agency_identifier() + ": " + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());
         setSynopsis(jaf.getSynopsis());
         if(jaf.getInitiating_agency_identifier() != null) {
@@ -55,7 +55,7 @@ public class BusinessCourtCaseData {
             // MAP 69
             if (index_crown_consel >= 0) {
                 // removing the suffix string
-                crn_decision_agency_name = crn_decision_agency_name.substring(0, index_crown_consel);
+                crn_decision_agency_name = crn_decision_agency_name.substring(0, index_crown_consel).trim();
             }
 
             setProposed_crown_office(jaf.getCrn_decision_agency_identifier() + ": " + crn_decision_agency_name);

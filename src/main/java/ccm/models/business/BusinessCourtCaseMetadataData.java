@@ -9,7 +9,7 @@ import java.util.List;
 
 public class BusinessCourtCaseMetadataData {
   public static final String DASH_STRING = "-";
-  public static final String COLON_STRING = "-";
+  public static final String COLON_STRING = ":";
   public static final String YES_STRING = "Y";
 
   private String court_file_id;
@@ -67,7 +67,7 @@ public class BusinessCourtCaseMetadataData {
       //"$MAPID62- $MAPID29"
       StringBuilder courtHomeReg = new StringBuilder();
       courtHomeReg.append(jcf.getHome_court_agency_identifier());
-      courtHomeReg.append(COLON_STRING);
+      courtHomeReg.append(COLON_STRING + " ");
       courtHomeReg.append(jcf.getHome_court_agency_name());
       setCourt_home_registry(courtHomeReg.toString());
       setCourt_home_registry_name(jcf.getHome_court_agency_name());

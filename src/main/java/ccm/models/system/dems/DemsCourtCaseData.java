@@ -35,7 +35,7 @@ public class DemsCourtCaseData {
             if(ba.getSurname() != null && !ba.getSurname().isEmpty()) {
                 // JADE-1470 surnames should be in all uppercase.
                 case_name.append(ba.getSurname().toUpperCase());
-                case_name.append(COMMA_STRING);
+                case_name.append(COMMA_STRING + " ");
                 case_name.append(ba.getGiven_1_name());
                 if(ba.getGiven_2_name() != null) {
                     case_name.append(SPACE_STRING);
@@ -100,25 +100,18 @@ public class DemsCourtCaseData {
         DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getRcc_submit_date()));
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), bcc.getAssessment_crown_name());
         
-        // BCPSDEMS-503/BCPSDEMS-553 Oct 13 JSIT: workaround to allow update case to function properly
-        DemsFieldData caseDecision = null;
-        if (caseDecisionValue != null) {
-            caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDecisionValue);
-        }
+        DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDecisionValue);
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), bcc.getCharge());
         DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), bcc.getInitiating_agency());
         DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), bcc.getInvestigating_officer());
         
-        // BCPSDEMS-503/BCPSDEMS-553 Oct 13 JSIT: workaround to allow update case to function properly
-        DemsFieldData caseFlags = null;
-        if (caseFlagList != null && !caseFlagList.isEmpty()) {
-            caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
-        }
+        DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getEarliest_offence_date()));
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getEarliest_proposed_appearance_date()));
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), bcc.getProposed_process_type_list());
         DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bcc.getLimitation_date()));
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), bcc.getRcc_status_code());
+        DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), bcc.getProposed_crown_office());
 
         StringBuilder accused_name_list = new StringBuilder();
 
@@ -139,18 +132,15 @@ public class DemsCourtCaseData {
         fieldData.add(agencyFileNo);
         fieldData.add(submitDate);
         fieldData.add(assessmentCrown);
-        if (caseDecision != null) {
-            fieldData.add(caseDecision);
-        }
+        fieldData.add(caseDecision);
         fieldData.add(proposedCharges);
         fieldData.add(initiatingAgency);
         fieldData.add(investigatingOfficer);
-        if (caseFlags != null) {
-            fieldData.add(caseFlags);
-        }
+        fieldData.add(caseFlags);
         fieldData.add(offenceDate);
         fieldData.add(proposedAppDate);
         fieldData.add(proposedProcessType);
+        fieldData.add(proposedCrownOffice);
         fieldData.add(limitationDate);
         fieldData.add(accusedFullName);
         fieldData.add(rccStatus);
