@@ -1,6 +1,6 @@
 [![Lifecycle:Maturing](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](<Redirect-URL>)
 
-# JPSS Agile-integrated Digital Ecosystem - Court Case Management Integration Solution
+# JPSS Agile-integrated Digital Ecosystem - Court Case Management (JADE-CCM) Integration Solution
 
 BC Prosecution Services (BCPS) is implementing a Digital Evidence & Disclosure Management Solution (DEMS) which will house police evidence and disclosure, electronically. BCPS is working in partnership with the Cascadia and EDT company who are providing the overall evidence management application.
 
@@ -8,13 +8,15 @@ The ISB Integration Delivery Service Team is responsible for providing the int
 
 For the ISB Integration Delivery Service Team to successfully deliver a working solution (JADE-CCM), they will need to work in partnership with the DEMS project other service providers, the EDT Team responsible for the DEMS product and NTT Data responsible for JUSTIN and CORNET application changes.
 
+To learn more about JADE and the Justice and Public Sector Integration Delivery Service, please visit: https://integrations.justice.gov.bc.ca/
+
 ## Technical Architecture Diagram
+
+JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
 
 JADE-CCM integrates between a court case managmeent system (JUSTIN), a digital edvidence management system (DEMS), and a corrections managemnt system (CORNET.)
 
-![JADE-CCM architecture diagram](img/ccm_architecture_diagram.drawio.png)
-
-JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
+![JADE-CCM architecture diagram](diagrams/img/ccm_architecture_diagram.png)
 
 The technical architecture diagram is created using the Draw.io diagramming tool.
 
@@ -24,14 +26,18 @@ JADE-CCM sequence diagrams are created using the PlantUML sequence diagramming t
 
 | Link to diagram (and source file) |
 | --- |
-|[JUSTIN Events](img/ccm_justin_event_processing_sequence_diagram.png) ([source](img/src/ccm_justin_event_processing_sequence_diagram.plantuml))|
-|[CourtCase:AUTH_LIST_CHANGED](img/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_AUTH_LIST_CHANGED_processing_sequence_diagram.plantuml))|
-|[CourtCase:CHANGED](img/ccm_COURTCASES_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_CHANGED_processing_sequence_diagram.plantuml))|
-|[CourtCase:CREATED](img/ccm_COURTCASES_CREATED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_CREATED_processing_sequence_diagram.plantuml))|
-|[CourtCase:UPDATED](img/ccm_COURTCASES_UPDATED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASES_UPDATED_processing_sequence_diagram.plantuml))|
-|[CourtCaseMetadata:APPEARANCE_CHANGED](img/ccm_COURTCASE_METADATAS_APPEARANCE_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_APPEARANCE_CHANGED_processing_sequence_diagram.plantuml))|
-|[CourtCaseMetadata:CHANGED](img/ccm_COURTCASE_METADATAS_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_CHANGED_processing_sequence_diagram.plantuml))|
-|[CourtCaseMetadata:CROWN_ASSIGNMENT_CHANGED](img/ccm_COURTCASE_METADATAS_CROWN_ASSIGNMENT_CHANGED_processing_sequence_diagram.png) ([source](img/src/ccm_COURTCASE_METADATAS_CROWN_ASSIGNMENT_CHANGED_processing_sequence_diagram.plantuml))|
+|[JUSTIN Events](diagrams/img/ccm_justin_event_processing_sequence_diagram.png) ([source](diagrams/ccm_justin_event_processing_sequence_diagram.plantuml))|
+|[Charge Asessment Case - CHANGED](diagrams/img/ccm_charge_assessment_case_changed_processing_sequence_diagram.png) ([source](diagrams/ccm_charge_assessment_case_changed_processing_sequence_diagram.plantuml))|
+|[Charge Assessment Case - CREATED](diagrams/img/ccm_charge_assessment_case_created_processing_sequence_diagram.png) ([source](diagrams/ccm_charge_assessment_case_created_processing_sequence_diagram.plantuml))|
+|[Charge Assesssment Case - UPDATED](diagrams/img/ccm_charge_assessment_case_updated_processing_sequence_diagram.png) ([source](diagrams/ccm_charge_assessment_case_updated_processing_sequence_diagram.plantuml))|
+|[Charge Assessment Case - AUTH_LIST_CHANGED](diagrams/img/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.img) ([source](diagrams/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.plantuml))|
+|[Approved Court Case - CHANGED](diagrams/img/ccm_approved_court_case_changed_processing_sequence_diagram.png) ([source](diagrams/ccm_approved_court_case_changed_processing_sequence_diagram.plantuml))|
+|[Approved Court Case - APPEARANCE_CHANGED](diagrams/img/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.png) ([source](diagrams/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.plantuml))|
+|[Approved Court Case - CROWN_ASSIGNMENT_CHANGED](diagrams/img/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.png) ([source](diagrams/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.plantuml))|
+
+### Example
+
+![JADE-CCM JUSTIN Event Processing Diagram](diagrams/img/ccm_justin_event_processing_sequence_diagram.png)
 
 ## State Diagrams
 
@@ -39,7 +45,11 @@ JADE-CCM state diagrams are created using the PlantUML state diagramming tool.  
 
 | Link to diagram (and source file) |
 | --- |
-|[DEMS Case State Diagram](img/ccm_dems_case_state_diagram.png) ([source](img/src/ccm_dems_case_state_diagram.plantuml))|
+|[DEMS Case Business State Diagram](diagrams/img/ccm_dems_case_state_diagram.png) ([source](diagrams/ccm_dems_case_state_diagram.drawio))|
+
+### Example
+
+![JADE-CCM DEMS Case Business State Diagram](diagrams/img/ccm_dems_case_state_diagram.png)
 
 Installation instructions for GraphViz dot is available [here](https://plantuml.com/graphviz-dot).
 

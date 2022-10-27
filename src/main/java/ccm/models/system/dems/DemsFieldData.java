@@ -65,6 +65,7 @@ public class DemsFieldData {
         SWORN_DATE("Sworn Date"),
         CHARGES("Charges"),
         COURT_FILE_NO("Court File No."),
+        COURT_FILE_DETAILS("Court File Details"),
         COURT_HOME_REG("Court Home Registry"),
         COURT_HOME_REG_NAME("Court Home Registry Name"),
         RMS_PROC_STAT("RMS Processing Status"),
@@ -83,7 +84,8 @@ public class DemsFieldData {
         PERSON_FULL_NAME("Full Name"),
         ACCUSED_FULL_NAME("Accused Full Name"),
         LIMITATION_DATE("Limitation Date"),
-        CROWN_OFFICE("Crown Office");
+        CROWN_OFFICE("Crown Office"),
+        RCC_STATUS("RCC Status");
 
         private String label;
 

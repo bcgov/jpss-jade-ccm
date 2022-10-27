@@ -3,7 +3,7 @@ package ccm.models.system.dems;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.business.BusinessCourtCaseCrownAssignmentList;
+import ccm.models.common.CommonCourtCaseCrownAssignmentList;
 
 public class DemsCourtCaseCrownAssignmentData {
     public static final String COMMA_STRING = ",";
@@ -16,7 +16,7 @@ public class DemsCourtCaseCrownAssignmentData {
     public DemsCourtCaseCrownAssignmentData() {
     }
 
-    public DemsCourtCaseCrownAssignmentData(String key, String name, BusinessCourtCaseCrownAssignmentList bccca) {
+    public DemsCourtCaseCrownAssignmentData(String key, String name, CommonCourtCaseCrownAssignmentList bccca) {
         setKey(key);
         setName(name);
 

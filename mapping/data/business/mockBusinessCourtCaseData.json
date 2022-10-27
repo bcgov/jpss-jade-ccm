@@ -17,7 +17,7 @@
     "earliest_proposed_appearance_date": "m72 2020-12-30",
     "proposed_process_type_list": "m73 Jones, Fred John AN; Smith, Peter WAR",
     "dems_case_name": "m87 Jones, Fred John; Smith, Peter",
-    "accused_person": [
+    "accused_persons": [
         {
             "identifier": "m22 541211.0001",
             "full_name": "m23 Jones, Fred John",

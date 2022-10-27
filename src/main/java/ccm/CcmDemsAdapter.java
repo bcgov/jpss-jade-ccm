@@ -22,7 +22,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.business.*;
+import ccm.models.common.*;
 import ccm.models.system.dems.*;
 
 import java.util.ArrayList;
@@ -152,7 +152,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:getCourtCaseIdByKey")
     .routeId("direct:getCourtCaseIdByKey")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("New direct:getCourtCaseIdByKey route. key = ${exchangeProperty.key}.")
+    .log("New direct:getCourtCaseIdByKey route. key = ${exchangeProperty.key}...")
     .setProperty("dems_org_unit_id").simple("1")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -220,11 +220,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing createCourtCase request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
+        CommonCourtCaseData b = exchange.getIn().getBody(CommonCourtCaseData.class);
         DemsCourtCaseData d = new DemsCourtCaseData(b);
         exchange.getMessage().setBody(d);
       }
@@ -251,7 +251,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("courtCaseId", jsonpath("$.id"))
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
     .split()
-      .jsonpathWriteAsString("$.accused_person")
+      .jsonpathWriteAsString("$.accused_persons")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
       .log("Found accused participant. Key: ${header.number}")
@@ -265,11 +265,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing updateCourtCase request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        BusinessCourtCaseData b = exchange.getIn().getBody(BusinessCourtCaseData.class);
+        CommonCourtCaseData b = exchange.getIn().getBody(CommonCourtCaseData.class);
         DemsCourtCaseData d = new DemsCourtCaseData(b);
         exchange.getMessage().setBody(d);
       }
@@ -294,7 +294,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("courtCaseId", jsonpath("$.id"))
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
     .split()
-      .jsonpathWriteAsString("$.accused_person")
+      .jsonpathWriteAsString("$.accused_persons")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
       .log("Found accused participant. Key: ${header.key}")
@@ -310,7 +310,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("key", simple("${header.rcc_id}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseMetadataData.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseMetadataData.class)
     .setProperty("CourtCaseMetadata").body()
     // retrieve court case name from DEMS
     .to("direct:getCourtCaseNameByKey")
@@ -322,7 +322,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
-        BusinessCourtCaseMetadataData bcm = exchange.getProperty("CourtCaseMetadata", BusinessCourtCaseMetadataData.class);
+        CommonCourtCaseMetadataData bcm = exchange.getProperty("CourtCaseMetadata", CommonCourtCaseMetadataData.class);
         DemsCourtCaseMetadataData d = new DemsCourtCaseMetadataData(key, courtCaseName, bcm);
         exchange.getMessage().setBody(d);
       }
@@ -347,7 +347,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Create participants")
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()
-      .jsonpathWriteAsString("$.accused_person")
+      .jsonpathWriteAsString("$.accused_persons")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
       .log("Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
@@ -362,7 +362,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing updateCourtCaseWithAppearanceSummary request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("key", simple("${header.rcc_id}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAppearanceSummaryList.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseAppearanceSummaryList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
     .to("direct:getCourtCaseNameByKey")
@@ -374,7 +374,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
-        BusinessCourtCaseAppearanceSummaryList b = exchange.getProperty("business_data", BusinessCourtCaseAppearanceSummaryList.class);
+        CommonCourtCaseAppearanceSummaryList b = exchange.getProperty("business_data", CommonCourtCaseAppearanceSummaryList.class);
         DemsCourtCaseAppearanceSummaryData d = new DemsCourtCaseAppearanceSummaryData(key, courtCaseName, b);
         exchange.getMessage().setBody(d);
       }
@@ -405,7 +405,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing updateCourtCaseWithCrownAssignmentData request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("key", simple("${header.rcc_id}"))
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseCrownAssignmentList.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseCrownAssignmentList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
     .to("direct:getCourtCaseNameByKey")
@@ -417,7 +417,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
-        BusinessCourtCaseCrownAssignmentList b = exchange.getProperty("business_data", BusinessCourtCaseCrownAssignmentList.class);
+        CommonCourtCaseCrownAssignmentList b = exchange.getProperty("business_data", CommonCourtCaseCrownAssignmentList.class);
         DemsCourtCaseCrownAssignmentData d = new DemsCourtCaseCrownAssignmentData(key, courtCaseName, b);
         exchange.getMessage().setBody(d);
       }
@@ -456,10 +456,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing syncCaseUserList request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
-    .unmarshal().json(JsonLibrary.Jackson, BusinessAuthUsersList.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonAuthUsersList.class)
     .process(new Processor() {
       public void process(Exchange exchange) {
-        BusinessAuthUsersList b = exchange.getIn().getBody(BusinessAuthUsersList.class);
+        CommonAuthUsersList b = exchange.getIn().getBody(CommonAuthUsersList.class);
         DemsAuthUsersList da = new DemsAuthUsersList(b);
         exchange.getMessage().setBody(da);
       }
@@ -597,11 +597,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing createPerson request: ${body}")
     .setProperty("dems_org_unit_id").simple("1")
     .setProperty("PersonData").body()
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAccused.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseAccused.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        BusinessCourtCaseAccused b = exchange.getIn().getBody(BusinessCourtCaseAccused.class);
+        CommonCourtCaseAccused b = exchange.getIn().getBody(CommonCourtCaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
         exchange.getMessage().setBody(d);
       }
@@ -638,11 +638,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("PersonData").body()
     .setProperty("personId").simple("${header[personId]}")
     .setProperty("organizationId").simple("${header[organizationId]}")
-    .unmarshal().json(JsonLibrary.Jackson, BusinessCourtCaseAccused.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonCourtCaseAccused.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        BusinessCourtCaseAccused b = exchange.getIn().getBody(BusinessCourtCaseAccused.class);
+        CommonCourtCaseAccused b = exchange.getIn().getBody(CommonCourtCaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);

@@ -8,13 +8,15 @@ mkdir -p ../../../classes
 \rm -rf ../../../classes/*
 
 # compile POJO classes
-javac -d ../../../classes ccm/models/business/*.java
+javac -d ../../../classes ccm/models/common/*.java
 javac -d ../../../classes ccm/models/system/justin/*.java
 javac -d ../../../classes ccm/models/system/dems/*.java
+javac -d ../../../classes ccm/models/system/splunk/*.java
+javac -d ../../../classes ccm/utils/*.java
 
 # create jar
 cd ../../../classes
-jar cvf ccm-models.jar ccm/models/*/*.class ccm/models/*/*/*.class
+jar cvf ccm-models.jar ccm/models/*/*.class ccm/models/*/*/*.class ccm/utils/*.class
 
 # return to current directory
 popd
