@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.common.CommonCourtCaseAccused;
-import ccm.utils.DateTimeConverter;
+import ccm.utils.DateTimeUtils;
 
 public class DemsPersonData {
 
@@ -29,7 +29,7 @@ public class DemsPersonData {
         
         // BCPSDEMS-602 - workaround to not provide the field data if date is null
         if (ba.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
             fieldData.add(dob);
         }
         

@@ -265,7 +265,7 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
     .log("Logging event to splunk body: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}")
+    //.to("kafka:{{kafka.topic.kpis.name}}")
     ;
 
 

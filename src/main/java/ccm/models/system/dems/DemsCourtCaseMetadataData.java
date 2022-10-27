@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.common.CommonCourtCaseMetadataData;
-import ccm.utils.DateTimeConverter;
+import ccm.utils.DateTimeUtils;
 
 public class DemsCourtCaseMetadataData {
     public static final String COMMA_STRING = ",";
@@ -40,7 +40,7 @@ public class DemsCourtCaseMetadataData {
         DemsFieldData courtFileLevel = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), bccm.getCourt_file_level());
         DemsFieldData fileClass = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CLASS.getLabel(), bccm.getCourt_file_class());
         DemsFieldData designation = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DESIGNATION.getLabel(), bccm.getCourt_file_designation());
-        DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeConverter.convertToUtcFromBCDateTimeString(bccm.getCourt_file_sworn_date()));
+        DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bccm.getCourt_file_sworn_date()));
         DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), bccm.getOffence_description_list());
         DemsFieldData courtFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), bccm.getCourt_file_number_seq_type());
         DemsFieldData courtFileDetails = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_DETAILS.getLabel(), bccm.getCourt_home_registry_identifier() + ": " + bccm.getCourt_file_number_seq_type());

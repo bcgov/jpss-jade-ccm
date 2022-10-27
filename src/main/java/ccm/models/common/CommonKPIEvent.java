@@ -4,35 +4,29 @@ public class CommonKPIEvent extends CommonBaseEvent {
   public enum STATUS {
     CREATED,
     PROCESSED,
-    NOT_PROCESSED;
+    PROCESS_FAILED;
   }
 
-  private String kpi_dtm;
-  private String kpi_status;
   private String application_component_name;
   private String component_route_id;
-  private CommonBaseEvent event;
+  private CommonCourtCaseEvent event;
 
-  public CommonKPIEvent(CommonBaseEvent event) {
+  public static final String EVENT_VERSION = "1.0";
+
+  public CommonKPIEvent() {
     super();
-    setKpi_dtm(CommonBaseEvent.util_generateCurrentDtm());
+    setEvent_version(EVENT_VERSION);
+  }
+
+  public CommonKPIEvent(CommonCourtCaseEvent event) {
+    this();
     setEvent(event);
+    setEvent_object_id(event.getEvent_type() + "-" + event.getEvent_object_id() + "-" + event.getEvent_status());
   }
 
-  public String getKpi_dtm() {
-    return kpi_dtm;
-  }
-
-  public void setKpi_dtm(String kpi_dtm) {
-    this.kpi_dtm = kpi_dtm;
-  }
-
-  public String getKpi_status() {
-    return kpi_status;
-  }
-
-  public void setKpi_status(String kpi_status) {
-    this.kpi_status = kpi_status;
+  public CommonKPIEvent(CommonCourtCaseEvent event, STATUS status) {
+    this(event);
+    setEvent_status(status.name());
   }
 
   public String getComponent_route_id() {
@@ -43,11 +37,11 @@ public class CommonKPIEvent extends CommonBaseEvent {
     this.component_route_id = component_route_id;
   }
 
-  public CommonBaseEvent getEvent() {
+  public CommonCourtCaseEvent getEvent() {
     return event;
   }
 
-  public void setEvent(CommonBaseEvent event) {
+  public void setEvent(CommonCourtCaseEvent event) {
     this.event = event;
   }
 

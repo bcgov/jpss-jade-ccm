@@ -5,9 +5,6 @@ import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
 public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
-  private String event_status;
-  private String event_source;
-
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
@@ -33,6 +30,7 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
   }
 
   public CommonCourtCaseMetadataEvent() {
+    super();
     super.setEvent_version(EVENT_VERSION);
   }
 
@@ -82,10 +80,8 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
   }
 
   public CommonCourtCaseMetadataEvent(String event_source, CommonCourtCaseMetadataEvent another) {
-    super((CommonBaseEvent)another);
+    super(another);
 
-    this.event_status = another.event_status;
-    this.event_source = event_source;
     this.justin_event_message_id = another.justin_event_message_id;
     this.justin_message_event_type_cd = another.justin_message_event_type_cd;
     this.justin_event_dtm = another.justin_event_dtm;
@@ -96,22 +92,6 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
 
   public CommonCourtCaseMetadataEvent copy(String event_source) {
     return new CommonCourtCaseMetadataEvent(event_source, this);
-  }
-
-  public String getEvent_status() {
-    return event_status;
-  }
-
-  public void setEvent_status(String event_status) {
-    this.event_status = event_status;
-  }
-
-  public String getEvent_source() {
-    return event_source;
-  }
-
-  public void setEvent_source(String event_source) {
-    this.event_source = event_source;
   }
 
   public int getJustin_event_message_id() {

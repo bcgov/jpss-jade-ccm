@@ -20,6 +20,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.*;
+import ccm.models.system.splunk.SplunkEventLog;
 
 
 public class CcmSplunkAdapter extends RouteBuilder {
@@ -35,42 +36,30 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .to("direct:processSplunkEvent")
     ;
 
-
     from("direct:processSplunkEvent")
     .routeId("processSplunkEvent")
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Processing splunk data: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonKPIEvent.class)
+    .log("Processing kpi event data: ${body}")
     .process(new Processor() {
       @Override
-      public void process(Exchange ex) {
-        CommonSplunkEvent se = ex.getIn().getBody(CommonSplunkEvent.class);
-        CommonSplunkData bd = new CommonSplunkData(se);
-        ex.getMessage().setBody(bd);
+      public void process(Exchange exchange) {
+        CommonKPIEvent kpiEvent = (CommonKPIEvent)exchange.getMessage().getBody();
+
+        SplunkEventLog splunkLog = new SplunkEventLog(kpiEvent);
+
+        System.out.println(splunkLog);
+
+        exchange.getMessage().setBody(splunkLog);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, CommonSplunkData.class)
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
-    .log("Generating derived data: ${body}")
-    .toD("{{splunk.host}}")
-    ;
-
-/*
-
-    from("direct:logSplunkEvent")
-    .routeId("logSplunkEvent")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setBody().simple("{\n  \"event\": \"${body}\",\n  \"sourcetype\": \"manual\"\n}")
+    .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
     .log("Logging event to splunk body: ${body}")
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
-    .to("{{splunk.host}}")
+    //.to("{{splunk.host}}")
+    .to("https://{{splunk.host}}")
+    .log("Event logged.")
     ;
-
- */
-
-
-
-
   }
 }

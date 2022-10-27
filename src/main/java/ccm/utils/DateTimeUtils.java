@@ -5,7 +5,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
-public class DateTimeConverter {
+public class DateTimeUtils {
 
     // in bcDateTimeString format: "yyyy-MM-dd" or "yyyy-MM-dd HH:mm:ss"
     // out format: "yyyy-MM-dd HH:mm:ss"
@@ -38,25 +38,25 @@ public class DateTimeConverter {
 
     public static void main(String[] args) {
         String bcDateTimeString1 = "2000-10-01 10:01:02";
-        String utcDateTimeString1 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString1);
+        String utcDateTimeString1 = DateTimeUtils.convertToUtcFromBCDateTimeString(bcDateTimeString1);
         System.out.println("");
         System.out.println("BC date/time PDT : " + bcDateTimeString1);
         System.out.println("UTC date/time : " + utcDateTimeString1);
 
         String bcDateTimeString2 = "2000-12-02 10:01:02";
-        String utcDateTimeString2 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString2);
+        String utcDateTimeString2 = DateTimeUtils.convertToUtcFromBCDateTimeString(bcDateTimeString2);
         System.out.println("");
         System.out.println("BC date/time PST : " + bcDateTimeString2);
         System.out.println("UTC date/time : " + utcDateTimeString2);
 
         String bcDateTimeString3 = "2000-12-03";
-        String utcDateTimeString3 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString3);
+        String utcDateTimeString3 = DateTimeUtils.convertToUtcFromBCDateTimeString(bcDateTimeString3);
         System.out.println("");
         System.out.println("BC date PST : " + bcDateTimeString3);
         System.out.println("UTC date/time : " + utcDateTimeString3);
 
         String bcDateTimeString4 = null;
-        String utcDateTimeString4 = DateTimeConverter.convertToUtcFromBCDateTimeString(bcDateTimeString4);
+        String utcDateTimeString4 = DateTimeUtils.convertToUtcFromBCDateTimeString(bcDateTimeString4);
         System.out.println("");
         System.out.println("BC date PST : " + bcDateTimeString4);
         System.out.println("UTC date/time : " + utcDateTimeString4);
