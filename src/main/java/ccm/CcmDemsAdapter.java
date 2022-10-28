@@ -188,7 +188,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
     .toD("{{dems.host}}/cases/${exchangeProperty.id}")
-    .log("Retrieved court case data by id: ${body}")
+    .log("Retrieved court case data by id.")
     ;
 
     // IN: exchangeProperty.key

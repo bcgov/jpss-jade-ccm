@@ -6,16 +6,20 @@ public class SplunkEventLog {
     String event;
     String sourcetype;
     String source;
+    String host;
 
     public SplunkEventLog() {
-        event = "";
-        sourcetype = "";
+        this.event = "";
+        this.sourcetype = "";
+        this.source = "";
+        this.host = "";
     }
 
-    public SplunkEventLog(CommonKPIEvent kpiEvent) {
-        event = "Event " + kpiEvent.getEvent_object_id() + " " + kpiEvent.getEvent_status();
-        sourcetype = kpiEvent.getApplication_component_name();
-        source = kpiEvent.getComponent_route_id();
+    public SplunkEventLog(String host, CommonKPIEvent kpiEvent) {
+        this.event = "Event " + kpiEvent.getEvent_status() + ": " + kpiEvent.getEvent_object_id();
+        this.sourcetype = kpiEvent.getApplication_component_name();
+        this.source = kpiEvent.getComponent_route_id();
+        this.host = host;
     }
 
     public String getEvent() {
@@ -40,6 +44,14 @@ public class SplunkEventLog {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
     }
 
     @Override

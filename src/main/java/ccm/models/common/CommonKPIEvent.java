@@ -2,9 +2,11 @@ package ccm.models.common;
 
 public class CommonKPIEvent extends CommonBaseEvent {
   public enum STATUS {
+    CREATING,
     CREATED,
-    PROCESSED,
-    PROCESS_FAILED;
+    PROCESSING_STARTED,
+    PROCESSING_COMPLETED,
+    PROCESSING_FAILED;
   }
 
   private String application_component_name;

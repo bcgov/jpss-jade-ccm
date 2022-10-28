@@ -27,26 +27,41 @@ public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
+    processKpiEvents();
+    postLogToSplunk();
+  }
+
+  private void processKpiEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
     from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter")
-    .routeId("processSplunkEvents")
+    .routeId(routeId)
     .log("Event from Kafka {{kafka.topic.kpis.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}")
-    .to("direct:processSplunkEvent")
+    .to("direct:postLogToSplunk")
     ;
 
-    from("direct:processSplunkEvent")
-    .routeId("processSplunkEvent")
+  }
+
+  private void postLogToSplunk() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .unmarshal().json(JsonLibrary.Jackson, CommonKPIEvent.class)
     .log("Processing kpi event data: ${body}")
+    .setProperty("namespace",simple("{{env:NAMESPACE}}"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         CommonKPIEvent kpiEvent = (CommonKPIEvent)exchange.getMessage().getBody();
 
-        SplunkEventLog splunkLog = new SplunkEventLog(kpiEvent);
+        SplunkEventLog splunkLog = new SplunkEventLog((String)exchange.getProperty("namespace"),kpiEvent);
 
         System.out.println(splunkLog);
 
@@ -61,5 +76,6 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .to("https://{{splunk.host}}")
     .log("Event logged.")
     ;
+
   }
 }
