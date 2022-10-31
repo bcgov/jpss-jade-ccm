@@ -13,16 +13,16 @@ public class DemsAuthUsersList {
     public DemsAuthUsersList() {
     }
 
-    public DemsAuthUsersList(CommonAuthUsersList b) {
-      Iterator<CommonAuthUser> i = b.getAuth_users_list().iterator();
+    public DemsAuthUsersList(CommonAuthUsersList commonList) {
+      Iterator<CommonAuthUser> i = commonList.getAuth_users_list().iterator();
 
-      List<String> l = new ArrayList<String>();
+      List<String> demsList = new ArrayList<String>();
       
       while (i != null && i.hasNext()) {
-        l.add(i.next().getPart_id());
+        demsList.add(i.next().getPart_id());
       }
 
-      setUserKeys(l);
+      setUserKeys(demsList);
     }
 
     public List<String> getUserKeys() {

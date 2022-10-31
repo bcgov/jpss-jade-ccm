@@ -3,9 +3,9 @@ package ccm.models.system.dems;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.common.CommonCourtCaseCrownAssignmentList;
+import ccm.models.common.CommonCaseCrownAssignmentList;
 
-public class DemsCourtCaseCrownAssignmentData {
+public class DemsCaseCrownAssignmentData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
@@ -13,16 +13,16 @@ public class DemsCourtCaseCrownAssignmentData {
     private String key;
     private List<DemsFieldData> fields;
 
-    public DemsCourtCaseCrownAssignmentData() {
+    public DemsCaseCrownAssignmentData() {
     }
 
-    public DemsCourtCaseCrownAssignmentData(String key, String name, CommonCourtCaseCrownAssignmentList bccca) {
+    public DemsCaseCrownAssignmentData(String key, String name, CommonCaseCrownAssignmentList commonList) {
         setKey(key);
         setName(name);
 
-        DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN.getLabel(), bccca.getCrownAssignmentList());
-        DemsFieldData assignedCrownName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), bccca.getCrownAssignmentName());
-        DemsFieldData assignedLegalStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccca.getLegalStaffAssignmentList());
+        DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN.getLabel(), commonList.getCrownAssignmentList());
+        DemsFieldData assignedCrownName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), commonList.getCrownAssignmentName());
+        DemsFieldData assignedLegalStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), commonList.getLegalStaffAssignmentList());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(assignedCrownName);

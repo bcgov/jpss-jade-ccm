@@ -3,11 +3,11 @@ package ccm.models.system.dems;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.common.CommonCourtCaseAppearanceSummary;
-import ccm.models.common.CommonCourtCaseAppearanceSummaryList;
+import ccm.models.common.CommonCaseAppearanceSummary;
+import ccm.models.common.CommonCaseAppearanceSummaryList;
 import ccm.utils.DateTimeUtils;
 
-public class DemsCourtCaseAppearanceSummaryData {
+public class DemsCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
@@ -15,15 +15,15 @@ public class DemsCourtCaseAppearanceSummaryData {
     private String key;
     private List<DemsFieldData> fields;
 
-    public DemsCourtCaseAppearanceSummaryData() {
+    public DemsCaseAppearanceSummaryData() {
     }
 
-    public DemsCourtCaseAppearanceSummaryData(String key, String name, CommonCourtCaseAppearanceSummaryList b) {
+    public DemsCaseAppearanceSummaryData(String key, String name, CommonCaseAppearanceSummaryList commonList) {
         setKey(key);
         setName(name);
 
-        if (b != null && b.getApprsummary() != null && b.getApprsummary().size() > 0) {
-            CommonCourtCaseAppearanceSummary bcas = b.getApprsummary().get(0);
+        if (commonList != null && commonList.getApprsummary() != null && commonList.getApprsummary().size() > 0) {
+            CommonCaseAppearanceSummary bcas = commonList.getApprsummary().get(0);
 
             DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bcas.getInitial_appr_dtm()));
             DemsFieldData initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), bcas.getInitial_appr_rsn_cd());

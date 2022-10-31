@@ -3,7 +3,7 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.common.CommonCourtCaseAccused;
+import ccm.models.common.CommonCaseAccused;
 import ccm.utils.DateTimeUtils;
 
 public class DemsPersonData {
@@ -20,30 +20,30 @@ public class DemsPersonData {
     public DemsPersonData() {
     }
 
-    public DemsPersonData(CommonCourtCaseAccused ba) {
-        setKey(ba.getIdentifier());
-        setLastName(ba.getSurname());
-        setFirstName(ba.getGiven_1_name());
+    public DemsPersonData(CommonCaseAccused ca) {
+        setKey(ca.getIdentifier());
+        setLastName(ca.getSurname());
+        setFirstName(ca.getGiven_1_name());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
         // BCPSDEMS-602 - workaround to not provide the field data if date is null
-        if (ba.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(ba.getBirth_date()));
+        if (ca.getBirth_date() != null) {
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(ca.getBirth_date()));
             fieldData.add(dob);
         }
         
         
-        DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ba.getGiven_2_name());
+        DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ca.getGiven_2_name());
         fieldData.add(given2);
 
-        DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ba.getGiven_3_name());
+        DemsFieldData given3 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_3.getLabel(), ca.getGiven_3_name());
         fieldData.add(given3);
 
-        String fullGivenNamesAndLastNameString = generateFullGivenNamesAndLastNameFromAccused(ba);
+        String fullGivenNamesAndLastNameString = generateFullGivenNamesAndLastNameFromAccused(ca);
 
         DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(),
-            fullGivenNamesAndLastNameString + "  (" + ba.getBirth_date() + ")");
+            fullGivenNamesAndLastNameString + "  (" + ca.getBirth_date() + ")");
 
         fieldData.add(fullName);
 
@@ -116,7 +116,7 @@ public class DemsPersonData {
         this.orgs = orgs;
     }
 
-    public static String generateFullGivenNamesAndLastNameFromAccused(CommonCourtCaseAccused accused) {
+    public static String generateFullGivenNamesAndLastNameFromAccused(CommonCaseAccused accused) {
         String concatenated_name_string = accused.getGiven_1_name() + 
             (accused.getGiven_2_name() != null && accused.getGiven_2_name().length() > 0 ? " " + accused.getGiven_2_name() : "" ) +
             (accused.getGiven_3_name() != null && accused.getGiven_3_name().length() > 0 ? " " + accused.getGiven_3_name() : "" ) + 

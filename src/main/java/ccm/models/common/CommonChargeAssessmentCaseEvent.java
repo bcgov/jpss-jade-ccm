@@ -4,37 +4,38 @@ import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
+public class CommonChargeAssessmentCaseEvent extends CommonBaseEvent {
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
   private String justin_fetched_date;
   private String justin_guid;
-  private String justin_mdoc_no;
+  private String justin_rcc_id;
 
   public static final String EVENT_VERSION = "1.0";
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
-  public static final String JUSTIN_MDOC_NO = "MDOC_JUSTIN_NO";
+  public static final String JUSTIN_RCC_ID = "RCC_ID";  
 
   public enum SOURCE {
     JUSTIN,
-    JADE_CCM;
+    JADE_CCM
   }
-
+  
   public enum STATUS {
     CHANGED,
-    APPEARANCE_CHANGED,
-    CROWN_ASSIGNMENT_CHANGED
+    CREATED,
+    UPDATED,
+    AUTH_LIST_CHANGED;
   }
 
-  public CommonCourtCaseMetadataEvent() {
+  public CommonChargeAssessmentCaseEvent() {
     super();
     super.setEvent_version(EVENT_VERSION);
   }
 
-  public CommonCourtCaseMetadataEvent(JustinEvent je) {
+  public CommonChargeAssessmentCaseEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -44,14 +45,11 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
     setJustin_event_dtm(je.getEvent_dtm());
 
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
-      case COURT_FILE:
+      case AGEN_FILE:
         setEvent_status(STATUS.CHANGED.toString());
         break;
-      case APPR:
-        setEvent_status(STATUS.APPEARANCE_CHANGED.toString());
-        break;
-      case CRN_ASSIGN:
-        setEvent_status(STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
+      case AUTH_LIST:
+        setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
         break;
       default:
         // unknown status
@@ -70,28 +68,30 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
         case JUSTIN_GUID:
           setJustin_guid(jed.getData_value_txt());
           break;
-        case JUSTIN_MDOC_NO:
-          setJustin_mdoc_no(jed.getData_value_txt());
+        case JUSTIN_RCC_ID:
+          setJustin_rcc_id(jed.getData_value_txt());
           break;
       }
     }
 
-    setEvent_object_id(getJustin_mdoc_no());
+    setEvent_object_id(getJustin_rcc_id());
   }
 
-  public CommonCourtCaseMetadataEvent(String event_source, CommonCourtCaseMetadataEvent another) {
+  public CommonChargeAssessmentCaseEvent(String event_source, CommonChargeAssessmentCaseEvent another) {
     super(another);
+
+    setEvent_source(event_source);
 
     this.justin_event_message_id = another.justin_event_message_id;
     this.justin_message_event_type_cd = another.justin_message_event_type_cd;
     this.justin_event_dtm = another.justin_event_dtm;
     this.justin_fetched_date = another.justin_fetched_date;
     this.justin_guid = another.justin_guid;
-    this.justin_mdoc_no = another.justin_mdoc_no;
+    this.justin_rcc_id = another.justin_rcc_id;
   }
 
-  public CommonCourtCaseMetadataEvent copy(String event_source) {
-    return new CommonCourtCaseMetadataEvent(event_source, this);
+  public CommonChargeAssessmentCaseEvent copy(String event_source) {
+    return new CommonChargeAssessmentCaseEvent(event_source, this);
   }
 
   public int getJustin_event_message_id() {
@@ -134,13 +134,11 @@ public class CommonCourtCaseMetadataEvent extends CommonBaseEvent {
     this.justin_guid = justin_guid;
   }
 
-  public String getJustin_mdoc_no() {
-    return justin_mdoc_no;
+  public String getJustin_rcc_id() {
+    return justin_rcc_id;
   }
 
-  public void setJustin_mdoc_no(String justin_mdoc_no) {
-    this.justin_mdoc_no = justin_mdoc_no;
+  public void setJustin_rcc_id(String justin_rcc_id) {
+    this.justin_rcc_id = justin_rcc_id;
   }
-
-  
 }

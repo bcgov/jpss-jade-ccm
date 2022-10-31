@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinAgencyFile;
 
-public class CommonCourtCaseData {
+public class CommonChargeAssessmentCaseData {
     private String rcc_id;
     private String agency_file;
     private String security_clearance_level;
@@ -30,12 +30,12 @@ public class CommonCourtCaseData {
 
     private List<String> case_flags;
 
-    private List<CommonCourtCaseAccused> accused_persons;
+    private List<CommonCaseAccused> accused_persons;
 
-    public CommonCourtCaseData() {
+    public CommonChargeAssessmentCaseData() {
     }
 
-    public CommonCourtCaseData(JustinAgencyFile jaf) {
+    public CommonChargeAssessmentCaseData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
         setAgency_file(jaf.getInitiating_agency_identifier() + ": " + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());
@@ -83,7 +83,7 @@ public class CommonCourtCaseData {
         // TODO: need definition of intimate partner violence (MAP 74)
         //if ("Y".equalsIgnoreCase(jaf.getIPV1())) { case_flags.add("K"); };
 
-        List<CommonCourtCaseAccused> accusedList = new ArrayList<CommonCourtCaseAccused>();
+        List<CommonCaseAccused> accusedList = new ArrayList<CommonCaseAccused>();
         String earliest_proposed_appearance_date = null;
 
 
@@ -96,7 +96,7 @@ public class CommonCourtCaseData {
 
             for (JustinAccused ja : jaf.getAccused()) {
 
-                CommonCourtCaseAccused accused = new CommonCourtCaseAccused(ja);
+                CommonCaseAccused accused = new CommonCaseAccused(ja);
                 accusedList.add(accused);
 
                 // Map 73
@@ -278,11 +278,11 @@ public class CommonCourtCaseData {
         this.proposed_process_type_list = proposed_process_type_list;
     }
 
-    public List<CommonCourtCaseAccused> getAccused_persons() {
+    public List<CommonCaseAccused> getAccused_persons() {
         return accused_persons;
     }
 
-    public void setAccused_persons(List<CommonCourtCaseAccused> accused_persons) {
+    public void setAccused_persons(List<CommonCaseAccused> accused_persons) {
         this.accused_persons = accused_persons;
     }
 

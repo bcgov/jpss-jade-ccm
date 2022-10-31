@@ -1,9 +1,9 @@
 package ccm.models.system.splunk;
 
-import ccm.models.common.CommonKPIEvent;
+import ccm.models.common.CommonEventKPI;
 
 public class SplunkEventLog {
-    String event;
+    Object event;
     String sourcetype;
     String source;
     String host;
@@ -15,14 +15,15 @@ public class SplunkEventLog {
         this.host = "";
     }
 
-    public SplunkEventLog(String host, CommonKPIEvent kpiEvent) {
-        this.event = "Event " + kpiEvent.getEvent_status() + ": " + kpiEvent.getEvent_object_id();
+    public SplunkEventLog(String host, CommonEventKPI kpiEvent) {
+        //this.event = "Event " + kpiEvent.getEvent_status() + ": " + kpiEvent.getEvent_object_id();
+        this.event = kpiEvent;
         this.sourcetype = kpiEvent.getApplication_component_name();
         this.source = kpiEvent.getComponent_route_id();
         this.host = host;
     }
 
-    public String getEvent() {
+    public Object getEvent() {
         return event;
     }
 

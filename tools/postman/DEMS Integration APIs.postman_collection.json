@@ -579,18 +579,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/version",
-							"protocol": "https",
+							"raw": "{{DEMS-API-URI}}/version",
 							"host": [
-								"346n1v5oeh",
-								"execute-api",
-								"ca-central-1",
-								"amazonaws",
-								"com"
+								"{{DEMS-API-URI}}"
 							],
 							"path": [
-								"api",
-								"v1",
 								"version"
 							]
 						}
@@ -613,18 +606,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/health",
-							"protocol": "https",
+							"raw": "{{DEMS-API-URI}}/health",
 							"host": [
-								"346n1v5oeh",
-								"execute-api",
-								"ca-central-1",
-								"amazonaws",
-								"com"
+								"{{DEMS-API-URI}}"
 							],
 							"path": [
-								"api",
-								"v1",
 								"health"
 							]
 						}
@@ -647,18 +633,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/swagger/index.html",
-							"protocol": "https",
+							"raw": "{{DEMS-API-URI}}/swagger/index.html",
 							"host": [
-								"346n1v5oeh",
-								"execute-api",
-								"ca-central-1",
-								"amazonaws",
-								"com"
+								"{{DEMS-API-URI}}"
 							],
 							"path": [
-								"api",
-								"v1",
 								"swagger",
 								"index.html"
 							]
@@ -682,18 +661,11 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/site/fields?organisationalUnitId=1",
-							"protocol": "https",
+							"raw": "{{DEMS-API-URI}}/site/fields?organisationalUnitId=1",
 							"host": [
-								"346n1v5oeh",
-								"execute-api",
-								"ca-central-1",
-								"amazonaws",
-								"com"
+								"{{DEMS-API-URI}}"
 							],
 							"path": [
-								"api",
-								"v1",
 								"site",
 								"fields"
 							],
@@ -992,7 +964,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2003",
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2753",
 							"protocol": "https",
 							"host": [
 								"dev",
@@ -1012,7 +984,7 @@
 							"query": [
 								{
 									"key": "id",
-									"value": "2003",
+									"value": "2753",
 									"description": "event_message_id"
 								}
 							]

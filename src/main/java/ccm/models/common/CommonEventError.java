@@ -1,15 +1,15 @@
 package ccm.models.common;
 
-public class CommonEventErrorData {
+public class CommonEventError {
     private String error_dtm;
     private String error_code;
     private String error_details;
 
-    public CommonEventErrorData() {
+    public CommonEventError() {
         setError_dtm(CommonBaseEvent.util_generateCurrentDtm());
     }
 
-    public CommonEventErrorData(CommonEventErrorData another) {
+    public CommonEventError(CommonEventError another) {
         this.error_dtm = another.error_dtm;
         this.error_code = another.error_code;
         this.error_details = another.error_details;

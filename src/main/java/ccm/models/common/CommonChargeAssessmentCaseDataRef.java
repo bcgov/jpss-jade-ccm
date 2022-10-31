@@ -2,15 +2,15 @@ package ccm.models.common;
 
 import ccm.models.system.justin.JustinAgencyFileRef;
 
-public class CommonCourtCaseDataRef {
+public class CommonChargeAssessmentCaseDataRef {
     private String rcc_id;
     private String agency_file_no;
     private Boolean primary_rcc_yn;
 
-    public CommonCourtCaseDataRef() {
+    public CommonChargeAssessmentCaseDataRef() {
     }
 
-    public CommonCourtCaseDataRef(JustinAgencyFileRef jafr) {
+    public CommonChargeAssessmentCaseDataRef(JustinAgencyFileRef jafr) {
         setRcc_id(jafr.getRcc_id());
         setAgency_file_no(jafr.getAgency_file_no());
     }

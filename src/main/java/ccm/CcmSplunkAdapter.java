@@ -53,13 +53,13 @@ public class CcmSplunkAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .unmarshal().json(JsonLibrary.Jackson, CommonKPIEvent.class)
+    .unmarshal().json(JsonLibrary.Jackson, CommonEventKPI.class)
     .log("Processing kpi event data: ${body}")
     .setProperty("namespace",simple("{{env:NAMESPACE}}"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        CommonKPIEvent kpiEvent = (CommonKPIEvent)exchange.getMessage().getBody();
+        CommonEventKPI kpiEvent = (CommonEventKPI)exchange.getMessage().getBody();
 
         SplunkEventLog splunkLog = new SplunkEventLog((String)exchange.getProperty("namespace"),kpiEvent);
 

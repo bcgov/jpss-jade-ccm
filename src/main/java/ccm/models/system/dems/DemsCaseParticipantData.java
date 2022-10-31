@@ -1,15 +1,15 @@
 package ccm.models.system.dems;
 
 
-public class DemsCourtCaseParticipantData {
+public class DemsCaseParticipantData {
 
     private String personIdOrKey;
     private String participantType;
 
-    public DemsCourtCaseParticipantData() {
+    public DemsCaseParticipantData() {
     }
 
-    public DemsCourtCaseParticipantData(String personIdOrKey, String participantType) {
+    public DemsCaseParticipantData(String personIdOrKey, String participantType) {
 
         setPersonIdOrKey(personIdOrKey);
         setParticipantType(participantType);

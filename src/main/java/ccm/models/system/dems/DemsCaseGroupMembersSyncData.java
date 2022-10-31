@@ -2,14 +2,14 @@ package ccm.models.system.dems;
 
 import java.util.List;
 
-public class DemsGroupMembersSyncData {
+public class DemsCaseGroupMembersSyncData {
     private String keyField;
     private List<String> values;
 
-    public DemsGroupMembersSyncData() {
+    public DemsCaseGroupMembersSyncData() {
     }
 
-    public DemsGroupMembersSyncData(DemsAuthUsersList d) {
+    public DemsCaseGroupMembersSyncData(DemsAuthUsersList d) {
       setKeyField("key");
       setValues(d.getUserKeys());
     }

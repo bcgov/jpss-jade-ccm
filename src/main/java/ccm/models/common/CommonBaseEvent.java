@@ -10,7 +10,7 @@ public class CommonBaseEvent {
     private String event_status;
     private String event_source;
     private String event_object_id;
-    private CommonEventErrorData event_error_data;
+    private CommonEventError event_error;
 
     public CommonBaseEvent() {
         this.event_dtm = util_generateCurrentDtm();
@@ -69,12 +69,12 @@ public class CommonBaseEvent {
         this.event_source = event_source;
     }
 
-    public CommonEventErrorData getEvent_error_data() {
-        return event_error_data;
+    public CommonEventError getEvent_error() {
+        return event_error;
     }
 
-    public void setEvent_error_data(CommonEventErrorData event_error_data) {
-        this.event_error_data = event_error_data;
+    public void setEvent_error(CommonEventError event_error) {
+        this.event_error = event_error;
     }
 
     public static String util_generateCurrentDtm() {
