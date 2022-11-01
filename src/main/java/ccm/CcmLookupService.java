@@ -24,8 +24,23 @@ import org.apache.camel.builder.RouteBuilder;
 public class CcmLookupService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
+
+    getCourtCaseDetails_old();
+    getCourtCaseExists();
+    getCourtCaseDetails();
+    getCourtCaseAuthList();
+    getCourtCaseMetadata();
+    getCourtCaseAppearanceSummaryList();
+    getCourtCaseCrownAssignmentList();
+    getPersonExists();
+  }
+
+  private void getCourtCaseDetails_old() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
     from("platform-http:/getCourtCaseDetails_old?httpMethodRestrict=GET")
-    .routeId("getCourtCaseDetails_old")
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -42,9 +57,14 @@ public class CcmLookupService extends RouteBuilder {
     .log("body (after transform): '${body}'")
     .to("kafka:{{kafka.topic.name}}")
     ;
+  }
 
-    from("platform-http:/getCourtCaseExists")
-    .routeId("getCourtCaseExists")
+  private void getCourtCaseExists() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -56,22 +76,32 @@ public class CcmLookupService extends RouteBuilder {
     .to("http://ccm-dems-adapter/getCourtCaseExists")
     .log("Lookup response = '${body}'")
     ;
+  }
 
-    from("platform-http:/getCourtCaseDetails")
-    .routeId("getCourtCaseDetails")
+  private void getCourtCaseDetails() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getCourtCaseDetails request... number = ${header[number]}")
+    .log("Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseDetails")
     .log("response from JUSTIN: ${body}")
     ;
+  }
 
-    from("platform-http:/getCourtCaseAuthList")
-    .routeId("getCourtCaseAuthList")
+  private void getCourtCaseAuthList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -82,60 +112,77 @@ public class CcmLookupService extends RouteBuilder {
     .to("http://ccm-justin-adapter/getCourtCaseAuthList")
     .log("response from JUSTIN: ${body}")
     ;
+  }
 
-    from("platform-http:/getCourtCaseMetadata")
-    .routeId("getCourtCaseMetadata")
+  private void getCourtCaseMetadata() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getCourtCaseMetadata request... number = ${header[number]}")
+    .log("Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseMetadata")
     .log("response from JUSTIN: ${body}")
     ;
+  }
 
-    from("platform-http:/getCourtCaseAppearanceSummaryList")
-    .routeId("getCourtCaseAppearanceSummaryList")
+  private void getCourtCaseAppearanceSummaryList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getCourtCaseAppearanceSummaryList request... number = ${header[number]}")
+    .log("Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseAppearanceSummaryList")
     .log("response from JUSTIN: ${body}")
     ;
+  }
 
-    from("platform-http:/getCourtCaseCrownAssignmentList")
-    .routeId("getCourtCaseCrownAssignmentList")
+  private void getCourtCaseCrownAssignmentList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getCourtCaseCrownAssignmentList request... number = ${header[number]}")
+    .log("Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseCrownAssignmentList")
     .log("response from JUSTIN: ${body}")
     ;
+  }
 
-    
-    from("platform-http:/getPersonExists")
-    .routeId("getPersonExists")
+  private void getPersonExists() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getPersonExists request... key = ${header[key]}")
+    .log("Processing request... key = ${header[key]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getPersonExists")
     .log("Lookup response = '${body}'")
     ;
-
-
   }
 }

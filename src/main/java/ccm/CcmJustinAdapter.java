@@ -33,20 +33,11 @@ public class CcmJustinAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     courtFileCreated();
-
     healthCheck();
-
     requeueEvents();
-
     processTimer();
-
     processJustinEventBatch();
-
-    //.to("direct:processOneJUSTINEvent");
-    // https://github.com/json-path/JsonPath
-    //JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
     processNewJUSTINEvents();
-
     processAgenFileEvent();
     processAuthListEvent();
     processCourtFileEvent();
@@ -216,6 +207,10 @@ public class CcmJustinAdapter extends RouteBuilder {
   private void processNewJUSTINEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //.to("direct:processOneJUSTINEvent");
+    // https://github.com/json-path/JsonPath
+    //JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
 
     from("direct:" + routeId)
     .routeId(routeId)

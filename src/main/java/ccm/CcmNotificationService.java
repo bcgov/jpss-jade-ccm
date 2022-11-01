@@ -25,21 +25,27 @@ import ccm.models.common.*;
 public class CcmNotificationService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    // from("kafka:{{kafka.topic.courtcases.name}}")
-    // .routeId("courtcases")
-    // .log("Message received from Kafka : ${body}")
-    // .log("    on the topic ${headers[kafka.TOPIC]}")
-    // .log("    on the partition ${headers[kafka.PARTITION]}")
-    // .log("    with the offset ${headers[kafka.OFFSET]}")
-    // .log("    with the key ${headers[kafka.KEY]}")
-    // .unmarshal().json()
-    // .transform(simple("{\"type\": \"courtcase\", \"number\": \"${body[number]}\", \"status\": \"created\", \"public_content\": \"${body[public_content]}\", \"created_datetime\": \"${body[created_datetime]}\"}"))
-    // .log("body (after unmarshalling): '${body}'")
-    // .to("kafka:{{kafka.topic.kpis.name}}");
+
+    processCourtcaseEvents();
+    processCourtcaseMetadataEvents();
+    processCourtCaseChanged();
+    processCourtCaseCreated();
+    processCourtCaseUpdated();
+    processCourtCaseAuthListChanged();
+    processCourtCaseMetadataChanged();
+    processCourtCaseAppearanceChanged();
+    processCourtCaseCrownAssignmentChanged();
+    processUnknownStatus();
+    logSplunkEvent();
+  }
+
+  private void processCourtcaseEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
-    .routeId("processCourtcaseEvents")
+    .routeId(routeId)
     .log("Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
@@ -63,9 +69,37 @@ public class CcmNotificationService extends RouteBuilder {
       .otherwise()
         .to("direct:processUnknownStatus");
     ;
+  }
+
+  private void processCourtCaseCreated() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_object_id = ${header[event_object_id]}")
+    .log("Retrieve latest court case details from JUSTIN.")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_object_id}")
+    .to("http://ccm-lookup-service/getCourtCaseDetails")
+    .log("Create court case in DEMS.  Court case data = ${body}.")
+    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+    .to("http://ccm-dems-adapter/createCourtCase")
+    .log("Update court case auth list.")
+    .to("direct:processCourtCaseAuthListChanged")
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCreated")
+    .to("direct:logSplunkEvent")
+    ;
+  }
+
+  private void processCourtcaseMetadataEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     from("kafka:{{kafka.topic.courtcase-metadatas.name}}?groupId=ccm-notification-service")
-    .routeId("processCourtcaseMetadataEvents")
+    .routeId(routeId)
     .log("Event from Kafka {{kafka.topic.courtcase-metadatas.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
@@ -87,11 +121,16 @@ public class CcmNotificationService extends RouteBuilder {
       .otherwise()
         .to("direct:processUnknownStatus");
     ;
+  }
 
-    from("direct:processCourtCaseChanged")
-    .routeId("processCourtCaseChanged")
+  private void processCourtCaseChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseChanged.  event_object_id = ${header[event_object_id]}")
+    .log("event_object_id = ${header[event_object_id]}")
     .setHeader("number", simple("${header[event_object_id]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
@@ -126,29 +165,16 @@ public class CcmNotificationService extends RouteBuilder {
     .setBody().simple("CCM Notification splunk adapter call: processCourtCaseChanged")
     .to("direct:logSplunkEvent")
     ;
+  }
 
-    from("direct:processCourtCaseCreated")
-    .routeId("processCourtCaseCreated")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
-    .log("Retrieve latest court case details from JUSTIN.")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_object_id}")
-    .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .log("Create court case in DEMS.  Court case data = ${body}.")
-    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-    .to("http://ccm-dems-adapter/createCourtCase")
-    .log("Update court case auth list.")
-    .to("direct:processCourtCaseAuthListChanged")
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCreated")
-    .to("direct:logSplunkEvent")
-    ;
+  private void processCourtCaseUpdated() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("direct:processCourtCaseUpdated")
-    .routeId("processCourtCaseUpdated")
+    from("direct:" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseCreated.  event_object_id = ${header[event_object_id]}")
+    .log("event_object_id = ${header[event_object_id]}")
     .log("Retrieve latest court case details from JUSTIN.")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -163,11 +189,16 @@ public class CcmNotificationService extends RouteBuilder {
     .setBody().simple("CCM Notification splunk adapter call: processCourtCaseUpdated")
     .to("direct:logSplunkEvent")
     ;
+  }
 
-    from("direct:processCourtCaseAuthListChanged")
-    .routeId("processCourtCaseAuthListChanged")
+  private void processCourtCaseAuthListChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseAuthListChanged.  event_object_id = ${header[event_object_id]}")
+    .log("event_object_id = ${header[event_object_id]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_object_id}")
@@ -180,95 +211,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAuthListChanged")
     .to("direct:logSplunkEvent")
     ;
-
-    // POC code - Experiment with moving a route definition into a dedicated route registration method for ease of code isolation and development
-    // naming convention:
-    //   * method name is the route id
-    processCourtCaseMetadataChanged();
-
-    from("direct:processCourtCaseAppearanceChanged")
-    .routeId("processCourtCaseAppearanceChanged")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseAppearanceChanged.  event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
-    .log("Retrieved Court Case appearance summary list from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
-    //   accessible in the split() block through exchange properties unless converted to String first.
-    .setProperty("business_data", simple("${bodyAs(String)}"))
-    .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .split()
-      .jsonpathWriteAsString("$.related_agency_file")
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.rcc_id}")
-      .setBody(simple("${exchangeProperty.business_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
-    .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAppearanceChanged")
-    .to("direct:logSplunkEvent")
-    ;
-
-    from("direct:processCourtCaseCrownAssignmentChanged")
-    .routeId("processCourtCaseCrownAssignmentChanged")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processCourtCaseCrownAssignmentChanged.  event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
-    .log("Retrieved Court Case crown assignment list from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
-    //   accessible in the split() block through exchange properties unless converted to String first.
-    .setProperty("business_data", simple("${bodyAs(String)}"))
-    .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .split()
-      .jsonpathWriteAsString("$.related_agency_file")
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.rcc_id}")
-      .setBody(simple("${exchangeProperty.business_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
-    .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCrownAssignmentChanged")
-    .to("direct:logSplunkEvent")
-    ;
-
-    from("direct:processUnknownStatus")
-    .routeId("processUnknownStatus")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("processUnknownStatus.  event_object_id = ${header[event_object_id]}")
-    ;
-
-
-    from("direct:logSplunkEvent")
-    .routeId("logSplunkEvent")
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setProperty("splunk_event", simple("${bodyAs(String)}"))
-    .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        CommonSplunkEvent be = new CommonSplunkEvent(ex.getProperty("splunk_event").toString());
-        be.setSource("ccm-notification-service");
-
-        ex.getMessage().setBody(be, CommonSplunkEvent.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
-    .log("Logging event to splunk body: ${body}")
-    //.to("kafka:{{kafka.topic.kpis.name}}")
-    ;
-
-
   }
 
   private void processCourtCaseMetadataChanged() {
@@ -298,6 +240,107 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
     .setBody().simple("CCM Notification splunk adapter call: processCourtCaseMetadataChanged")
     .to("direct:logSplunkEvent")
+    ;
+  }
+
+  private void processCourtCaseAppearanceChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_object_id = ${header[event_object_id]}")
+    .setHeader("number", simple("${header[event_object_id]}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
+    .log("Retrieved Court Case appearance summary list from JUSTIN: ${body}")
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    //   accessible in the split() block through exchange properties unless converted to String first.
+    .setProperty("business_data", simple("${bodyAs(String)}"))
+    .to("http://ccm-lookup-service/getCourtCaseMetadata")
+    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setHeader("rcc_id", jsonpath("$.rcc_id"))
+      .log("Found related court case. Rcc_id: ${header.rcc_id}")
+      .setBody(simple("${exchangeProperty.business_data}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
+    .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAppearanceChanged")
+    .to("direct:logSplunkEvent")
+    ;
+  }
+
+  private void processCourtCaseCrownAssignmentChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_object_id = ${header[event_object_id]}")
+    .setHeader("number", simple("${header[event_object_id]}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
+    .log("Retrieved Court Case crown assignment list from JUSTIN: ${body}")
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    //   accessible in the split() block through exchange properties unless converted to String first.
+    .setProperty("business_data", simple("${bodyAs(String)}"))
+    .to("http://ccm-lookup-service/getCourtCaseMetadata")
+    .log("Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setHeader("rcc_id", jsonpath("$.rcc_id"))
+      .log("Found related court case. Rcc_id: ${header.rcc_id}")
+      .setBody(simple("${exchangeProperty.business_data}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
+    .end()
+    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCrownAssignmentChanged")
+    .to("direct:logSplunkEvent")
+    ;
+  }
+
+  private void processUnknownStatus() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_object_id = ${header[event_object_id]}")
+    ;
+  }
+
+  private void logSplunkEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("splunk_event", simple("${bodyAs(String)}"))
+    .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        CommonSplunkEvent be = new CommonSplunkEvent(ex.getProperty("splunk_event").toString());
+        be.setSource("ccm-notification-service");
+
+        ex.getMessage().setBody(be, CommonSplunkEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, CommonSplunkEvent.class)
+    .log("Logging event to splunk body: ${body}")
+    //.to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
 }
