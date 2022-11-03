@@ -85,7 +85,7 @@ public class DemsFieldData {
         ACCUSED_FULL_NAME("Accused Full Name"),
         LIMITATION_DATE("Limitation Date"),
         CROWN_OFFICE("Crown Office"),
-        RCC_STATUS("RCC Status");
+        RCC_STATUS("RCC Status"),
         LAST_JUSTIN_UPDATE("Last JUSTIN Update");
 
         private String label;
