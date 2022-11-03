@@ -1,15 +1,17 @@
-package ccm.models.common;
+package ccm.models.common.event;
 
-public class CommonEventError {
+import ccm.utils.DateTimeUtils;
+
+public class EventError {
     private String error_dtm;
     private String error_code;
     private String error_details;
 
-    public CommonEventError() {
-        setError_dtm(CommonBaseEvent.util_generateCurrentDtm());
+    public EventError() {
+        setError_dtm(DateTimeUtils.generateCurrentDtm());
     }
 
-    public CommonEventError(CommonEventError another) {
+    public EventError(EventError another) {
         this.error_dtm = another.error_dtm;
         this.error_code = another.error_code;
         this.error_details = another.error_details;

@@ -79,7 +79,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/138",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/86",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -92,7 +92,7 @@
 										"api",
 										"v1",
 										"cases",
-										"138"
+										"86"
 									]
 								}
 							},
@@ -175,7 +175,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"name\": \"JONES,Willie; THOMAS,James Anthony\",\n    \"key\": \"50453.0734\",\n    \"description\": \"\",\n    \"timeZoneId\": \"Pacific Standard Time\",\n    \"templateCase\": \"28\",\n    \"fields\": [\n        {\n            \"name\": \"Agency File ID\",\n            \"value\": \"50453.0734\"\n        },\n        {\n            \"name\": \"Agency File No.\",\n            \"value\": \"105:22-472028\"\n        },\n        {\n            \"name\": \"Submit Date\",\n            \"value\": \"2022-09-27\"\n        },\n        {\n            \"name\": \"Assessment Crown\",\n            \"value\": \"Garrison, Dave\"\n        },\n        {\n            \"name\": \"Proposed Charges\",\n            \"value\": \"CCC 344(1)(b) Robbery, CCC 231 1 St Murder\"\n        },\n        {\n            \"name\": \"Initiating Agency\",\n            \"value\": \"105: Kelowna Municipal RCMP\"\n        },\n        {\n            \"name\": \"Investigating Officer\",\n            \"value\": \"Rhodes, Christopher 1001\"\n        },\n        {\n            \"name\": \"Case Flags\",\n            \"value\": [\n                {\n                    \"id\": 12\n                }\n            ]\n        },\n        {\n            \"name\": \"Offence Date (earliest)\",\n            \"value\": \"2022-01-05\"\n        },\n        {\n            \"name\": \"Proposed App. Date (earliest)\",\n            \"value\": null\n        },\n        {\n            \"name\": \"Proposed Process Type\",\n            \"value\": \"AN Jones, Willie;  Thomas, James Anthony\"\n        },\n        {\n            \"name\": \"Limitation Date\",\n            \"value\": null\n        },\n        {\n            \"name\": \"Accused Full Name\",\n            \"value\": \"Willie Jones; James Thomas\"\n        },\n        {\n            \"name\": \"RCC Status\",\n            \"value\": \"Received\"\n        }\n    ]\n}",
+									"raw": "{\"name\":\"PETERSON, Jeffrey Alan; JOHNSON, Kyle; GRANT, Howard James\",\"key\":\"50431.0734\",\"fields\":[{\"name\":\"Court File Unique ID\",\"value\":\"39849\"},{\"name\":\"Crown Election\",\"value\":\"IND\"},{\"name\":\"Court File Level\",\"value\":\"P\"},{\"name\":\"Class\",\"value\":\"A\"},{\"name\":\"Designation\",\"value\":\"GA\"},{\"name\":\"Sworn Date\",\"value\":\"2022-07-22 07:00:00\"},{\"name\":\"Charges\",\"value\":\"CCC 102(7) Firearm: posession while prohibited 102(7),CCC 111(1) Firearm application\"},{\"name\":\"Court File No.\",\"value\":\"546511-1\"},{\"name\":\"Court File Details\",\"value\":\"4801: 546511-1\"},{\"name\":\"Court Home Registry\",\"value\":\"4801: Kelowna Law Courts\"},{\"name\":\"Court Home Registry Name\",\"value\":\"Kelowna Law Courts\"},{\"name\":\"Case Flags\",\"value\":[]},{\"name\":\"Accused Full Name\",\"value\":\"Kyle Johnson, Jeffrey Peterson, Howard Grant\"},{\"name\":\"Crown Office\",\"value\":\"Kelowna\"}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -183,7 +183,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/99",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/102",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -196,7 +196,7 @@
 										"api",
 										"v1",
 										"cases",
-										"99"
+										"102"
 									]
 								}
 							},
@@ -564,6 +564,38 @@
 					]
 				},
 				{
+					"name": "Record",
+					"item": [
+						{
+							"name": "GetRecord",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/86/records/7",
+									"protocol": "https",
+									"host": [
+										"346n1v5oeh",
+										"execute-api",
+										"ca-central-1",
+										"amazonaws",
+										"com"
+									],
+									"path": [
+										"api",
+										"v1",
+										"cases",
+										"86",
+										"records",
+										"7"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "GetVersion",
 					"request": {
 						"auth": {
@@ -674,6 +706,34 @@
 									"key": "organisationalUnitId",
 									"value": "1"
 								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCustomFields Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/site/fields",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"site",
+								"fields"
 							]
 						}
 					},

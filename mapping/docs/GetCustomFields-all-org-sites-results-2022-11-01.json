@@ -1,0 +1,362 @@
+[
+    {
+        "id": 1,
+        "name": "PartId",
+        "displayName": null,
+        "dataType": "UniqueIdentifier",
+        "objectType": "User",
+        "objectId": null,
+        "order": null,
+        "required": false,
+        "listItems": [],
+        "isAutoIncrementing": false,
+        "autoIncrementingStartNumber": null,
+        "autoIncrementingPrefix": null,
+        "autoIncrementingFormat": null,
+        "calculationField": null,
+        "calculationFunction": null,
+        "calculationValue": null,
+        "calculationUnit": null,
+        "organisationalUnitId": null,
+        "editable": false,
+        "permissions": [
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 1,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 5,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 6,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 7,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 8,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 9,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 1,
+                "siteGroupId": 10,
+                "accessLevel": 0
+            }
+        ]
+    },
+    {
+        "id": 51,
+        "name": "Given Name 2",
+        "displayName": null,
+        "dataType": "Text",
+        "objectType": "PeopleOrgs",
+        "objectId": null,
+        "order": null,
+        "required": false,
+        "listItems": [],
+        "isAutoIncrementing": false,
+        "autoIncrementingStartNumber": null,
+        "autoIncrementingPrefix": null,
+        "autoIncrementingFormat": null,
+        "calculationField": null,
+        "calculationFunction": null,
+        "calculationValue": null,
+        "calculationUnit": null,
+        "organisationalUnitId": 1,
+        "editable": false,
+        "permissions": [
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 1,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 5,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 6,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 7,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 8,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 9,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 51,
+                "siteGroupId": 10,
+                "accessLevel": 0
+            }
+        ]
+    },
+    {
+        "id": 52,
+        "name": "Given Name 3",
+        "displayName": null,
+        "dataType": "Text",
+        "objectType": "PeopleOrgs",
+        "objectId": null,
+        "order": null,
+        "required": false,
+        "listItems": [],
+        "isAutoIncrementing": false,
+        "autoIncrementingStartNumber": null,
+        "autoIncrementingPrefix": null,
+        "autoIncrementingFormat": null,
+        "calculationField": null,
+        "calculationFunction": null,
+        "calculationValue": null,
+        "calculationUnit": null,
+        "organisationalUnitId": 1,
+        "editable": false,
+        "permissions": [
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 1,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 5,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 6,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 7,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 8,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 9,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 52,
+                "siteGroupId": 10,
+                "accessLevel": 0
+            }
+        ]
+    },
+    {
+        "id": 54,
+        "name": "Full Name",
+        "displayName": null,
+        "dataType": "Text",
+        "objectType": "PeopleOrgs",
+        "objectId": null,
+        "order": null,
+        "required": false,
+        "listItems": [],
+        "isAutoIncrementing": false,
+        "autoIncrementingStartNumber": null,
+        "autoIncrementingPrefix": null,
+        "autoIncrementingFormat": null,
+        "calculationField": null,
+        "calculationFunction": null,
+        "calculationValue": null,
+        "calculationUnit": null,
+        "organisationalUnitId": 1,
+        "editable": false,
+        "permissions": [
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 1,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 5,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 6,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 7,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 8,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 9,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 54,
+                "siteGroupId": 10,
+                "accessLevel": 0
+            }
+        ]
+    },
+    {
+        "id": 60,
+        "name": "Date of Birth",
+        "displayName": null,
+        "dataType": "Date",
+        "objectType": "PeopleOrgs",
+        "objectId": null,
+        "order": null,
+        "required": false,
+        "listItems": [],
+        "isAutoIncrementing": false,
+        "autoIncrementingStartNumber": null,
+        "autoIncrementingPrefix": null,
+        "autoIncrementingFormat": null,
+        "calculationField": null,
+        "calculationFunction": null,
+        "calculationValue": null,
+        "calculationUnit": null,
+        "organisationalUnitId": 1,
+        "editable": false,
+        "permissions": [
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 1,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 5,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 6,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 7,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 8,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 9,
+                "accessLevel": 0
+            },
+            {
+                "id": 0,
+                "itemType": 24,
+                "itemId": 60,
+                "siteGroupId": 10,
+                "accessLevel": 0
+            }
+        ]
+    }
+]

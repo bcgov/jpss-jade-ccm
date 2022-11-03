@@ -1,4 +1,4 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinAgencyFileRef;
@@ -7,7 +7,7 @@ import ccm.models.system.justin.JustinCourtFile;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CommonApprovedCourtCaseData {
+public class ApprovedCourtCaseData {
   public static final String DASH_STRING = "-";
   public static final String COLON_STRING = ":";
   public static final String YES_STRING = "Y";
@@ -30,16 +30,16 @@ public class CommonApprovedCourtCaseData {
   //private String rms_processing_status;
   private List<String> case_flags;
 
-  private List<CommonCaseAccused> accused_persons;
-  private List<CommonChargeAssessmentCaseDataRef> related_agency_file;
+  private List<CaseAccused> accused_persons;
+  private List<ChargeAssessmentCaseDataRef> related_agency_file;
 
   private String approving_crown_agency_name;
   private String approving_crown_agency_ident;
 
-  public CommonApprovedCourtCaseData() {
+  public ApprovedCourtCaseData() {
   }
 
-  public CommonApprovedCourtCaseData(JustinCourtFile jcf) {
+  public ApprovedCourtCaseData(JustinCourtFile jcf) {
       setCourt_file_id(jcf.getMdoc_justin_no());
       setCourt_file_no(jcf.getCourt_file_no());
       setCourt_file_type_reference(jcf.getType_reference());
@@ -97,13 +97,13 @@ public class CommonApprovedCourtCaseData {
       //   }
       // }
 
-      List<CommonCaseAccused> accusedList = new ArrayList<CommonCaseAccused>();
+      List<CaseAccused> accusedList = new ArrayList<CaseAccused>();
       StringBuilder accused_names = new StringBuilder();
 
       if(jcf.getMdocaccused() != null) {
         for (JustinAccused ja : jcf.getMdocaccused()) {
 
-          CommonCaseAccused accused = new CommonCaseAccused(ja);
+          CaseAccused accused = new CaseAccused(ja);
           accusedList.add(accused);
           // Map 87
           if(accused_names.length() > 0) {
@@ -117,12 +117,12 @@ public class CommonApprovedCourtCaseData {
       setAccused_persons(accusedList);
       setAccused_names(accused_names.toString());
 
-      List<CommonChargeAssessmentCaseDataRef> agencyList = new ArrayList<CommonChargeAssessmentCaseDataRef>();
+      List<ChargeAssessmentCaseDataRef> agencyList = new ArrayList<ChargeAssessmentCaseDataRef>();
 
       if(jcf.getRelated_rcc() != null) {
         for (JustinAgencyFileRef jafr : jcf.getRelated_rcc()) {
 
-          CommonChargeAssessmentCaseDataRef agencyRef = new CommonChargeAssessmentCaseDataRef(jafr);
+          ChargeAssessmentCaseDataRef agencyRef = new ChargeAssessmentCaseDataRef(jafr);
           agencyList.add(agencyRef);
         }
       }
@@ -273,16 +273,16 @@ public class CommonApprovedCourtCaseData {
     this.accused_names = accused_names;
   }
 
-  public List<CommonCaseAccused> getAccused_persons() {
+  public List<CaseAccused> getAccused_persons() {
     return accused_persons;
   }
-  public void setAccused_persons(List<CommonCaseAccused> accused_person) {
+  public void setAccused_persons(List<CaseAccused> accused_person) {
     this.accused_persons = accused_person;
   }
-  public List<CommonChargeAssessmentCaseDataRef> getRelated_agency_file() {
+  public List<ChargeAssessmentCaseDataRef> getRelated_agency_file() {
     return related_agency_file;
   }
-  public void setRelated_agency_file(List<CommonChargeAssessmentCaseDataRef> related_agency_file) {
+  public void setRelated_agency_file(List<ChargeAssessmentCaseDataRef> related_agency_file) {
     this.related_agency_file = related_agency_file;
   }
 

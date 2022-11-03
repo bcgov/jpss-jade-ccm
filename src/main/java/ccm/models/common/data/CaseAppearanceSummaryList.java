@@ -1,26 +1,26 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 import java.util.List;
 import java.util.ArrayList;
 import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtAppearanceSummary;
 
-public class CommonCaseAppearanceSummaryList {
+public class CaseAppearanceSummaryList {
   private String mdoc_justin_no;
 
-  private List<CommonCaseAppearanceSummary> apprsummary;
+  private List<CaseAppearanceSummary> apprsummary;
 
-  public CommonCaseAppearanceSummaryList() {
+  public CaseAppearanceSummaryList() {
   }
 
-  public CommonCaseAppearanceSummaryList(JustinCourtAppearanceSummaryList jasl) {
+  public CaseAppearanceSummaryList(JustinCourtAppearanceSummaryList jasl) {
     setMdoc_justin_no(jasl.getMdoc_justin_no());
 
-    List<CommonCaseAppearanceSummary> appearanceList = new ArrayList<CommonCaseAppearanceSummary>();
+    List<CaseAppearanceSummary> appearanceList = new ArrayList<CaseAppearanceSummary>();
 
     if(jasl.getApprsummary() != null) {
       for (JustinCourtAppearanceSummary jas : jasl.getApprsummary()) {
-        CommonCaseAppearanceSummary bcas = new CommonCaseAppearanceSummary(jas);
+        CaseAppearanceSummary bcas = new CaseAppearanceSummary(jas);
         appearanceList.add(bcas);
       }
     }
@@ -35,10 +35,10 @@ public class CommonCaseAppearanceSummaryList {
     this.mdoc_justin_no = mdoc_justin_no;
   }
 
-  public List<CommonCaseAppearanceSummary> getApprsummary() {
+  public List<CaseAppearanceSummary> getApprsummary() {
     return apprsummary;
   }
-  public void setApprsummary(List<CommonCaseAppearanceSummary> apprsummary) {
+  public void setApprsummary(List<CaseAppearanceSummary> apprsummary) {
     this.apprsummary = apprsummary;
   }
 

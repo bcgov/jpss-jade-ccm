@@ -1,8 +1,8 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 import ccm.models.system.justin.JustinCrownAssignmentData;
 
-public class CommonCaseCrownAssignmentData {
+public class CaseCrownAssignmentData {
   private String agency_name;
   private String agency_identifier;
   private String part_id;
@@ -12,10 +12,10 @@ public class CommonCaseCrownAssignmentData {
   private String end_date;
 
 
-  public CommonCaseCrownAssignmentData() {
+  public CaseCrownAssignmentData() {
   }
 
-  public CommonCaseCrownAssignmentData(JustinCrownAssignmentData jasl) {
+  public CaseCrownAssignmentData(JustinCrownAssignmentData jasl) {
     setAgency_name(jasl.getAgency_name());
     setAgency_identifier(jasl.getAgency_identifier());
     setPart_id(jasl.getPart_id());

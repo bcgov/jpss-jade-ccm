@@ -3,8 +3,8 @@ package ccm.models.system.dems;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.common.CommonCaseAppearanceSummary;
-import ccm.models.common.CommonCaseAppearanceSummaryList;
+import ccm.models.common.data.CaseAppearanceSummary;
+import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.utils.DateTimeUtils;
 
 public class DemsCaseAppearanceSummaryData {
@@ -18,12 +18,12 @@ public class DemsCaseAppearanceSummaryData {
     public DemsCaseAppearanceSummaryData() {
     }
 
-    public DemsCaseAppearanceSummaryData(String key, String name, CommonCaseAppearanceSummaryList commonList) {
+    public DemsCaseAppearanceSummaryData(String key, String name, CaseAppearanceSummaryList commonList) {
         setKey(key);
         setName(name);
 
         if (commonList != null && commonList.getApprsummary() != null && commonList.getApprsummary().size() > 0) {
-            CommonCaseAppearanceSummary bcas = commonList.getApprsummary().get(0);
+            CaseAppearanceSummary bcas = commonList.getApprsummary().get(0);
 
             DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bcas.getInitial_appr_dtm()));
             DemsFieldData initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), bcas.getInitial_appr_rsn_cd());

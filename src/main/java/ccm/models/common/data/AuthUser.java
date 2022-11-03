@@ -1,17 +1,17 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 
 import ccm.models.system.justin.JustinAuthUser;
 
-public class CommonAuthUser {
+public class AuthUser {
     private String part_id;
     private String crown_agency;
     private String user_name;
 
-    public CommonAuthUser() {
+    public AuthUser() {
     }
 
-    public CommonAuthUser(JustinAuthUser ja) {
+    public AuthUser(JustinAuthUser ja) {
       setPart_id(ja.getPart_id());
       setCrown_agency(ja.getCrown_agency());
       setUser_name(ja.getUser_name());

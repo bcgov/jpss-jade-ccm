@@ -1,8 +1,8 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 import ccm.models.system.justin.JustinAccused;
 
-public class CommonCaseAccused {
+public class CaseAccused {
     public static final String COMMA_STRING = ",";
 
     private String identifier;
@@ -21,10 +21,10 @@ public class CommonCaseAccused {
     private Boolean hroip_yn;
     private Boolean do_lto_yn;
 
-    public CommonCaseAccused() {
+    public CaseAccused() {
     }
 
-    public CommonCaseAccused(JustinAccused ja) {
+    public CaseAccused(JustinAccused ja) {
         setIdentifier(ja.getPart_id());
         setFull_name(ja.getAccused_name());
         setSurname(ja.getAccused_surname_nm());

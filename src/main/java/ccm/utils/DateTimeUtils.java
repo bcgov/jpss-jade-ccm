@@ -1,5 +1,7 @@
 package ccm.utils;
 
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +36,13 @@ public class DateTimeUtils {
         }
 
         return utcDateTimeString;
+    }
+
+    public static String generateCurrentDtm() {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+        
+        return formatter.format(date);
     }
 
     public static void main(String[] args) {

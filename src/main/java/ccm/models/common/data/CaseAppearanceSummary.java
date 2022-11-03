@@ -1,8 +1,8 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 import ccm.models.system.justin.JustinCourtAppearanceSummary;
 
-public class CommonCaseAppearanceSummary {
+public class CaseAppearanceSummary {
   private String initial_appr_dtm;
   private String initial_appr_rsn_cd;
   private String next_appr_dtm;
@@ -10,10 +10,10 @@ public class CommonCaseAppearanceSummary {
   private String trial_start_appr_dtm;
   private String trial_start_appr_rsn_cd;
 
-  public CommonCaseAppearanceSummary() {
+  public CaseAppearanceSummary() {
   }
 
-  public CommonCaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
+  public CaseAppearanceSummary(JustinCourtAppearanceSummary jaf) {
     setInitial_appr_dtm(jaf.getInitial_appr_dtm());
     setInitial_appr_rsn_cd(jaf.getInitial_appr_rsn_cd());
     setNext_appr_dtm(jaf.getNext_appr_dtm());

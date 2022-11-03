@@ -1,23 +1,22 @@
-package ccm.models.common;
+package ccm.models.common.event;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import ccm.utils.DateTimeUtils;
 
-public class CommonBaseEvent {
+public class BaseEvent {
     private String event_dtm;
     private String event_version;
     private String event_type;
     private String event_status;
     private String event_source;
     private String event_object_id;
-    private CommonEventError event_error;
+    private EventError event_error;
 
-    public CommonBaseEvent() {
-        this.event_dtm = util_generateCurrentDtm();
+    public BaseEvent() {
+        this.event_dtm = DateTimeUtils.generateCurrentDtm();
         this.event_type = this.getClass().getSimpleName();
     }
 
-    public CommonBaseEvent(CommonBaseEvent another) {
+    public BaseEvent(BaseEvent another) {
         this.event_dtm = another.event_dtm;
         this.event_version = another.event_version;
         this.event_type = another.event_type;
@@ -69,18 +68,11 @@ public class CommonBaseEvent {
         this.event_source = event_source;
     }
 
-    public CommonEventError getEvent_error() {
+    public EventError getEvent_error() {
         return event_error;
     }
 
-    public void setEvent_error(CommonEventError event_error) {
+    public void setEvent_error(EventError event_error) {
         this.event_error = event_error;
-    }
-
-    public static String util_generateCurrentDtm() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
-        
-        return formatter.format(date);
     }
 }

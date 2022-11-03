@@ -3,8 +3,8 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.common.CommonCaseAccused;
-import ccm.models.common.CommonChargeAssessmentCaseData;
+import ccm.models.common.data.CaseAccused;
+import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsChargeAssessmentCaseData {
@@ -24,10 +24,10 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(CommonChargeAssessmentCaseData commonData) {
+    public DemsChargeAssessmentCaseData(ChargeAssessmentCaseData commonData) {
 
         StringBuilder case_name = new StringBuilder();
-        for (CommonCaseAccused ba : commonData.getAccused_persons()) {
+        for (CaseAccused ba : commonData.getAccused_persons()) {
             // Map 87
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
@@ -116,7 +116,7 @@ public class DemsChargeAssessmentCaseData {
         StringBuilder accused_name_list = new StringBuilder();
 
         if(commonData.getAccused_persons() != null) {
-            for (CommonCaseAccused accused : commonData.getAccused_persons()) {
+            for (CaseAccused accused : commonData.getAccused_persons()) {
                 // Map 101
                 if(accused_name_list.length() > 0) {
                     accused_name_list.append(", ");

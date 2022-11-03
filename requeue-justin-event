@@ -1,0 +1,3 @@
+oc exec service/ccm-justin-adapter -- curl \
+-X PUT \
+"http://ccm-justin-adapter/requeueJustinEvent?id=$1"

@@ -279,7 +279,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{JUSTIN-API-URI}}/agencyFile?rcc_id=50453.0734",
+					"raw": "{{JUSTIN-API-URI}}/agencyFile?rcc_id=173181.0877",
 					"host": [
 						"{{JUSTIN-API-URI}}"
 					],
@@ -289,7 +289,85 @@
 					"query": [
 						{
 							"key": "rcc_id",
-							"value": "50453.0734"
+							"value": "173181.0877"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "imageDataGet (agency file)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"document_keys\": [\r\n        {\r\n            \"rcc_id\": \"50473.0734\",\r\n            \"report_types\": \"VEHICLE\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"imageDataGet"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50285.0734",
+							"disabled": true
+						},
+						{
+							"key": "report_types",
+							"value": "VEHICLE",
+							"disabled": true
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "imageDataGet (court file)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"document_keys\": [\r\n        {             \r\n            \"mdoc_justin_no\": \"39852\",             \r\n            \"report_types\": \"INFORMATION\"         \r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"imageDataGet"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50285.0734",
+							"disabled": true
+						},
+						{
+							"key": "report_types",
+							"value": "VEHICLE",
+							"disabled": true
 						}
 					]
 				},
@@ -387,6 +465,42 @@
 						}
 					]
 				}
+			},
+			"response": []
+		},
+		{
+			"name": "agencyFile Copy",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/agencyFile?rcc_id=173181.0877",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"agencyFile"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "173181.0877"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
 			},
 			"response": []
 		}
