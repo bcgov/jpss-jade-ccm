@@ -16,7 +16,7 @@ public class SplunkEventLog {
     }
 
     public SplunkEventLog(String host, EventKPI kpiEvent) {
-        //this.event = "Event " + kpiEvent.getEvent_status() + ": " + kpiEvent.getEvent_object_id();
+        //this.event = "Event " + kpiEvent.getEvent_status() + ": " + kpiEvent.getEvent_key();
         this.event = kpiEvent;
         this.sourcetype = kpiEvent.getIntegration_component_name();
         this.source = kpiEvent.getComponent_route_name();

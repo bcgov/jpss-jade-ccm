@@ -122,7 +122,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-      .setProperty("key", simple("${header.event_object_id}"))
+      .setProperty("key", simple("${header.event_key}"))
       .log("Key = ${exchangeProperty.key}")
       .to("direct:getCourtCaseIdByKey")
     ;
@@ -518,11 +518,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/syncCaseUserList")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setProperty("key", simple("${header.event_object_id}"))
+    .setProperty("key", simple("${header.event_key}"))
     //.setBody(simple("{\"rcc_id\":\"50433.0734\",\"auth_users_list\":[{\"part_id\":\"11429.0026\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85056.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85062.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85170.0734\",\"crown_agency\":null,\"user_name\":null}]}"))
     .setBody(simple("${header.temp-body}"))
     .removeHeader("temp-body")
-    .log("Processing request (event_object_id = ${exchangeProperty.event_object_id}): ${body}")
+    .log("Processing request (event_key = ${exchangeProperty.event_key}): ${body}")
     .to("direct:syncCaseUserList");
   }
 

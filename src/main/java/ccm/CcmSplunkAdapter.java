@@ -17,9 +17,9 @@ package ccm;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.common.*;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.splunk.SplunkEventLog;
 
@@ -28,11 +28,11 @@ public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    processKpiEvents();
+    processEventKPIs();
     postLogToSplunk();
   }
 
-  private void processKpiEvents() {
+  private void processEventKPIs() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -43,7 +43,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" + 
       "    and key ${headers[kafka.KEY]}")
-    .log("body: ${body}")
+    .log("Event KPI: ${body}")
     //.to("direct:postLogToSplunk")
     ;
 
@@ -57,7 +57,6 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .unmarshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Processing event kpi data: ${body}")
     .setProperty("namespace",simple("{{env:NAMESPACE}}"))
     .process(new Processor() {
       @Override
@@ -68,8 +67,9 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
-    .log("Logging event to splunk body: ${body}")
+    .log("Logging event to splunk body: ${body} ...")
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     //.to("{{splunk.host}}")
     .to("https://{{splunk.host}}")

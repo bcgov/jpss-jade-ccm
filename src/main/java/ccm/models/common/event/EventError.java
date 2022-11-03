@@ -5,7 +5,7 @@ import ccm.utils.DateTimeUtils;
 public class EventError {
     private String error_dtm;
     private String error_code;
-    private String error_details;
+    private Object error_details;
 
     public EventError() {
         setError_dtm(DateTimeUtils.generateCurrentDtm());
@@ -33,11 +33,11 @@ public class EventError {
         this.error_code = error_code;
     }
 
-    public String getError_details() {
+    public Object getError_details() {
         return error_details;
     }
 
-    public void setError_details(String error_details) {
+    public void setError_details(Object error_details) {
         this.error_details = error_details;
     }
 }

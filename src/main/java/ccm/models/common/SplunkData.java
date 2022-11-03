@@ -17,7 +17,7 @@ public class SplunkData {
     public SplunkData(SplunkEvent se) {
 
         StringBuilder eventMessage = new StringBuilder();
-        setMessageId(se.getEvent_object_id());
+        setMessageId(se.getEvent_key());
         if(getMessageId() != null) {
             eventMessage.append(MESSAGE_ID);
             eventMessage.append(getMessageId());

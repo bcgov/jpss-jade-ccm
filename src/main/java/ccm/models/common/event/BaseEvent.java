@@ -8,7 +8,7 @@ public class BaseEvent {
     private String event_type;
     private String event_status;
     private String event_source;
-    private String event_object_id;
+    private String event_key;
     private EventError event_error;
 
     public BaseEvent() {
@@ -22,14 +22,14 @@ public class BaseEvent {
         this.event_type = another.event_type;
         this.event_source = another.event_source;
         this.event_status = another.event_status;
-        this.event_object_id = another.event_object_id;
+        this.event_key = another.event_key;
     }
 
-    public String getEvent_object_id() {
-        return event_object_id;
+    public String getEvent_key() {
+        return event_key;
     }
-    public void setEvent_object_id(String event_object_id) {
-        this.event_object_id = event_object_id;
+    public void setEvent_key(String event_key) {
+        this.event_key = event_key;
     }
     public String getEvent_version() {
         return event_version;

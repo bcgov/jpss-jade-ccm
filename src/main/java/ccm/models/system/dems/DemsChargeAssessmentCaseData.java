@@ -107,11 +107,12 @@ public class DemsChargeAssessmentCaseData {
         
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getEarliest_offence_date()));
-        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getEarliest_proposed_appearance_date()));
+        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), commonData.getEarliest_proposed_appearance_date());
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), commonData.getProposed_process_type_list());
         DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getLimitation_date()));
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), commonData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), commonData.getProposed_crown_office());
+        DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
 
         StringBuilder accused_name_list = new StringBuilder();
 
@@ -144,6 +145,7 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(limitationDate);
         fieldData.add(accusedFullName);
         fieldData.add(rccStatus);
+        fieldData.add(lastJustinUpdate);
 
         setFields(fieldData);
 

@@ -74,7 +74,7 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
       }
     }
 
-    setEvent_object_id(getJustin_rcc_id());
+    setEvent_key(getJustin_rcc_id());
   }
 
   public ChargeAssessmentCaseEvent(String event_source, ChargeAssessmentCaseEvent another) {

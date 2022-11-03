@@ -76,7 +76,7 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
       }
     }
 
-    setEvent_object_id(getJustin_mdoc_no());
+    setEvent_key(getJustin_mdoc_no());
   }
 
   public ApprovedCourtCaseEvent(String event_source, ApprovedCourtCaseEvent another) {

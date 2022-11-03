@@ -34,7 +34,7 @@ public class EventKPI {
     this();
     setEvent_details(event);
     setEvent_type(event.getEvent_type());
-    setEvent_key(event.getEvent_object_id());
+    setEvent_key(event.getEvent_key());
     setEvent_status(event.getEvent_status());
   }
 

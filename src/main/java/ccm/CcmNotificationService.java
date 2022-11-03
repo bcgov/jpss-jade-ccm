@@ -53,8 +53,8 @@ public class CcmNotificationService extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
       "    with the key ${headers[kafka.KEY]}")
-    .setHeader("event_object_id")
-      .jsonpath("$.event_object_id")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
     .setHeader("event")
@@ -80,11 +80,11 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
+    .log("event_key = ${header[event_key]}")
     .log("Retrieve latest court case details from JUSTIN.")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_object_id}")
+    .setHeader("number").simple("${header.event_key}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Create court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -107,8 +107,8 @@ public class CcmNotificationService extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
       "    with the key ${headers[kafka.KEY]}")
-    .setHeader("event_object_id")
-      .jsonpath("$.event_object_id")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
     .setHeader("event")
@@ -132,8 +132,8 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
+    .log("event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
@@ -146,11 +146,11 @@ public class CcmNotificationService extends RouteBuilder {
         //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
         boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
-        String event_object_id = ex.getIn().getHeader("event_object_id").toString();
+        String event_key = ex.getIn().getHeader("event_key").toString();
 
         be.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.toString());
-        be.setEvent_object_id(event_object_id);
-        be.setJustin_rcc_id(event_object_id);
+        be.setEvent_key(event_key);
+        be.setJustin_rcc_id(event_key);
 
         if (court_case_exists) {
           be.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
@@ -176,11 +176,11 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
+    .log("event_key = ${header[event_key]}")
     .log("Retrieve latest court case details from JUSTIN.")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_object_id}")
+    .setHeader("number").simple("${header.event_key}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log("Update court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -200,10 +200,10 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
+    .log("event_key = ${header[event_key]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_object_id}")
+    .setHeader("number").simple("${header.event_key}")
     .log("Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
     .log("Update court case auth list in DEMS.  Court case auth list = ${body}")
@@ -222,8 +222,8 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
+    .log("event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
@@ -252,8 +252,8 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
+    .log("event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
@@ -285,8 +285,8 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
-    .setHeader("number", simple("${header[event_object_id]}"))
+    .log("event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
@@ -318,7 +318,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_object_id = ${header[event_object_id]}")
+    .log("event_key = ${header[event_key]}")
     ;
   }
 

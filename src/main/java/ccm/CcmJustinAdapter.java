@@ -147,7 +147,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Re-queueing JUSTIN event: id = ${header.id}")
+    .log("Re-queueing JUSTIN event: id = ${header.id} ...")
     .setProperty("id", header("id"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -155,6 +155,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .toD("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=${exchangeProperty.id}")
+    .log("Event re-queued.")
     ;
   }
 
@@ -326,7 +327,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
     
         exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
       }})
     .setProperty("kpi_event_object", body())
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
@@ -365,7 +366,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
     
         exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
       }})
     .setProperty("kpi_event_object", body())
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
@@ -405,7 +406,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
     
         exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
       }})
     .setProperty("kpi_event_object", body())
     .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
@@ -444,7 +445,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
     
         exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
       }})
     .setProperty("kpi_event_object", body())
     .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
@@ -483,7 +484,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
     
         exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_object_id());
+        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
       }})
     .setProperty("kpi_event_object", body())
     .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
@@ -518,7 +519,7 @@ public class CcmJustinAdapter extends RouteBuilder {
 
         EventError error = new EventError();
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_details((String)exchange.getProperty("justin_event"));
+        error.setError_details(je);
 
         BaseEvent event_error = new BaseEvent();
         event_error.setEvent_dtm(je.getEvent_dtm());
@@ -739,7 +740,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       public void process(Exchange ex) {
         SplunkEvent be = new SplunkEvent(ex.getProperty("splunk_event").toString());
         be.setSource("ccm-justin-adapter");
-        be.setEvent_object_id(ex.getProperty("event_message_id").toString());
+        be.setEvent_key(ex.getProperty("event_message_id").toString());
 
         ex.getMessage().setBody(be, SplunkEvent.class);
       }
@@ -781,7 +782,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log("Event kpi: ${body}")
-    //.setBody(simple("{\"kpi_dtm\":\"2022-11-01 17:39:11\",\"kpi_version\":\"1.0\",\"kpi_status\":\"CREATED\",\"kpi_key\":\"CommonChargeAssessmentCaseEvent-50414.0734-CHANGED\",\"application_component_name\":\"CcmJustinAdapter\",\"component_route_name\":\"publishEventKPI\",\"event\":{\"event_dtm\":\"2022-11-01 17:39:10\",\"event_version\":\"1.0\",\"event_type\":\"CommonChargeAssessmentCaseEvent\",\"event_status\":\"CHANGED\",\"event_source\":\"JUSTIN\",\"event_object_id\":\"50414.0734\",\"event_error\":null,\"justin_event_message_id\":2003,\"justin_message_event_type_cd\":\"AGEN_FILE\",\"justin_event_dtm\":\"2022-11-01 17:39\",\"justin_fetched_date\":\"NULL\",\"justin_guid\":\"DF51EA80E2C064E8E05400144FFBC109\",\"justin_rcc_id\":\"50414.0734\"}}"))
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }

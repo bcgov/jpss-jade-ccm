@@ -52,6 +52,7 @@ public class DemsApprovedCourtCaseData {
         //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
         DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), commonData.getAccused_names());
         DemsFieldData crownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_OFFICE.getLabel(), commonData.getApproving_crown_agency_name());
+        DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(courtFileId);
@@ -68,6 +69,7 @@ public class DemsApprovedCourtCaseData {
         fieldData.add(caseFlags);
         fieldData.add(accusedName);
         fieldData.add(crownOffice);
+        fieldData.add(lastJustinUpdate);
 
         setFields(fieldData);
     }
