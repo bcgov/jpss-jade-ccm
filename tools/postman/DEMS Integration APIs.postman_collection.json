@@ -79,7 +79,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/86",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/28",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -92,7 +92,7 @@
 										"api",
 										"v1",
 										"cases",
-										"86"
+										"28"
 									]
 								}
 							},
@@ -706,34 +706,6 @@
 									"key": "organisationalUnitId",
 									"value": "1"
 								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "GetCustomFields Copy",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{DEMS-Token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{DEMS-API-URI}}/site/fields",
-							"host": [
-								"{{DEMS-API-URI}}"
-							],
-							"path": [
-								"site",
-								"fields"
 							]
 						}
 					},
