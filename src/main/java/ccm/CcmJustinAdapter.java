@@ -95,7 +95,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log("/v1/health request received")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health");
+      .to("https://{{justin.host}}/health");
 
   }
 
@@ -111,30 +111,30 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.removeHeaders("*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    //.to("{{justin.host}}/requeueEventById?id=2045")
-    //.to("{{justin.host}}/requeueEventById?id=2060")
-    //.to("{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
-    //.to("{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
-    //.to("{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
-    //.to("{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
-    //.to("{{justin.host}}/requeueEventById?id=2451") // COURT_FILE 39857
+    //.to("https://{{justin.host}}/requeueEventById?id=2045")
+    //.to("https://{{justin.host}}/requeueEventById?id=2060")
+    //.to("https://{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
+    //.to("https://{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
+    //.to("https://{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
+    //.to("https://{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
+    //.to("https://{{justin.host}}/requeueEventById?id=2451") // COURT_FILE 39857
 
     // JSIT Sep 8
-    //.to("{{justin.host}}/requeueEventById?id=2581") // AGEN_FILE 49408.0734 (case name: YOYO, Yammy; SOSO, Yolando ...)
-    //.to("{{justin.host}}/requeueEventById?id=2590") // AGEN_FILE 50448.0734 (case name: VADER, Darth)
-    //.to("{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
+    //.to("https://{{justin.host}}/requeueEventById?id=2581") // AGEN_FILE 49408.0734 (case name: YOYO, Yammy; SOSO, Yolando ...)
+    //.to("https://{{justin.host}}/requeueEventById?id=2590") // AGEN_FILE 50448.0734 (case name: VADER, Darth)
+    //.to("https://{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
 
-    //.to("{{justin.host}}/requeueEventById?id=2362") // AGEN_FILE 50431.0734
-    //.to("{{justin.host}}/requeueEventById?id=2320") // COURT_FILE 39849 (RCC_ID 50431.0734)
-    //.to("{{justin.host}}/requeueEventById?id=2327") // APPR (mdoc no 39849; RCC_ID = 50431.0734)
-    //.to("{{justin.host}}/requeueEventById?id=2321") // CRN_ASSIGN (mdoc no 39849; RCC_ID 50431.0734)
+    //.to("https://{{justin.host}}/requeueEventById?id=2362") // AGEN_FILE 50431.0734
+    //.to("https://{{justin.host}}/requeueEventById?id=2320") // COURT_FILE 39849 (RCC_ID 50431.0734)
+    //.to("https://{{justin.host}}/requeueEventById?id=2327") // APPR (mdoc no 39849; RCC_ID = 50431.0734)
+    //.to("https://{{justin.host}}/requeueEventById?id=2321") // CRN_ASSIGN (mdoc no 39849; RCC_ID 50431.0734)
 
     // JSIT Sep 29
-    //.to("{{justin.host}}/requeueEventById?id=2753") // AGEN_FILE (RCC_ID = 50454.0734)
-    //.to("{{justin.host}}/requeueEventById?id=2759") // APPR (mdoc no 39869; RCC_ID = 50444.0734)
+    //.to("https://{{justin.host}}/requeueEventById?id=2753") // AGEN_FILE (RCC_ID = 50454.0734)
+    //.to("https://{{justin.host}}/requeueEventById?id=2759") // APPR (mdoc no 39869; RCC_ID = 50444.0734)
 
     // JSIT Oct 27
-    .to("{{justin.host}}/requeueEventById?id=2003") // AGEN_FILE (RCC_ID = 50414.0734)
+    .to("https://{{justin.host}}/requeueEventById?id=2003") // AGEN_FILE (RCC_ID = 50414.0734)
     ;
 
   }
@@ -154,7 +154,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .toD("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=${exchangeProperty.id}")
+    .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
     .log("Event re-queued.")
     ;
   }
@@ -168,10 +168,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/newEventsBatch") // mark all new events as "in progres"
+    .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
     //.log("Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents") // retrieve all "in progress" events
+    .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
     //.log("Processing in progress events from JUSTIN: ${body}")
     .to("direct:processJustinEventBatch")
     ;
@@ -193,7 +193,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     //from("file:/etc/camel/resources/?fileName=eventBatch-empty.json&noop=true&exchangePattern=InOnly&readLock=none")
     //from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
     //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
-    // .to("https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents")
+    // .to("https://{{justin.host}}/inProgressEvents")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.to("direct:processNewJUSTINEvents");
@@ -558,11 +558,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.removeHeader("is_success")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    //.toD("{{justin.host}}/eventStatus?event_message_id=${header.custom_event_message_id}&is_success=T")
-    //.to("{{justin.host}}/eventStatus")
+    //.toD("https://{{justin.host}}/eventStatus?event_message_id=${header.custom_event_message_id}&is_success=T")
+    //.to("https://{{justin.host}}/eventStatus")
     .doTry()
-      //.to("{{justin.host}}/eventStatus")
-      .toD("{{justin.host}}/eventStatus?event_message_id=${exchangeProperty.event_message_id}&is_success=T")
+      //.to("https://{{justin.host}}/eventStatus")
+      .toD("https://{{justin.host}}/eventStatus?event_message_id=${exchangeProperty.event_message_id}&is_success=T")
     .doCatch(Exception.class)
       .log("Exception: ${exception}")
       .log("Exchange Context: ${exchange.context}")
@@ -596,7 +596,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .removeHeader("rcc_id")
-    .toD("{{justin.host}}/agencyFile?rcc_id=${header[number]}")
+    .toD("https://{{justin.host}}/agencyFile?rcc_id=${header[number]}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAgencyFile.class)
     .process(new Processor() {
@@ -625,7 +625,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .toD("{{justin.host}}/authUsers?rcc_id=${header.number}")
+    .toD("https://{{justin.host}}/authUsers?rcc_id=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAuthUsersList.class)
     .process(new Processor() {
@@ -654,7 +654,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .toD("{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
+    .toD("https://{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtAppearanceSummaryList.class)
     .process(new Processor() {
@@ -683,7 +683,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .toD("{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
+    .toD("https://{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtFile.class)
     .process(new Processor() {
@@ -712,7 +712,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .toD("{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
+    .toD("https://{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCrownAssignmentList.class)
     .process(new Processor() {

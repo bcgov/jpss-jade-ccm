@@ -74,7 +74,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .choice()
-      .when(simple("${header.authorization} == 'Bearer {{token.adapter}}'"))
+      .when(simple("${header.authorization} == 'Bearer {{adapter.token}}'"))
         .to("http://ccm-justin-mock-app/v1/version")
         .setProperty("version").simple("${body}")
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -98,14 +98,14 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("DEMS version query request received")
     .choice()
-      .when(simple("${header.authorization} == 'Bearer {{token.adapter}}'"))
+      .when(simple("${header.authorization} == 'Bearer {{adapter.token}}'"))
         .removeHeader("CamelHttpUri")
         .removeHeader("CamelHttpBaseUri")
         .removeHeaders("CamelHttp*")
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-        .to("{{dems.host}}/version")
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        .to("https://{{dems.host}}/version")
         .log("Response: ${body}")
       .otherwise()
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
@@ -143,11 +143,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .doTry()
       // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
       //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
-      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?httpClient.soTimeout=30")
+      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?httpClient.soTimeout=30")
       .setProperty("id", jsonpath("$.id"))
       .log("Case found. Id = ${exchangeProperty.id}")
     //.doCatch(HttpOperationFailedException.class)
@@ -188,8 +188,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
         .setProperty("id", simple(""))
@@ -220,8 +220,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/cases/${exchangeProperty.id}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
     .log("Retrieved court case data by id.")
     ;
   }
@@ -285,9 +285,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .doTry()
-      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
+      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
     .doCatch(Exception.class)
       .log(LoggingLevel.ERROR, "Exception: ${exception}")
       .process(new Processor() {
@@ -342,8 +342,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
     .log("Court case updated.")
     .setProperty("courtCaseId", jsonpath("$.id"))
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
@@ -400,8 +400,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
     .log("Court case updated.")
     .log("Create participants")
     .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -457,8 +457,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
     .log("Court case updated.")
     ;
   }
@@ -505,8 +505,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
     .log("Court case updated.")
     ;
   }
@@ -557,9 +557,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization", simple("Bearer " + "{{token.dems}}"))
+    .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .setBody(simple("${exchangeProperty.demsAuthUserList}"))
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
     .log("Case users synchronized.")
     //
     // sync case group members
@@ -579,8 +579,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization", simple("Bearer " + "{{token.dems}}"))
-    .toD("{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/0/sync")
+    .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/0/sync")
     .log("Case group members synchronized.")
     ;
   }
@@ -654,11 +654,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .doTry()
       // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
       //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
-      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
+      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
       .setProperty("id", jsonpath("$.id"))
       .log("Participant found. Id = ${exchangeProperty.id}")
     .doCatch(CamelException.class)
@@ -709,9 +709,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .doTry()
-      .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons")
+      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons")
     .doCatch(Exception.class)
       .log(LoggingLevel.ERROR, "Exception: ${exception}")
       .process(new Processor() {
@@ -764,8 +764,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
-    .toD("{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
     .log("Person updated.")
     ;
   }
@@ -778,7 +778,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // IN: header.courtCaseId
     from("direct:" + routeId)
     .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html"{{dems.host}}
     .log("Processing request: ${body}")
     .setProperty("participantType").simple("Accused")
     .setProperty("key").simple("${header.key}")
@@ -802,9 +802,9 @@ public class CcmDemsAdapter extends RouteBuilder {
         .removeHeaders("CamelHttp*")
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .setHeader("Authorization").simple("Bearer " + "{{token.dems}}")
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
         .doTry()
-          .toD("{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
         .doCatch(Exception.class)
           .log(LoggingLevel.ERROR, "Exception: ${exception}")
           .process(new Processor() {

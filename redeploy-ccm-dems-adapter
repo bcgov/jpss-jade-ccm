@@ -24,8 +24,8 @@ kamel -n $ns run \
   CcmDemsAdapter.java \
   --resource file:../../../../classes/ccm-models.jar \
   --property file:ccmDemsAdapter.properties \
-  --config secret:dems-secrets \
-  --config secret:dems-edge-adapter-secrets \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
   --profile openshift \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false
