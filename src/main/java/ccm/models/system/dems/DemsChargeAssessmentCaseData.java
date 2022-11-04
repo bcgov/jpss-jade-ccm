@@ -9,7 +9,6 @@ import ccm.utils.DateTimeUtils;
 
 public class DemsChargeAssessmentCaseData {
     public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
-    public static final String TEMPLATE_CASE = "28";
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
     public static final String SPACE_STRING = " ";
@@ -24,7 +23,7 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(ChargeAssessmentCaseData commonData) {
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentCaseData commonData) {
 
         StringBuilder case_name = new StringBuilder();
         for (CaseAccused ba : commonData.getAccused_persons()) {
@@ -57,7 +56,7 @@ public class DemsChargeAssessmentCaseData {
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(commonData.getRcc_id());
         setDescription("");
-        setTemplateCase(TEMPLATE_CASE);
+        setTemplateCase(caseTemplateId);
 
 
         // Map any case flags that exist
