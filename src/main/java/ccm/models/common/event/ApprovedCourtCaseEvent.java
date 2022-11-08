@@ -12,8 +12,6 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
   private String justin_guid;
   private String justin_mdoc_no;
 
-  public static final String EVENT_VERSION = "1.0";
-
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_MDOC_NO = "MDOC_JUSTIN_NO";
@@ -31,7 +29,6 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
 
   public ApprovedCourtCaseEvent() {
     super();
-    super.setEvent_version(EVENT_VERSION);
   }
 
   public ApprovedCourtCaseEvent(JustinEvent je) {

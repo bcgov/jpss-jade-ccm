@@ -11,9 +11,12 @@ public class BaseEvent {
     private String event_key;
     private EventError event_error;
 
+    public static final String EVENT_VERSION = "0.2";
+
     public BaseEvent() {
         this.event_dtm = DateTimeUtils.generateCurrentDtm();
         this.event_type = this.getClass().getSimpleName();
+        this.event_version = EVENT_VERSION;
     }
 
     public BaseEvent(BaseEvent another) {

@@ -28,7 +28,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
   public void configure() throws Exception {
 
     processEventKPIs();
-    postLogToSplunk();
+    publishEventKPIToSplunk();
   }
 
   private void processEventKPIs() {
@@ -42,13 +42,13 @@ public class CcmSplunkAdapter extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" + 
       "    and key ${headers[kafka.KEY]}")
-    .log("Event KPI: ${body}")
-    .to("direct:postLogToSplunk")
+    //.log("Event KPI: ${body}")
+    .to("direct:publishEventKPIToSplunk")
     ;
 
   }
 
-  private void postLogToSplunk() {
+  private void publishEventKPIToSplunk() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -68,11 +68,11 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
-    .log("Logging event to splunk body: ${body} ...")
+    .log("Publishing event KPI to splunk. Body = ${body} ...")
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     //.to("{{splunk.host}}")
     .to("https://{{splunk.host}}")
-    .log("Event logged.")
+    .log("Event KPI published.")
     ;
 
   }

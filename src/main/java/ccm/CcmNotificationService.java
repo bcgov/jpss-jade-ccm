@@ -1,5 +1,7 @@
 package ccm;
 
+import java.util.StringTokenizer;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
@@ -21,8 +23,9 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.event.ApprovedCourtCaseEvent;
+import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.ChargeAssessmentCaseEvent;
-import ccm.models.common.event.SplunkEvent;
+import ccm.models.common.event.EventKPI;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -30,25 +33,25 @@ public class CcmNotificationService extends RouteBuilder {
 
     processCourtcaseEvents();
     processCourtcaseMetadataEvents();
-    processCourtCaseChanged();
+    processChargeAssessmentCaseChanged();
     processCourtCaseCreated();
     processCourtCaseUpdated();
     processCourtCaseAuthListChanged();
-    processCourtCaseMetadataChanged();
+    processApprovedCourtCaseChanged();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processUnknownStatus();
-    logSplunkEvent();
+    publishEventKPI();
   }
 
   private void processCourtcaseEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
+    //from("kafka:{{kafka.topic.chargeassessmentcases.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.chargeassessmentcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log("Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log("Event from Kafka {{kafka.topic.chargeassessmentcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -59,17 +62,56 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event")
       .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
     .choice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CHANGED))
-        .to("direct:processCourtCaseChanged")
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processChargeAssessmentCaseChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CREATED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseCreated"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processCourtCaseCreated")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.UPDATED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseUpdated"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processCourtCaseUpdated")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.AUTH_LIST_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseAuthListChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processCourtCaseAuthListChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .to("direct:publishEventKPI")
+        .endChoice()
       .otherwise()
-        .to("direct:processUnknownStatus");
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
     ;
   }
 
@@ -91,8 +133,6 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/createCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCreated")
-    .to("direct:logSplunkEvent")
     ;
   }
 
@@ -100,9 +140,9 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.courtcase-metadatas.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.approvedcourtcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log("Event from Kafka {{kafka.topic.courtcase-metadatas.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log("Event from Kafka {{kafka.topic.approvedcourtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -115,17 +155,43 @@ public class CcmNotificationService extends RouteBuilder {
       .simple("${body}")
     .choice()
       .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.CHANGED))
-        .to("direct:processCourtCaseMetadataChanged")
+        .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processApprovedCourtCaseChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.APPEARANCE_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseAppearanceChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processCourtCaseAppearanceChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseCrownAssignmentChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processCourtCaseCrownAssignmentChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .otherwise()
-        .to("direct:processUnknownStatus");
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end()
     ;
   }
 
-  private void processCourtCaseChanged() {
+  private void processChargeAssessmentCaseChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -159,13 +225,42 @@ public class CcmNotificationService extends RouteBuilder {
         }
 
         ex.getMessage().setBody(be);
+
+        // KPI
+        ex.setProperty("kpi_event_object", be);
       }
     })
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
     .log("Generating derived court case event: ${body}")
-    .to("kafka:{{kafka.topic.courtcases.name}}")
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseChanged")
-    .to("direct:logSplunkEvent")
+    .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
+    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+    .setProperty("tmp_record_metadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))    
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // extract the offset from response header.  Example format: "some-topic-0@301"
+        String recordMetadata = (String)exchange.getProperty("tmp_record_metadata");
+        StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "@");
+        Long offset = null;
+
+        try {
+          if (tokenizer.countTokens() == 2) {
+            // ignore first token
+            tokenizer.nextToken();
+            offset = Long.parseLong(tokenizer.nextToken());
+          }
+        } catch (Exception e) {
+          // failed to retrieve offset. Do nothing.
+        }
+        
+        exchange.setProperty("kpi_event_topic_offset", offset);
+      }
+    })
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:publishEventKPI")
     ;
   }
 
@@ -188,8 +283,6 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/updateCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseUpdated")
-    .to("direct:logSplunkEvent")
     ;
   }
 
@@ -210,12 +303,10 @@ public class CcmNotificationService extends RouteBuilder {
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAuthListChanged")
-    .to("direct:logSplunkEvent")
     ;
   }
 
-  private void processCourtCaseMetadataChanged() {
+  private void processApprovedCourtCaseChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -240,8 +331,6 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
     .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseMetadataChanged")
-    .to("direct:logSplunkEvent")
     ;
   }
 
@@ -273,8 +362,6 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
     .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseAppearanceChanged")
-    .to("direct:logSplunkEvent")
     ;
   }
 
@@ -306,8 +393,6 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
     .end()
-    .setBody().simple("CCM Notification splunk adapter call: processCourtCaseCrownAssignmentChanged")
-    .to("direct:logSplunkEvent")
     ;
   }
 
@@ -322,27 +407,38 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void logSplunkEvent() {
+  private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    //IN: property = kpi_event_object
+    //IN: property = kpi_event_topic_name
+    //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_status
+    //IN: property = kpi_component_route_name
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setProperty("splunk_event", simple("${bodyAs(String)}"))
-    .log("Processing Splunk event for message: ${exchangeProperty.splunk_event}")
+    .setProperty("kpi_env_name", simple("{{kpi.env.name}}"))
     .process(new Processor() {
       @Override
-      public void process(Exchange ex) {
-        SplunkEvent be = new SplunkEvent(ex.getProperty("splunk_event").toString());
-        be.setSource("ccm-notification-service");
+      public void process(Exchange exchange) throws Exception {        
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        String kpi_status = (String) exchange.getProperty("kpi_status");
 
-        ex.getMessage().setBody(be, SplunkEvent.class);
+        // KPI
+        EventKPI kpi = new EventKPI(event, kpi_status);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset((Long)exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setEnv_name((String)exchange.getProperty("kpi_env_name"));
+        exchange.getMessage().setBody(kpi);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, SplunkEvent.class)
-    .log("Logging event to splunk body: ${body}")
-    //.to("kafka:{{kafka.topic.kpis.name}}")
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
 }

@@ -12,8 +12,6 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
   private String justin_guid;
   private String justin_rcc_id;
 
-  public static final String EVENT_VERSION = "1.0";
-
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_RCC_ID = "RCC_ID";  
@@ -32,7 +30,6 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
 
   public ChargeAssessmentCaseEvent() {
     super();
-    super.setEvent_version(EVENT_VERSION);
   }
 
   public ChargeAssessmentCaseEvent(JustinEvent je) {

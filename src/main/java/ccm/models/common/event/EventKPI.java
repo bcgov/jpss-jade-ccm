@@ -15,15 +15,15 @@ public class EventKPI {
   private String kpi_dtm;
   private String kpi_version;
   private String kpi_status;
-  private String event_type;
-  private String event_key;
-  private String event_status;
   private Object event_details;
+  private String event_topic_name;
+  private Long event_topic_offset;
 
   private String integration_component_name;
   private String component_route_name;
+  private String env_name;
 
-  public static final String KPI_VERSION = "1.0";
+  public static final String KPI_VERSION = "0.2";
 
   public EventKPI() {
     setKpi_dtm(DateTimeUtils.generateCurrentDtm());
@@ -33,9 +33,6 @@ public class EventKPI {
   public EventKPI(BaseEvent event) {
     this();
     setEvent_details(event);
-    setEvent_type(event.getEvent_type());
-    setEvent_key(event.getEvent_key());
-    setEvent_status(event.getEvent_status());
   }
 
   public EventKPI(BaseEvent event, STATUS status) {
@@ -82,30 +79,6 @@ public class EventKPI {
     this.kpi_status = kpi_status;
   }
 
-  public String getEvent_type() {
-    return event_type;
-  }
-
-  public void setEvent_type(String event_type) {
-    this.event_type = event_type;
-  }
-
-  public String getEvent_key() {
-    return event_key;
-  }
-
-  public void setEvent_key(String event_key) {
-    this.event_key = event_key;
-  }
-
-  public String getEvent_status() {
-    return event_status;
-  }
-
-  public void setEvent_status(String event_status) {
-    this.event_status = event_status;
-  }
-
   public String getComponent_route_name() {
     return component_route_name;
   }
@@ -128,5 +101,29 @@ public class EventKPI {
 
   public void setIntegration_component_name(String integration_component_name) {
     this.integration_component_name = integration_component_name;
+  }
+
+  public String getEvent_topic_name() {
+    return event_topic_name;
+  }
+
+  public void setEvent_topic_name(String event_topic_name) {
+    this.event_topic_name = event_topic_name;
+  }
+
+  public Long getEvent_topic_offset() {
+    return event_topic_offset;
+  }
+
+  public void setEvent_topic_offset(Long event_topic_offset) {
+    this.event_topic_offset = event_topic_offset;
+  }
+
+  public String getEnv_name() {
+    return env_name;
+  }
+
+  public void setEnv_name(String env_name) {
+    this.env_name = env_name;
   }
 }

@@ -1,24 +1,29 @@
 ns_set="cef5dd"
 
-id="$1"
-
-if [ "$1" != "test" ] || [ "$1" = "dev" ]; then
+if [ "$1" = "dev" ]; then
     env="dev"
-    if [ "$1" = "dev"]; then
-        id="$1"
-    fi
 elif [ "$1" = "test" ]; then
     env="test"
-    id="$2"
 else
     env=""
 fi
 
+id="$2"
+
 if [ "$env" = "" ]; then
-   echo "Error.  Invalid environment specified: $1\n"
+   echo "Error.  Invalid environment specified: '$1'"
+   echo "$0 env justin_event_id"
+   echo "E.g., $0 dev 123\n"
    return 1
 else
    ns="$ns_set-$env"
+fi
+
+if [ "$id" = "" ]; then
+   echo "Error.  Event id not specified.\n"
+   echo "$0 env justin_event_id"
+   echo "E.g., $0 dev 123\n"
+   return 1
 fi
 
 echo "`basename $0` to $ns ..."

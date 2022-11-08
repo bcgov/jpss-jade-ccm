@@ -4,8 +4,12 @@ import ccm.utils.DateTimeUtils;
 
 public class EventError {
     private String error_dtm;
+    private String error_version;
     private String error_code;
+    private String error_summary;
     private Object error_details;
+
+    public static final String ERROR_VERSION = "0.2";
 
     public EventError() {
         setError_dtm(DateTimeUtils.generateCurrentDtm());
@@ -39,5 +43,21 @@ public class EventError {
 
     public void setError_details(Object error_details) {
         this.error_details = error_details;
+    }
+
+    public String getError_version() {
+        return error_version;
+    }
+
+    public void setError_version(String error_version) {
+        this.error_version = error_version;
+    }
+
+    public String getError_summary() {
+        return error_summary;
+    }
+
+    public void setError_summary(String error_summary) {
+        this.error_summary = error_summary;
     }
 }
