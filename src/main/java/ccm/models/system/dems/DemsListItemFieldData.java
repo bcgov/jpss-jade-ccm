@@ -62,6 +62,60 @@ public class DemsListItemFieldData {
         }
     }
 
+    public enum CASE_GROUP_FIELD_MAPPINGS {
+        SYSTEM_SUPPORT("JRS_SYSTEM_SUPPORT","System Support"),
+        ADMINISTRATOR("JRS_ADMINISTRATOR","Administrator"),
+        LAWYER("JRS_BASE_LAWYER","Lawyer"),
+        LEGAL_ASSISTANT("JRS_BASE_LEGAL_ASST","Legal Assistant"),
+        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal"),
+        HROIP("JRS_HROIP_USER","HROIP"),
+        BUSINESS_INTELLIGENCE("JRS_CROWN_BI","Business Intelligence");
+
+        private String justin_name;
+        private String dems_name;
+
+        private CASE_GROUP_FIELD_MAPPINGS(String justin_name, String dems_name) {
+            this.justin_name = justin_name;
+            this.dems_name = dems_name;
+        }
+
+        public String getJustin_name() {
+            return justin_name;
+        }
+
+        public void setJustin_name(String justin_name) {
+            this.justin_name = justin_name;
+        }
+
+        public String getDems_name() {
+            return dems_name;
+        }
+
+        public void setDems_name(String dems_name) {
+            this.dems_name = dems_name;
+        }
+
+        public CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
+            CASE_GROUP_FIELD_MAPPINGS caseGroup = null;
+
+            if (SYSTEM_SUPPORT.getJustin_name().equals(justin_name)) {
+                caseGroup = SYSTEM_SUPPORT;
+            } else if (ADMINISTRATOR.getJustin_name().equals(justin_name)) {
+                caseGroup = ADMINISTRATOR;
+            } else if (LAWYER.getJustin_name().equals(justin_name)) {
+                caseGroup = LAWYER;
+            } else if (PARALEGAL.getJustin_name().equals(justin_name)) {
+                caseGroup = PARALEGAL;
+            } else if (HROIP.getJustin_name().equals(justin_name)) {
+                caseGroup = HROIP;
+            } else if (BUSINESS_INTELLIGENCE.getJustin_name().equals(justin_name)) {
+                caseGroup = BUSINESS_INTELLIGENCE;
+            }
+            
+            return caseGroup;
+        }
+    }
+
     private String name;
 
     public String getName() {

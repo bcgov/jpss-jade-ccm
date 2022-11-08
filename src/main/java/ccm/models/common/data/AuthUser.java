@@ -5,16 +5,14 @@ import ccm.models.system.justin.JustinAuthUser;
 
 public class AuthUser {
     private String part_id;
-    private String crown_agency;
-    private String user_name;
+    private String jrs_role;
 
     public AuthUser() {
     }
 
     public AuthUser(JustinAuthUser ja) {
       setPart_id(ja.getPart_id());
-      setCrown_agency(ja.getCrown_agency());
-      setUser_name(ja.getUser_name());
+      setJrs_role(ja.getJrs_role());
 
     }
 
@@ -26,20 +24,12 @@ public class AuthUser {
       this.part_id = part_id;
     }
 
-    public String getCrown_agency() {
-      return crown_agency;
+    public String getJrs_role() {
+      return jrs_role;
     }
 
-    public void setCrown_agency(String crown_agency) {
-      this.crown_agency = crown_agency;
-    }
-
-    public String getUser_name() {
-      return user_name;
-    }
-
-    public void setUser_name(String user_name) {
-      this.user_name = user_name;
+    public void setJrs_role(String jrs_role) {
+      this.jrs_role = jrs_role;
     }
   
     

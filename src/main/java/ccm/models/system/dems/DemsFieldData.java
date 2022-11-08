@@ -86,7 +86,8 @@ public class DemsFieldData {
         LIMITATION_DATE("Limitation Date"),
         CROWN_OFFICE("Crown Office"),
         RCC_STATUS("RCC Status"),
-        LAST_JUSTIN_UPDATE("Last JUSTIN Update");
+        LAST_JUSTIN_UPDATE("Last JUSTIN Update"),
+        LAST_API_RECORD_UPDATE("Last API Record Update");
 
         private String label;
 
