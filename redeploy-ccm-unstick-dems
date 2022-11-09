@@ -10,7 +10,7 @@ sleep 3
 
 kamel -n cef5dd-dev run \
   CcmDemsAdapter.java \
-  --resource file:../../../../classes/ccm-models.jar \
+  --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmDemsAdapter.properties \
   --config secret:dems-secrets \
   --config secret:dems-edge-adapter-secrets \
@@ -25,7 +25,7 @@ sleep 20
 
 kamel -n cef5dd-dev run \
   CcmNotificationService.java \
-  --resource file:../../../../classes/ccm-models.jar \
+  --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmNotificationService.properties \
   --profile openshift \
   --trait environment.vars=TZ="Canada/Pacific" \

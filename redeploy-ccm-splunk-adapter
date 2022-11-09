@@ -22,7 +22,7 @@ pushd src/main/java/ccm
 kamel -n $ns delete ccm-splunk-adapter
 kamel -n $ns run \
   CcmSplunkAdapter.java \
-  --resource file:../../../../classes/ccm-models.jar \
+  --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmSplunkAdapter.properties \
   --profile openshift \
   --config secret:splunk-secrets \
