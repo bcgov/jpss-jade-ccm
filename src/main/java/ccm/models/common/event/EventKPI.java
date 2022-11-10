@@ -133,6 +133,10 @@ public class EventKPI {
     this.event_topic_offset = event_topic_offset;
   }
 
+  public void setEvent_topic_offset(Object o) {
+    this.event_topic_offset = (o == null) ? null : o.toString();
+  }
+
   public Error getError() {
     return error;
   }
