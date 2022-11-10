@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import ccm.models.common.CommonAuthUser;
-import ccm.models.common.CommonAuthUsersList;
+import ccm.models.common.data.AuthUser;
+import ccm.models.common.data.AuthUsersList;
 
 public class DemsAuthUsersList {
     private List<String> userKeys;
@@ -13,16 +13,16 @@ public class DemsAuthUsersList {
     public DemsAuthUsersList() {
     }
 
-    public DemsAuthUsersList(CommonAuthUsersList b) {
-      Iterator<CommonAuthUser> i = b.getAuth_users_list().iterator();
+    public DemsAuthUsersList(AuthUsersList commonList) {
+      Iterator<AuthUser> i = commonList.getAuth_users_list().iterator();
 
-      List<String> l = new ArrayList<String>();
+      List<String> demsList = new ArrayList<String>();
       
       while (i != null && i.hasNext()) {
-        l.add(i.next().getPart_id());
+        demsList.add(i.next().getPart_id());
       }
 
-      setUserKeys(l);
+      setUserKeys(demsList);
     }
 
     public List<String> getUserKeys() {

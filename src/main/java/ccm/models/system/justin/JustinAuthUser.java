@@ -1,8 +1,7 @@
 package ccm.models.system.justin;
 public class JustinAuthUser {
     private String part_id;
-    private String user_name;
-    private String crown_agency;
+    private String jrs_role;
   
     public String getPart_id() {
       return this.part_id;
@@ -12,20 +11,12 @@ public class JustinAuthUser {
       this.part_id = part_id;
     }
 
-    public String getUser_name() {
-      return user_name;
+    public String getJrs_role() {
+      return jrs_role;
     }
 
-    public void setUser_name(String user_name) {
-      this.user_name = user_name;
-    }
-
-    public String getCrown_agency() {
-      return crown_agency;
-    }
-
-    public void setCrown_agency(String crown_agency) {
-      this.crown_agency = crown_agency;
+    public void setJrs_role(String jrs_role) {
+      this.jrs_role = jrs_role;
     }
   }
   

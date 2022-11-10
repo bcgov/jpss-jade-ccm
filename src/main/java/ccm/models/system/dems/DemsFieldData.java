@@ -55,7 +55,7 @@ public class DemsFieldData {
         PROPOSED_CROWN_OFFICE("Proposed Crown Office"),
         CASE_FLAGS("Case Flags"),
         OFFENCE_DATE("Offence Date (earliest)"),
-        PROPOSED_APP_DATE("Proposed App. Date (earliest)"),
+        PROPOSED_APP_DATE("Proposed Appr. Date (earliest)"),
         PROPOSED_PROCESS_TYPE("Proposed Process Type"),
         MDOC_JUSTIN_NO("Court File Unique ID"),
         CROWN_ELECTION("Crown Election"),
@@ -71,10 +71,10 @@ public class DemsFieldData {
         RMS_PROC_STAT("RMS Processing Status"),
         ASSIGNED_LEGAL_STAFF("Assigned Legal Staff"),
         ASSIGNED_CROWN("Assigned Crown"),
-        INITIAL_APP_DT("Initial App. Date"),
-        INITIAL_APP_REASON("Initial App. Date Reason"),
-        NEXT_APP_DT("Next App. Date"),
-        NEXT_APP_REASON("Next App. Date Reason"),
+        INITIAL_APP_DT("Initial Appr."),
+        INITIAL_APP_REASON("Initial Appr. Rsn"),
+        NEXT_APP_DT("Next Appr."),
+        NEXT_APP_REASON("Next Appr. Rsn"),
         FIRST_TRIAL_DT("First Trial Date"),
         FIRST_TRIAL_REASON("First Trial Date Reason"),
         ASSIGNED_CROWN_NAME("Assigned Crown Name"),
@@ -85,7 +85,9 @@ public class DemsFieldData {
         ACCUSED_FULL_NAME("Accused Full Name"),
         LIMITATION_DATE("Limitation Date"),
         CROWN_OFFICE("Crown Office"),
-        RCC_STATUS("RCC Status");
+        RCC_STATUS("RCC Status"),
+        LAST_JUSTIN_UPDATE("Last JUSTIN Update"),
+        LAST_API_RECORD_UPDATE("Last API Record Update");
 
         private String label;
 
