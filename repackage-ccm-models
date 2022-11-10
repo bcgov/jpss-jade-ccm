@@ -1,20 +1,13 @@
+mvn clean test
+if [[ "$?" -ne 0 ]] ; then
+  echo 'could not perform tests';
+  exit $rc
+fi
+
 # preserve current directory
-pushd src/main/java/
-
-# create the classes directory if missing
-mkdir -p ../../../classes
-
-# delete previous classes and jar
-\rm -rf ../../../classes/*
-
-# compile POJO classes
-### find ccm/models | grep .java | xargs javac -d ../../../classes
-javac -d ../../../classes $(find ccm/models | grep .java)
-
 # create jar
-cd ../../../classes
+pushd target/classes/
 jar cvf ccm-models.jar -C . .
-#jar cvf ccm-models.jar ccm/models/*/*.class ccm/models/*/*/*.class ccm/utils/*.class
 
 # return to current directory
 popd
