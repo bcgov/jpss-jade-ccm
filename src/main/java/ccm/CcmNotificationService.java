@@ -31,8 +31,8 @@ public class CcmNotificationService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    processCourtcaseEvents();
-    processCourtcaseMetadataEvents();
+    processChargeAssessmentCaseEvents();
+    processApprovedCourtCaseEvents();
     processChargeAssessmentCaseChanged();
     processCourtCaseCreated();
     processCourtCaseUpdated();
@@ -45,7 +45,7 @@ public class CcmNotificationService extends RouteBuilder {
     publishEventKPI();
   }
 
-  private void processCourtcaseEvents() {
+  private void processChargeAssessmentCaseEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -104,7 +104,6 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseAuthListChanged")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
-        .to("direct:publishEventKPI")
         .endChoice()
       .otherwise()
         .to("direct:processUnknownStatus")
@@ -137,7 +136,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processCourtcaseMetadataEvents() {
+  private void processApprovedCourtCaseEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -154,6 +153,11 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event")
       .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
     .choice()
       .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.CHANGED))
         .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseChanged"))
@@ -451,7 +455,7 @@ public class CcmNotificationService extends RouteBuilder {
         // KPI
         EventKPI kpi = new EventKPI(event, kpi_status);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset").toString());
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
