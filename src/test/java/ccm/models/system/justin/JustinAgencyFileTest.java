@@ -37,7 +37,7 @@ public class JustinAgencyFileTest {
         assertEquals("hello world", "hello world");
     }
 
-    //@Test
+    @Test
     public void testSampleJustinFiles() {
 
         String fileName = "json/justin/agency_file/justin_agency_file1.json";
@@ -59,16 +59,16 @@ public class JustinAgencyFileTest {
             StringWriter stringFile3 = new StringWriter();
 
             objectMapper.writeValue(stringFile, agencyFile);
-            System.out.println("JustinAgencyFile JSON is\n"+stringFile);
+            //System.out.println("JustinAgencyFile JSON is\n"+stringFile);
 
             CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
             objectMapper.writeValue(stringFile2, businessFile);
 
-            System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
+            //System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
             DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
 
             objectMapper.writeValue(stringFile3, demsCaseFile);
-            System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
+            //System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
 
         } catch (IOException e) {
             e.printStackTrace();
