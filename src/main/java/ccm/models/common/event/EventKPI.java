@@ -6,6 +6,7 @@ import ccm.utils.DateTimeUtils;
 public class EventKPI {
   public enum STATUS {
     EVENT_CREATING,
+    EVENT_CREATION_FAILED,
     EVENT_CREATED,
     EVENT_PROCESSING_STARTED,
     EVENT_PROCESSING_COMPLETED,
