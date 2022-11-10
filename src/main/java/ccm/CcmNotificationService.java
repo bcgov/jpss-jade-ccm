@@ -41,6 +41,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processUnknownStatus();
+    preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
   }
 
@@ -230,8 +231,6 @@ public class CcmNotificationService extends RouteBuilder {
         ex.setProperty("kpi_event_object", be);
       }
     })
-    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
-    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
@@ -239,7 +238,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:publishEventKPI")
+    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -386,6 +385,51 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
+  private void preprocessAndPublishEventCreatedKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_event_topic_recordmetadata
+    //---------
+    //IN: property = kpi_event_object
+    //IN: property = kpi_event_topic_name
+    //IN: property = kpi_status
+    //IN: property = kpi_component_route_name
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // extract kpi_event_topic_offset
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
+
+        try {
+          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+          Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
+          String recordMetadata = o.toString();
+
+          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
+
+          if (tokenizer.countTokens() == 2) {
+            // get first token
+            String topicAndPartition = tokenizer.nextToken();
+
+            if (topicAndPartition.startsWith(expectedTopicName)) {
+              // this is the metadata we are looking for
+              Long offset = Long.parseLong(tokenizer.nextToken());
+              exchange.setProperty("kpi_event_topic_offset", offset);
+            }
+          }
+        } catch (Exception e) {
+          // failed to retrieve offset. Do nothing.
+        }
+      }})
+    .to("direct:publishEventKPI")
+    ;
+  }
+
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -407,7 +451,7 @@ public class CcmNotificationService extends RouteBuilder {
         // KPI
         EventKPI kpi = new EventKPI(event, kpi_status);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-        kpi.setEvent_topic_offset((Long)exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset").toString());
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);

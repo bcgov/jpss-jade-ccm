@@ -7,7 +7,7 @@ fi
 # preserve current directory
 # create jar
 pushd target/classes/
-jar cvf ccm-models.jar -C . .
+jar cvf ccm-models.jar ccm/models/*/*/*.class ccm/utils/*.class
 
 # return to current directory
 popd

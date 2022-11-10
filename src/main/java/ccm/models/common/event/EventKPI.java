@@ -18,7 +18,7 @@ public class EventKPI {
   private String kpi_status;
   private Object event_details;
   private String event_topic_name;
-  private Long event_topic_offset;
+  private String event_topic_offset;
   private Error error;
 
   private String integration_component_name;
@@ -125,11 +125,11 @@ public class EventKPI {
     this.event_topic_name = event_topic_name;
   }
 
-  public Long getEvent_topic_offset() {
+  public String getEvent_topic_offset() {
     return event_topic_offset;
   }
 
-  public void setEvent_topic_offset(Long event_topic_offset) {
+  public void setEvent_topic_offset(String event_topic_offset) {
     this.event_topic_offset = event_topic_offset;
   }
 

@@ -589,15 +589,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/{{dems.casedefaultgroup.id}}/sync")
     .log("Case group members synchronized.")
-    .setProperty("id", simple("${exchangeProperty.dems_case_id}"))
-    .to("direct:getCaseGroupListById")
-    .unmarshal().json(JsonLibrary.Jackson)
-    .process(new Processor() {
-      public void process(Exchange exchange) {
-        Object bodyObject = exchange.getIn().getBody();
-        System.out.println("class = " + bodyObject.getClass());
-        System.out.println("body = " + bodyObject.toString());
-      }})
     ;
   }
 

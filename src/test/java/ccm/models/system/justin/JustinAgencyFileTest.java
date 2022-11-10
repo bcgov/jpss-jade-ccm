@@ -23,8 +23,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinCourtFile;
-import ccm.models.common.CommonCaseAccused;
-import ccm.models.common.CommonChargeAssessmentCaseData;
+import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsPersonData;
 
@@ -61,11 +60,11 @@ public class JustinAgencyFileTest {
             objectMapper.writeValue(stringFile, agencyFile);
             //System.out.println("JustinAgencyFile JSON is\n"+stringFile);
 
-            CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
+            ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
             objectMapper.writeValue(stringFile2, businessFile);
 
             //System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
+            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1",businessFile);
 
             objectMapper.writeValue(stringFile3, demsCaseFile);
             //System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
@@ -113,8 +112,8 @@ public class JustinAgencyFileTest {
                     objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
                     JustinAgencyFile agencyFile = objectMapper.readValue(jsonData, JustinAgencyFile.class);
-                    CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
-                    DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
+                    ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+                    DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1", businessFile);
 
                     StringWriter stringFile = new StringWriter();
                     objectMapper.writeValue(stringFile, agencyFile);
@@ -229,8 +228,8 @@ public class JustinAgencyFileTest {
                 objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
                 JustinAgencyFile agencyFile = objectMapper.readValue(jsonData, JustinAgencyFile.class);
-                CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
-                DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
+                ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+                DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1", businessFile);
 
                 StringWriter stringFile = new StringWriter();
                 objectMapper.writeValue(stringFile, agencyFile);
