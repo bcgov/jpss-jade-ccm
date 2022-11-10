@@ -34,8 +34,8 @@ public class CcmNotificationService extends RouteBuilder {
     processChargeAssessmentCaseEvents();
     processApprovedCourtCaseEvents();
     processChargeAssessmentCaseChanged();
-    processCourtCaseCreated();
-    processCourtCaseUpdated();
+    processApprovedCourtCaseUpdated();
+    processChargeAssessmentCaseUpdated();
     processCourtCaseAuthListChanged();
     processApprovedCourtCaseChanged();
     processCourtCaseAppearanceChanged();
@@ -79,20 +79,20 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CREATED))
-        .setProperty("kpi_component_route_name", simple("processCourtCaseCreated"))
+        .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCourtCaseCreated")
+        .to("direct:processApprovedCourtCaseUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.UPDATED))
-        .setProperty("kpi_component_route_name", simple("processCourtCaseUpdated"))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCourtCaseUpdated")
+        .to("direct:processChargeAssessmentCaseUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -115,7 +115,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processCourtCaseCreated() {
+  private void processApprovedCourtCaseUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -246,7 +246,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processCourtCaseUpdated() {
+  private void processChargeAssessmentCaseUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 

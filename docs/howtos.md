@@ -69,7 +69,7 @@ s18.3 -> s18
 E.g.,
 
 ```
-jpss-jade-ccm % git ls-remote --tags origin | grep s17
+git ls-remote --tags origin | grep s17
 ```
 
 Example output
