@@ -1,21 +1,22 @@
 package ccm.models.common.event;
 
+import ccm.models.common.versioning.Version;
 import ccm.utils.DateTimeUtils;
 
-public class EventError {
+public class Error {
     private String error_dtm;
     private String error_version;
     private String error_code;
     private String error_summary;
     private Object error_details;
 
-    public static final String ERROR_VERSION = "0.2";
-
-    public EventError() {
+    public Error() {
+        setError_version(Version.V1_0.toString());
         setError_dtm(DateTimeUtils.generateCurrentDtm());
     }
 
-    public EventError(EventError another) {
+    public Error(Error another) {
+        this.error_version = another.error_version;
         this.error_dtm = another.error_dtm;
         this.error_code = another.error_code;
         this.error_details = another.error_details;

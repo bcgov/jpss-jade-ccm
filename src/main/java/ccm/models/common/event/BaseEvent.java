@@ -1,5 +1,6 @@
 package ccm.models.common.event;
 
+import ccm.models.common.versioning.Version;
 import ccm.utils.DateTimeUtils;
 
 public class BaseEvent {
@@ -9,14 +10,11 @@ public class BaseEvent {
     private String event_status;
     private String event_source;
     private String event_key;
-    private EventError event_error;
-
-    public static final String EVENT_VERSION = "0.2";
 
     public BaseEvent() {
         this.event_dtm = DateTimeUtils.generateCurrentDtm();
         this.event_type = this.getClass().getSimpleName();
-        this.event_version = EVENT_VERSION;
+        this.event_version = Version.V1_0.toString();
     }
 
     public BaseEvent(BaseEvent another) {
@@ -69,13 +67,5 @@ public class BaseEvent {
 
     public void setEvent_source(String event_source) {
         this.event_source = event_source;
-    }
-
-    public EventError getEvent_error() {
-        return event_error;
-    }
-
-    public void setEvent_error(EventError event_error) {
-        this.event_error = event_error;
     }
 }

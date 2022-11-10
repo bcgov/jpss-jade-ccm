@@ -14,25 +14,28 @@
 						{
 							"name": "GetCaseIdByKey",
 							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/50454.0734/id",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/171441.0877/id",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"cases",
-										"50454.0734",
+										"171441.0877",
 										"id"
 									]
 								}
@@ -105,7 +108,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\"name\":\"THOMAS,Kelly; WONG,Neal\",\"key\":\"50454.0734\",\"description\":\"\",\"timeZoneId\":\"Pacific Standard Time\",\"templateCase\":\"28\",\"fields\":[{\"id\":12,\"name\":\"Agency File ID\",\"value\":\"50454.0734\"},{\"id\":3,\"name\":\"Agency File No.\",\"value\":\"22-472033\"},{\"id\":13,\"name\":\"Submit Date\",\"value\":\"2022-09-29\"},{\"id\":9,\"name\":\"Assessment Crown\",\"value\":\"Garrison, Dave\"},{\"id\":14,\"name\":\"Case Decision\",\"value\":null},{\"id\":18,\"name\":\"Proposed Charges\",\"value\":\"CCC 220(a) Cause death by criminal negligence using a firearm\"},{\"id\":24,\"name\":\"Initiating Agency\",\"value\":\"105: Kelowna Municipal RCMP\"},{\"id\":25,\"name\":\"Investigating Officer\",\"value\":\"Rhodes, Christopher 1001\"},{\"id\":26,\"name\":\"Proposed Crown Office\",\"value\":\"C402: Kelowna Crown Counsel\"},{\"id\":28,\"name\":\"Case Flags\",\"value\":[]},{\"id\":29,\"name\":\"Offence Date (earliest)\",\"value\":\"2022-08-20\"},{\"id\":30,\"name\":\"Proposed App. Date (earliest)\",\"value\":null},{\"id\":31,\"name\":\"Proposed Process Type\",\"value\":\"AN Thomas, Kelly;  Wong, Neal\"}]}",
+									"raw": "{\"name\":\"\",\"key\":\"171441.0877\",\"description\":\"\",\"timeZoneId\":\"Pacific Standard Time\",\"templateCase\":\"4\",\"fields\":[{\"name\":\"Agency File ID\",\"value\":\"171441.0877\"},{\"name\":\"Agency File No.\",\"value\":\"401: 20-999999901\"},{\"name\":\"Submit Date\",\"value\":\"2020-05-25 07:00:00\"},{\"name\":\"Assessment Crown\",\"value\":\"Walsh, David Joe\"},{\"name\":\"Case Decision\",\"value\":null},{\"name\":\"Proposed Charges\",\"value\":\"\"},{\"name\":\"Initiating Agency\",\"value\":\"401: Vancouver Police Department\"},{\"name\":\"Investigating Officer\",\"value\":\"Jewett, Jhanna Lex VA2214\"},{\"name\":\"Case Flags\",\"value\":[]},{\"name\":\"Offence Date (earliest)\",\"value\":\"2019-12-19 08:00:00\"},{\"name\":\"Proposed Appr. Date (earliest)\",\"value\":null},{\"name\":\"Proposed Process Type\",\"value\":\"\"},{\"name\":\"Proposed Crown Office\",\"value\":\"C202: Vancouver Provincial\"},{\"name\":\"Limitation Date\",\"value\":null},{\"name\":\"Accused Full Name\",\"value\":\"\"},{\"name\":\"RCC Status\",\"value\":null},{\"name\":\"Last JUSTIN Update\",\"value\":\"2022-11-09 00:54:46\"}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -113,18 +116,11 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"cases"
@@ -234,6 +230,47 @@
 										"groups",
 										"1",
 										"sync"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetGroups",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/12/groups",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"12",
+										"groups"
 									]
 								}
 							},

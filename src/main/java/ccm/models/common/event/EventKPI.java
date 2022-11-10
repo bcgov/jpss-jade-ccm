@@ -1,5 +1,6 @@
 package ccm.models.common.event;
 
+import ccm.models.common.versioning.Version;
 import ccm.utils.DateTimeUtils;
 
 public class EventKPI {
@@ -18,21 +19,30 @@ public class EventKPI {
   private Object event_details;
   private String event_topic_name;
   private Long event_topic_offset;
+  private Error error;
 
   private String integration_component_name;
   private String component_route_name;
-  private String env_name;
-
-  public static final String KPI_VERSION = "0.2";
 
   public EventKPI() {
     setKpi_dtm(DateTimeUtils.generateCurrentDtm());
-    setKpi_version(KPI_VERSION);
+    setKpi_version(Version.V1_0.toString());
   }
 
   public EventKPI(BaseEvent event) {
     this();
     setEvent_details(event);
+  }
+
+  public EventKPI(STATUS status) {
+    this();
+    setKpi_status(status.name());
+  }
+
+  public EventKPI(String suggested_status_string) {
+    this();
+
+    setKpi_status(util_getStatusString(suggested_status_string));
   }
 
   public EventKPI(BaseEvent event, STATUS status) {
@@ -43,6 +53,10 @@ public class EventKPI {
   public EventKPI(BaseEvent event, String suggested_status_string) {
     this(event);
 
+    setKpi_status(util_getStatusString(suggested_status_string));
+  }
+
+  private static String util_getStatusString(String suggested_status_string) {
     String final_status_string = null;
 
     try {
@@ -52,7 +66,7 @@ public class EventKPI {
       final_status_string = STATUS.UNKNOWN.name() + "(" + suggested_status_string + ")";
     }
 
-    setKpi_status(final_status_string);
+    return final_status_string;
   }
 
   public String getKpi_dtm() {
@@ -119,11 +133,11 @@ public class EventKPI {
     this.event_topic_offset = event_topic_offset;
   }
 
-  public String getEnv_name() {
-    return env_name;
+  public Error getError() {
+    return error;
   }
 
-  public void setEnv_name(String env_name) {
-    this.env_name = env_name;
+  public void setError(Error error) {
+    this.error = error;
   }
 }

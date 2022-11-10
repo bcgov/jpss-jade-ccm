@@ -236,28 +236,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
     .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
-    .setProperty("tmp_record_metadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))    
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        // extract the offset from response header.  Example format: "some-topic-0@301"
-        String recordMetadata = (String)exchange.getProperty("tmp_record_metadata");
-        StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "@");
-        Long offset = null;
-
-        try {
-          if (tokenizer.countTokens() == 2) {
-            // ignore first token
-            tokenizer.nextToken();
-            offset = Long.parseLong(tokenizer.nextToken());
-          }
-        } catch (Exception e) {
-          // failed to retrieve offset. Do nothing.
-        }
-        
-        exchange.setProperty("kpi_event_topic_offset", offset);
-      }
-    })
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:publishEventKPI")
@@ -419,7 +398,6 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setProperty("kpi_env_name", simple("{{kpi.env.name}}"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {        
@@ -432,7 +410,6 @@ public class CcmNotificationService extends RouteBuilder {
         kpi.setEvent_topic_offset((Long)exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setEnv_name((String)exchange.getProperty("kpi_env_name"));
         exchange.getMessage().setBody(kpi);
       }
     })

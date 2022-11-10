@@ -31,6 +31,8 @@ import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.system.dems.*;
 
 import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.camel.CamelException;
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
@@ -59,6 +61,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     createPerson();
     updatePerson();
     addParticipantToCase();
+    getCaseGroupListById();
   }
 
   private void version() {
@@ -549,7 +552,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class)
     .setProperty("demsAuthUserList").simple("${body}")
-    .log("DEMS-bound case users sync request data: '${body}'")
+    .log("DEMS-bound case users sync request data: '${body}' ...")
     .setProperty("sync_data", simple("${body}"))
     // get case id
     // exchangeProperty.key already set
@@ -577,7 +580,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsCaseGroupMembersSyncData.class)
-    .log("DEMS-bound case group members sync request data: '${body}'")
+    .log("DEMS-bound case group members sync request data: '${body}' ...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -586,6 +589,15 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/{{dems.casedefaultgroup.id}}/sync")
     .log("Case group members synchronized.")
+    .setProperty("id", simple("${exchangeProperty.dems_case_id}"))
+    .to("direct:getCaseGroupListById")
+    .unmarshal().json(JsonLibrary.Jackson)
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        Object bodyObject = exchange.getIn().getBody();
+        System.out.println("class = " + bodyObject.getClass());
+        System.out.println("body = " + bodyObject.toString());
+      }})
     ;
   }
 
@@ -824,5 +836,36 @@ public class CcmDemsAdapter extends RouteBuilder {
     .endChoice()
     ;
   }
+
+  private void getCaseGroupListById() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
   
+    // IN: exchangeProperty.id
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log("Looking up case groups (case id = ${exchangeProperty.id}) ...")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.id}/id?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        .log("Case groups retrieved.")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR,"Case groups lookup error.  " + 
+            "Response status code = ${header.CamelHttpResponseCode}.  " + 
+            "Response body = '${body}'.  " + 
+            "Assume no case groups.")
+        .setBody(simple("[]"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .endChoice()
+    .end()
+    ;
+  }
 }
