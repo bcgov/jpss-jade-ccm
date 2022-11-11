@@ -200,6 +200,9 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    // IN
+    // property: event_object
+    // property: caseFound
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -211,28 +214,25 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent();
+        // KPI: Preserve original event properties
+        ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+        ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
 
-        // hardcoding boolean to false for first implementation
-        //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
+        ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
+        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.name(), original_event);
+
         boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
-        String event_key = ex.getIn().getHeader("event_key").toString();
-
-        be.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.toString());
-        be.setEvent_key(event_key);
-        be.setJustin_rcc_id(event_key);
-
         if (court_case_exists) {
-          be.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
         } else {
-          be.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
         }
 
-        ex.getMessage().setBody(be);
+        ex.getMessage().setBody(derived_event);
 
-        // KPI
-        ex.setProperty("kpi_event_object", be);
+        // KPI: Set new event object
+        ex.setProperty("kpi_event_object", derived_event);
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
@@ -243,6 +243,10 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:preprocessAndPublishEventCreatedKPI")
+    // restore kpi_event_object
+    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object}"))
+    // restore kpi_event_topic_offset
+    .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
     ;
   }
 
