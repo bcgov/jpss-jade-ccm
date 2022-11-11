@@ -1,18 +1,23 @@
 package ccm.models.system.splunk;
 
+import java.time.Instant;
+
 import ccm.models.common.event.EventKPI;
+import ccm.utils.DateTimeUtils;
 
 public class SplunkEventLog {
     Object event;
     String sourcetype;
     String source;
     String host;
+    Long time;
 
     public SplunkEventLog() {
         this.event = "";
         this.sourcetype = "";
         this.source = "";
         this.host = "";
+        this.time = Instant.now().toEpochMilli();
     }
 
     public SplunkEventLog(String host, EventKPI kpiEvent) {
@@ -21,13 +26,14 @@ public class SplunkEventLog {
         this.sourcetype = kpiEvent.getIntegration_component_name();
         this.source = kpiEvent.getComponent_route_name();
         this.host = host;
+        this.time = DateTimeUtils.convertToEpochMilliFromBCDateTimeString(kpiEvent.getKpi_dtm());
     }
 
     public Object getEvent() {
         return event;
     }
 
-    public void setEvent(String event) {
+    public void setEvent(Object event) {
         this.event = event;
     }
 
@@ -53,6 +59,14 @@ public class SplunkEventLog {
 
     public void setHost(String host) {
         this.host = host;
+    }
+
+    public Long getTime() {
+        return time;
+    }
+
+    public void setTime(Long time) {
+        this.time = time;
     }
 
     @Override
