@@ -77,7 +77,7 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
   }
 
   public ApprovedCourtCaseEvent(String event_source, ApprovedCourtCaseEvent another) {
-    super(another);
+    super(event_source, another);
 
     this.justin_event_message_id = another.justin_event_message_id;
     this.justin_message_event_type_cd = another.justin_message_event_type_cd;

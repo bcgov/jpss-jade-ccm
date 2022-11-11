@@ -74,10 +74,8 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     setEvent_key(getJustin_rcc_id());
   }
 
-  public ChargeAssessmentCaseEvent(String event_source, ChargeAssessmentCaseEvent another) {
-    super(another);
-
-    setEvent_source(event_source);
+  public ChargeAssessmentCaseEvent(SOURCE source, ChargeAssessmentCaseEvent another) {
+    super(source.name(), another);
 
     this.justin_event_message_id = another.justin_event_message_id;
     this.justin_message_event_type_cd = another.justin_message_event_type_cd;
@@ -85,10 +83,6 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     this.justin_fetched_date = another.justin_fetched_date;
     this.justin_guid = another.justin_guid;
     this.justin_rcc_id = another.justin_rcc_id;
-  }
-
-  public ChargeAssessmentCaseEvent copy(String event_source) {
-    return new ChargeAssessmentCaseEvent(event_source, this);
   }
 
   public int getJustin_event_message_id() {

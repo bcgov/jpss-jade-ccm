@@ -17,13 +17,14 @@ public class BaseEvent {
         this.event_version = Version.V1_0.toString();
     }
 
-    public BaseEvent(BaseEvent another) {
+    public BaseEvent(String event_source, BaseEvent another) {
         this.event_dtm = another.event_dtm;
         this.event_version = another.event_version;
         this.event_type = another.event_type;
-        this.event_source = another.event_source;
         this.event_status = another.event_status;
         this.event_key = another.event_key;
+
+        this.event_source = event_source;
     }
 
     public String getEvent_key() {

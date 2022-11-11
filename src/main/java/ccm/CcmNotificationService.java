@@ -217,9 +217,12 @@ public class CcmNotificationService extends RouteBuilder {
         // KPI: Preserve original event properties
         ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
         ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+        ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+        ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+        ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
         ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
-        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.name(), original_event);
+        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
 
         boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
@@ -243,10 +246,12 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:preprocessAndPublishEventCreatedKPI")
-    // restore kpi_event_object
-    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object}"))
-    // restore kpi_event_topic_offset
+    // KPI: restore previous values
+    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
     .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+    .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+    .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
   }
 
