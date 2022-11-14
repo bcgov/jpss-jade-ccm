@@ -525,15 +525,25 @@ public class CcmJustinAdapter extends RouteBuilder {
         error.setError_summary("Unable to process unknown JUSTIN event.");
         error.setError_details(je);
 
-        exchange.getMessage().setBody(error, Error.class);
+        // KPI
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        kpi.setError(error);
+        kpi.setEvent_topic_name("{{kafka.topic.general-errors.name}}");
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty(routeId));
+        exchange.getMessage().setBody(kpi, EventKPI.class);
       }
     })
-    .setProperty("kpi_error_object", body())
+    .setProperty("kpi_object", body())
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    // send to the general errors topic
+    .to("kafka:{{kafka.topic.general-errors.name}}")
+    // mark JUSTIN event as processed
     .setBody(simple("${exchangeProperty.justin_event}"))
     .setProperty("event_message_id")
       .jsonpath("$.event_message_id")
     .to("direct:confirmEventProcessed")
-    .setProperty("kpi_component_route_name", simple(routeId))
+    // send KPI to kpis topic
     .to("direct:publishUnknownEventKPIError")
     ;
   }
@@ -808,24 +818,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //IN: property = kpi_error_object
-    //IN: property = kpi_component_route_name
+    //IN: property = kpi_object
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {        
-        Error error = (Error)exchange.getProperty("kpi_error_object");
-
-        // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
-        kpi.setError(error);
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        exchange.getMessage().setBody(kpi);
-      }
-    })
+    .setBody(simple("${exchangeProperty.kpi_object}"))
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log("Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
