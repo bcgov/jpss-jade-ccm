@@ -116,7 +116,7 @@ public class JustinAgencyFileTest {
 
     }
 
-    //@Test
+    @Test
     public void testAgencyFileConversion() {
 
         try {
@@ -153,7 +153,7 @@ public class JustinAgencyFileTest {
             objectMapper.writeValue(stringFile4, expectedDemsCaseData);
             //System.out.println("\n\nExpectedDemsChargeAssessmentCaseData JSON is\n"+stringFile4);
 
-            assertEquals(stringFile3, stringFile4);
+            assertEquals(stringFile3.toString(), stringFile4.toString());
 
         } catch (IOException e) {
             e.printStackTrace();
