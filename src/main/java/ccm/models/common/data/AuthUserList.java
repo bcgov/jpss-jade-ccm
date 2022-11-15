@@ -6,14 +6,14 @@ import java.util.List;
 import ccm.models.system.justin.JustinAuthUser;
 import ccm.models.system.justin.JustinAuthUsersList;
 
-public class AuthUsersList {
+public class AuthUserList {
     private String rcc_id;
-    private List<AuthUser> auth_users_list;
+    private List<AuthUser> auth_user_list;
 
-    public AuthUsersList() {
+    public AuthUserList() {
     }
 
-    public AuthUsersList(JustinAuthUsersList jal) {
+    public AuthUserList(JustinAuthUsersList jal) {
       setRcc_id(jal.getRcc_id());
 
       List<AuthUser> l = new ArrayList<AuthUser>();
@@ -23,7 +23,7 @@ public class AuthUsersList {
         l.add(ba);
       }
 
-      setAuth_users_list(l);
+      setAuth_user_list(l);
     }
   
     public String getRcc_id() {
@@ -34,12 +34,12 @@ public class AuthUsersList {
       this.rcc_id = rcc_id;
     }
 
-    public List<AuthUser> getAuth_users_list() {
-      return auth_users_list;
+    public List<AuthUser> getAuth_user_list() {
+      return auth_user_list;
     }
 
-    public void setAuth_users_list(List<AuthUser> auth_users_list) {
-      this.auth_users_list = auth_users_list;
+    public void setAuth_user_list(List<AuthUser> auth_user_list) {
+      this.auth_user_list = auth_user_list;
     }
 
     

@@ -1,5 +1,6 @@
 package ccm.models.system.dems;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DemsCaseGroupMembersSyncData {
@@ -7,6 +8,8 @@ public class DemsCaseGroupMembersSyncData {
     private List<String> values;
 
     public DemsCaseGroupMembersSyncData() {
+      setKeyField("key");
+      setValues(new ArrayList<String>());
     }
 
     public DemsCaseGroupMembersSyncData(DemsAuthUsersList d) {
