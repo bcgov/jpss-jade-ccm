@@ -33,7 +33,6 @@ import ccm.models.system.dems.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.apache.camel.CamelException;
@@ -66,6 +65,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     addParticipantToCase();
     getGroupMapByCaseId();
     syncCaseGroupMembers();
+    syncCaseGroupMembersOrig();
   }
 
   private void version() {
@@ -196,7 +196,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    //.toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    //.toD("rest:get:org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
+    .toD("netty-http:https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
         .setProperty("id", simple(""))
@@ -557,7 +559,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class)
     .setProperty("dems_auth_user_list").simple("${body}")
-    .log("DEMS-bound case users sync request data: '${body}' ...")
+    .log("DEMS-bound case users sync request data: '${body}'.")
     .setProperty("sync_data", simple("${body}"))
     // get case id
     // exchangeProperty.key already set
@@ -571,22 +573,29 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .setBody(simple("${exchangeProperty.dems_auth_user_list}"))
+    .log("Synchronizing case users ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
     .log("Case users synchronized.")
     // retrieve case group map
     .to("direct:getGroupMapByCaseId")
-    // create group members sync data
+    // create group members map
     .process(new Processor() {
       public void process(Exchange exchange) {
         AuthUserList userList = (AuthUserList)exchange.getProperty("auth_user_list_object");
         DemsCaseGroupMap demsCaseGroupMap = (DemsCaseGroupMap)exchange.getProperty("dems_case_group_map");
         HashMap<Long,DemsCaseGroupMembersSyncData> demsGroupMembersMap = new HashMap<Long,DemsCaseGroupMembersSyncData>();
+        List<DemsCaseGroupMembersSyncHelper> demsGroupMembersSyncHelperList = new ArrayList<DemsCaseGroupMembersSyncHelper>();
 
         // iterate through auth user list
         for (AuthUser user : userList.getAuth_user_list()) {
           DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS demsCaseGroupFieldMapping = DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS.findCaseGroupByJustinName(user.getJrs_role());
           String demsGroupName = (demsCaseGroupFieldMapping == null) ? null : demsCaseGroupFieldMapping.getDems_name();
-          Long demsGroupId = demsCaseGroupMap.getIdByName(demsGroupName);
+          Long demsGroupId = (demsGroupName == null || demsCaseGroupMap == null) ? null : demsCaseGroupMap.getIdByName(demsGroupName);
+
+          System.out.println("DEBUG: user JUSTIN Id = " + user.getPart_id());
+          System.out.println("DEBUG: user JUSTIN Role = " + user.getJrs_role());
+          System.out.println("DEBUG: demsGroupName = " + demsGroupName);
+          System.out.println("DEBUG: demsGroupId = " + demsGroupId);
 
           if (demsGroupId != null) {
             DemsCaseGroupMembersSyncData syncData = demsGroupMembersMap.get(demsGroupId);
@@ -596,20 +605,50 @@ public class CcmDemsAdapter extends RouteBuilder {
               // group id sync data does not exist; create new sync data
               syncData = new DemsCaseGroupMembersSyncData();
               demsGroupMembersMap.put(demsGroupId, syncData);
-              System.out.println("New syncn data created: DEMS group id = " + demsGroupId);
+              System.out.println("DEBUG: New syncn data created: DEMS group id = " + demsGroupId);
             }
 
             // add user to group id sync data
             syncData.getValues().add(user.getPart_id());
-            System.out.println("User added to sync data: DEMS group id = " + demsGroupId + ", user id = " + user.getPart_id());
+            System.out.println("DEBUG: User added to sync data: DEMS group id = " + demsGroupId + ", user id = " + user.getPart_id());
           }
         }
 
-        exchange.setProperty("dems_group_members_map", demsGroupMembersMap);
+        for (Long id : demsGroupMembersMap.keySet()) {
+          DemsCaseGroupMembersSyncHelper helper = new DemsCaseGroupMembersSyncHelper(id, demsGroupMembersMap.get(id));
+          demsGroupMembersSyncHelperList.add(helper);
+        }
+        exchange.setProperty("dems_case_group_members_sync_helper_list", demsGroupMembersSyncHelperList);
       }
     })
-    .to("direct:syncCaseGroupMembers")
+    .to("direct:syncCaseGroupMembersOrig")
+    //.to("direct:syncCaseGroupMembers")
     ;
+  }
+
+  private void syncCaseGroupMembersOrig() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: exchangeProperty.dems_case_id
+    // IN: exchangeProperty.dems_auth_user_list
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("DEMS-bound case group members sync request data: '${exchangeProperty.dems_auth_user_list}' ...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+      }
+    })
+    .log("Case group sync processing completed.")
+    ;
+
   }
 
   private void syncCaseGroupMembers() {
@@ -617,24 +656,36 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: exchangeProperty.dems_case_id
-    // IN: exchangeProperty.dems_group_members_map
+    // IN: exchangeProperty.dems_case_group_members_sync_helper_list
     from("direct:" + routeId)
+    .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("DEMS-bound case group members sync request data: '${body}' ...")
+    .log("DEMS case group members sync helper list: '${exchangeProperty.dems_case_group_members_sync_helper_list}' ...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
-    .setBody(simple("${exchangeProperty.dems_group_members_map}"))
-    .split(body())
-      //.marshal().json(JsonLibrary.Jackson, DemsCaseGroupMembersSyncData.class)
-      //.toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/{{dems.casedefaultgroup.id}}/sync")
-      //.log("Case group (group id = ${exchangeProperty.dems_case_group_id} ) members synchronized.")
-      .log("In split. body = '${body}'")
-    .end()
-    .log("Case group sync processing completed.")
+    .setBody(simple("${exchangeProperty.dems_case_group_members_sync_helper_list}"))
+    .marshal().json()
+    .log("body = '${body}'")
+    .split().jsonpathWriteAsString("$")
+      .log("line = '${body}'")
+      .unmarshal().json(JsonLibrary.Jackson,DemsCaseGroupMembersSyncHelper.class)
+      .process(new Processor() {
+        public void process(Exchange exchange) {
+          DemsCaseGroupMembersSyncHelper helper = (DemsCaseGroupMembersSyncHelper)exchange.getIn().getBody();
+          System.out.println("DEBUG: helper case group id = " + helper.getCaseGroupId());
+        }
+      })
+    // .split(body())
+    //   //.marshal().json(JsonLibrary.Jackson, DemsCaseGroupMembersSyncData.class)
+    //   //.toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/{{dems.casedefaultgroup.id}}/sync")
+    //   //.log("Case group (group id = ${exchangeProperty.dems_case_group_id} ) members synchronized.")
+    //   .log("In split. body = '${body}'")
+    // .end()
+    .log("Case group sync processing skipped.")
     ;
 
   }
@@ -894,13 +945,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups?throwExceptionOnFailure=false")
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
-        .log("Case groups retrieved.  body = '${body}'")
-        .unmarshal().json()
+        // create initial case group map
+        .convertBodyTo(String.class)
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
-            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap(exchange.getIn().getBody());
-
+            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
             exchange.setProperty("dems_case_group_map", caseGroupMap);
           }
         })
