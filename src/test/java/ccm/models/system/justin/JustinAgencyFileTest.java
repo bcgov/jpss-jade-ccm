@@ -25,23 +25,15 @@ import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsChargeAssessmentCaseData;
+import ccm.models.system.dems.DemsFieldData;
 import ccm.models.system.dems.DemsPersonData;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JustinAgencyFileTest {
 
-    @Test
-    public void testHelloWorld() {
-        assertEquals("hello world", "hello world");
-    }
-
-    @Test
-    public void testSampleJustinFiles() {
-
-        String fileName = "json/justin/agency_file/justin_agency_file1.json";
-        System.out.println(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()+"json/justin/agency_file/justin_agency_file1.json");
-
+    private JustinAgencyFile getTestJustinFile() {
+        String fileName = "json/system/justin/justin_agency_file.json";
         ClassLoader classLoader = getClass().getClassLoader();
 
         try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
@@ -51,260 +43,122 @@ public class JustinAgencyFileTest {
             //create ObjectMapper instance
             ObjectMapper objectMapper = new ObjectMapper();
             JustinAgencyFile agencyFile = objectMapper.readValue(reader, JustinAgencyFile.class);
+
+            return agencyFile;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new JustinAgencyFile();
+    }
+
+    private DemsChargeAssessmentCaseData getTestDemsFile() {
+        String fileName = "json/system/dems/dems_agency_file.json";
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
+             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(streamReader)) {
+
+            //create ObjectMapper instance
+            ObjectMapper objectMapper = new ObjectMapper();
+            DemsChargeAssessmentCaseData agencyFile = objectMapper.readValue(reader, DemsChargeAssessmentCaseData.class);
+
+            return agencyFile;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new DemsChargeAssessmentCaseData();
+    }
+
+    @Test
+    public void testInitiatingAgency() {
+        JustinAgencyFile agencyFile = getTestJustinFile();
+
+        ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+        // Initiating Agency: "$MAPID8: $MAPID7" INITIATING_AGENCY_IDENTIFIER: INITIATING_AGENCY_NAME
+        
+        assertEquals("105: Kelowna Municipal RCMP", businessFile.getInitiating_agency());
+
+        // Investigating Officer: "$MAPID9 $MAPID10" INVESTIGATING_OFFICER_NAME INVESTIGATING_OFFICER_PIN
+        assertEquals("Rhodes, Christopher 1001", businessFile.getInvestigating_officer());
+
+        // Proposed Crown Office: "$MAPID14: $MAPID15" and Strip " Crown Counsel" from data  CRN_DECISION_AGENCY_IDENTIFIER: CRN_DECISION_AGENCY_NAME
+        assertEquals("C402: Kelowna", businessFile.getProposed_crown_office());
+
+        // ??? "$MAPID24 - $MAPID23"  ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME
+        //assertEquals(businessFile., "AN - Thomasffffffffffffffffffffffff, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh");
+
+        // Earliest Offence Date Earliest: Offence date of the Accused Person array "$MAPID27" ACCUSED\OFFENCE_DATE
+        assertEquals(agencyFile.getMin_offence_date(), businessFile.getEarliest_offence_date());
+
+        // Earliest Proposed Appearance Date: Earliest Proposed Appearance Date of the Accused Person array "$MAPID25" ACCUSED\PROPOSED_APPR_DATE
+
+        // Proposed Process Type List: Roll up of $MAPID70, data elements seperated by a semi colon ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME' ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME
+
+        // Intimate partner violence Y/N: KFILE_YN IF Y then True, ELSE False
+
+        // DEMS Case Name: Roll up of $MAPID23, data elements seperated by a semi colon ACCUSED\ACCUSED_NAME; ACCUSED\ACCUSED_NAME
+        // Accused Full Name: Roll up of $MAPID119 Concatenate $MAPID85, $MAPID86 $MAPID118 and $MAPID84 with a space seperator if the $MAPIDX is not null.
+        // Agency File: $MAPID8: $MAPID2 INITIATING_AGENCY_IDENTIFIER: AGENCY_FILE_NO
+        // "If $MAPID113 = ""ACT"" then ""Received"" or 
+        // $MAPID113 = ""CLS""  then  ""Close"" or
+        // $MAPID113 = ""FIN""  then  ""Finish"" or
+        // $MAPID113 = ""RET""  then  ""Return""" RCC_STATE_CD
+        
+
+
+
+        //System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
+        //DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1",businessFile);
+
+
+    }
+
+    @Test
+    public void testAgencyFileConversion() {
+
+        try {
+            JustinAgencyFile agencyFile = getTestJustinFile();
+
+            DemsChargeAssessmentCaseData expectedDemsCaseData = getTestDemsFile();
+
+            //create ObjectMapper instance
+            ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-            StringWriter stringFile = new StringWriter();
-            StringWriter stringFile2 = new StringWriter();
-            StringWriter stringFile3 = new StringWriter();
+            ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("28", businessFile);
 
+            // since Last JUSTIN Update is current date, set it to blank, so test doesn't fail
+            for(DemsFieldData fieldData : demsCaseFile.getFields()) {
+                if(fieldData.getName().equalsIgnoreCase("Last JUSTIN Update")) {
+                    fieldData.setValue(null);
+                }
+            }
+            StringWriter stringFile = new StringWriter();
             objectMapper.writeValue(stringFile, agencyFile);
             //System.out.println("JustinAgencyFile JSON is\n"+stringFile);
 
-            ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+            StringWriter stringFile2 = new StringWriter();
             objectMapper.writeValue(stringFile2, businessFile);
-
             //System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1",businessFile);
 
+            StringWriter stringFile3 = new StringWriter();
             objectMapper.writeValue(stringFile3, demsCaseFile);
             //System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            StringWriter stringFile4 = new StringWriter();
+            objectMapper.writeValue(stringFile4, expectedDemsCaseData);
+            //System.out.println("\n\nExpectedDemsChargeAssessmentCaseData JSON is\n"+stringFile4);
 
-    }
-
-    //@Test
-    public void testTraverseJsonFiles() {
-        String testFileFolder = getClass().getProtectionDomain().getCodeSource().getLocation().getPath()+"json/justin/agency_file";
-        System.out.println(testFileFolder);
-        File testJsonFolder = new File(testFileFolder);
-
-        if(testJsonFolder.isDirectory()) {  // Run with JAR file
-            System.out.println("this is a directory.");
-            File [] files = testJsonFolder.listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.startsWith("justin");
-                }
-            });
-
-            for (File justinFile : files) {
-                String justinFilePath = justinFile.getAbsolutePath();
-                justinFile.getAbsolutePath();
-                System.out.println("Justin File:" + justinFilePath);
-
-                StringBuilder b = new StringBuilder(justinFilePath);
-                b.replace(justinFilePath.lastIndexOf("justin"), justinFilePath.lastIndexOf("justin") + 6, "common" );
-                String commonFilePath = b.toString();
-                System.out.println("Common File:" + commonFilePath);
-
-                b = new StringBuilder(justinFilePath);
-                b.replace(justinFilePath.lastIndexOf("justin"), justinFilePath.lastIndexOf("justin") + 6, "dems" );
-                String demsFilePath = b.toString();
-                System.out.println("Dems File:" + demsFilePath);
-
-                try {
-                    byte[] jsonData = Files.readAllBytes(Paths.get(justinFilePath));
-                    //create ObjectMapper instance
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-
-                    JustinAgencyFile agencyFile = objectMapper.readValue(jsonData, JustinAgencyFile.class);
-                    ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
-                    DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1", businessFile);
-
-                    StringWriter stringFile = new StringWriter();
-                    objectMapper.writeValue(stringFile, agencyFile);
-                    System.out.println("JustinAgencyFile JSON is\n"+stringFile);
-
-                    StringWriter stringFile2 = new StringWriter();
-                    objectMapper.writeValue(stringFile2, businessFile);
-                    System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-
-                    StringWriter stringFile3 = new StringWriter();
-                    objectMapper.writeValue(stringFile3, demsCaseFile);
-                    System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-        
-    
-
-
-            }
-        } else {
-            System.out.println("this is a something else.");
-            // Run with IDE
-            /*
-            final URL url = Launcher.class.getResource("/" + path);
-            if (url != null) {
-                try {
-                    final File apps = new File(url.toURI());
-                    for (File app : apps.listFiles()) {
-                        System.out.println(app);
-                    }
-                } catch (URISyntaxException ex) {
-                    // never happens
-                }
-            }*/
-        }
-/*
-        String fileName = "./json/justin/agency_file";
-        final File folder = new File(fileName);
-        for (final File fileEntry : folder.listFiles()) {
-            System.out.println(fileEntry.getName());
-        }*/
-/*
-        ClassLoader classLoader = getClass().getClassLoader();
-
-        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
-             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
-             BufferedReader reader = new BufferedReader(streamReader)) {
-
-            //create ObjectMapper instance
-            ObjectMapper objectMapper = new ObjectMapper();
-            JustinAgencyFile agencyFile = objectMapper.readValue(reader, JustinAgencyFile.class);
-            objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-
-            StringWriter stringFile = new StringWriter();
-            StringWriter stringFile2 = new StringWriter();
-            StringWriter stringFile3 = new StringWriter();
-
-            objectMapper.writeValue(stringFile, agencyFile);
-            System.out.println("JustinAgencyFile JSON is\n"+stringFile);
-
-            CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
-            objectMapper.writeValue(stringFile2, businessFile);
-
-            System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
-
-            objectMapper.writeValue(stringFile3, demsCaseFile);
-            System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
+            assertEquals(stringFile3.toString(), stringFile4.toString());
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-*/
+
     }
-
-   //@Test
-   public void testAgencyFileName() {
-    String testFileFolder = getClass().getProtectionDomain().getCodeSource().getLocation().getPath()+"json/justin/agency_file";
-    System.out.println(testFileFolder);
-    File testJsonFolder = new File(testFileFolder);
-
-    if(testJsonFolder.isDirectory()) {  // Run with JAR file
-        System.out.println("this is a directory.");
-        File [] files = testJsonFolder.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.startsWith("justin");
-            }
-        });
-
-        for (File justinFile : files) {
-            String justinFilePath = justinFile.getAbsolutePath();
-            justinFile.getAbsolutePath();
-            System.out.println("Justin File:" + justinFilePath);
-
-            StringBuilder b = new StringBuilder(justinFilePath);
-            b.replace(justinFilePath.lastIndexOf("justin"), justinFilePath.lastIndexOf("justin") + 6, "common" );
-            String commonFilePath = b.toString();
-            System.out.println("Common File:" + commonFilePath);
-
-            b = new StringBuilder(justinFilePath);
-            b.replace(justinFilePath.lastIndexOf("justin"), justinFilePath.lastIndexOf("justin") + 6, "dems" );
-            String demsFilePath = b.toString();
-            System.out.println("Dems File:" + demsFilePath);
-
-            try {
-                byte[] jsonData = Files.readAllBytes(Paths.get(justinFilePath));
-                //create ObjectMapper instance
-                ObjectMapper objectMapper = new ObjectMapper();
-                objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-
-                JustinAgencyFile agencyFile = objectMapper.readValue(jsonData, JustinAgencyFile.class);
-                ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
-                DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1", businessFile);
-
-                StringWriter stringFile = new StringWriter();
-                objectMapper.writeValue(stringFile, agencyFile);
-                System.out.println("JustinAgencyFile JSON is\n"+stringFile);
-
-                StringWriter stringFile2 = new StringWriter();
-                objectMapper.writeValue(stringFile2, businessFile);
-                System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-
-                StringWriter stringFile3 = new StringWriter();
-                objectMapper.writeValue(stringFile3, demsCaseFile);
-                System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-    
-
-
-
-        }
-    } else {
-        System.out.println("this is a something else.");
-        // Run with IDE
-        /*
-        final URL url = Launcher.class.getResource("/" + path);
-        if (url != null) {
-            try {
-                final File apps = new File(url.toURI());
-                for (File app : apps.listFiles()) {
-                    System.out.println(app);
-                }
-            } catch (URISyntaxException ex) {
-                // never happens
-            }
-        }*/
-    }
-/*
-    String fileName = "./json/justin/agency_file";
-    final File folder = new File(fileName);
-    for (final File fileEntry : folder.listFiles()) {
-        System.out.println(fileEntry.getName());
-    }*/
-/*
-    ClassLoader classLoader = getClass().getClassLoader();
-
-    try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
-         InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
-         BufferedReader reader = new BufferedReader(streamReader)) {
-
-        //create ObjectMapper instance
-        ObjectMapper objectMapper = new ObjectMapper();
-        JustinAgencyFile agencyFile = objectMapper.readValue(reader, JustinAgencyFile.class);
-        objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-
-        StringWriter stringFile = new StringWriter();
-        StringWriter stringFile2 = new StringWriter();
-        StringWriter stringFile3 = new StringWriter();
-
-        objectMapper.writeValue(stringFile, agencyFile);
-        System.out.println("JustinAgencyFile JSON is\n"+stringFile);
-
-        CommonChargeAssessmentCaseData businessFile = new CommonChargeAssessmentCaseData(agencyFile);
-        objectMapper.writeValue(stringFile2, businessFile);
-
-        System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-        DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData(businessFile);
-
-        objectMapper.writeValue(stringFile3, demsCaseFile);
-        System.out.println("\n\nDemsChargeAssessmentCaseData JSON is\n"+stringFile3);
-
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-*/
-}
 
 }
