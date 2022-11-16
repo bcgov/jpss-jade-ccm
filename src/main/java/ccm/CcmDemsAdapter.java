@@ -803,7 +803,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, DemsCaseParticipantData.class)
-        .log("DEMS-bound request data: '${body}'")
+        .log("DEMS-bound request data: '${body}' ...")
         .removeHeader("CamelHttpUri")
         .removeHeader("CamelHttpBaseUri")
         .removeHeaders("CamelHttp*")
@@ -812,6 +812,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
         .doTry()
           .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
+          .log("Person added to case.")
         .doCatch(Exception.class)
           .log(LoggingLevel.ERROR, "Exception: ${exception}")
           .process(new Processor() {
@@ -819,8 +820,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               throw exchange.getException();
             }
           })
-        .endDoTry()
-        .log("Person added to case.")
+        .end()
       .endChoice()
     .otherwise()
       .log("Court case id was not defined. Skipped linking to a case.")
