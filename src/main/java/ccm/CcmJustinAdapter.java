@@ -29,7 +29,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.model.;
 
 import ccm.models.common.data.ApprovedCourtCaseData;
-import ccm.models.common.data.AuthUsersList;
+import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentCaseData;
@@ -640,11 +640,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinAuthUsersList j = exchange.getIn().getBody(JustinAuthUsersList.class);
-        AuthUsersList b = new AuthUsersList(j);
-        exchange.getMessage().setBody(b, AuthUsersList.class);
+        AuthUserList b = new AuthUserList(j);
+        exchange.getMessage().setBody(b, AuthUserList.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, AuthUsersList.class)
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

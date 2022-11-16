@@ -95,7 +95,7 @@ public class DemsListItemFieldData {
             this.dems_name = dems_name;
         }
 
-        public CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
+        public static CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
             CASE_GROUP_FIELD_MAPPINGS caseGroup = null;
 
             if (SYSTEM_SUPPORT.getJustin_name().equals(justin_name)) {
