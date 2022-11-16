@@ -1,9 +1,15 @@
 package ccm.models.system.dems;
 
+import java.io.StringReader;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
+
+import javax.json.JsonString;
+import javax.json.JsonNumber;
+import javax.json.JsonReader;
+import javax.json.JsonObject;
+import javax.json.Json;
+import javax.json.JsonArray;
 
 public class DemsCaseGroupMap {
     Map<String,Long> map;
@@ -12,41 +18,43 @@ public class DemsCaseGroupMap {
         map = new HashMap<String,Long>();
     }
 
-    public DemsCaseGroupMap(Object demsCaseGroupJson) {
+    public DemsCaseGroupMap(String jsonString) {
         this();
 
+        // https://stackoverflow.com/questions/59528817/split-a-jsonarray
+        //
+        // alternatively (via Camel Java DSL unmarshal() method),
+        // https://www.baeldung.com/java-camel-jackson-json-array
+
+        JsonReader reader = Json.createReader(new StringReader(jsonString));
+        JsonArray array = reader.readArray();
+
         /*
-            Example expected DEMS case group json structure
-            [
-                {id=0, name=Legal Assistant, isUserGroup=true}
-                {id=1, name=Submitting Agency, isUserGroup=true}
-                {id=3, name=Paralegal, isUserGroup=true}
-                {id=4, name=System Support, isUserGroup=true}
-                {id=7, name=Lawyer, isUserGroup=true}
-                {id=8, name=Administrator, isUserGroup=true}
-            ]
-        */
+         * Expected example json format
+         * [
+         *      {
+         *          "name": "abc",
+         *          "id": 123,
+         *          "isUserGroup": true
+         *      },
+         *      {
+         *          "name": "xyz",
+         *          "id": 456,
+         *          "isUserGroup": true
+         *      }
+         * ]
+         */
 
-        try {
-            @SuppressWarnings("unchecked")
-            List<LinkedHashMap<String,Object>> demsCaseGroupLinkedHashMap = (List<LinkedHashMap<String,Object>>)demsCaseGroupJson;
-
-            if (demsCaseGroupLinkedHashMap == null || demsCaseGroupLinkedHashMap.isEmpty()) {
-                // null or empty list; do nothing.
-                return;
-            }
-    
-            for (LinkedHashMap<String,Object> element : demsCaseGroupLinkedHashMap) {
-                //DemsCaseGroupData caseGroup = new DemsCaseGroupData();
-    
-                System.out.println("element (" + element.getClass() + ") = '" + element.toString() + "'");
-                System.out.println("element.keySet = '" + element.keySet().toString() + "'");
-                System.out.println("element.values = '" + element.values().toString() + "'");
-
-                map.put((String)element.get("name"), (Long)element.get("id"));
-            }
-        } catch (ClassCastException e) {
-            // conversion error; do nothing.
+        for (int i = 0; i < array.size(); i++) {
+            JsonObject o = array.getJsonObject(i);
+            JsonString name = o.getJsonString("name");
+            JsonNumber id = o.getJsonNumber("id");
+            System.out.println("DEBUG: JsonArray: id of name (" + name + ") = " + id);
+            DemsCaseGroupData data = new DemsCaseGroupData();
+            data.setId(o.getJsonNumber("id").longValue());
+            data.setName(o.getJsonString("name").getString());
+            data.setIsUserGroup(o.getBoolean("isUserGroup"));
+            add(data);
         }
     }
 
@@ -54,5 +62,15 @@ public class DemsCaseGroupMap {
         Long id = (Long)map.get(name);
 
         return id;
+    }
+
+    public void add(DemsCaseGroupData caseGroupData) {
+        if (getIdByName(caseGroupData.getName()) == null) {
+            map.put(caseGroupData.getName(), caseGroupData.getId());
+        }
+    }
+
+    public Map<String,Long> getMap() {
+        return map;
     }
 }

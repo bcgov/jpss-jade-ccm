@@ -9,7 +9,7 @@ import java.time.format.DateTimeParseException;
 
 public class DateTimeUtils {
 
-    // in bcDateTimeString format: "yyyy-MM-dd" or "yyyy-MM-dd HH:mm:ss.SSS"
+    // in bcDateTimeString format: "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss" or "yyyy-MM-dd HH:mm:ss.SSS"
     // out format: "yyyy-MM-dd HH:mm:ss.SSS"
     public static String convertToUtcFromBCDateTimeString(String bcDateTimeString) throws DateTimeParseException {
         // Java 8 - Convert Date Time From One Timezone To Another
@@ -36,7 +36,11 @@ public class DateTimeUtils {
             String bcDateTimeWithTimeZoneString = null;
             if (bcDateTimeString.length() > 10) {
                 // this is a date+time.  Add BC timezone to string.
-                bcDateTimeWithTimeZoneString = bcDateTimeString + " PT";
+                if (bcDateTimeString.contains(".")) {
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + " PT";
+                } else {
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + ".000 PT";
+                }
             } else {
                 // this is a date.  add default time and BC timezone to string.
                 bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00.000 PT";
