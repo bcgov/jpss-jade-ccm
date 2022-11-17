@@ -47,13 +47,14 @@ public class DemsCaseGroupMap {
 
         for (int i = 0; i < array.size(); i++) {
             JsonObject o = array.getJsonObject(i);
-            JsonString name = o.getJsonString("name");
-            JsonNumber id = o.getJsonNumber("id");
-            System.out.println("DEBUG: JsonArray: id of name (" + name + ") = " + id);
+            String name = o.getJsonString("name").getString();
+            Long id = o.getJsonNumber("id").longValue();
+            Boolean isUserGroup = o.getBoolean("isUserGroup");
+            System.out.println("DEBUG: JsonArray: id of name (" + name + ") = " + id + ". isUserGroup = " + isUserGroup);
             DemsCaseGroupData data = new DemsCaseGroupData();
-            data.setId(o.getJsonNumber("id").longValue());
-            data.setName(o.getJsonString("name").getString());
-            data.setIsUserGroup(o.getBoolean("isUserGroup"));
+            data.setId(id);
+            data.setName(name);
+            data.setIsUserGroup(isUserGroup);
             add(data);
         }
     }

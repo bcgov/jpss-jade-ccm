@@ -104,6 +104,8 @@ public class DemsListItemFieldData {
                 caseGroup = ADMINISTRATOR;
             } else if (LAWYER.getJustin_name().equals(justin_name)) {
                 caseGroup = LAWYER;
+            } else if (LEGAL_ASSISTANT.getJustin_name().equals(justin_name)) {
+                caseGroup = LEGAL_ASSISTANT;
             } else if (PARALEGAL.getJustin_name().equals(justin_name)) {
                 caseGroup = PARALEGAL;
             } else if (HROIP.getJustin_name().equals(justin_name)) {

@@ -514,6 +514,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Ignoring unknown event: ${body}")
     .setProperty("justin_event", body())
+    .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
     .process(new Processor() {
       @Override
@@ -528,9 +529,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         // KPI
         EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
         kpi.setError(error);
-        kpi.setEvent_topic_name("{{kafka.topic.general-errors.name}}");
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty(routeId));
+        kpi.setComponent_route_name(routeId);
         exchange.getMessage().setBody(kpi, EventKPI.class);
       }
     })
