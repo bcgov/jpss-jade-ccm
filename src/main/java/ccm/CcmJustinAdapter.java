@@ -6,7 +6,6 @@ package ccm;
 // curl -d '{}' http://ccm-justin-adapter/courtFileCreated
 //
 
-import java.util.List;
 import java.util.StringTokenizer;
 
 // camel-k: language=java
@@ -25,6 +24,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.CamelException;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
@@ -318,30 +318,68 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .log("Processing AGEN_FILE event: ${exchangeProperty.justin_event}")
-    .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        // Insert code that gets executed *before* delegating
-        // to the next processor in the chain.
-    
-        JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-    
-        ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
-    
-        exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
-        exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
-      }})
-    .setProperty("kpi_event_object", body())
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
-    .log("Generate converted business event: ${body}")
-    .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setBody(simple("${exchangeProperty.justin_event}"))
-    .setProperty("event_message_id")
-      .jsonpath("$.event_message_id")
-    .to("direct:confirmEventProcessed")
+    .doTry()
+      .log("Extracting event")
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .log("Extracted event")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          // Insert code that gets executed *before* delegating
+          // to the next processor in the chain.
+      
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+      
+          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+      
+          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .log("Set kpi event object")
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .log("Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .doCatch(Exception.class)
+      .log("General Exception thrown.")
+      .log("${exception}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          Object je = exchange.getIn().getBody();
+          Error error = new Error();
+          error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+          error.setError_summary("Unable to process unknown JUSTIN event.");
+          error.setError_details(je);
+  
+          // KPI
+          EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+          kpi.setError(error);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name(routeId);
+          exchange.getMessage().setBody(kpi, EventKPI.class);
+
+        }})
+      .setProperty("kpi_object", body())
+      .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+      // send to the general errors topic
+      .to("kafka:{{kafka.topic.general-errors.name}}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+      .log("finally, send confirmation for justin event")
+      .setBody(simple("${exchangeProperty.justin_event}"))
+      .setProperty("event_message_id")
+        .jsonpath("$.event_message_id")
+      .to("direct:confirmEventProcessed")
+    .end()
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:preprocessAndPublishEventCreatedKPI")
