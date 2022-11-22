@@ -180,42 +180,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
-  private void getCourtCaseIdByKeyPreProd() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: exchangeProeprty.key
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("key = ${exchangeProperty.key}...")
-    .setProperty("dems_org_unit_id").simple("{{dems.org-unit.id}}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    //.toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    //.toD("rest:get:org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
-    .toD("netty-http:https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    .choice()
-      .when().simple("${header.CamelHttpResponseCode} == 404")
-        .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\"}"))
-        .setHeader("CamelHttpResponseCode", simple("200"))
-        .log("Case not found.")
-      .endChoice()
-      .when().simple("${header.CamelHttpResponseCode} == 200")
-        .setProperty("id", jsonpath("$[0].id"))
-        .log("Case found. Id = ${exchangeProperty.id}")
-      .endChoice()
-      .otherwise()
-        .log(LoggingLevel.ERROR, "Case lookup error occurred: response code = ${header.CamelHttpResponseCode}, response body = '${body}'")
-    .end()
-    ;
-  }
-
   private void getCourtCaseIdByKey() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
