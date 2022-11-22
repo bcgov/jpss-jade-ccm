@@ -375,6 +375,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
     .log("Processing AUTH_LIST event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
@@ -431,6 +432,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
     .log("Processing COURT_FILE event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
@@ -486,6 +488,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
     .log("Processing APPR event: ${body}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
@@ -541,6 +544,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
     .log("Processing CRN_ASSIGN event: ${body}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
