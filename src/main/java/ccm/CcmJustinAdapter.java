@@ -942,10 +942,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setBody(simple("${exchangeProperty.error_event_object}"))
+    .unmarshal().json(JsonLibrary.Jackson)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-        Object je = (Object)exchange.getProperty("error_event_object");
+        Object je = (Object)exchange.getIn().getBody();
         Error error = new Error();
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_summary("Unable to process JUSTIN event.");
