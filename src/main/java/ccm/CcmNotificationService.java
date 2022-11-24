@@ -25,7 +25,9 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.common.event.ApprovedCourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.ChargeAssessmentCaseEvent;
+import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.utils.DateTimeUtils;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -34,8 +36,8 @@ public class CcmNotificationService extends RouteBuilder {
     processChargeAssessmentCaseEvents();
     processApprovedCourtCaseEvents();
     processChargeAssessmentCaseChanged();
-    processCourtCaseCreated();
-    processCourtCaseUpdated();
+    processApprovedCourtCaseUpdated();
+    processChargeAssessmentCaseUpdated();
     processCourtCaseAuthListChanged();
     processApprovedCourtCaseChanged();
     processCourtCaseAppearanceChanged();
@@ -79,20 +81,20 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CREATED))
-        .setProperty("kpi_component_route_name", simple("processCourtCaseCreated"))
+        .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCourtCaseCreated")
+        .to("direct:processApprovedCourtCaseUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.UPDATED))
-        .setProperty("kpi_component_route_name", simple("processCourtCaseUpdated"))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCourtCaseUpdated")
+        .to("direct:processChargeAssessmentCaseUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -115,7 +117,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processCourtCaseCreated() {
+  private void processApprovedCourtCaseUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -200,6 +202,9 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    // IN
+    // property: event_object
+    // property: caseFound
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -211,28 +216,28 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent();
+        // KPI: Preserve original event properties
+        ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+        ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+        ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+        ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+        ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
-        // hardcoding boolean to false for first implementation
-        //boolean court_case_exists = ex.getIn().getBody() != null && ex.getIn().getBody().toString().length() > 0;
+        ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
+        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
+
         boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
-        String event_key = ex.getIn().getHeader("event_key").toString();
-
-        be.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.toString());
-        be.setEvent_key(event_key);
-        be.setJustin_rcc_id(event_key);
-
         if (court_case_exists) {
-          be.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
         } else {
-          be.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
         }
 
-        ex.getMessage().setBody(be);
+        ex.getMessage().setBody(derived_event);
 
-        // KPI
-        ex.setProperty("kpi_event_object", be);
+        // KPI: Set new event object
+        ex.setProperty("kpi_event_object", derived_event);
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
@@ -243,10 +248,16 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:preprocessAndPublishEventCreatedKPI")
+    // KPI: restore previous values
+    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+    .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+    .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+    .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
   }
 
-  private void processCourtCaseUpdated() {
+  private void processChargeAssessmentCaseUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -466,4 +477,82 @@ public class CcmNotificationService extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
+
+  
+  private void publishChargeAssessmentCaseKPIError() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_object
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setBody(simple("${exchangeProperty.error_event_object}"))
+    .unmarshal().json(JsonLibrary.Jackson)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        Object je = (Object)exchange.getIn().getBody();
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_summary("Unable to process JUSTIN event.");
+        error.setError_details(je);
+
+        // KPI
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        kpi.setError(error);
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        exchange.getMessage().setBody(kpi, EventKPI.class);
+      }})
+
+    .setProperty("kpi_object", body())
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Generate kpi event: ${body}")
+    // send to the chargeassessmentcase errors topic
+    .to("kafka:{{kafka.topic.chargeassessmentcase-errors.name}}")
+    .log("kpi event added to chargeassessmentcase errors topic")
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .setBody(simple("${exchangeProperty.kpi_object}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        EventKPI kpi = exchange.getIn().getBody(EventKPI.class);
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
+        System.out.println(expectedTopicName);
+
+        try {
+          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+          Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
+          String recordMetadata = o.toString();
+          System.out.println("recordMetadata:"+recordMetadata);
+
+          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
+
+          if (tokenizer.countTokens() == 2) {
+            // get first token
+            String topicAndPartition = tokenizer.nextToken();
+
+            if (topicAndPartition.startsWith(expectedTopicName)) {
+              // this is the metadata we are looking for
+              Long offset = Long.parseLong(tokenizer.nextToken());
+              exchange.setProperty("kpi_event_topic_offset", offset);
+              kpi.setEvent_topic_offset(offset);
+              kpi.setEvent_topic_name(expectedTopicName);
+            }
+          }
+        } catch (Exception e) {
+          // failed to retrieve offset. Do nothing.
+        }
+        exchange.getMessage().setBody(kpi, EventKPI.class);
+      }})
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+
+
 }

@@ -12,7 +12,7 @@
     "value" : "105: 22-472028"
   }, {
     "name" : "Submit Date",
-    "value" : "2022-09-27 07:00:00"
+    "value" : "2022-09-27 07:00:00.000"
   }, {
     "name" : "Assessment Crown",
     "value" : "OHarris, Debbie Nn"
@@ -33,13 +33,13 @@
     "value" : [ "VUL1", "Indigenous", "HROIP" ]
   }, {
     "name" : "Offence Date (earliest)",
-    "value" : "2022-01-01 08:00:00"
+    "value" : "2022-01-01 08:00:00.000"
   }, {
-    "name" : "Proposed App. Date (earliest)",
-    "value" : "2022-10-27 07:00:00"
+    "name" : "Proposed Appr. Date (earliest)",
+    "value" : "2022-10-27"
   }, {
     "name" : "Proposed Process Type",
-    "value" : "AN - Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike"
+    "value" : "AN - Thomasffffffffffffffffffffffff, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh; AN - Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike"
   }, {
     "name" : "Proposed Crown Office",
     "value" : "C402: Kelowna"
@@ -48,9 +48,11 @@
     "value" : null
   }, {
     "name" : "Accused Full Name",
-    "value" : "Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh Thomasffffffffffffffffffffffff, Willeeeeeeeeeeeeeeeeeeeeeeeeee Raragdfagadf Asdfasdfasdfsad Joneseeeeeeeeeeeeeeeeeeeeeeeee, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Michaeltttttttttttttttttttttt Asdfasdfasdfasdfas Asdfsadfasdfasdfasd Jonestttttttttttttttttttttttt"
-  }, {
+    "value" : "Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh Thomasffffffffffffffffffffffff, Willeeeeeeeeeeeeeeeeeeeeeeeeee Raragdfagadf Asdfasdfasdfsad Joneseeeeeeeeeeeeeeeeeeeeeeeee, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Michaeltttttttttttttttttttttt Asdfasdfasdfasdfas Asdfsadfasdfasdfasd Jonestttttttttttttttttttttttt"  }, {
     "name" : "RCC Status",
     "value" : "Received"
+  }, {
+    "name" : "Last JUSTIN Update",
+    "value" : null
   } ]
 }

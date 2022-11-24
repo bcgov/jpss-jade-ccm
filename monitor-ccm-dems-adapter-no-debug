@@ -17,5 +17,5 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-export TITLEPREFIX="DEMS Adapter   "
+export TITLEPREFIX="DEMS Adapter $ns "
 kamel -n $ns log ccm-dems-adapter | grep -v "DEBUG"

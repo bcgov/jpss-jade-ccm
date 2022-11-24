@@ -67,9 +67,7 @@ public class DemsListItemFieldData {
         ADMINISTRATOR("JRS_ADMINISTRATOR","Administrator"),
         LAWYER("JRS_BASE_LAWYER","Lawyer"),
         LEGAL_ASSISTANT("JRS_BASE_LEGAL_ASST","Legal Assistant"),
-        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal"),
-        HROIP("JRS_HROIP_USER","HROIP"),
-        BUSINESS_INTELLIGENCE("JRS_CROWN_BI","Business Intelligence");
+        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal");
 
         private String justin_name;
         private String dems_name;
@@ -95,7 +93,7 @@ public class DemsListItemFieldData {
             this.dems_name = dems_name;
         }
 
-        public CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
+        public static CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
             CASE_GROUP_FIELD_MAPPINGS caseGroup = null;
 
             if (SYSTEM_SUPPORT.getJustin_name().equals(justin_name)) {
@@ -104,12 +102,10 @@ public class DemsListItemFieldData {
                 caseGroup = ADMINISTRATOR;
             } else if (LAWYER.getJustin_name().equals(justin_name)) {
                 caseGroup = LAWYER;
+            } else if (LEGAL_ASSISTANT.getJustin_name().equals(justin_name)) {
+                caseGroup = LEGAL_ASSISTANT;
             } else if (PARALEGAL.getJustin_name().equals(justin_name)) {
                 caseGroup = PARALEGAL;
-            } else if (HROIP.getJustin_name().equals(justin_name)) {
-                caseGroup = HROIP;
-            } else if (BUSINESS_INTELLIGENCE.getJustin_name().equals(justin_name)) {
-                caseGroup = BUSINESS_INTELLIGENCE;
             }
             
             return caseGroup;

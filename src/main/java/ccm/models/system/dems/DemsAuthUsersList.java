@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import ccm.models.common.data.AuthUser;
-import ccm.models.common.data.AuthUsersList;
+import ccm.models.common.data.AuthUserList;
 
 public class DemsAuthUsersList {
     private List<String> userKeys;
@@ -13,8 +13,8 @@ public class DemsAuthUsersList {
     public DemsAuthUsersList() {
     }
 
-    public DemsAuthUsersList(AuthUsersList commonList) {
-      Iterator<AuthUser> i = commonList.getAuth_users_list().iterator();
+    public DemsAuthUsersList(AuthUserList commonList) {
+      Iterator<AuthUser> i = commonList.getAuth_user_list().iterator();
 
       List<String> demsList = new ArrayList<String>();
       

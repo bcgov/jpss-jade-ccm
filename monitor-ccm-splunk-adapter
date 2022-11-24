@@ -18,6 +18,6 @@ fi
 echo "`basename $0` to $ns ..."
 
 export TITLEPREFIX="SPLUNK Adapter   "
-echo -ne "\e]0;SPLUNK Adapter\a"
+echo -ne "\e]0;SPLUNK Adapter $env\a"
 
 kamel -n $ns log ccm-splunk-adapter

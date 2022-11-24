@@ -27,7 +27,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{DEMS-API-URI}}/org-units/1/cases/171441.0877/id",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/50473.0734/id",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
@@ -35,7 +35,7 @@
 										"org-units",
 										"1",
 										"cases",
-										"171441.0877",
+										"50473.0734",
 										"id"
 									]
 								}
@@ -79,21 +79,24 @@
 						{
 							"name": "GetCaseDataById",
 							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/28",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/28",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"28"
 									]
@@ -167,11 +170,21 @@
 						{
 							"name": "UpdateCase - PST",
 							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
 								"method": "PUT",
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\"name\":\"PETERSON, Jeffrey Alan; JOHNSON, Kyle; GRANT, Howard James\",\"key\":\"50431.0734\",\"fields\":[{\"name\":\"Court File Unique ID\",\"value\":\"39849\"},{\"name\":\"Crown Election\",\"value\":\"IND\"},{\"name\":\"Court File Level\",\"value\":\"P\"},{\"name\":\"Class\",\"value\":\"A\"},{\"name\":\"Designation\",\"value\":\"GA\"},{\"name\":\"Sworn Date\",\"value\":\"2022-07-22 07:00:00\"},{\"name\":\"Charges\",\"value\":\"CCC 102(7) Firearm: posession while prohibited 102(7),CCC 111(1) Firearm application\"},{\"name\":\"Court File No.\",\"value\":\"546511-1\"},{\"name\":\"Court File Details\",\"value\":\"4801: 546511-1\"},{\"name\":\"Court Home Registry\",\"value\":\"4801: Kelowna Law Courts\"},{\"name\":\"Court Home Registry Name\",\"value\":\"Kelowna Law Courts\"},{\"name\":\"Case Flags\",\"value\":[]},{\"name\":\"Accused Full Name\",\"value\":\"Kyle Johnson, Jeffrey Peterson, Howard Grant\"},{\"name\":\"Crown Office\",\"value\":\"Kelowna\"}]}",
+									"raw": "{\"name\":\"BASSI, Ryan\",\"key\":\"173245.0877\",\"fields\":[{\"name\":\"Initial Appr.\",\"value\":\"2022-11-15 23:00:00.000\"},{\"name\":\"Initial Appr. Rsn\",\"value\":\"JIR\"},{\"name\":\"Next Appr.\",\"value\":\"2022-11-15 23:00:00.000\"},{\"name\":\"Next Appr. Rsn\",\"value\":\"JIR\"},{\"name\":\"First Trial Date\",\"value\":null},{\"name\":\"First Trial Date Reason\",\"value\":null}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -179,20 +192,13 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/102",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/21",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
-										"102"
+										"21"
 									]
 								}
 							},
@@ -205,7 +211,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n  \"keyField\": \"key\",\r\n  \"values\": [\r\n  ]\r\n}",
+									"raw": "{\"keyField\":\"key\",\"values\":[\"122204.0734\",\"122205.0734\",\"122206.0734\"]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -213,7 +219,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/groups/1/sync",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/148/groups/8/sync",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -226,9 +232,9 @@
 										"api",
 										"v1",
 										"cases",
-										"58",
+										"148",
 										"groups",
-										"1",
+										"8",
 										"sync"
 									]
 								}
@@ -263,13 +269,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{DEMS-API-URI}}/cases/12/groups",
+									"raw": "{{DEMS-API-URI}}/cases/148/groups",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
 									"path": [
 										"cases",
-										"12",
+										"148",
 										"groups"
 									]
 								}
@@ -418,6 +424,16 @@
 						{
 							"name": "FindCaseIdsByCustomFields",
 							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
 								"method": "GET",
 								"header": [],
 								"url": {
@@ -577,7 +593,7 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/DA.accused.5",
+									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/122204.0734",
 									"protocol": "https",
 									"host": [
 										"346n1v5oeh",
@@ -592,7 +608,7 @@
 										"org-units",
 										"1",
 										"persons",
-										"DA.accused.5"
+										"122204.0734"
 									]
 								}
 							},
@@ -629,6 +645,62 @@
 								}
 							},
 							"response": []
+						}
+					]
+				},
+				{
+					"name": "User",
+					"item": [
+						{
+							"name": "GetUserCases",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/users/key:73638.0734/cases",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"users",
+										"key:73638.0734",
+										"cases"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{DEMS-Token}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
 						}
 					]
 				},
@@ -743,6 +815,36 @@
 									"key": "organisationalUnitId",
 									"value": "1"
 								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCustomFields Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/site/org-units/1/fields",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"site",
+								"org-units",
+								"1",
+								"fields"
 							]
 						}
 					},

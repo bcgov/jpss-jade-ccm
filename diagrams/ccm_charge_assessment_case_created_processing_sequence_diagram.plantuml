@@ -98,16 +98,22 @@ deactivate d_adapter
 case_notification_service -> d_adapter: Sync case group members
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-d_adapter -> d_interface: Sync case group members in DEMS
+d_adapter -> d_interface: Retrieve case-specific group name / id list
 activate d_interface
-d_interface --> d_adapter: Acknowledged
+d_interface --> d_adapter: Case-specific user group name / id list
 deactivate d_interface
-d_adapter --> case_notification_service: Acknowledged
+loop For every case-specific user group
+    d_adapter -> d_interface: Sync case group members in DEMS
+    activate d_interface
+    d_interface --> d_adapter: Acknowledged
+    deactivate d_interface
+end
+d_adapter --> notification_service: Acknowledged
 deactivate d_adapter
 
 deactivate case_notification_service
 
 caption
-Prepared by David Agahchen | Updated October 17, 2022
+Prepared by David Agahchen | Updated November 22, 2022
 end caption
 @enduml
