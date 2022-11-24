@@ -17,6 +17,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-export TITLEPREFIX="Notification Service   "
-echo -ne "\e]0;Notification Service\a"
+export TITLEPREFIX="Notification Service $env "
+echo -ne "\e]0;Notification Service $env\a"
+
 kamel -n $ns log ccm-notification-service

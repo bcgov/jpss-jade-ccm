@@ -17,4 +17,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
+export TITLEPREFIX="Notification Events $env "
+echo -ne "\e]0;Notification Events $env\a"
+
 kamel -n $ns log ccm-notification-service | grep "Event from Kafka "

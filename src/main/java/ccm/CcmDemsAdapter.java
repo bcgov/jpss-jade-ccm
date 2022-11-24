@@ -129,6 +129,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      // .log("Before delay call...")
+      // .delay(10000)
+      // .log("After delay call.")
       .setProperty("key", simple("${header.event_key}"))
       .log("Key = ${exchangeProperty.key}")
       .to("direct:getCourtCaseIdByKey")

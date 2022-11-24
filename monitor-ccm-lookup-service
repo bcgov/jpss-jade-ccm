@@ -17,6 +17,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-export TITLEPREFIX="Lookup Service   "
-echo -ne "\e]0;Lookup Service\a"
+export TITLEPREFIX="Lookup Service $env "
+echo -ne "\e]0;Lookup Service $env\a"
+
 kamel -n $ns log ccm-lookup-service
