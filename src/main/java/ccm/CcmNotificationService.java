@@ -25,7 +25,9 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.common.event.ApprovedCourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.ChargeAssessmentCaseEvent;
+import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.utils.DateTimeUtils;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -475,4 +477,82 @@ public class CcmNotificationService extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
+
+  
+  private void publishChargeAssessmentCaseKPIError() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_object
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setBody(simple("${exchangeProperty.error_event_object}"))
+    .unmarshal().json(JsonLibrary.Jackson)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        Object je = (Object)exchange.getIn().getBody();
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_summary("Unable to process JUSTIN event.");
+        error.setError_details(je);
+
+        // KPI
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        kpi.setError(error);
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        exchange.getMessage().setBody(kpi, EventKPI.class);
+      }})
+
+    .setProperty("kpi_object", body())
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Generate kpi event: ${body}")
+    // send to the chargeassessmentcase errors topic
+    .to("kafka:{{kafka.topic.chargeassessmentcase-errors.name}}")
+    .log("kpi event added to chargeassessmentcase errors topic")
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .setBody(simple("${exchangeProperty.kpi_object}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        EventKPI kpi = exchange.getIn().getBody(EventKPI.class);
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
+        System.out.println(expectedTopicName);
+
+        try {
+          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+          Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
+          String recordMetadata = o.toString();
+          System.out.println("recordMetadata:"+recordMetadata);
+
+          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
+
+          if (tokenizer.countTokens() == 2) {
+            // get first token
+            String topicAndPartition = tokenizer.nextToken();
+
+            if (topicAndPartition.startsWith(expectedTopicName)) {
+              // this is the metadata we are looking for
+              Long offset = Long.parseLong(tokenizer.nextToken());
+              exchange.setProperty("kpi_event_topic_offset", offset);
+              kpi.setEvent_topic_offset(offset);
+              kpi.setEvent_topic_name(expectedTopicName);
+            }
+          }
+        } catch (Exception e) {
+          // failed to retrieve offset. Do nothing.
+        }
+        exchange.getMessage().setBody(kpi, EventKPI.class);
+      }})
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+
+
 }
