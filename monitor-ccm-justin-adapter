@@ -17,7 +17,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-export TITLEPREFIX="JUSTIN Adapter $env "
-echo -ne "\e]0;JUSTIN Adapter $env\a"
+export TITLEPREFIX="JUSTIN Adapter $ns "
+echo -ne "\e]0;JUSTIN Adapter $ns\a"
 
 kamel -n $ns log ccm-justin-adapter
