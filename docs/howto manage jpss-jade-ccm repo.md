@@ -1,4 +1,4 @@
-# How-to's
+# How-to manage the jpss-jade-ccm repo
 
 This document lists the how-to's around developing and maintaining jpss-jade-ccm.
 
