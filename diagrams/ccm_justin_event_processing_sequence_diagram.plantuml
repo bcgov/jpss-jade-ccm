@@ -21,7 +21,9 @@ loop Every 5 minutes
     deactivate j_interface
     loop For every business event
         j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-        alt AGEN_FILE event
+        alt MANU_FILE event
+            j_adapter ->o charge_assessment_cases_topic: Produce MANUALLY_CHANGED event
+        else AGEN_FILE event
             j_adapter ->o charge_assessment_cases_topic: Produce CHANGED event
         else AUTH_LIST changed event
             j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
@@ -43,6 +45,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated October 17, 2022
+Prepared by David Agahchen | Updated November 24, 2022
 end caption
 @enduml

@@ -8,12 +8,12 @@ participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment Case CHANGED Event Processing Sequence Diagram
+CCM Charge Assessment Case MANUALLY_CHANGED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-charge_assessment_cases_topic o-> notification_service: Process court case CHANGED event
+charge_assessment_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
 activate notification_service
 notification_service -> lookup_service: Check case exists
 activate lookup_service
@@ -32,9 +32,7 @@ d_adapter --> lookup_service: Response
 deactivate d_adapter
 lookup_service --> notification_service: Response
 deactivate lookup_service
-alt New court case AND auto case creation = FALSE
-    notification_service -> notification_service: No operation
-else New court case AND auto case creation = TRUE
+alt New court case
     notification_service ->o charge_assessment_cases_topic: Produce court case CREATED event
 else Existing court case
     notification_service ->o charge_assessment_cases_topic: Produce court case UPDATED event
