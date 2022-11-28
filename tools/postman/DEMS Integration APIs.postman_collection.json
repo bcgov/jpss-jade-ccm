@@ -546,7 +546,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\"id\":\"36\",\"key\":\"64945.0002\",\"name\":\"Willie Jones\",\"firstName\":\"Willie\",\"lastName\":\"Jones\",\"fields\":[{\"name\":\"Date Of Birth\",\"value\":null},{\"name\":\"Given Name 2\",\"value\":null},{\"name\":\"Given Name 3\",\"value\":null},{\"name\":\"Full Name\",\"value\":\"Willie Jones\"}],\"address\":{\"email\":null},\"orgs\":[{\"organisationId\":\"29\"}]}",
+									"raw": "{\"id\":\"25\",\"key\":\"170069.0877\",\"name\":\"Bill Jackson\",\"firstName\":\"Bill\",\"lastName\":\"Jackson\",\"fields\":[{\"name\":\"Given Name 2\",\"value\":null},{\"name\":\"Given Name 3\",\"value\":null},{\"name\":\"Full Name\",\"value\":\"Bill Jackson  ()\"}],\"address\":{\"email\":null},\"orgs\":[{\"organisationId\":\"25\"}]}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -554,22 +554,15 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/64945.0002",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons/170069.0877",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"persons",
-										"64945.0002"
+										"170069.0877"
 									]
 								}
 							},
@@ -581,6 +574,16 @@
 								"disableBodyPruning": true
 							},
 							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{DEMS-Token}}",
+											"type": "string"
+										}
+									]
+								},
 								"method": "GET",
 								"header": [],
 								"body": {
@@ -593,22 +596,15 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons/122204.0734",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons/170069.0877",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"persons",
-										"122204.0734"
+										"170069.0877"
 									]
 								}
 							},
