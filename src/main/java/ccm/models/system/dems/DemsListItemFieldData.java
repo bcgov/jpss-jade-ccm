@@ -17,18 +17,18 @@ public class DemsListItemFieldData {
         HROIP("HROIP"),
         DO_LTO("DO/LTO");
 
-        private String name;
+        private String label;
 
-        public String getName() {
-            return name;
+        public String getLabel() {
+            return label;
         }
 
-        public void setName(String name) {
-            this.name = name;
+        public void setLabel(String label) {
+            this.label = label;
         }
 
         private CASE_FLAG_FIELD_MAPPINGS(String name) {
-            this.name = name;
+            this.label = name;
         }
     }
 
