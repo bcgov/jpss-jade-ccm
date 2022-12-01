@@ -25,6 +25,7 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     CHANGED,
     CREATED,
     UPDATED,
+    MANUALLY_CHANGED,
     AUTH_LIST_CHANGED;
   }
 
@@ -44,6 +45,9 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
       case AGEN_FILE:
         setEvent_status(STATUS.CHANGED.toString());
+        break;
+      case MANU_FILE:
+        setEvent_status(STATUS.MANUALLY_CHANGED.toString());
         break;
       case AUTH_LIST:
         setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());

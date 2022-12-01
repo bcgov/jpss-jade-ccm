@@ -18,11 +18,16 @@ public class JustinEvent {
     AUTH_LIST,
     COURT_FILE,
     APPR,
-    CRN_ASSIGN;
+    CRN_ASSIGN,
+    MANU_FILE;
   }
 
   public boolean isAgenFileEvent() {
     return STATUS.AGEN_FILE.equals(getMessage_event_type_cd());
+  }  
+
+  public boolean isManuFileEvent() {
+    return STATUS.MANU_FILE.equals(getMessage_event_type_cd());
   }  
   
   public boolean isCourtFileEvent() {
