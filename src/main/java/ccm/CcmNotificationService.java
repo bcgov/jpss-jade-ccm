@@ -37,9 +37,10 @@ public class CcmNotificationService extends RouteBuilder {
     processApprovedCourtCaseEvents();
     processChargeAssessmentCaseChanged();
     processManualChargeAssessmentCaseChanged();
-    processApprovedCourtCaseUpdated();
+    processChargeAssessmentCaseCreated();
     processChargeAssessmentCaseUpdated();
     processCourtCaseAuthListChanged();
+    processCourtCaseAuthListUpdated();
     processApprovedCourtCaseChanged();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
@@ -91,11 +92,11 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CREATED))
-        .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseUpdated"))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseCreated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processApprovedCourtCaseUpdated")
+        .to("direct:processChargeAssessmentCaseCreated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -127,7 +128,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processApprovedCourtCaseUpdated() {
+  private void processChargeAssessmentCaseCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -224,8 +225,6 @@ public class CcmNotificationService extends RouteBuilder {
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-    .log("autoCreateFlag:${exchangeProperty.autoCreateFlag}")
-    .log("caseFound:${exchangeProperty.caseFound}")
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
@@ -260,7 +259,7 @@ public class CcmNotificationService extends RouteBuilder {
         .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .otherwise()
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_SKIPPED.name()))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_SKIPPED.name()))
     .end()
     .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -269,7 +268,7 @@ public class CcmNotificationService extends RouteBuilder {
     // KPI: restore previous values
     .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
     .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+    .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
     .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
     .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
@@ -328,7 +327,7 @@ public class CcmNotificationService extends RouteBuilder {
     // KPI: restore previous values
     .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
     .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+    .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
     .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
     .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
@@ -357,6 +356,68 @@ public class CcmNotificationService extends RouteBuilder {
   }
 
   private void processCourtCaseAuthListChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
+    .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
+    .choice()
+      .when(simple("${exchangeProperty.caseFound} != ''"))
+        .to("direct:processCourtCaseAuthListUpdated")
+      .otherwise()
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            // KPI: Preserve original event properties
+            ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+            ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+            ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+            ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+            ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
+    
+            ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
+            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
+    
+            boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
+    
+            if (court_case_exists) {
+              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+            } else {
+              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+            }
+    
+            ex.getMessage().setBody(derived_event);
+    
+            // KPI: Set new event object
+            ex.setProperty("kpi_event_object", derived_event);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_SKIPPED.name()))
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("kpi_component_route_name", simple(routeId))
+        .to("direct:preprocessAndPublishEventCreatedKPI")
+        // KPI: restore previous values
+        .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+        .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+        .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+        .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
+    .end()
+    ;
+
+  }
+
+
+  private void processCourtCaseAuthListUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
