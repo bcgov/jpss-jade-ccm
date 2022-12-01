@@ -32,7 +32,7 @@ public class DateTimeUtils {
         ZonedDateTime zonedDateTime = null;
 
         // preprocess input date/time string.
-        if (bcDateTimeString != null) {
+        if (bcDateTimeString != null && !bcDateTimeString.isEmpty()) {
             String bcDateTimeWithTimeZoneString = null;
             if (bcDateTimeString.length() > 10) {
                 // this is a date+time.  Add BC timezone to string.
