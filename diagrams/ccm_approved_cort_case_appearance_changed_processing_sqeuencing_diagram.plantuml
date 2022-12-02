@@ -3,9 +3,9 @@
 
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections court_case_metadatas_topic as "Approved Court Case Events"
-participant case_notification_service as "Notification Service"
-participant case_lookup_service as "Lookup Service"
+collections approved_court_cases_topic as "Approved Court Case Events"
+participant notification_service as "Notification Service"
+participant lookup_service as "Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
@@ -15,12 +15,33 @@ end title
 
 autonumber
 
-court_case_metadatas_topic o-> case_notification_service: Process APPEARANCE_CHANGED event
-activate case_notification_service
+approved_court_cases_topic o-> notification_service: Process APPEARANCE_CHANGED event
+activate notification_service
 
-case_notification_service -> case_lookup_service: Call /getCourtCaseAppearanceSummaryList
-activate case_lookup_service
-case_lookup_service -> j_adapter: Retrieve court court apperance details from JUSTIN
+notification_service -> lookup_service: Check case exists
+activate lookup_service
+note over lookup_service, d_adapter
+Integration assumption: DEMS is the system-of-record
+for whether a court case already exists or not
+end note
+lookup_service -> d_adapter: Check case existence in DEMS
+activate d_adapter
+d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+d_adapter -> d_interface: Check case existence in DEMS
+activate d_interface
+
+break Case not found - end processing
+d_interface --> d_adapter: Case not found
+deactivate d_interface
+d_adapter --> lookup_service: Case not found
+lookup_service --> notification_service: Case not found
+deactivate lookup_service
+deactivate d_adapter
+end break
+
+notification_service -> lookup_service: Call /getCourtCaseAppearanceSummaryList
+activate lookup_service
+lookup_service -> j_adapter: Retrieve court court apperance details from JUSTIN
 
 activate j_adapter
 j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
@@ -29,15 +50,15 @@ activate j_interface
 j_interface --> j_adapter: Appearance details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> case_lookup_service: Court case appearance summary list
+j_adapter --> lookup_service: Court case appearance summary list
 deactivate j_adapter
 
-case_lookup_service --> case_notification_service: Result of getCourtCaseAppearanceSummaryList
-deactivate case_lookup_service
+lookup_service --> notification_service: Result of getCourtCaseAppearanceSummaryList
+deactivate lookup_service
 
-case_notification_service -> case_lookup_service: Retrieve court case metadata details
-activate case_lookup_service
-case_lookup_service -> j_adapter: Retrieve court case metadata details from JUSTIN
+notification_service -> lookup_service: Retrieve court case metadata details
+activate lookup_service
+lookup_service -> j_adapter: Retrieve court case metadata details from JUSTIN
 
 activate j_adapter
 j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
@@ -46,14 +67,14 @@ activate j_interface
 j_interface --> j_adapter: Court file details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> case_lookup_service: Court case metadata details
+j_adapter --> lookup_service: Court case metadata details
 deactivate j_adapter
 
-case_lookup_service --> case_notification_service: Court case metadata details
-deactivate case_lookup_service
+lookup_service --> notification_service: Court case metadata details
+deactivate lookup_service
 
 loop For every related court case
-    case_notification_service -> d_adapter: Call /updateCourtCaseWithAppearanceSummary
+    notification_service -> d_adapter: Call /updateCourtCaseWithAppearanceSummary
     activate d_adapter
 
     d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
@@ -64,14 +85,14 @@ loop For every related court case
     d_interface --> d_adapter: Updated
     deactivate d_interface
 
-    d_adapter --> case_notification_service: Updated
+    d_adapter --> notification_service: Updated
     deactivate d_adapter
 
 end
 
-deactivate case_notification_service
+deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated October 17, 2022
+Prepared by David Agahchen | Updated December 1, 2022
 end caption
 @enduml
