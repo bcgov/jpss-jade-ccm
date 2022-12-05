@@ -225,52 +225,50 @@ public class CcmNotificationService extends RouteBuilder {
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        // KPI: Preserve original event properties
-        ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-        ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
-        ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
-        ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
-        ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
-
-        ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
-        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
-
-        boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
-
-        if (court_case_exists) {
-          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
-        } else {
-          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
-        }
-
-        ex.getMessage().setBody(derived_event);
-
-        // KPI: Set new event object
-        ex.setProperty("kpi_event_object", derived_event);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
-    .log("Generating derived court case event: ${body}")
     .choice()
       .when(simple("${exchangeProperty.autoCreateFlag} == 'true' || ${exchangeProperty.caseFound} != ''"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            // KPI: Preserve original event properties
+            ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+            ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+            ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+            ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+            ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
+
+            ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
+            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
+
+            boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
+
+            if (court_case_exists) {
+              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+            } else {
+              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+            }
+
+            ex.getMessage().setBody(derived_event);
+
+            // KPI: Set new event object
+            ex.setProperty("kpi_event_object", derived_event);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+        .log("Generating derived court case event: ${body}")
         .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-      .otherwise()
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_SKIPPED.name()))
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("kpi_component_route_name", simple(routeId))
+        .to("direct:preprocessAndPublishEventCreatedKPI")
+        // KPI: restore previous values
+        .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+        .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+        .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+        .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     .end()
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
-    // KPI: restore previous values
-    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
-    .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-    .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
-    .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
-    .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
   }
 
@@ -319,6 +317,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
+    .log("Returned topic value = ${body}")
     .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setProperty("kpi_component_route_name", simple(routeId))
@@ -371,46 +370,6 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
         .to("direct:processCourtCaseAuthListUpdated")
-      .otherwise()
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            // KPI: Preserve original event properties
-            ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-            ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
-            ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
-            ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
-            ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
-    
-            ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
-            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
-    
-            boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
-    
-            if (court_case_exists) {
-              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
-            } else {
-              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
-            }
-    
-            ex.getMessage().setBody(derived_event);
-    
-            // KPI: Set new event object
-            ex.setProperty("kpi_event_object", derived_event);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_SKIPPED.name()))
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
-        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-        .setProperty("kpi_component_route_name", simple(routeId))
-        .to("direct:preprocessAndPublishEventCreatedKPI")
-        // KPI: restore previous values
-        .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
-        .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
-        .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
-        .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     .end()
     ;
 
