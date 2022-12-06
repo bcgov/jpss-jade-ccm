@@ -19,7 +19,9 @@ public class JustinEvent {
     COURT_FILE,
     APPR,
     CRN_ASSIGN,
-    MANU_FILE;
+    MANU_FILE,
+    USER_PROV,
+    USER_DPROV;
   }
 
   public boolean isAgenFileEvent() {
@@ -44,6 +46,14 @@ public class JustinEvent {
 
   public boolean isCrownAsgnEvent() {
     return STATUS.CRN_ASSIGN.equals(getMessage_event_type_cd());
+  }
+
+  public boolean isUserProvEvent() {
+    return STATUS.USER_PROV.equals(getMessage_event_type_cd());
+  }
+
+  public boolean isUserDProvEvent() {
+    return STATUS.USER_DPROV.equals(getMessage_event_type_cd());
   }
   
   public String getMessage_event_type_dsc() {

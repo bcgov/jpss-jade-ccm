@@ -29,6 +29,7 @@ import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentCaseData;
+import ccm.models.common.data.ChargeAssessmentCaseDataRefList;
 import ccm.models.system.dems.*;
 
 import java.util.ArrayList;
@@ -65,6 +66,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getGroupMapByCaseId();
     prepareDemsCaseGroupMembersSyncHelperList();
     syncCaseGroupMembers();
+    getCaseListByUserKey();
   }
 
   private void version() {
@@ -890,6 +892,46 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
         })
         .setHeader("CamelHttpResponseCode", simple("200"))
+        .endChoice()
+    .end()
+    ;
+  }
+
+  private void getCaseListByUserKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  
+    // IN: header.key
+    // OUT: body as ChargeAssessmentCaseDataRefList
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log("Looking up case list by user key (${header.key}) ...")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/users/key:${header.key}/cases?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        // create initial case list
+        .convertBodyTo(String.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            DemsCaseRefList demsCaseList = new DemsCaseRefList((String)exchange.getIn().getBody());
+            ChargeAssessmentCaseDataRefList caseList = new ChargeAssessmentCaseDataRefList(demsCaseList);
+            exchange.getMessage().setBody(caseList);
+            exchange.setProperty("case_list_size", caseList.getCase_list().size());
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseDataRefList.class)
+        .log("User found; case list size = ${exchangeProperty.case_list_size}.")
+        .endChoice()
+      .when().simple("${header.CamelHttpResponseCode} == 404")
+        .log("User not found.  Message from DEMS: ${body}")
         .endChoice()
     .end()
     ;

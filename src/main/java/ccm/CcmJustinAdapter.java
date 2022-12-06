@@ -35,6 +35,7 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.common.event.ApprovedCourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
+import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentCaseEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
@@ -57,6 +58,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     processCourtFileEvent();
     processApprEvent();
     processCrnAssignEvent();
+    processUserProvEvent();
+    processUserDProvEvent();
     processUnknownEvent();
 
     confirmEventProcessed();
@@ -139,6 +142,9 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     // JSIT Oct 27
     .to("https://{{justin.host}}/requeueEventById?id=2003") // AGEN_FILE (RCC_ID = 50414.0734)
+
+    // Pre-JSIT Dec 6 (Dev)
+    .to("https://{{justin.host}}/requeueEventById?id=4277") // USER_DPROV (PART_ID = null)
     ;
 
   }
@@ -237,6 +243,12 @@ public class CcmJustinAdapter extends RouteBuilder {
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.CRN_ASSIGN))
           .to("direct:processCrnAssignEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_PROV))
+          .to("direct:processUserProvEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
+          .to("direct:processUserDProvEvent")
           .endChoice()
         .otherwise()
           .log("message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
@@ -345,6 +357,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -364,9 +379,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -400,6 +412,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("business_event", body())
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -419,11 +436,123 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    ;
+  }
+
+  private void processUserProvEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
+    .log("Processing USER_PROV event: ${exchangeProperty.justin_event}")
+    .doTry()
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          // Insert code that gets executed *before* delegating
+          // to the next processor in the chain.
+      
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+      
+          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+      
+          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .setProperty("business_event", body())
+      .log("Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log("General Exception thrown.")
+      .log("${exception}")
+      .setProperty("error_event_object", body())
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+      .log("finally, send confirmation for justin event")
+      .setBody(simple("${exchangeProperty.justin_event}"))
+      .setProperty("event_message_id")
+        .jsonpath("$.event_message_id")
+      .to("direct:confirmEventProcessed")
+    .end()
+    ;
+  }
+
+  private void processUserDProvEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log("Processing USER_DPROV event: ${exchangeProperty.justin_event}")
+    .doTry()
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          // Insert code that gets executed *before* delegating
+          // to the next processor in the chain.
+      
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+      
+          CaseUserEvent be = new CaseUserEvent(je);
+
+          // JADE-1795 bug: JUSTIN returning null part_id; hard code user key for initial testing
+          //be.setEvent_key("122201.0734");
+      
+          exchange.getMessage().setBody(be, CaseUserEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .setProperty("business_event", body())
+      .log("Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.caseusers.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.caseusers.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log("General Exception thrown.")
+      .log("${exception}")
+      .setProperty("error_event_object", body())
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+      .log("finally, send confirmation for justin event")
+      .setBody(simple("${exchangeProperty.justin_event}"))
+      .setProperty("event_message_id")
+        .jsonpath("$.event_message_id")
+      .to("direct:confirmEventProcessed")
+    .end()
     ;
   }
 
@@ -456,6 +585,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}") 
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -475,11 +609,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -512,6 +641,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -531,11 +665,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -568,6 +697,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -587,11 +721,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 

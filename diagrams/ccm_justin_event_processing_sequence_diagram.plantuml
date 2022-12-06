@@ -4,6 +4,7 @@ participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
 collections approved_court_cases_topic as "Approved Court Case Events"
+collections case_users_topic as "Case User Events"
 
 title
 CCM JUSTIN Event Processing Sequence Diagram
@@ -19,21 +20,26 @@ loop Every 5 minutes
     j_adapter-> j_interface: Retrieve all in progress JUSTIN events
     j_interface --> j_adapter: List of JUSTIN events
     deactivate j_interface
-    loop For every business event
+    loop For every JUSTIN event
         j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-        alt MANU_FILE event
+        alt MANU_FILE
             j_adapter ->o charge_assessment_cases_topic: Produce MANUALLY_CHANGED event
-        else AGEN_FILE event
+        else AGEN_FILE
             j_adapter ->o charge_assessment_cases_topic: Produce CHANGED event
-        else AUTH_LIST changed event
+        else AUTH_LIST
             j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
-        else COURT_FILE changed event
+        else COURT_FILE
             j_adapter ->o approved_court_cases_topic: Produce CHANGED event
-        else APPR changed event
+        else APPR
             j_adapter ->o approved_court_cases_topic: Produce APPEARANCE_CHANGED event
-        else CRN_ASSIGN changed event
+        else CRN_ASSIGN
             j_adapter ->o approved_court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
-        else Other business event
+        else USER_PROV
+            j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
+            'j_adapter ->o case_users_topic: Produce ACCESS_ADDED event
+        else USER_DPROV
+            j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
+        else Unknown JUSTIN Event
             j_adapter -> j_adapter: No operation (future functionality)
         end
         j_adapter -> j_interface: Mark event as processed
@@ -45,6 +51,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated November 24, 2022
+Prepared by David Agahchen | Updated December 5, 2022
 end caption
 @enduml
