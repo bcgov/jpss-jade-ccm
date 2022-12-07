@@ -452,7 +452,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("event_key = ${header[event_key]}")
     .setHeader("key", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCaseListByUserKey?throwExceptionOnFailure=true=false")
+    .to("http://ccm-lookup-service/getCaseListByUserKey?throwExceptionOnFailure=false")
     .choice()
         .when(simple("${header.CamelHttpResponseCode} == 200"))
           .log("body = '${body}'.")
