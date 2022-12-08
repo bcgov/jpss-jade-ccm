@@ -14,10 +14,10 @@ end title
 
 autonumber
 
-approved_court_case_topic o-> notification_service: Process Approved Court CAse CHANGED event
+approved_court_case_topic o-> notification_service: Process Approved Court Case CHANGED event
 activate notification_service
 
-notification_service -> lookup_service: Retrieve Approved Court CAse details
+notification_service -> lookup_service: Retrieve Approved Court Case details
 activate lookup_service
 lookup_service -> j_adapter: Retrieve Approved Court Case details from JUSTIN
 
@@ -28,10 +28,10 @@ activate j_interface
 j_interface --> j_adapter: Court file details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> lookup_service: Approved Court CAse details
+j_adapter --> lookup_service: Approved Court Case details
 deactivate j_adapter
 
-lookup_service --> notification_service: Approved Court CAse details
+lookup_service --> notification_service: Approved Court Case details
 deactivate lookup_service
 
 loop For every associated charge assessment case
@@ -95,6 +95,6 @@ deactivate d_adapter
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 1, 2022
+Prepared by David Agahchen | Updated December 7, 2022
 end caption
 @enduml

@@ -24,7 +24,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.CamelException;
+//import org.apache.camel.CamelException;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
@@ -52,7 +52,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     
     processTimer();
     processJustinEventBatch();
-    processNewJUSTINEvents();
+    //processNewJUSTINEvents();
     processAgenFileEvent();
     processAuthListEvent();
     processCourtFileEvent();
@@ -459,17 +459,17 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+          CaseUserEvent event = new CaseUserEvent(je);
       
-          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
-          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+          exchange.getMessage().setBody(event, CaseUserEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .setProperty("business_event", body())
       .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .to("kafka:{{kafka.topic.caseusers.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.caseusers.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
@@ -516,13 +516,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          CaseUserEvent be = new CaseUserEvent(je);
+          CaseUserEvent event = new CaseUserEvent(je);
 
           // JADE-1795 bug: JUSTIN returning null part_id; hard code user key for initial testing
           //be.setEvent_key("122201.0734");
       
-          exchange.getMessage().setBody(be, CaseUserEvent.class);
-          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+          exchange.getMessage().setBody(event, CaseUserEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)

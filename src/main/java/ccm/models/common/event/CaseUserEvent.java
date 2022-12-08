@@ -11,10 +11,12 @@ public class CaseUserEvent extends BaseEvent {
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_part_id;
+  private String justin_rcc_id;
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
-  public static final String JUSTIN_PART_ID = "PART_ID";  
+  public static final String JUSTIN_PART_ID = "PART_ID";
+  public static final String JUSTIN_RCC_ID = "RCC_ID";  
 
   public enum SOURCE {
     JUSTIN,
@@ -22,6 +24,7 @@ public class CaseUserEvent extends BaseEvent {
   }
   
   public enum STATUS {
+    ACCESS_ADDED,
     ACCESS_REMOVED;
   }
 
@@ -39,6 +42,9 @@ public class CaseUserEvent extends BaseEvent {
     setJustin_event_dtm(je.getEvent_dtm());
 
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
+      case USER_PROV:
+        setEvent_status(STATUS.ACCESS_ADDED.toString());
+        break;
       case USER_DPROV:
         setEvent_status(STATUS.ACCESS_REMOVED.toString());
         break;
@@ -61,6 +67,9 @@ public class CaseUserEvent extends BaseEvent {
           break;
         case JUSTIN_PART_ID:
           setJustin_part_id(jed.getData_value_txt());
+          break;
+        case JUSTIN_RCC_ID:
+          setJustin_rcc_id(jed.getData_value_txt());
           break;
       }
     }
@@ -125,5 +134,13 @@ public class CaseUserEvent extends BaseEvent {
 
   public void setJustin_part_id(String justin_part_id) {
     this.justin_part_id = justin_part_id;
+  }
+
+  public String getJustin_rcc_id() {
+    return justin_rcc_id;
+  }
+
+  public void setJustin_rcc_id(String justin_rcc_id) {
+    this.justin_rcc_id = justin_rcc_id;
   }
 }

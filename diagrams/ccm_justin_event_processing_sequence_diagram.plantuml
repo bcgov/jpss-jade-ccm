@@ -35,8 +35,7 @@ loop Every 5 minutes
         else CRN_ASSIGN
             j_adapter ->o approved_court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
         else USER_PROV
-            j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
-            'j_adapter ->o case_users_topic: Produce ACCESS_ADDED event
+            j_adapter ->o case_users_topic: Produce ACCESS_ADDED event
         else USER_DPROV
             j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
         else Unknown JUSTIN Event
@@ -51,6 +50,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated December 5, 2022
+Prepared by David Agahchen | Updated December 7, 2022
 end caption
 @enduml
