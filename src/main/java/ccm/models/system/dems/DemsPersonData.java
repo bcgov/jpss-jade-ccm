@@ -42,8 +42,14 @@ public class DemsPersonData {
 
         String fullGivenNamesAndLastNameString = generateFullGivenNamesAndLastNameFromAccused(ca);
 
+        // check birth date info
+        if (ca.getBirth_date() != null && !ca.getBirth_date().isEmpty()) {
+            // append birth date to full name string
+            fullGivenNamesAndLastNameString = fullGivenNamesAndLastNameString + "  (" + ca.getBirth_date() + ")";
+        }
+
         DemsFieldData fullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(),
-            fullGivenNamesAndLastNameString + "  (" + ca.getBirth_date() + ")");
+            fullGivenNamesAndLastNameString);
 
         fieldData.add(fullName);
 

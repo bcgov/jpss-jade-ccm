@@ -1,47 +1,42 @@
 @startuml
 'hide footbox
+
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections case_users_topic as "Case User Events"
 participant notification_service as "Notification Service"
 participant lookup_service as "Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
+
 title
-CCM Charge Assessment AUTH_LIST_CHANGED Event Processing Sequence Diagram
+CCM Case User ACCESS_REMOVED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-charge_assessment_cases_topic o-> notification_service : Process AUTH_LIST_CHANGED event
+case_users_topic o-> notification_service : Process ACCESS_REMOVED event
 activate notification_service
 
-group Call route processCourtCaseAuthListChanged
+notification_service -> lookup_service: Retrieve user accessible case list
+activate lookup_service
+lookup_service -> d_adapter: Retrieve user accessible case list from DEMS
 
-    notification_service -> lookup_service: Check case exists
-    activate lookup_service
-    note over lookup_service, d_adapter
-    Integration assumption: DEMS is the system-of-record
-    for whether a court case already exists or not
-    end note
-    lookup_service -> d_adapter: Check case existence in DEMS
-    activate d_adapter
-    d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-    d_adapter -> d_interface: Check case existence in DEMS
-    activate d_interface
+activate d_adapter
+d_adapter -> d_interface: Call getUserCases()
+activate d_interface
+d_interface --> d_adapter: Case list
+deactivate d_interface
+d_adapter -> d_adapter: Convert data from System (DEMS) to Business model
+d_adapter --> lookup_service: Case list
+deactivate d_adapter
 
-    break Case not found - end processing
-    d_interface --> d_adapter: Case not found
-    deactivate d_interface
-    d_adapter --> lookup_service: Case not found
-    lookup_service --> notification_service: Case not found
-    deactivate lookup_service
-    deactivate d_adapter
-    end break
+lookup_service --> notification_service: Case list
+deactivate lookup_service
 
+loop For every case
     group Call route processCourtCaseAuthListUpdated
-
         notification_service -> lookup_service: Retrieve court case authorized user list
         activate lookup_service
         lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
@@ -85,7 +80,7 @@ group Call route processCourtCaseAuthListChanged
         d_adapter --> notification_service: Acknowledged
         deactivate d_adapter
     end group
-end group
+end
 
 deactivate notification_service
 

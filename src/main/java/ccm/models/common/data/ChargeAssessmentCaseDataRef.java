@@ -1,5 +1,6 @@
 package ccm.models.common.data;
 
+import ccm.models.system.dems.DemsCaseRef;
 import ccm.models.system.justin.JustinAgencyFileRef;
 
 public class ChargeAssessmentCaseDataRef {
@@ -13,6 +14,10 @@ public class ChargeAssessmentCaseDataRef {
     public ChargeAssessmentCaseDataRef(JustinAgencyFileRef jafr) {
         setRcc_id(jafr.getRcc_id());
         setAgency_file_no(jafr.getAgency_file_no());
+    }
+
+    public ChargeAssessmentCaseDataRef(DemsCaseRef demsCaseRef) {
+        setRcc_id(demsCaseRef.getKey());
     }
 
     public String getRcc_id() {

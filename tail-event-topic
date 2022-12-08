@@ -1,0 +1,39 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+else
+    env=""
+fi
+
+app=`basename $0`
+
+topic="$2"
+
+offset="$3"
+if [ "$offset" = "" ]; then
+   offset="latest"
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: '$1'"
+   echo "$app env topic_name [offset]"
+   echo "E.g., $app dev ccm-kpis 101\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+if [ "$topic" = "" ]; then
+   echo "Error.  Topic name not specified.\n"
+   echo "$app env topic_name [offset]"
+   echo "E.g., $app dev ccm-kpis 101\n"
+   return 1
+fi
+
+echo "$app to $ns ..."
+
+oc -n $ns exec service/events-kafka-brokers -- /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server events-kafka-bootstrap:9092 --topic $topic
+oc -n $ns exec service/events-kafka-brokers -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server events-kafka-bootstrap:9092 --topic $topic --partition 0 --offset $offset --property print.key=true --property print.offset=true --property print.timestamp=true

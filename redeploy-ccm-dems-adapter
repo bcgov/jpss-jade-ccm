@@ -30,6 +30,8 @@ kamel -n $ns run \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false
 
+  ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
+
   #--trait route.tls-termination=edge \
   #--trait route.tls-insecure-edge-termination-policy=Redirect \
   #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \  

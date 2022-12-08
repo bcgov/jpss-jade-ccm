@@ -29,6 +29,7 @@ import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentCaseData;
+import ccm.models.common.data.ChargeAssessmentCaseDataRefList;
 import ccm.models.system.dems.*;
 
 import java.util.ArrayList;
@@ -44,8 +45,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     
     version();
     dems_version();
-    getCourtCaseExists();  
-    getCourtCaseIdByKeyOrig();
+    getCourtCaseExists();
     getCourtCaseIdByKey(); 
     getCourtCaseDataById();
     getCourtCaseDataByKey();
@@ -66,6 +66,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getGroupMapByCaseId();
     prepareDemsCaseGroupMembersSyncHelperList();
     syncCaseGroupMembers();
+    getCaseListByUserKey();
   }
 
   private void version() {
@@ -135,51 +136,6 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setProperty("key", simple("${header.event_key}"))
       .log("Key = ${exchangeProperty.key}")
       .to("direct:getCourtCaseIdByKey")
-    ;
-  }
-
-  private void getCourtCaseIdByKeyOrig() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: exchangeProperty.key
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Processing request (key=${exchangeProperty.key})...")
-    .setProperty("dems_org_unit_id").simple("{{dems.org-unit.id}}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .doTry()
-      // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
-      //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
-      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases/${exchangeProperty.key}/id?httpClient.soTimeout=30")
-      .setProperty("id", jsonpath("$.id"))
-      .log("Case found. Id = ${exchangeProperty.id}")
-    //.doCatch(HttpOperationFailedException.class)
-    .doCatch(CamelException.class)
-      .log("Exception: ${exception}")
-      .log("Exchange: ${exchange}")
-      .choice()
-        .when().simple("${exception.statusCode} == 404")
-          .log(LoggingLevel.INFO,"Record not found (404).")
-          ////.toD("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
-          .setBody(simple("{\"id\": \"\"}"))
-        .endChoice()
-        .otherwise()
-          .log(LoggingLevel.ERROR,"Unknown error.  Re-throw ${exception}")
-          .process(new Processor() {
-            public void process(Exchange exchange) throws Exception {
-              throw exchange.getException();
-            }
-          })
-        .endChoice()
-      .end()
-    .endDoTry()
     ;
   }
 
@@ -301,16 +257,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .doTry()
-      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
-    .doCatch(Exception.class)
-      .log(LoggingLevel.ERROR, "Exception: ${exception}")
-      .process(new Processor() {
-        public void process(Exchange exchange) throws Exception {
-          throw exchange.getException();
-        }
-      })
-    .endDoTry()
+    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/cases")
     .log("Court case created.")
     .setProperty("courtCaseId", jsonpath("$.id"))
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
@@ -538,7 +485,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     //.setBody(simple("{\"rcc_id\":\"50433.0734\",\"auth_users_list\":[{\"part_id\":\"11429.0026\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85056.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85062.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85170.0734\",\"crown_agency\":null,\"user_name\":null}]}"))
     .setBody(simple("${header.temp-body}"))
     .removeHeader("temp-body")
-    .log("Processing request (event_key = ${exchangeProperty.event_key}): ${body}")
+    .log("Processing request (event_key = ${exchangeProperty.key}): ${body}")
     .to("direct:syncCaseUserList");
   }
 
@@ -766,31 +713,20 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .doTry()
-      // JADE-1453 - workaround: introduced httpClient.soTimeout parameter.
-      //   Observation: the timeout issue has not re-occurred since the introduction of the following logging, as well as the timeout setting.
-      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}")
-      .setProperty("id", jsonpath("$.id"))
-      .log("Participant found. Id = ${exchangeProperty.id}")
-    .doCatch(CamelException.class)
-      .log("Exception: ${exception}")
-      .log("Exchange: ${exchange}")
-      .choice()
-        .when().simple("${exception.statusCode} == 404")
-          .log(LoggingLevel.INFO,"Record not found (404).")
-          ////.toD("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector")
-          .setBody(simple("{\"id\": \"\"}"))
+    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons/${header[key]}?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        // person found
+        .setProperty("id", jsonpath("$.id"))
+        .log("Participant found. Id = ${exchangeProperty.id}")
         .endChoice()
-        .otherwise()
-          .log(LoggingLevel.ERROR,"Unknown error.  Re-throw ${exception}")
-          .process(new Processor() {
-            public void process(Exchange exchange) throws Exception {
-              throw exchange.getException();
-            }
-          })
+      .when().simple("${header.CamelHttpResponseCode} == 404")
+        // person not found
+        .log("Participant not found.")
+        .setBody(simple("{\"id\": \"\"}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
         .endChoice()
-      .end()
-    .endDoTry()
+    .end()
     ;
   }
 
@@ -821,16 +757,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .doTry()
-      .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons")
-    .doCatch(Exception.class)
-      .log(LoggingLevel.ERROR, "Exception: ${exception}")
-      .process(new Processor() {
-        public void process(Exchange exchange) throws Exception {
-          throw exchange.getException();
-        }
-      })
-    .endDoTry()
+    .toD("https://{{dems.host}}/org-units/${exchangeProperty.dems_org_unit_id}/persons")
     .log("Person created.")
     ;
   }
@@ -914,16 +841,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-        .doTry()
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
-        .doCatch(Exception.class)
-          .log(LoggingLevel.ERROR, "Exception: ${exception}")
-          .process(new Processor() {
-            public void process(Exchange exchange) throws Exception {
-              throw exchange.getException();
-            }
-          })
-        .endDoTry()
+        .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
         .log("Person added to case.")
       .endChoice()
     .otherwise()
@@ -974,6 +892,46 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
         })
         .setHeader("CamelHttpResponseCode", simple("200"))
+        .endChoice()
+    .end()
+    ;
+  }
+
+  private void getCaseListByUserKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  
+    // IN: header.key
+    // OUT: body as ChargeAssessmentCaseDataRefList
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log("Looking up case list by user key (${header.key}) ...")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/users/key:${header.key}/cases?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        // create initial case list
+        .convertBodyTo(String.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            DemsCaseRefList demsCaseList = new DemsCaseRefList((String)exchange.getIn().getBody());
+            ChargeAssessmentCaseDataRefList caseList = new ChargeAssessmentCaseDataRefList(demsCaseList);
+            exchange.getMessage().setBody(caseList);
+            exchange.setProperty("case_list_size", caseList.getCase_list().size());
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseDataRefList.class)
+        .log("User found; case list size = ${exchangeProperty.case_list_size}.")
+        .endChoice()
+      .when().simple("${header.CamelHttpResponseCode} == 404")
+        .log("User not found.  Message from DEMS: ${body}")
         .endChoice()
     .end()
     ;

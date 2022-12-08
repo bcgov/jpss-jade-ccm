@@ -1,20 +1,22 @@
 @startuml
 'hide footbox
+collections case_users_topic as "Case User Events"
+
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections case_users_topic as "Case User Events"
 participant notification_service as "Notification Service"
 participant lookup_service as "Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment AUTH_LIST_CHANGED Event Processing Sequence Diagram
+CCM Case User ACCESS_ADDED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-charge_assessment_cases_topic o-> notification_service : Process AUTH_LIST_CHANGED event
+case_users_topic o-> notification_service : Process ACCESS_ADDED event
 activate notification_service
 
 group Call route processCourtCaseAuthListChanged

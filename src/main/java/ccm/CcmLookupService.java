@@ -33,6 +33,7 @@ public class CcmLookupService extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getPersonExists();
+    getCaseListByUserKey();
   }
 
   private void getCourtCaseDetails_old() {
@@ -183,6 +184,31 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getPersonExists")
     .log("Lookup response = '${body}'")
+    ;
+  }  
+
+  private void getCaseListByUserKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  
+    // IN: header.key
+    // OUT: body as ChargeAssessmentCaseDataRefList
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log("Looking up case list by user key (${header.key}) ...")
+    .to("http://ccm-dems-adapter/getCaseListByUserKey?throwExceptionOnFailure=false")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        .log("User found.")
+        .endChoice()
+      .when().simple("${header.CamelHttpResponseCode} == 404")
+        .log("User not found.  Error message from DEMS: ${body}")
+        .endChoice()
+    .end()
     ;
   }
 }

@@ -4,16 +4,18 @@ import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class ChargeAssessmentCaseEvent extends BaseEvent {
+public class CaseUserEvent extends BaseEvent {
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
   private String justin_fetched_date;
   private String justin_guid;
+  private String justin_part_id;
   private String justin_rcc_id;
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
+  public static final String JUSTIN_PART_ID = "PART_ID";
   public static final String JUSTIN_RCC_ID = "RCC_ID";  
 
   public enum SOURCE {
@@ -22,18 +24,15 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
   }
   
   public enum STATUS {
-    CHANGED,
-    CREATED,
-    UPDATED,
-    MANUALLY_CHANGED,
-    AUTH_LIST_CHANGED;
+    ACCESS_ADDED,
+    ACCESS_REMOVED;
   }
 
-  public ChargeAssessmentCaseEvent() {
+  public CaseUserEvent() {
     super();
   }
 
-  public ChargeAssessmentCaseEvent(JustinEvent je) {
+  public CaseUserEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -43,15 +42,11 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     setJustin_event_dtm(je.getEvent_dtm());
 
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
-      case AGEN_FILE:
-        setEvent_status(STATUS.CHANGED.toString());
-        break;
-      case MANU_FILE:
-        setEvent_status(STATUS.MANUALLY_CHANGED.toString());
-        break;
-      case AUTH_LIST:
       case USER_PROV:
-        setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
+        setEvent_status(STATUS.ACCESS_ADDED.toString());
+        break;
+      case USER_DPROV:
+        setEvent_status(STATUS.ACCESS_REMOVED.toString());
         break;
       default:
         // unknown status
@@ -70,16 +65,19 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
         case JUSTIN_GUID:
           setJustin_guid(jed.getData_value_txt());
           break;
+        case JUSTIN_PART_ID:
+          setJustin_part_id(jed.getData_value_txt());
+          break;
         case JUSTIN_RCC_ID:
           setJustin_rcc_id(jed.getData_value_txt());
           break;
       }
     }
 
-    setEvent_key(getJustin_rcc_id());
+    setEvent_key(getJustin_part_id());
   }
 
-  public ChargeAssessmentCaseEvent(SOURCE source, ChargeAssessmentCaseEvent another) {
+  public CaseUserEvent(SOURCE source, CaseUserEvent another) {
     super(source.name(), another);
 
     this.justin_event_message_id = another.justin_event_message_id;
@@ -87,17 +85,7 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     this.justin_event_dtm = another.justin_event_dtm;
     this.justin_fetched_date = another.justin_fetched_date;
     this.justin_guid = another.justin_guid;
-    this.justin_rcc_id = another.justin_rcc_id;
-  }
-
-  public ChargeAssessmentCaseEvent(SOURCE source, CaseUserEvent another) {
-    super(source.name(), another);
-
-    this.justin_event_message_id = another.getJustin_event_message_id();
-    this.justin_message_event_type_cd = another.getJustin_message_event_type_cd();
-    this.justin_event_dtm = another.getJustin_event_dtm();
-    this.justin_fetched_date = another.getJustin_fetched_date();
-    this.justin_guid = another.getJustin_guid();
+    this.justin_part_id = another.justin_part_id;
   }
 
   public int getJustin_event_message_id() {
@@ -138,6 +126,14 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
 
   public void setJustin_guid(String justin_guid) {
     this.justin_guid = justin_guid;
+  }
+
+  public String getJustin_part_id() {
+    return justin_part_id;
+  }
+
+  public void setJustin_part_id(String justin_part_id) {
+    this.justin_part_id = justin_part_id;
   }
 
   public String getJustin_rcc_id() {
