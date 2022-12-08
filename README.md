@@ -35,6 +35,8 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Approved Court Case | CHANGED |[Diagram](diagrams/img/ccm_approved_court_case_changed_processing_sequence_diagram.png) ([source](diagrams/ccm_approved_court_case_changed_processing_sequence_diagram.plantuml))|
 | Approved Court Case | APPERANCE_CHANGED |[Diagram](diagrams/img/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.png) ([source](diagrams/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.plantuml))|
 | Approved Court Case | CROWN_ASSIGNMENT_CHANGED |[Diagram](diagrams/img/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.png) ([source](diagrams/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.plantuml))|
+| Case User | ACCESS_ADDED |[Diagram](diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
+| Case User | ACCESS_REMOVED |[Diagram](diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
 
 ### Example
 
