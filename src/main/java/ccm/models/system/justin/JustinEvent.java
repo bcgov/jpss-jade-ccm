@@ -19,7 +19,8 @@ public class JustinEvent {
     COURT_FILE,
     APPR,
     CRN_ASSIGN,
-    MANU_FILE;
+    MANU_FILE,
+    MANU_CFILE;
   }
 
   public boolean isAgenFileEvent() {
