@@ -424,6 +424,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
       .setProperty("event_key_orig", simple("${header[event_key]}"))
       .setHeader("number", jsonpath("$.rcc_id"))
       .setHeader("event_key", jsonpath("$.rcc_id"))
@@ -467,7 +468,7 @@ public class CcmNotificationService extends RouteBuilder {
       // reset the original values
       .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
       .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
+      .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
       .log("Found related court case. Rcc_id: ${header.rcc_id}")
       .setBody(simple("${exchangeProperty.metadata_data}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
