@@ -232,6 +232,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_FILE))
           .to("direct:processAgenFileEvent")
           .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_CFILE))
+          .to("direct:processCourtFileEvent")
+          .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AUTH_LIST))
           .to("direct:processAuthListEvent")
           .endChoice()
@@ -584,12 +587,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}") 
+      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-      .setProperty("kpi_component_route_name", simple(routeId))
-      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -609,6 +609,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 

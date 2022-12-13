@@ -23,6 +23,7 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
 
   public enum STATUS {
     CHANGED,
+    MANUALLY_CHANGED,
     APPEARANCE_CHANGED,
     CROWN_ASSIGNMENT_CHANGED
   }
@@ -43,6 +44,9 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
       case COURT_FILE:
         setEvent_status(STATUS.CHANGED.toString());
+        break;
+      case MANU_CFILE:
+        setEvent_status(STATUS.MANUALLY_CHANGED.toString());
         break;
       case APPR:
         setEvent_status(STATUS.APPEARANCE_CHANGED.toString());

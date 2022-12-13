@@ -20,6 +20,7 @@ public class JustinEvent {
     APPR,
     CRN_ASSIGN,
     MANU_FILE,
+    MANU_CFILE,
     USER_PROV,
     USER_DPROV;
   }
@@ -30,6 +31,10 @@ public class JustinEvent {
 
   public boolean isManuFileEvent() {
     return STATUS.MANU_FILE.equals(getMessage_event_type_cd());
+  }  
+
+  public boolean isManuCfileEvent() {
+    return STATUS.MANU_CFILE.equals(getMessage_event_type_cd());
   }  
   
   public boolean isCourtFileEvent() {
