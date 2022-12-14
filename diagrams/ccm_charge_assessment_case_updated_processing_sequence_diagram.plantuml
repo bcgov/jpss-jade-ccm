@@ -3,8 +3,8 @@
 participant j_interface as "JUSTIN Interface"
 participant j_adapter as "JUSTIN Adapter"
 collections court_cases_topic as "Charge Assessment Case Events"
-participant case_notification_service as "Notification Service"
-participant case_lookup_service as "Lookup Service"
+participant notification_service as "Notification Service"
+participant lookup_service as "Lookup Service"
 participant d_adapter as "DEMS Adapter"
 participant d_interface as "DEMS Interface"
 
@@ -14,11 +14,11 @@ end title
 
 autonumber
 
-court_cases_topic o-> case_notification_service : Process UPDATED event
-activate case_notification_service
-case_notification_service -> case_lookup_service: Retrieve court case details
-activate case_lookup_service
-case_lookup_service -> j_adapter: Retrieve court case details from JUSTIN
+court_cases_topic o-> notification_service : Process UPDATED event
+activate notification_service
+notification_service -> lookup_service: Retrieve court case details
+activate lookup_service
+lookup_service -> j_adapter: Retrieve court case details from JUSTIN
 
 activate j_adapter
 j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
@@ -27,15 +27,19 @@ activate j_interface
 j_interface --> j_adapter: Agency file details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> case_lookup_service: Court case details
+j_adapter --> lookup_service: Court case details
 deactivate j_adapter
 
-case_lookup_service --> case_notification_service: Court case details
-deactivate case_lookup_service
-case_notification_service -> d_adapter: Update court case
+lookup_service --> notification_service: Court case details
+deactivate lookup_service
+notification_service -> d_adapter: Update court case
 
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+d_adapter -> d_interface: Retrieve DEMS case data
+d_interface --> d_adapter: DEMS case data
+d_adapter -> d_adapter: Derive the K value for the case flags field
+d_adapter -> 
 d_adapter -> d_interface: Update case in DEMS
 activate d_interface
 d_interface --> d_adapter: Updated
@@ -63,14 +67,14 @@ loop For every accused partipant
     deactivate d_interface
 end
 
-d_adapter --> case_notification_service: Created
+d_adapter --> notification_service: Created
 
-d_adapter --> case_notification_service: Updated
+d_adapter --> notification_service: Updated
 deactivate d_adapter
 
-case_notification_service -> case_lookup_service: Retrieve court case authorized user list
-activate case_lookup_service
-case_lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
+notification_service -> lookup_service: Retrieve court case authorized user list
+activate lookup_service
+lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
 
 activate j_adapter
 j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
@@ -79,13 +83,13 @@ activate j_interface
 j_interface --> j_adapter: Auth user list details
 deactivate j_interface
 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-j_adapter --> case_lookup_service: Auth user list details
+j_adapter --> lookup_service: Auth user list details
 deactivate j_adapter
 
-case_lookup_service --> case_notification_service: Auth user list details details
-deactivate case_lookup_service
+lookup_service --> notification_service: Auth user list details details
+deactivate lookup_service
 
-case_notification_service -> d_adapter: Sync caes users
+notification_service -> d_adapter: Sync caes users
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
 d_adapter -> d_interface: Sync case users in DEMS
@@ -93,10 +97,10 @@ activate d_interface
 d_interface --> d_adapter: Acknowledged
 deactivate d_interface
 
-d_adapter --> case_notification_service: Acknowledged
+d_adapter --> notification_service: Acknowledged
 deactivate d_adapter
 
-case_notification_service -> d_adapter: Sync case group members
+notification_service -> d_adapter: Sync case group members
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
 d_adapter -> d_interface: Retrieve case-specific group name / id list
@@ -112,9 +116,9 @@ end
 d_adapter --> notification_service: Acknowledged
 deactivate d_adapter
 
-deactivate case_notification_service
+deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated November 22, 2022
+Prepared by David Agahchen | Updated December 14, 2022
 end caption
 @enduml
