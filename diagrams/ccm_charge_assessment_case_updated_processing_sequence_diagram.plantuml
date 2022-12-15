@@ -36,10 +36,13 @@ notification_service -> d_adapter: Update court case
 
 activate d_adapter
 d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+
 d_adapter -> d_interface: Retrieve DEMS case data
+activate d_interface
 d_interface --> d_adapter: DEMS case data
+deactivate d_interface 
+
 d_adapter -> d_adapter: Derive the K value for the case flags field
-d_adapter -> 
 d_adapter -> d_interface: Update case in DEMS
 activate d_interface
 d_interface --> d_adapter: Updated
@@ -66,8 +69,6 @@ loop For every accused partipant
     d_interface --> d_adapter: Acknowledged
     deactivate d_interface
 end
-
-d_adapter --> notification_service: Created
 
 d_adapter --> notification_service: Updated
 deactivate d_adapter
@@ -119,6 +120,6 @@ deactivate d_adapter
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 14, 2022
+Prepared by David Agahchen | Updated December 15, 2022
 end caption
 @enduml
