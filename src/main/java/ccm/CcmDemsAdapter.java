@@ -31,12 +31,13 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.common.data.ChargeAssessmentCaseDataRefList;
 import ccm.models.system.dems.*;
+import ccm.utils.JsonParseUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.camel.CamelException;
+
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -45,11 +46,14 @@ public class CcmDemsAdapter extends RouteBuilder {
     
     version();
     dems_version();
+    getDemsFieldMappings();
+    getDemsCaseFlagId();
     getCourtCaseExists();
     getCourtCaseIdByKey(); 
     getCourtCaseDataById();
     getCourtCaseDataByKey();
     getCourtCaseNameByKey();
+    getCourtCaseCourtFileUniqueIdByKey();
     createCourtCase();
     updateCourtCase();
     updateCourtCaseWithMetadata();
@@ -121,6 +125,52 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setBody().simple("{ \"message\": \"Authentication error.\" }")
         .log("Response: ${body}")
       .end();
+  }
+
+  private void getDemsFieldMappings() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: exchangeProperty.id
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/org-units/1/fields")
+    .log("Retrieved dems field mappings.")
+    ;
+  }
+
+  private void getDemsCaseFlagId() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .log("CaseFlagName = ${exchangeProperty.caseFlagName}")
+      .to("direct:getDemsFieldMappings")
+      .setProperty("DemsFieldMappings", simple("${bodyAs(String)}"))
+      //.log("Response: ${body}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          String demsFieldMappingsJson = exchange.getProperty("DemsFieldMappings", String.class);
+          String caseFlagName = exchange.getProperty("caseFlagName", String.class);
+          String value = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(demsFieldMappingsJson, "", "/name", "Case Flags", "/listItems")
+                                               , "", "/name", caseFlagName, "/id");
+          exchange.setProperty("caseFlagId", value);
+          System.out.println("caseFlagId:" + value);
+        }
+  
+      })
+      .setBody(simple("${exchangeProperty.caseFlagId}"))
+      ;
   }
 
   private void getCourtCaseExists() {
@@ -229,6 +279,38 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void getCourtCaseCourtFileUniqueIdByKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: exchangeProperty.key
+    // OUT: String
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Processing request")
+    .setProperty("caseFlagName", simple("K"))
+    .to("direct:getDemsCaseFlagId")
+    .log("case flag K id = '${exchangeProperty.caseFlagId}'.")
+    .to("direct:getCourtCaseDataByKey")
+    .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+        String caseFlagId = exchange.getProperty("caseFlagId", String.class);
+        String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
+        exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
+        String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
+                                                                     , "", "", caseFlagId, "");
+        exchange.setProperty("kFileValue", kFileValue);
+      }
+
+    })
+    .log("DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtFileUniqueId}:  ${exchangeProperty.kFileValue}")
+    ;
+  }
+
   private void createCourtCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -279,6 +361,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing request: ${body}")
+    .setProperty("JustinCourtCase", simple("${bodyAs(String)}"))
+    .setProperty("key", simple("${header.event_key}"))
+    .to("direct:getCourtCaseCourtFileUniqueIdByKey")
+    //.log("Existing values: ${exchangeProperty.courtFileUniqueId} : ${exchangeProperty.kFileValue}")
+    .setBody(simple("${exchangeProperty.JustinCourtCase}"))
     .setProperty("dems_org_unit_id").simple("{{dems.org-unit.id}}")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseData.class)
@@ -286,7 +373,26 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
+
+        // If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
+        String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
+        String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
         ChargeAssessmentCaseData b = exchange.getIn().getBody(ChargeAssessmentCaseData.class);
+        if(doesCourtFileUniqueIdExist != null && !doesCourtFileUniqueIdExist.isEmpty()) {
+          // this is an approved court case.
+          if(doesKFilePreExist != null && !doesKFilePreExist.isEmpty()) {
+            // dems copy of the case has k file set.
+            if(!b.getCase_flags().contains("K")) {
+              // new copy from justin doesn't have k set, so need to set it, to retain it.
+              b.getCase_flags().add("K");
+            }
+          } else if(b.getCase_flags().contains("K")) {
+            // dems copy of the case does not have the k file set.
+            // but the justin copy has k set, so remove it.
+            b.getCase_flags().remove("K");
+          }
+
+        }
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
         exchange.getMessage().setBody(d);
       }

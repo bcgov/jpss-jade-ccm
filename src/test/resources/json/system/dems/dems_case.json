@@ -1,0 +1,251 @@
+{
+    "id": 163,
+    "name": "APP PERSON, Testa; ROLECHANGE, Jenny; YOUNGSTER, Little; YOMKIPPER, Joey Pauloo; JOHNSON, Kyle; SOSO, Yolando; YOYO, Yammy",
+    "key": "49408.0734",
+    "caseNumber": null,
+    "description": null,
+    "category": null,
+    "status": "Active",
+    "cfsLocationType": 0,
+    "showCfsLocation": true,
+    "exportTempPath": "C:\\eDiscovery\\Temp",
+    "stagingAreaPath": "\\edt-mapleimp-poc-edtdems-staging\\Source/Site01_Case0163",
+    "stagingAreaPathNote": "The staging area is in Amazon S3: \\edt-mapleimp-poc-edtdems-staging\\Source/Site01_Case0163",
+    "stagingAreaPathDisabled": true,
+    "generateThumbnails": true,
+    "useDocIdForDownloads": false,
+    "timeZoneId": "Pacific Standard Time",
+    "timeZone": {
+        "id": "Pacific Standard Time",
+        "hasIanaId": false,
+        "displayName": "(UTC-08:00) Pacific Time (Los Angeles)",
+        "standardName": "Pacific Standard Time",
+        "daylightName": "Pacific Daylight Time",
+        "baseUtcOffset": "-08:00:00",
+        "supportsDaylightSavingTime": true
+    },
+    "removeGeneratedFiles": false,
+    "searchHistoryRetention": 0,
+    "fields": [
+        {
+            "id": 3,
+            "name": "Agency File No.",
+            "value": "105: RU-10232017"
+        },
+        {
+            "id": 7,
+            "name": "Disclosure Status",
+            "value": null
+        },
+        {
+            "id": 9,
+            "name": "Assessment Crown",
+            "value": "OHarris, Debbie Nn"
+        },
+        {
+            "id": 12,
+            "name": "Agency File ID",
+            "value": "49408.0734"
+        },
+        {
+            "id": 14,
+            "name": "Case Decision",
+            "value": 4
+        },
+        {
+            "id": 15,
+            "name": "Court File Unique ID",
+            "value": "39137"
+        },
+        {
+            "id": 16,
+            "name": "Crown Election",
+            "value": "IND"
+        },
+        {
+            "id": 17,
+            "name": "Court File Level",
+            "value": "P"
+        },
+        {
+            "id": 18,
+            "name": "Proposed Charges",
+            "value": "CCC 348(1)(a) Breaking and entering with intent,CCC 348(1)(a) Breaking and entering with intent,CCC 348(1)(a) Breaking and entering with intent"
+        },
+        {
+            "id": 19,
+            "name": "Class",
+            "value": "A"
+        },
+        {
+            "id": 20,
+            "name": "Designation",
+            "value": "SPC"
+        },
+        {
+            "id": 23,
+            "name": "Court File No.",
+            "value": "10232017-14"
+        },
+        {
+            "id": 24,
+            "name": "Initiating Agency",
+            "value": "105: Kelowna Municipal RCMP"
+        },
+        {
+            "id": 25,
+            "name": "Investigating Officer",
+            "value": "Rhodes, Christopher 1001"
+        },
+        {
+            "id": 26,
+            "name": "Proposed Crown Office",
+            "value": "C402: Kelowna"
+        },
+        {
+            "id": 27,
+            "name": "Court Home Registry",
+            "value": "4801: Kelowna Law Courts"
+        },
+        {
+            "id": 28,
+            "name": "Case Flags",
+            "value": [
+                11
+            ]
+        },
+        {
+            "id": 31,
+            "name": "Proposed Process Type",
+            "value": null
+        },
+        {
+            "id": 32,
+            "name": "RMS Processing Status",
+            "value": null
+        },
+        {
+            "id": 33,
+            "name": "Assigned Legal Staff",
+            "value": null
+        },
+        {
+            "id": 34,
+            "name": "Assigned Crown",
+            "value": null
+        },
+        {
+            "id": 43,
+            "name": "Assigned Crown Name",
+            "value": null
+        },
+        {
+            "id": 44,
+            "name": "Court Home Registry Name",
+            "value": "Kelowna Law Courts"
+        },
+        {
+            "id": 45,
+            "name": "Charges",
+            "value": "CCC 348(1)(a) Breaking and entering with intent,CCC 348(1)(a) Breaking and entering with intent,CCC 753.3(1) breach of long-term supervision order"
+        },
+        {
+            "id": 47,
+            "name": "Accused Full Name",
+            "value": "Joey YomKipper, Yolando Soso"
+        },
+        {
+            "id": 48,
+            "name": "Last JUSTIN Update",
+            "value": "2022-12-09 02:21:47.000"
+        },
+        {
+            "id": 55,
+            "name": "Limitation Date",
+            "value": "2018-04-16"
+        },
+        {
+            "id": 56,
+            "name": "RCC Status",
+            "value": 16
+        },
+        {
+            "id": 57,
+            "name": "Crown Office",
+            "value": "Kelowna"
+        },
+        {
+            "id": 58,
+            "name": "Primary Agency File ID",
+            "value": null
+        },
+        {
+            "id": 59,
+            "name": "Primary Agency File No.",
+            "value": null
+        },
+        {
+            "id": 61,
+            "name": "Court File Details",
+            "value": "4801: 10232017-14"
+        },
+        {
+            "id": 65,
+            "name": "Submit Date",
+            "value": "2017-10-23"
+        },
+        {
+            "id": 66,
+            "name": "Sworn Date",
+            "value": "2022-06-01"
+        },
+        {
+            "id": 67,
+            "name": "Offence Date (earliest)",
+            "value": "2017-10-23"
+        },
+        {
+            "id": 70,
+            "name": "Proposed Appr. Date (earliest)",
+            "value": "2020-08-15"
+        },
+        {
+            "id": 72,
+            "name": "Initial Appr. Rsn",
+            "value": null
+        },
+        {
+            "id": 73,
+            "name": "Next Appr.",
+            "value": null
+        },
+        {
+            "id": 74,
+            "name": "Next Appr. Rsn",
+            "value": null
+        },
+        {
+            "id": 76,
+            "name": "Initial Appr.",
+            "value": null
+        },
+        {
+            "id": 78,
+            "name": "First Trial Rsn",
+            "value": null
+        },
+        {
+            "id": 79,
+            "name": "First Trial",
+            "value": null
+        }
+    ],
+    "cfsLocation": "C:\\eDiscovery\\Store",
+    "cfsLocationS3": "\\edt-mapleimp-poc-edtdems-cfs\\CFS",
+    "dateFormat": "d MMM yyyy",
+    "showMilliseconds": false,
+    "automaticArchive": false,
+    "automaticArchiveDuration": 0,
+    "automaticArchiveUnit": "",
+    "automaticArchiveMode": ""
+}

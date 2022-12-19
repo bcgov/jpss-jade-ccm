@@ -365,6 +365,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log("Update court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
     //.to("http://ccm-dems-adapter/updateCourtCase?httpClient.connectTimeout=1&httpClient.connectionRequestTimeout=1&httpClient.socketTimeout=1")
+    .setBody(simple("${exchangeProperty.courtcase_data}"))
     .to("http://ccm-dems-adapter/updateCourtCase")
     .log("Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
@@ -667,6 +668,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
       .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
       .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+      .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
       .log("Found related court case. Rcc_id: ${header.rcc_id}")
       .setBody(simple("${exchangeProperty.metadata_data}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -731,6 +733,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
 
       .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+      .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
       .log("Found related court case. Rcc_id: ${header.rcc_id}")
       .setBody(simple("${exchangeProperty.metadata_data}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
