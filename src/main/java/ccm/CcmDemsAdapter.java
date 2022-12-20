@@ -15,6 +15,7 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
+// camel-k: dependency=mvn:org.slf4j.slf4j-api
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -597,7 +598,6 @@ public class CcmDemsAdapter extends RouteBuilder {
             // add empty sync data to helper list
             DemsCaseGroupMembersSyncData emptySyncData = new DemsCaseGroupMembersSyncData();
             helper = new DemsCaseGroupMembersSyncHelper(actualDemsCaseGroupId, actualDemsCaseGroupName, emptySyncData);
-            System.out.println("ERROR: did not find case group: " + actualDemsCaseGroupName);
           }
 
           demsGroupMembersSyncHelperList.add(helper);
