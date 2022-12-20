@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,6 +24,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinCourtFile;
+import ccm.utils.JsonParseUtils;
 import ccm.models.common.data.ChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsFieldData;
@@ -160,5 +162,70 @@ public class JustinAgencyFileTest {
         }
 
     }
+
+    @Test
+    public void testJsonParsing() {
+        String fileName = "json/system/dems/dems_case.json";
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
+             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(streamReader)) {
+
+            StringBuilder stringBuilder = new StringBuilder();
+            String line = null;
+            String ls = System.getProperty("line.separator");
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+                stringBuilder.append(ls);
+            }
+            //System.out.println("\nJSON is\n"+stringBuilder.toString());
+            String extractedValue = JsonParseUtils.getJsonArrayElementValue(stringBuilder.toString(), "/fields", "/name", "Court File Unique ID", "/value");
+            String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "/fields", "/name", "Case Flags", "/value")
+                                                                     , "", "", "11", "");
+            //System.out.println(extractedValue);
+            assertEquals("11", kFileValue);
+            assertEquals("39137", extractedValue);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Test
+    public void testJsonCustFieldParsing() {
+        String fileName = "json/system/dems/dems_custom_fields.json";
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
+             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(streamReader)) {
+
+            StringBuilder stringBuilder = new StringBuilder();
+            String line = null;
+            String ls = System.getProperty("line.separator");
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+                stringBuilder.append(ls);
+            }
+            //System.out.println("\nJSON is\n"+stringBuilder.toString());
+            String value = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "", "/name", "Case Flags", "/listItems")
+                                                 , "", "/name", "K", "/id");
+            //System.out.println("\nJSON element value is:\n"+value);
+            assertEquals("11", value);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+
+    }
+
+
+
+
+
 
 }
