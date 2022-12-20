@@ -503,6 +503,59 @@
 				"description": "Get Agency File Data"
 			},
 			"response": []
+		},
+		{
+			"name": "demsUserSet",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/demsUserSet?part_id=85056.07345",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"demsUserSet"
+					],
+					"query": [
+						{
+							"key": "part_id",
+							"value": "85056.07345"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{JUSTIN-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
 		}
 	]
 }
