@@ -930,7 +930,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_details(je);
 
         // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
         kpi.setError(error);
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));

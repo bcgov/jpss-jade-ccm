@@ -5,14 +5,14 @@ import ccm.utils.DateTimeUtils;
 
 public class EventKPI {
   public enum STATUS {
+    EVENT_UNKNOWN,
     EVENT_CREATING,
     EVENT_CREATION_FAILED,
     EVENT_CREATED,
     EVENT_PROCESSING_STARTED,
     EVENT_PROCESSING_COMPLETED,
     EVENT_PROCESSING_FAILED,
-    EVENT_PROCESSING_WARNING,
-    UNKNOWN;
+    EVENT_PROCESSING_WARNING;
   }
 
   private String kpi_dtm;
@@ -65,7 +65,7 @@ public class EventKPI {
       STATUS status = STATUS.valueOf(suggested_status_string);
       final_status_string = status.name();
     } catch (IllegalArgumentException e) {
-      final_status_string = STATUS.UNKNOWN.name() + "(" + suggested_status_string + ")";
+      final_status_string = STATUS.EVENT_UNKNOWN.name() + "(" + suggested_status_string + ")";
     }
 
     return final_status_string;

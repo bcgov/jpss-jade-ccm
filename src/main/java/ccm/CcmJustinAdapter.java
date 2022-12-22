@@ -49,6 +49,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     healthCheck();
     //readRCCFileSystem();
     requeueJustinEvent();
+    requeueJustinEventRange();
     
     processTimer();
     processJustinEventBatch();
@@ -166,6 +167,40 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
     .log("Event re-queued.")
+    ;
+  }
+
+  private void requeueJustinEventRange() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Re-queueing JUSTIN events: from id ${header.id} to id ${header.idEnd} ...")
+    .setProperty("id", simple("${header.id}"))
+    .setProperty("idEnd", simple("${header.idEnd}"))
+    .loopDoWhile(simple("${exchangeProperty.id} <= ${exchangeProperty.idEnd}"))
+      .log("Requeuing JUSTIN event ${exchangeProperty.id} ...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader("id", simple("${exchangeProperty.id}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-justin-adapter/requeueJustinEvent")
+      .log("JUSTIN event ${exchangeProperty.id} requeued.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          String id = (String)exchange.getProperty("id");
+          Long nextId = Long.parseLong(id) + 1;
+          exchange.setProperty("id", nextId.toString());
+        }
+      })
+    .end()
+    .log("All JUSTIN events requeued.")
     ;
   }
 
@@ -751,7 +786,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           error.setError_details(je);
 
           // KPI
-          EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+          EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
           kpi.setError(error);
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -1089,7 +1124,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         error.setError_details(je);
 
         // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
         kpi.setError(error);
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));

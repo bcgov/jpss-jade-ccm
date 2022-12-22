@@ -12,8 +12,10 @@ Available colours
 https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
 '/
 
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
-collections errors_topic as "Charge Assessment Case Event Errors"
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Adapter"
+collections approved_court_cases_topic as "Approved Court Case Events"
+collections errors_topic as "Approved Court Case Event Errors"
 collections kpis_topic as "Event KPIs"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
@@ -21,10 +23,10 @@ control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment Case MANUALLY_CHANGED Event Processing Sequence Diagram
+CCM Approved Court Case MANUALLY_CHANGED Event Processing Sequence Diagram
 end title
 
-charge_assessment_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
+approved_court_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
 activate notification_service
 
 notification_service ->o kpis_topic: **[1]** Publish 'processing started' event KPI
@@ -70,9 +72,9 @@ deactivate d_adapter
 lookup_service --> notification_service: Response
 deactivate lookup_service
 alt New court case
-    notification_service ->o charge_assessment_cases_topic: **[3]** Produce court case CREATED event
+    notification_service ->o approved_court_cases_topic: **[3]** Produce court case CREATED event
 else Existing court case
-    notification_service ->o charge_assessment_cases_topic: **[4]** Produce court case UPDATED event
+    notification_service ->o approved_court_cases_topic: **[4]** Produce court case UPDATED event
 end
 
 notification_service ->o kpis_topic: **[5]** Publish 'processing completed' event KPI

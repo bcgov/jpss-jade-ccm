@@ -15,13 +15,20 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
 collections errors_topic as "Charge Assessment Case Event Errors"
 collections kpis_topic as "Event KPIs"
-control notification_service as "Notification Service"
+
+' box #LightBlue Notification Service
+box Notification Service
+control ns_processManualChargeAssessmentCaseChanged as "processManualChargeAssessmentCaseChanged"
+control ns_preprocessAndPublishEventCreatedKPI as "preprocessAndPublishEventCreatedKPI"
+end box
+
+
 control lookup_service as "Lookup Service"
 control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment Case MANUALLY_CHANGED Event Processing Sequence Diagram
+CCM Notification Service - processManualChargeAssessmentCaseChanged Sequence Diagram
 end title
 
 charge_assessment_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
