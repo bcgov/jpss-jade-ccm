@@ -31,6 +31,7 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
+import ccm.models.system.justin.*;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -709,7 +710,6 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
       .log("caseFound = ${exchangeProperty.caseFound}")
       .log("autoCreateFlag = ${exchangeProperty.autoCreateFlag}")
-
       .choice()
         .when(simple("${exchangeProperty.caseFound} == ''"))
         .process(new Processor() {
@@ -727,11 +727,9 @@ public class CcmNotificationService extends RouteBuilder {
         .log("Generating derived court case event: ${body}")
         .to("direct:processChargeAssessmentCaseCreated")
       .end()
-
       // reset the original values
       .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
       .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-
       .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
       .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
       .log("Found related court case. Rcc_id: ${header.rcc_id}")
@@ -740,6 +738,53 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
     .end()
+
+
+    .doTry()
+      .log("Create new crown assignment changed event.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          ApprovedCourtCaseEvent be = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          be.setEvent_status(ApprovedCourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
+          be.setEvent_source(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString());
+      
+          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .log("Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+
+      .log("Create new appearance summary changed event.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          ApprovedCourtCaseEvent be = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          be.setEvent_status(ApprovedCourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
+          be.setEvent_source(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString());
+      
+          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .log("Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+    .doCatch(Exception.class)
+        .log("General Exception thrown.")
+        .log("${exception}")
+        .setProperty("error_event_object", body())
+        .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+        .to("direct:publishJustinEventKPIError")
+        .process(new Processor() {
+          public void process(Exchange exchange) throws Exception {
+  
+            throw exchange.getException();
+          }
+        })
+    .end()
+  
+
     ;
   }
 
