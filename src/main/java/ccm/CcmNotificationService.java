@@ -745,32 +745,107 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent be = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          ApprovedCourtCaseEvent origbe = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
           be.setEvent_status(ApprovedCourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
-          be.setEvent_source(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString());
       
           exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.setProperty("derived_event_object", be);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
 
+
+      .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("derived_event_topic", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .log("Derived event published.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          ApprovedCourtCaseEvent derived_event = (ApprovedCourtCaseEvent)exchange.getProperty("derived_event_object");
+
+          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+          // extract the offset from response header.  Example format: "[some-topic-0@301]"
+          String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+            exchange.getProperty("derived_event_recordmetadata"));
+            
+          String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
+
+          EventKPI derived_event_kpi = new EventKPI(
+            derived_event, 
+            EventKPI.STATUS.EVENT_CREATED);
+
+          derived_event_kpi.setComponent_route_name(routeId);
+          derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          derived_event_kpi.setEvent_topic_name(derived_event_topic);
+          derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+
+          exchange.getMessage().setBody(derived_event_kpi);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+      .log("Publishing derived event KPI ...")
+      .to("direct:publishBodyAsEventKPI")
+      .log("Derived event KPI published.")
+
+
+
+
+
       .log("Create new appearance summary changed event.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent be = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          ApprovedCourtCaseEvent origbe = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
+          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
           be.setEvent_status(ApprovedCourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
-          be.setEvent_source(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString());
       
           exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.setProperty("derived_event_object", be);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
-    .doCatch(Exception.class)
+
+
+      .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("derived_event_topic", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .log("Derived event published.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          ApprovedCourtCaseEvent derived_event = (ApprovedCourtCaseEvent)exchange.getProperty("derived_event_object");
+
+          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+          // extract the offset from response header.  Example format: "[some-topic-0@301]"
+          String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+            exchange.getProperty("derived_event_recordmetadata"));
+            
+          String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
+
+          EventKPI derived_event_kpi = new EventKPI(
+            derived_event, 
+            EventKPI.STATUS.EVENT_CREATED);
+
+          derived_event_kpi.setComponent_route_name(routeId);
+          derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          derived_event_kpi.setEvent_topic_name(derived_event_topic);
+          derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+
+          exchange.getMessage().setBody(derived_event_kpi);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+      .log("Publishing derived event KPI ...")
+      .to("direct:publishBodyAsEventKPI")
+      .log("Derived event KPI published.")
+
+
+
+      .doCatch(Exception.class)
         .log("General Exception thrown.")
         .log("${exception}")
         .setProperty("error_event_object", body())
