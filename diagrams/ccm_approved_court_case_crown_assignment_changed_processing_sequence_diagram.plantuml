@@ -13,20 +13,23 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
-collections approved_court_case_topic as "Approved Court Case Events"
+collections court_case_topic as "Court Case Events"
+collections kpis_topic as "Event KPIs"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
 control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Approved Court Case CROWN_ASSIGNMENT_CHANGED Event Processing Sequence Diagram
+Court Case CROWN_ASSIGNMENT_CHANGED (CR) Event Processing Sequence Diagram
 end title
 
 autonumber
 
-approved_court_case_topic o-> notification_service: Process CROWN_ASSIGNMENT_CHANGED event
+court_case_topic o-> notification_service: Process CROWN_ASSIGNMENT_CHANGED event
 activate notification_service
+
+notification_service ->o kpis_topic: Publish 'processing started' event KPI
 
 notification_service -> lookup_service: Call /getCourtCaseCrownAssignmentList
 activate lookup_service
@@ -101,7 +104,7 @@ loop For every related court case
 
 end
 
-deactivate notification_service
+notification_service ->o kpis_topic: Publish 'processing completed' event KPI
 
 deactivate notification_service
 

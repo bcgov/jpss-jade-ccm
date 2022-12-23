@@ -31,7 +31,6 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
-import ccm.models.system.justin.*;
 
 public class CcmNotificationService extends RouteBuilder {
   @Override
@@ -884,12 +883,25 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.rcc_id}")
-      .setBody(simple("${exchangeProperty.business_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .log("Check case (rcc_id ${exchangeProperty.rcc_id}) existence ...")
+      .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+      .to("http://ccm-lookup-service/getCourtCaseExists")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .choice()
+        .when(simple("${exchangeProperty.caseId} != ''"))
+          .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+          .log("Found related court case. Rcc_id: ${header.rcc_id}")
+          .setBody(simple("${exchangeProperty.business_data}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
+          .endChoice()
+        .otherwise()
+          .log("Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
+          .endChoice()
+        .end()
     .end()
     ;
   }
@@ -915,12 +927,25 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
-      .setHeader("rcc_id", jsonpath("$.rcc_id"))
-      .log("Found related court case. Rcc_id: ${header.rcc_id}")
-      .setBody(simple("${exchangeProperty.business_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .log("Check case (rcc_id ${exchangeProperty.rcc_id}) existence ...")
+      .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+      .to("http://ccm-lookup-service/getCourtCaseExists")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .choice()
+        .when(simple("${exchangeProperty.caseId} != ''"))
+          .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+          .log("Found related court case. Rcc_id: ${header.rcc_id}")
+          .setBody(simple("${exchangeProperty.business_data}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-dems-adapter/updateCourtCaseWithCrownAssignmentData")
+          .endChoice()
+        .otherwise()
+          .log("Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
+          .endChoice()
+        .end()
     .end()
     ;
   }
