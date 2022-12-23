@@ -178,13 +178,15 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    //IN: header.number
+
     from("platform-http:/" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       // .log("Before delay call...")
       // .delay(10000)
       // .log("After delay call.")
-      .setProperty("key", simple("${header.event_key}"))
+      .setProperty("key", simple("${header.number}"))
       .log("Key = ${exchangeProperty.key}")
       .to("direct:getCourtCaseIdByKey")
     ;
