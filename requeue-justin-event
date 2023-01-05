@@ -10,24 +10,36 @@ fi
 
 id="$2"
 
+idEnd="$3"
+
 if [ "$env" = "" ]; then
    echo "Error.  Invalid environment specified: '$1'"
    echo "$0 env justin_event_id"
-   echo "E.g., $0 dev 123\n"
+   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
+   echo "E.g., $0 dev 100"
+   echo "      $0 dev 100 105\n"
    return 1
 else
    ns="$ns_set-$env"
 fi
 
 if [ "$id" = "" ]; then
-   echo "Error.  Event id not specified.\n"
+   echo "Error.  Event id or range not specified.\n"
    echo "$0 env justin_event_id"
-   echo "E.g., $0 dev 123\n"
+   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
+   echo "E.g., $0 dev 100"
+   echo "      $0 dev 100 105\n"
    return 1
 fi
 
 echo "`basename $0` to $ns ..."
 
-oc -n $ns exec service/ccm-justin-adapter -- curl \
--X PUT \
-"http://ccm-justin-adapter/requeueJustinEvent?id=$id"
+if [ "$idEnd" = "" ]; then
+    oc -n $ns exec service/ccm-justin-adapter -- curl \
+    -X PUT \
+    "http://ccm-justin-adapter/requeueJustinEvent?id=$id"
+else
+    oc -n $ns exec service/ccm-justin-adapter -- curl \
+    -X PUT \
+    "http://ccm-justin-adapter/requeueJustinEventRange?id=$id&idEnd=$idEnd"
+fi

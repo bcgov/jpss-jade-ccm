@@ -1,7 +1,18 @@
 @startuml
 'hide footbox
-participant j_interface as "JUSTIN Interface"
-participant j_adapter as "JUSTIN Adapter"
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Adapter"
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
 collections approved_court_cases_topic as "Approved Court Case Events"
 collections case_users_topic as "Case User Events"
@@ -50,6 +61,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated December 7, 2022
+Prepared by David Agahchen | Updated December 22, 2022
 end caption
 @enduml

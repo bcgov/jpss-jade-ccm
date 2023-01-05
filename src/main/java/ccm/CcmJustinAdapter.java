@@ -49,6 +49,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     healthCheck();
     //readRCCFileSystem();
     requeueJustinEvent();
+    requeueJustinEventRange();
     
     processTimer();
     processJustinEventBatch();
@@ -102,6 +103,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log("/v1/health request received")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
       .to("https://{{justin.host}}/health");
 
   }
@@ -118,6 +120,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.removeHeaders("*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     //.to("https://{{justin.host}}/requeueEventById?id=2045")
     //.to("https://{{justin.host}}/requeueEventById?id=2060")
     //.to("https://{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
@@ -164,8 +167,43 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
     .log("Event re-queued.")
+    ;
+  }
+
+  private void requeueJustinEventRange() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log("Re-queueing JUSTIN events: from id ${header.id} to id ${header.idEnd} ...")
+    .setProperty("id", simple("${header.id}"))
+    .setProperty("idEnd", simple("${header.idEnd}"))
+    .loopDoWhile(simple("${exchangeProperty.id} <= ${exchangeProperty.idEnd}"))
+      .log("Requeuing JUSTIN event ${exchangeProperty.id} ...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader("id", simple("${exchangeProperty.id}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-justin-adapter/requeueJustinEvent")
+      .log("JUSTIN event ${exchangeProperty.id} requeued.")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          String id = (String)exchange.getProperty("id");
+          Long nextId = Long.parseLong(id) + 1;
+          exchange.setProperty("id", nextId.toString());
+        }
+      })
+    .end()
+    .log("All JUSTIN events requeued.")
     ;
   }
 
@@ -178,9 +216,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
     //.log("Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
     //.log("Processing in progress events from JUSTIN: ${body}")
     .to("direct:processJustinEventBatch")
@@ -231,6 +271,9 @@ public class CcmJustinAdapter extends RouteBuilder {
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_FILE))
           .to("direct:processAgenFileEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_CFILE))
+          .to("direct:processCourtFileEvent")
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AUTH_LIST))
           .to("direct:processAuthListEvent")
@@ -584,12 +627,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}") 
+      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-      .setProperty("kpi_component_route_name", simple(routeId))
-      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log("General Exception thrown.")
       .log("${exception}")
@@ -609,6 +649,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
     .end()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -748,7 +791,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           error.setError_details(je);
 
           // KPI
-          EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+          EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
           kpi.setError(error);
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -803,6 +846,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     //.removeHeader("is_success")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     //.toD("https://{{justin.host}}/eventStatus?event_message_id=${header.custom_event_message_id}&is_success=T")
     //.to("https://{{justin.host}}/eventStatus")
     .doTry()
@@ -840,6 +884,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .removeHeader("rcc_id")
     .toD("https://{{justin.host}}/agencyFile?rcc_id=${header[number]}")
     .log("Received response from JUSTIN: '${body}'")
@@ -870,6 +915,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/authUsers?rcc_id=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAuthUsersList.class)
@@ -899,6 +945,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtAppearanceSummaryList.class)
@@ -928,6 +975,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtFile.class)
@@ -957,6 +1005,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
     .log("Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCrownAssignmentList.class)
@@ -1086,7 +1135,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         error.setError_details(je);
 
         // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.UNKNOWN);
+        EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
         kpi.setError(error);
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));

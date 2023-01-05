@@ -14,20 +14,10 @@
 						{
 							"name": "GetCaseIdByKey",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{DEMS-API-URI}}/org-units/1/cases/50473.0734/id",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/173297.0877/id",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
@@ -35,7 +25,7 @@
 										"org-units",
 										"1",
 										"cases",
-										"50473.0734",
+										"173297.0877",
 										"id"
 									]
 								}
@@ -55,18 +45,11 @@
 									"raw": ""
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/list",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/list",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"cases",
@@ -79,16 +62,6 @@
 						{
 							"name": "GetCaseDataById",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"url": {
@@ -147,18 +120,11 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91/participants",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/91/participants",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"91",
 										"participants"
@@ -170,16 +136,6 @@
 						{
 							"name": "UpdateCase - PST",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "PUT",
 								"header": [],
 								"body": {
@@ -219,18 +175,11 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/148/groups/8/sync",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/148/groups/8/sync",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"148",
 										"groups",
@@ -247,16 +196,6 @@
 								"disableBodyPruning": true
 							},
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"body": {
@@ -269,13 +208,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{DEMS-API-URI}}/cases/148/groups",
+									"raw": "{{DEMS-API-URI}}/cases/63/groups",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
 									"path": [
 										"cases",
-										"148",
+										"63",
 										"groups"
 									]
 								}
@@ -297,18 +236,11 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/58/case-users/sync",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/58/case-users/sync",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"58",
 										"case-users",
@@ -324,18 +256,11 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/28/schema",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/28/schema",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"28",
 										"schema"
@@ -347,31 +272,14 @@
 						{
 							"name": "GetCaseParticipants",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/91/participants?participantType=Accused",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/91/participants?participantType=Accused",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"91",
 										"participants"
@@ -389,31 +297,14 @@
 						{
 							"name": "DeleteCase",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
-											"type": "string"
-										}
-									]
-								},
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/96",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/96",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"96"
 									]
@@ -424,31 +315,14 @@
 						{
 							"name": "FindCaseIdsByCustomFields",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/cases/45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder/id",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder/id",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"cases",
@@ -487,16 +361,6 @@
 						{
 							"name": "CreatePerson",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "POST",
 								"header": [],
 								"body": {
@@ -509,18 +373,11 @@
 									}
 								},
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/org-units/1/persons",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"org-units",
 										"1",
 										"persons"
@@ -532,16 +389,6 @@
 						{
 							"name": "UpdatePerson",
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "PUT",
 								"header": [],
 								"body": {
@@ -574,16 +421,6 @@
 								"disableBodyPruning": true
 							},
 							"request": {
-								"auth": {
-									"type": "bearer",
-									"bearer": [
-										{
-											"key": "token",
-											"value": "{{DEMS-Token}}",
-											"type": "string"
-										}
-									]
-								},
 								"method": "GET",
 								"header": [],
 								"body": {
@@ -621,18 +458,11 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "https://346n1v5oeh.execute-api.ca-central-1.amazonaws.com/api/v1/cases/86/records/7",
-									"protocol": "https",
+									"raw": "{{DEMS-API-URI}}/cases/86/records/7",
 									"host": [
-										"346n1v5oeh",
-										"execute-api",
-										"ca-central-1",
-										"amazonaws",
-										"com"
+										"{{DEMS-API-URI}}"
 									],
 									"path": [
-										"api",
-										"v1",
 										"cases",
 										"86",
 										"records",
@@ -703,16 +533,6 @@
 				{
 					"name": "GetVersion",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{DEMS-Token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -730,16 +550,6 @@
 				{
 					"name": "GetHealth",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{DEMS-Token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -757,16 +567,6 @@
 				{
 					"name": "GetSwagger",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "7N6EYCR6TD88O7MV1VXQNBP0K",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -783,18 +583,8 @@
 					"response": []
 				},
 				{
-					"name": "GetCustomFields",
+					"name": "GetCustomFields-old",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{DEMS-Token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -817,27 +607,16 @@
 					"response": []
 				},
 				{
-					"name": "GetCustomFields Copy",
+					"name": "GetCustomFields",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{DEMS-Token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{DEMS-API-URI}}/site/org-units/1/fields",
+							"raw": "{{DEMS-API-URI}}/org-units/1/fields",
 							"host": [
 								"{{DEMS-API-URI}}"
 							],
 							"path": [
-								"site",
 								"org-units",
 								"1",
 								"fields"
@@ -950,24 +729,24 @@
 				{
 					"name": "health",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/health",
-							"protocol": "https",
+							"raw": "{{JUSTIN-API-URI}}/health",
 							"host": [
-								"dev",
-								"jag",
-								"gov",
-								"bc",
-								"ca"
+								"{{JUSTIN-API-URI}}"
 							],
 							"path": [
-								"ords",
-								"devj",
-								"justinords",
-								"dems",
-								"v1",
 								"health"
 							]
 						}
