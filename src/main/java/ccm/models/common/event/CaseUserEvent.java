@@ -20,10 +20,12 @@ public class CaseUserEvent extends BaseEvent {
 
   public enum SOURCE {
     JUSTIN,
+    PIDP,
     JADE_CCM
   }
   
   public enum STATUS {
+    ACCOUNT_CREATED,
     ACCESS_ADDED,
     ACCESS_REMOVED;
   }
