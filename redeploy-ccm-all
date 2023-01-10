@@ -2,6 +2,8 @@ if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
     env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
 else
     env=""
 fi
@@ -11,6 +13,17 @@ if [ "$env" = "" ]; then
    return 1
 fi
 
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+
+    return 1
+fi
+
 echo "`basename $0` to $env ..."
 
 . ./repackage-ccm-models
@@ -18,4 +31,4 @@ echo "`basename $0` to $env ..."
 . ./redeploy-ccm-dems-adapter $env
 . ./redeploy-ccm-lookup-service $env
 . ./redeploy-ccm-notification-service $env
-. ./redeploy-ccm-justin-adapter $env
+# . ./redeploy-ccm-justin-adapter $env
