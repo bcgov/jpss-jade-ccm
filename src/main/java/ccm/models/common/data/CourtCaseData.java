@@ -7,7 +7,7 @@ import ccm.models.system.justin.JustinCourtFile;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ApprovedCourtCaseData {
+public class CourtCaseData {
   public static final String DASH_STRING = "-";
   public static final String COLON_STRING = ":";
   public static final String YES_STRING = "Y";
@@ -31,15 +31,15 @@ public class ApprovedCourtCaseData {
   private List<String> case_flags;
 
   private List<CaseAccused> accused_persons;
-  private List<ChargeAssessmentCaseDataRef> related_agency_file;
+  private List<ChargeAssessmentDataRef> related_agency_file;
 
   private String approving_crown_agency_name;
   private String approving_crown_agency_ident;
 
-  public ApprovedCourtCaseData() {
+  public CourtCaseData() {
   }
 
-  public ApprovedCourtCaseData(JustinCourtFile jcf) {
+  public CourtCaseData(JustinCourtFile jcf) {
       setCourt_file_id(jcf.getMdoc_justin_no());
       setCourt_file_no(jcf.getCourt_file_no());
       setCourt_file_type_reference(jcf.getType_reference());
@@ -117,12 +117,12 @@ public class ApprovedCourtCaseData {
       setAccused_persons(accusedList);
       setAccused_names(accused_names.toString());
 
-      List<ChargeAssessmentCaseDataRef> agencyList = new ArrayList<ChargeAssessmentCaseDataRef>();
+      List<ChargeAssessmentDataRef> agencyList = new ArrayList<ChargeAssessmentDataRef>();
 
       if(jcf.getRelated_rcc() != null) {
         for (JustinAgencyFileRef jafr : jcf.getRelated_rcc()) {
 
-          ChargeAssessmentCaseDataRef agencyRef = new ChargeAssessmentCaseDataRef(jafr);
+          ChargeAssessmentDataRef agencyRef = new ChargeAssessmentDataRef(jafr);
           agencyList.add(agencyRef);
         }
       }
@@ -279,10 +279,10 @@ public class ApprovedCourtCaseData {
   public void setAccused_persons(List<CaseAccused> accused_person) {
     this.accused_persons = accused_person;
   }
-  public List<ChargeAssessmentCaseDataRef> getRelated_agency_file() {
+  public List<ChargeAssessmentDataRef> getRelated_agency_file() {
     return related_agency_file;
   }
-  public void setRelated_agency_file(List<ChargeAssessmentCaseDataRef> related_agency_file) {
+  public void setRelated_agency_file(List<ChargeAssessmentDataRef> related_agency_file) {
     this.related_agency_file = related_agency_file;
   }
 

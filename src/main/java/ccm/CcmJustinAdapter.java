@@ -28,15 +28,15 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
-import ccm.models.common.data.ApprovedCourtCaseData;
+import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
-import ccm.models.common.data.ChargeAssessmentCaseData;
-import ccm.models.common.event.ApprovedCourtCaseEvent;
+import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
-import ccm.models.common.event.ChargeAssessmentCaseEvent;
+import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.justin.*;
@@ -346,15 +346,15 @@ public class CcmJustinAdapter extends RouteBuilder {
 
             if (e.isAgenFileEvent()) {
               // court case changed.  generate new business event.
-              ChargeAssessmentCaseEvent bce = new ChargeAssessmentCaseEvent(e);
+              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
               System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
             } else if (e.isAuthListEvent()) {
               // auth list changed.  Generate new business event.
-              ChargeAssessmentCaseEvent bce = new ChargeAssessmentCaseEvent(e);
+              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
               System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
             } else if (e.isCourtFileEvent()) {
               // court file changed.  Generate new business event.
-              ApprovedCourtCaseEvent bcme = new ApprovedCourtCaseEvent(e);
+              CourtCaseEvent bcme = new CourtCaseEvent(e);
               System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + bcme.getJustin_mdoc_no() + "')..");
             } else {
               System.out.println(" Unknown JUSTIN event type; Do nothing.");
@@ -388,14 +388,14 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+          ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
       
-          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .log("Set kpi event object")
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
@@ -445,13 +445,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+          ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
       
-          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
       .setProperty("business_event", body())
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
@@ -619,13 +619,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
@@ -675,13 +675,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
@@ -731,13 +731,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
@@ -893,11 +893,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinAgencyFile j = exchange.getIn().getBody(JustinAgencyFile.class);
-        ChargeAssessmentCaseData b = new ChargeAssessmentCaseData(j);
-        exchange.getMessage().setBody(b, ChargeAssessmentCaseData.class);
+        ChargeAssessmentData b = new ChargeAssessmentData(j);
+        exchange.getMessage().setBody(b, ChargeAssessmentData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
@@ -983,11 +983,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinCourtFile j = exchange.getIn().getBody(JustinCourtFile.class);
-        ApprovedCourtCaseData b = new ApprovedCourtCaseData(j);
-        exchange.getMessage().setBody(b, ApprovedCourtCaseData.class);
+        CourtCaseData b = new CourtCaseData(j);
+        exchange.getMessage().setBody(b, CourtCaseData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseData.class)
+    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .log("Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

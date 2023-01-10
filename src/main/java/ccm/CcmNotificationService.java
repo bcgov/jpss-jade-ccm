@@ -22,11 +22,11 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.common.data.ChargeAssessmentCaseDataRef;
-import ccm.models.common.event.ApprovedCourtCaseEvent;
+import ccm.models.common.data.ChargeAssessmentDataRef;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
-import ccm.models.common.event.ChargeAssessmentCaseEvent;
+import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
@@ -75,22 +75,22 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event")
       .simple("${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .choice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CHANGED))
-        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseChanged"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-        .to("direct:processChargeAssessmentCaseChanged")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.MANUALLY_CHANGED))
+      // .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CHANGED))
+      //   .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseChanged"))
+      //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+      //   .to("direct:publishEventKPI")
+      //   .setBody(header("event"))
+      //   .to("direct:processChargeAssessmentCaseChanged")
+      //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+      //   .to("direct:publishEventKPI")
+      //   .endChoice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.MANUALLY_CHANGED))
         .setProperty("kpi_component_route_name", simple("processManualChargeAssessmentCaseChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -99,7 +99,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.CREATED))
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CREATED))
         .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseCreated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -108,7 +108,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.UPDATED))
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.UPDATED))
         .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -117,7 +117,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentCaseEvent.STATUS.AUTH_LIST_CHANGED))
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED))
         .setProperty("kpi_component_route_name", simple("processCourtCaseAuthListChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -174,13 +174,13 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event")
       .simple("${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
     .choice()
-      .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.CHANGED))
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.CHANGED))
         .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -189,7 +189,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.MANUALLY_CHANGED))
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.MANUALLY_CHANGED))
         .setProperty("kpi_component_route_name", simple("processManualApprovedCourtCaseChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -198,7 +198,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.APPEARANCE_CHANGED))
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.APPEARANCE_CHANGED))
         .setProperty("kpi_component_route_name", simple("processCourtCaseAppearanceChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -207,7 +207,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ApprovedCourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
         .setProperty("kpi_component_route_name", simple("processCourtCaseCrownAssignmentChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -254,15 +254,15 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
             ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
-            ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
-            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
+            ChargeAssessmentEvent original_event = (ChargeAssessmentEvent)ex.getProperty("kpi_event_object");
+            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM, original_event);
 
             boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
             if (court_case_exists) {
-              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+              derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.UPDATED.toString());
             } else {
-              derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+              derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
             }
 
             ex.getMessage().setBody(derived_event);
@@ -271,7 +271,7 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_event_object", derived_event);
           }
         })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log("Generating derived court case event: ${body}")
         .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
@@ -314,15 +314,15 @@ public class CcmNotificationService extends RouteBuilder {
         ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
         ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
-        ChargeAssessmentCaseEvent original_event = (ChargeAssessmentCaseEvent)ex.getProperty("kpi_event_object");
-        ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM, original_event);
+        ChargeAssessmentEvent original_event = (ChargeAssessmentEvent)ex.getProperty("kpi_event_object");
+        ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM, original_event);
 
         boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
 
         if (court_case_exists) {
-          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.UPDATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.UPDATED.toString());
         } else {
-          derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
+          derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
         }
 
         ex.getMessage().setBody(derived_event);
@@ -331,7 +331,7 @@ public class CcmNotificationService extends RouteBuilder {
         ex.setProperty("kpi_event_object", derived_event);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .log("Generating derived court case event: ${body}")
     .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
     .log("Returned topic value = ${body}")
@@ -507,7 +507,7 @@ public class CcmNotificationService extends RouteBuilder {
             .jsonpathWriteAsString("$.case_list")
             .setProperty("rcc_id",jsonpath("$.rcc_id"))
             .log("Iterating through case list.  case ref = ${body}")
-            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseDataRef.class)
+            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
             .setHeader("event_key", jsonpath("$.rcc_id"))
             .log("Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
             .to("direct:processCourtCaseAuthListUpdated")
@@ -540,17 +540,17 @@ public class CcmNotificationService extends RouteBuilder {
             .jsonpathWriteAsString("$.case_list")
             .setProperty("rcc_id",jsonpath("$.rcc_id"))
             .log("Iterating through case list.  case ref = ${body}")
-            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseDataRef.class)
+            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
             .process(new Processor() {
               @Override
               public void process(Exchange exchange) throws Exception {
-                ChargeAssessmentCaseDataRef caseRef = (ChargeAssessmentCaseDataRef)exchange.getIn().getBody();
+                ChargeAssessmentDataRef caseRef = (ChargeAssessmentDataRef)exchange.getIn().getBody();
                 CaseUserEvent event = (CaseUserEvent)exchange.getProperty("event_object");
-                ChargeAssessmentCaseEvent authListEvent = new ChargeAssessmentCaseEvent();
+                ChargeAssessmentEvent authListEvent = new ChargeAssessmentEvent();
                 authListEvent.setEvent_dtm(DateTimeUtils.generateCurrentDtm());
                 authListEvent.setEvent_key(caseRef.getRcc_id());
-                authListEvent.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.name());
-                authListEvent.setEvent_status(ChargeAssessmentCaseEvent.STATUS.AUTH_LIST_CHANGED.name());
+                authListEvent.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
+                authListEvent.setEvent_status(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED.name());
                 authListEvent.setJustin_event_dtm(event.getJustin_event_dtm());
                 authListEvent.setJustin_event_message_id(event.getJustin_event_message_id());
                 authListEvent.setJustin_fetched_date(event.getJustin_fetched_date());
@@ -561,7 +561,7 @@ public class CcmNotificationService extends RouteBuilder {
               }
             })
             .setBody(simple("${exchangeProperty.derived_event_object}"))
-            .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+            .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
             .log("Publishing derived event ${exchangeProperty.derived_event_type} (rcc_id = ${exchangeProperty.rcc_id}) ...")
             .log("body: ${body}")
             .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
@@ -571,7 +571,7 @@ public class CcmNotificationService extends RouteBuilder {
             .process(new Processor() {
               @Override
               public void process(Exchange exchange) throws Exception {
-                ChargeAssessmentCaseEvent derived_event = (ChargeAssessmentCaseEvent)exchange.getProperty("derived_event_object");
+                ChargeAssessmentEvent derived_event = (ChargeAssessmentEvent)exchange.getProperty("derived_event_object");
 
                 // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
                 // extract the offset from response header.  Example format: "[some-topic-0@301]"
@@ -643,9 +643,9 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
             ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
-            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent();
-            derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
-            derived_event.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.name());
+            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
+            derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
+            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
 
             ex.getMessage().setBody(derived_event);
 
@@ -653,7 +653,7 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_event_object", derived_event);
           }
         })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log("Generating derived court case event: ${body}")
         .to("direct:processChargeAssessmentCaseCreated")
         // KPI: restore previous values
@@ -715,14 +715,14 @@ public class CcmNotificationService extends RouteBuilder {
           @Override
           public void process(Exchange ex) {
 
-            ChargeAssessmentCaseEvent derived_event = new ChargeAssessmentCaseEvent();
-            derived_event.setEvent_status(ChargeAssessmentCaseEvent.STATUS.CREATED.toString());
-            derived_event.setEvent_source(ChargeAssessmentCaseEvent.SOURCE.JADE_CCM.name());
+            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
+            derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
+            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
 
             ex.getMessage().setBody(derived_event);
           }
         })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log("Generating derived court case event: ${body}")
         .to("direct:processChargeAssessmentCaseCreated")
       .end()
@@ -744,15 +744,15 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent origbe = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
-          be.setEvent_status(ApprovedCourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
+          CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
+          CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+          be.setEvent_status(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.setProperty("derived_event_object", be);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
 
@@ -763,7 +763,7 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent derived_event = (ApprovedCourtCaseEvent)exchange.getProperty("derived_event_object");
+          CourtCaseEvent derived_event = (CourtCaseEvent)exchange.getProperty("derived_event_object");
 
           // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
           // extract the offset from response header.  Example format: "[some-topic-0@301]"
@@ -797,15 +797,15 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent origbe = (ApprovedCourtCaseEvent)exchange.getProperty("kpi_event_object");
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(ApprovedCourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
-          be.setEvent_status(ApprovedCourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
+          CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
+          CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+          be.setEvent_status(CourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.setProperty("derived_event_object", be);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log("Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
 
@@ -816,7 +816,7 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          ApprovedCourtCaseEvent derived_event = (ApprovedCourtCaseEvent)exchange.getProperty("derived_event_object");
+          CourtCaseEvent derived_event = (CourtCaseEvent)exchange.getProperty("derived_event_object");
 
           // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
           // extract the offset from response header.  Example format: "[some-topic-0@301]"

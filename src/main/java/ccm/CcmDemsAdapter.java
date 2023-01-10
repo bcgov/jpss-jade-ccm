@@ -23,14 +23,14 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.common.data.ApprovedCourtCaseData;
+import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
-import ccm.models.common.data.ChargeAssessmentCaseData;
-import ccm.models.common.data.ChargeAssessmentCaseDataRefList;
+import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.data.ChargeAssessmentDataRefList;
 import ccm.models.system.dems.*;
 import ccm.utils.JsonParseUtils;
 
@@ -321,12 +321,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log("Processing request: ${body}")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
-        ChargeAssessmentCaseData b = exchange.getIn().getBody(ChargeAssessmentCaseData.class);
+        ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
         exchange.getMessage().setBody(d);
       }
@@ -367,7 +367,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     //.log("Existing values: ${exchangeProperty.courtFileUniqueId} : ${exchangeProperty.kFileValue}")
     .setBody(simple("${exchangeProperty.JustinCourtCase}"))
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
@@ -376,7 +376,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         // If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
         String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
         String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
-        ChargeAssessmentCaseData b = exchange.getIn().getBody(ChargeAssessmentCaseData.class);
+        ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
         if(doesCourtFileUniqueIdExist != null && !doesCourtFileUniqueIdExist.isEmpty()) {
           // this is an approved court case.
           if(doesKFilePreExist != null && !doesKFilePreExist.isEmpty()) {
@@ -436,7 +436,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log("Processing request: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.rcc_id}"))
-    .unmarshal().json(JsonLibrary.Jackson, ApprovedCourtCaseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .setProperty("CourtCaseMetadata").body()
     // retrieve court case name from DEMS
     .to("direct:getCourtCaseNameByKey")
@@ -448,7 +448,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
-        ApprovedCourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", ApprovedCourtCaseData.class);
+        CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
         DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm);
         exchange.getMessage().setBody(d);
       }
@@ -1019,12 +1019,12 @@ public class CcmDemsAdapter extends RouteBuilder {
           @Override
           public void process(Exchange exchange) {
             DemsCaseRefList demsCaseList = new DemsCaseRefList((String)exchange.getIn().getBody());
-            ChargeAssessmentCaseDataRefList caseList = new ChargeAssessmentCaseDataRefList(demsCaseList);
+            ChargeAssessmentDataRefList caseList = new ChargeAssessmentDataRefList(demsCaseList);
             exchange.getMessage().setBody(caseList);
             exchange.setProperty("case_list_size", caseList.getCase_list().size());
           }
         })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseDataRefList.class)
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRefList.class)
         .log("User found; case list size = ${exchangeProperty.case_list_size}.")
         .endChoice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
