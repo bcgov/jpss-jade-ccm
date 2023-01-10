@@ -36,7 +36,7 @@ public class CcmNotificationService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    processChargeAssessmentCaseEvents();
+    processChargeAssessmentEvents();
     processApprovedCourtCaseEvents();
     processChargeAssessmentChanged();
     processManualChargeAssessmentChanged();
@@ -57,7 +57,7 @@ public class CcmNotificationService extends RouteBuilder {
     publishBodyAsEventKPI();
   }
 
-  private void processChargeAssessmentCaseEvents() {
+  private void processChargeAssessmentEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -81,15 +81,15 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .choice()
-      // .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CHANGED))
-      //   .setProperty("kpi_component_route_name", simple("processChargeAssessmentChanged"))
-      //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-      //   .to("direct:publishEventKPI")
-      //   .setBody(header("event"))
-      //   .to("direct:processChargeAssessmentChanged")
-      //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-      //   .to("direct:publishEventKPI")
-      //   .endChoice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CHANGED))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processChargeAssessmentChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.MANUALLY_CHANGED))
         .setProperty("kpi_component_route_name", simple("processManualChargeAssessmentChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
