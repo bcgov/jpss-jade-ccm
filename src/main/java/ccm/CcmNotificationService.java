@@ -38,14 +38,14 @@ public class CcmNotificationService extends RouteBuilder {
 
     processChargeAssessmentCaseEvents();
     processApprovedCourtCaseEvents();
-    processChargeAssessmentCaseChanged();
-    processManualChargeAssessmentCaseChanged();
-    processChargeAssessmentCaseCreated();
-    processChargeAssessmentCaseUpdated();
+    processChargeAssessmentChanged();
+    processManualChargeAssessmentChanged();
+    processChargeAssessmentCreated();
+    processChargeAssessmentUpdated();
     processCourtCaseAuthListChanged();
     processCourtCaseAuthListUpdated();
-    processApprovedCourtCaseChanged();
-    processManualApprovedCourtCaseChanged();
+    processCourtCaseChanged();
+    processManualCourtCaseChanged();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
@@ -82,38 +82,38 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .choice()
       // .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CHANGED))
-      //   .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseChanged"))
+      //   .setProperty("kpi_component_route_name", simple("processChargeAssessmentChanged"))
       //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
       //   .to("direct:publishEventKPI")
       //   .setBody(header("event"))
-      //   .to("direct:processChargeAssessmentCaseChanged")
+      //   .to("direct:processChargeAssessmentChanged")
       //   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
       //   .to("direct:publishEventKPI")
       //   .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.MANUALLY_CHANGED))
-        .setProperty("kpi_component_route_name", simple("processManualChargeAssessmentCaseChanged"))
+        .setProperty("kpi_component_route_name", simple("processManualChargeAssessmentChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processManualChargeAssessmentCaseChanged")
+        .to("direct:processManualChargeAssessmentChanged")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CREATED))
-        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseCreated"))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCreated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processChargeAssessmentCaseCreated")
+        .to("direct:processChargeAssessmentCreated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.UPDATED))
-        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCaseUpdated"))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentUpdated"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processChargeAssessmentCaseUpdated")
+        .to("direct:processChargeAssessmentUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -136,7 +136,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processChargeAssessmentCaseCreated() {
+  private void processChargeAssessmentCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -181,20 +181,20 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
     .choice()
       .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.CHANGED))
-        .setProperty("kpi_component_route_name", simple("processApprovedCourtCaseChanged"))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processApprovedCourtCaseChanged")
+        .to("direct:processCourtCaseChanged")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
       .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.MANUALLY_CHANGED))
-        .setProperty("kpi_component_route_name", simple("processManualApprovedCourtCaseChanged"))
+        .setProperty("kpi_component_route_name", simple("processManualCourtCaseChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processManualApprovedCourtCaseChanged")
+        .to("direct:processManualCourtCaseChanged")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -226,7 +226,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processChargeAssessmentCaseChanged() {
+  private void processChargeAssessmentChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -289,7 +289,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processManualChargeAssessmentCaseChanged() {
+  private void processManualChargeAssessmentChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -349,7 +349,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processChargeAssessmentCaseUpdated() {
+  private void processChargeAssessmentUpdated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -605,7 +605,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processApprovedCourtCaseChanged() {
+  private void processCourtCaseChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -655,7 +655,7 @@ public class CcmNotificationService extends RouteBuilder {
         })
         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log("Generating derived court case event: ${body}")
-        .to("direct:processChargeAssessmentCaseCreated")
+        .to("direct:processChargeAssessmentCreated")
         // KPI: restore previous values
         .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
         .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
@@ -678,7 +678,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processManualApprovedCourtCaseChanged() {
+  private void processManualCourtCaseChanged() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -724,7 +724,7 @@ public class CcmNotificationService extends RouteBuilder {
         })
         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log("Generating derived court case event: ${body}")
-        .to("direct:processChargeAssessmentCaseCreated")
+        .to("direct:processChargeAssessmentCreated")
       .end()
       // reset the original values
       .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
