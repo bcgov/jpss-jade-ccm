@@ -11,17 +11,6 @@ if [ "$env" = "" ]; then
    return 1
 fi
 
-if [ "$env" = "prod" ]; then
-    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
-    read answer
-    if [ "$answer" != "y" ]; then
-        echo "Aborting deployment."
-        return 1
-    fi
-
-    return 1
-fi
-
 echo "`basename $0` to $env ..."
 
 . ./repackage-ccm-models
