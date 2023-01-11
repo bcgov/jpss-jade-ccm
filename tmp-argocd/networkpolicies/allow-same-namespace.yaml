@@ -5,7 +5,7 @@ metadata:
 spec:
   # Allow all pods within the current namespace to communicate
   # to one another.
-  podSelector:
+  podSelector: {}
   ingress:
   - from:
     - podSelector: {}

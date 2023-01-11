@@ -62,10 +62,10 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //from("kafka:{{kafka.topic.chargeassessmentcases.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.chargeassessmentcases.name}}?groupId=ccm-notification-service")
+    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessmentcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -162,9 +162,9 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.approvedcourtcases.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.approvedcourtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -274,9 +274,9 @@ public class CcmNotificationService extends RouteBuilder {
         })
         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-        .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
+        .to("kafka:{{kafka.topic.chargeassessments.name}}") // only push on topic, if auto creation is true
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
         .setProperty("kpi_component_route_name", simple(routeId))
         .to("direct:preprocessAndPublishEventCreatedKPI")
@@ -334,9 +334,9 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
     .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-    .to("kafka:{{kafka.topic.chargeassessmentcases.name}}") // only push on topic, if auto creation is true
+    .to("kafka:{{kafka.topic.chargeassessments.name}}") // only push on topic, if auto creation is true
     .log(LoggingLevel.DEBUG,"Returned topic value = ${body}")
-    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
@@ -417,10 +417,10 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //from("kafka:{{kafka.topic.chargeassessmentcases.name}}?groupId=ccm-notification-service")
+    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessmentcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -565,9 +565,9 @@ public class CcmNotificationService extends RouteBuilder {
             .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
             .log(LoggingLevel.DEBUG,"Publishing derived event ${exchangeProperty.derived_event_type} (rcc_id = ${exchangeProperty.rcc_id}) ...")
             .log(LoggingLevel.DEBUG,"body: ${body}")
-            .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
+            .to("kafka:{{kafka.topic.chargeassessments.name}}")
             .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-            .setProperty("derived_event_topic", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+            .setProperty("derived_event_topic", simple("{{kafka.topic.chargeassessments.name}}"))
             .log(LoggingLevel.DEBUG,"Derived event published.")
             .process(new Processor() {
               @Override
@@ -755,11 +755,11 @@ public class CcmNotificationService extends RouteBuilder {
         }})
       .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+      .to("kafka:{{kafka.topic.courtcases.name}}")
 
 
       .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-      .setProperty("derived_event_topic", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
       .log(LoggingLevel.DEBUG,"Derived event published.")
       .process(new Processor() {
         @Override
@@ -808,11 +808,11 @@ public class CcmNotificationService extends RouteBuilder {
         }})
       .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
+      .to("kafka:{{kafka.topic.courtcases.name}}")
 
 
       .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-      .setProperty("derived_event_topic", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
       .log(LoggingLevel.DEBUG,"Derived event published.")
       .process(new Processor() {
         @Override
@@ -1087,7 +1087,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.DEBUG,"Generate kpi event: ${body}")
     // send to the chargeassessmentcase errors topic
-    .to("kafka:{{kafka.topic.chargeassessmentcase-errors.name}}")
+    .to("kafka:{{kafka.topic.chargeassessment-errors.name}}")
     .log(LoggingLevel.DEBUG,"kpi event added to chargeassessmentcase errors topic")
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setBody(simple("${exchangeProperty.kpi_object}"))
