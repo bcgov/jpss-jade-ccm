@@ -17,6 +17,19 @@ else
    ns="$ns_set-$env"
 fi
 
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+else
+    logging_level="DEBUG"
+fi
+
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm

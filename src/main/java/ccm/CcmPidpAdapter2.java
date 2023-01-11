@@ -1,6 +1,7 @@
 package ccm;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 
 // camel-k: language=java
@@ -40,7 +41,7 @@ public class CcmPidpAdapter2 extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("event_key = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
@@ -59,10 +60,10 @@ public class CcmPidpAdapter2 extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Publishing Event KPI to Kafka ...")
-    .log("body: ${body}")
+    .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
+    .log(LoggingLevel.DEBUG,"body: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
-    .log("Event KPI published.")
+    .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
 
