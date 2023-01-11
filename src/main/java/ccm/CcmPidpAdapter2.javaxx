@@ -24,6 +24,13 @@ import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.kafka.KafkaComponent;
+import org.apache.camel.component.kafka.KafkaConfiguration;
+import org.apache.camel.util.jsse.KeyManagersParameters;
+import org.apache.camel.util.jsse.KeyStoreParameters;
+import org.apache.camel.util.jsse.SSLContextParameters;
+
 public class CcmPidpAdapter2 extends RouteBuilder {
   @Override
   public void configure() throws Exception {
@@ -36,9 +43,38 @@ public class CcmPidpAdapter2 extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    // Configure SSL context parameters for the P12 client certificate
+    KeyStoreParameters keystore = new KeyStoreParameters();
+    keystore.setResource("file:path/to/client.p12");
+    keystore.setPassword("clientpassword");
+    keystore.setType("PKCS12");
+
+    KeyManagersParameters keyManagers = new KeyManagersParameters();
+    keyManagers.setKeyStore(keystore);
+
+    SSLContextParameters sslContext = new SSLContextParameters();
+    sslContext.setKeyManagers(keyManagers);
+
+    // Configure Kafka component and set the SSL context parameters
+    KafkaComponent kafka = new KafkaComponent();
+    kafka.setSslContextParameters(sslContext);
+    getContext().addComponent("kafka", kafka);
+
+    // Configure OIDC authentication parameters
+    KafkaConfiguration kafkaConfig = new KafkaConfiguration();
+    kafkaConfig.setSaslMechanism("OAUTHBEARER");
+    kafkaConfig.setSecurityProtocol("SASL_SSL");
+    kafkaConfig.setSaslJaasConfig("org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required "
+        + "oidc.provider.url='https://oidc-provider.com' "
+        + "oidc.client.id='client-id' "
+        + "oidc.client.secret='client-secret' "
+        + "oidc.token.endpoint='https://token-endpoint.com' "
+        + "oidc.username.claim='sub' "
+        + "oidc.groups.claim='groups';");
+
     // IN
     // property: event_object
-    from("direct:" + routeId)
+    from("kafka:{{pidp.kafka.topic.name}}?groupId=ccm-pidp-adapter2&configuration=#kafkaConfig")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")

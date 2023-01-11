@@ -1,10 +1,15 @@
 package ccm;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.StringTokenizer;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+
+// import org.apache.camel.component.http4.HttpOperationFailedException;
+// import org.apache.camel.component.http4.HttpMethods;
 
 // To run this integration use:
 // kamel run CcmNotificationService.java --property file:ccmNotificationService.properties --profile openshift
@@ -17,6 +22,7 @@ import org.apache.camel.Processor;
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
 // camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http4
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 //import org.apache.camel.Exchange;
@@ -37,6 +43,8 @@ public class CcmNotificationService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
+    attachExceptionHandlers();
+
     processChargeAssessmentEvents();
     processCourtCaseEvents();
     processChargeAssessmentChanged();
@@ -56,6 +64,42 @@ public class CcmNotificationService extends RouteBuilder {
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
     publishBodyAsEventKPI();
+  }
+
+  private void attachExceptionHandlers() {
+
+    onException(ConnectException.class, SocketTimeoutException.class)
+      .backOffMultiplier(2)
+      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
+      .retryAttemptedLogLevel(LoggingLevel.WARN);
+        
+    // onException(HttpOperationFailedException.class)
+    //   .onWhen(exchange -> exchange.getProperty(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 404)
+    //   .handled(true)
+    //   .setBody(constant("Resource Not Found"))
+    //   .to("mock:notFound");
+
+    // onException(HttpOperationFailedException.class)
+    //   .maximumRedeliveries(3)
+    //   .backOffMultiplier(2)
+    //   .retryAttemptedLogLevel(LoggingLevel.WARN);
+    
+    onException(Exception.class)
+      .setBody(constant("An unexpected error occurred"))
+      .log(LoggingLevel.ERROR,"onException(Exception) called.");
+
+/*             // Context scoped error handler
+      errorHandler(
+        // OOTB DeadLetterChannel error handler divert messages after issue being fixed 
+        deadLetterChannel("file:{{doc.location}}/csv")
+                .logStackTrace(false)
+                .onPrepareFailure(e -> {
+                        // Fixing the application error programmatically
+                        e.getMessage().removeHeader("failure");
+                        e.removeProperty(Exchange.EXCEPTION_CAUGHT);
+                })
+      ); */
+
   }
 
   private void processChargeAssessmentEvents() {
