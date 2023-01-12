@@ -104,11 +104,11 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/org.apache.camel/camel-http -->
-    <!-- <dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.camel/camel-http-base -->
+     <dependency>
       <groupId>org.apache.camel</groupId>
-      <artifactId>camel-http4</artifactId>
-    </dependency> -->
+      <artifactId>camel-http-base</artifactId>
+    </dependency> 
 
   </dependencies>
   <build>

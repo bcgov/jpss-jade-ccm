@@ -7,6 +7,7 @@ import java.util.StringTokenizer;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.http.base.HttpOperationFailedException;
 
 // import org.apache.camel.component.http4.HttpOperationFailedException;
 // import org.apache.camel.component.http4.HttpMethods;
@@ -28,6 +29,7 @@ import org.apache.camel.Processor;
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.http.HttpStatus;
 
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.event.CourtCaseEvent;
@@ -73,6 +75,28 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .retryAttemptedLogLevel(LoggingLevel.WARN);
         
+      onException(HttpOperationFailedException.class)
+      .maximumRedeliveries(3)
+      .redeliveryDelay(120000) // 2 min delay?
+      .setBody(constant("An unexpected HTTP error occurred"))
+      .backOffMultiplier(2)
+      .retryAttemptedLogLevel(LoggingLevel.WARN)
+      .log(LoggingLevel.ERROR,"HttpOperationFailedException called");
+
+    // just seeing what this will do as well
+    onException(HttpOperationFailedException.class)
+   .process(new Processor() {
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        // e won't be null because we only catch HttpOperationFailedException;
+        // otherwise, we'd need to check for null.
+        final HttpOperationFailedException e =
+                exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+        // Do something with the responseBody
+        final String responseBody = e.getResponseBody();
+        log.error("Caught HttpOperationFailed exception, http status : " + e.getHttpResponseStatus());
+    }
+});
     // onException(HttpOperationFailedException.class)
     //   .onWhen(exchange -> exchange.getProperty(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 404)
     //   .handled(true)
