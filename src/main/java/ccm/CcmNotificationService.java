@@ -2,8 +2,10 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.util.HashMap;
 import java.util.StringTokenizer;
 
+import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -28,6 +30,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.builder.component.dsl.KafkaComponentBuilderFactory.KafkaComponentBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.HttpStatus;
 
@@ -70,59 +73,144 @@ public class CcmNotificationService extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
+     errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
+        e.getMessage()
+        .setHeader(Exchange.FILE_NAME, e);
+     })
+     
+     .useOriginalMessage()
+     .logStackTrace(false)
+     .maximumRedeliveries(0));
+
+    // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
       .backOffMultiplier(2)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
-      .retryAttemptedLogLevel(LoggingLevel.WARN);
-        
-      onException(HttpOperationFailedException.class)
-      .maximumRedeliveries(3)
-      .redeliveryDelay(120000) // 2 min delay?
-      .setBody(constant("An unexpected HTTP error occurred"))
-      .backOffMultiplier(2)
-      .retryAttemptedLogLevel(LoggingLevel.WARN)
-      .log(LoggingLevel.ERROR,"HttpOperationFailedException called");
+      .setBody(constant("An unexpected network error occurred"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+      .end();
 
-    // just seeing what this will do as well
+    // HttpOperation Failed
     onException(HttpOperationFailedException.class)
-   .process(new Processor() {
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        // e won't be null because we only catch HttpOperationFailedException;
-        // otherwise, we'd need to check for null.
-        final HttpOperationFailedException e =
-                exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-        // Do something with the responseBody
-        final String responseBody = e.getResponseBody();
-        log.error("Caught HttpOperationFailed exception, http status : " + e.getHttpResponseStatus());
-    }
-});
-    // onException(HttpOperationFailedException.class)
-    //   .onWhen(exchange -> exchange.getProperty(Exchange.HTTP_RESPONSE_CODE, Integer.class) == 404)
-    //   .handled(true)
-    //   .setBody(constant("Resource Not Found"))
-    //   .to("mock:notFound");
-
-    // onException(HttpOperationFailedException.class)
-    //   .maximumRedeliveries(3)
-    //   .backOffMultiplier(2)
-    //   .retryAttemptedLogLevel(LoggingLevel.WARN);
+   
     
-    onException(Exception.class)
-      .setBody(constant("An unexpected error occurred"))
-      .log(LoggingLevel.ERROR,"onException(Exception) called.");
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+       
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_code("HttpOperationFailed");
+        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
 
-/*             // Context scoped error handler
-      errorHandler(
-        // OOTB DeadLetterChannel error handler divert messages after issue being fixed 
-        deadLetterChannel("file:{{doc.location}}/csv")
-                .logStackTrace(false)
-                .onPrepareFailure(e -> {
-                        // Fixing the application error programmatically
-                        e.getMessage().removeHeader("failure");
-                        e.removeProperty(Exchange.EXCEPTION_CAUGHT);
-                })
-      ); */
+        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+          exchange.getProperty("derived_event_recordmetadata"));
+          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+          exchange.setProperty("kpi_component_route_name", failedRouteId);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught HttpOperationFailed exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .handled(true)
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .end();
+ 
+    onException(CamelException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+       
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_code("CamelException");
+        error.setError_summary("Unable to process event, CamelException raised.");
+       
+       
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
+
+        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+          exchange.getProperty("derived_event_recordmetadata"));
+          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+          exchange.setProperty("kpi_component_route_name", failedRouteId);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught CamelException exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .handled(true)
+    .end();
+
+    // General Exception
+     onException(Exception.class)
+     .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+       
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_summary("Unable to process event., general Exception raised.");
+        error.setError_code("General Exception");
+        error.setError_details(event);
+       
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
+
+        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+        // extract the offset from response header.  Example format: "[some-topic-0@301]"
+        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+          exchange.getProperty("derived_event_recordmetadata"));
+          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+          exchange.setProperty("kpi_component_route_name", failedRouteId);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught General exception exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .handled(true)
+    .end();
+
+
 
   }
 
@@ -133,7 +221,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -232,7 +320,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -295,7 +383,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processChargeAssessmentChanged() {
+  private void processChargeAssessmentChanged() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -307,7 +395,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .to("http://ccm-lookup-service/getCourtCaseExists22")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
@@ -315,7 +403,7 @@ public class CcmNotificationService extends RouteBuilder {
       .when(simple("${exchangeProperty.autoCreateFlag} == 'true' || ${exchangeProperty.caseFound} != ''"))
         .process(new Processor() {
           @Override
-          public void process(Exchange ex) {
+          public void process(Exchange ex) throws HttpOperationFailedException {
             // KPI: Preserve original event properties
             ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
             ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
@@ -325,9 +413,10 @@ public class CcmNotificationService extends RouteBuilder {
 
             ChargeAssessmentEvent original_event = (ChargeAssessmentEvent)ex.getProperty("kpi_event_object");
             ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM, original_event);
-
+           
+            
             boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
-
+            
             if (court_case_exists) {
               derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.UPDATED.toString());
             } else {
@@ -356,6 +445,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     .end()
     ;
+    //throw new HttpOperationFailedException("testingCCMNotificationService",404,"Exception raised","CCMNotificationService",null, routeId);
   }
 
   private void processManualChargeAssessmentChanged() {
@@ -450,7 +540,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .to("http://ccm-lookup-service/getCourtCaseExists3")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
@@ -1095,11 +1185,13 @@ public class CcmNotificationService extends RouteBuilder {
 
         // KPI
         EventKPI kpi = new EventKPI(event, kpi_status);
+
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
+       
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
