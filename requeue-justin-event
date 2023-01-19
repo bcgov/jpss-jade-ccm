@@ -32,8 +32,6 @@ if [ "$env" = "prod" ]; then
         echo "Aborting deployment."
         return 1
     fi
-
-    return 1
 fi
 
 if [ "$id" = "" ]; then
