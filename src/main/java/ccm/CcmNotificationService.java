@@ -2,7 +2,6 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-import java.util.HashMap;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -30,10 +29,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.builder.component.dsl.KafkaComponentBuilderFactory.KafkaComponentBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.http.HttpStatus;
-
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
@@ -73,10 +69,10 @@ public class CcmNotificationService extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
-     errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
-        e.getMessage()
-        .setHeader(Exchange.FILE_NAME, e);
-     })
+    errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
+      e.getMessage()
+      .setHeader(Exchange.FILE_NAME, e);
+   })
      
      .useOriginalMessage()
      .logStackTrace(false)
@@ -93,8 +89,6 @@ public class CcmNotificationService extends RouteBuilder {
 
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
-   
-    
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -209,8 +203,6 @@ public class CcmNotificationService extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     .handled(true)
     .end();
-
-
 
   }
 
@@ -395,7 +387,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists22")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
@@ -540,7 +532,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists3")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
