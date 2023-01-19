@@ -456,12 +456,6 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .otherwise()
-        .to("direct:processUnknownStatus")
-        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
       .end();
     ;
   }

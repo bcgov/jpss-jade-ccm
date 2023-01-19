@@ -136,3 +136,6 @@ Working directory: tools/postman
 * Camel Quarkus Examples: https://github.com/jboss-fuse/camel-quarkus-examples/tree/camel-quarkus-examples-1.6.0-product/file-bindy-ftp
 * Unmarshalling a JSON Array Using camel-jackson: https://www.baeldung.com/java-camel-jackson-json-array
 * Youtube video (30 min): [Getting started with Apache Camel on Quarkus](https://www.youtube.com/watch?v=POWsZnGhVHM)
+
+## Other Links
+* [OCIO Private OpenShift Platform Architecture Diagram (first login with IDIR via button on page, and then re-access the link)[https://cloud.gov.bc.ca/private-cloud/platform-architecture-diagram/]

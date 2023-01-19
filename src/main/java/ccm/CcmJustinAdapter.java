@@ -69,6 +69,10 @@ public class CcmJustinAdapter extends RouteBuilder {
     getCourtCaseMetadata();
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
+
+    processCaseUserEvents();
+    processCaseUserAccountCreated();
+
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
     publishUnknownEventKPIError();
@@ -1019,6 +1023,56 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+  }
+  
+  private void processCaseUserEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Received event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]})")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("event_object", body())
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCOUNT_CREATED))
+        .setProperty("kpi_component_route_name", simple("processCaseUserAccountCreated"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCaseUserAccountCreated")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processCaseUserAccountCreated() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .log("Updating user status (DEMS flag to true) in JUSTIN ...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    //.setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .setHeader(Exchange.HTTP_QUERY, simple("part_id=${body[partId]}"))
+    //https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/demsUserSet?part_id=85056.0734
+    .toD("https://{{justin.host}}/demsUserSet")
+    .log("User status updated in JUSTIN.")
     ;
   }
 
