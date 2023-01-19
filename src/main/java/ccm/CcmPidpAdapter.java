@@ -24,6 +24,7 @@ import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
 
+import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
@@ -46,9 +47,9 @@ public class CcmPidpAdapter extends RouteBuilder {
 
     log.info("Defining '" + routeId + "' ...");
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}?seekTo=beginning&groupId=jade-ccm")
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId=" + CcmAppUtils.getAppName())
     .routeId("saslSSLKafkaConsumer")
-    .log("Received user creation event.")
+    .log("Received user creation event from PIDP.")
     .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
@@ -58,15 +59,18 @@ public class CcmPidpAdapter extends RouteBuilder {
         PidpUserModificationEvent pidpUserEvent = exchange.getIn().getBody(PidpUserModificationEvent.class);
         CaseUserEvent event = new CaseUserEvent(pidpUserEvent);
 
+        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
         exchange.setProperty("event_object", event);
         exchange.getMessage().setBody(event);
       }
     })
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
-    .log("Sending user creation event to Kafka ...")
+    .log("Publishing user creation event ...")
     .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
-    .log("User creation event sent to Kafka.")
+    .log("User creation event published.")
+
+    // generate event KPI
     .setProperty("event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .process(new Processor() {
       @Override
@@ -86,7 +90,9 @@ public class CcmPidpAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Publishing event KPI ...")
     .to("direct:publishBodyAsEventKPI")
+    .log("Event KPI published.")
     ;
 
     log.info("Route '" + routeId + "' defined.");
@@ -189,7 +195,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
     .log(LoggingLevel.DEBUG,"body: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}")
+    .to("kafka:{{kafka.topic.kpis.name}}?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
     .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }

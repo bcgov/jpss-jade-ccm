@@ -75,6 +75,7 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
+    publishBodyAsEventKPI();
     publishUnknownEventKPIError();
     publishJustinEventKPIError();
   }
@@ -1032,28 +1033,19 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Received event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]})")
-    .setHeader("event_key")
-      .jsonpath("$.event_key")
-    .setHeader("event_status")
-      .jsonpath("$.event_status")
-    .setHeader("event")
-      .simple("${body}")
+    .log("body = ${body}")
+    .setProperty("event_status", jsonpath("$.event_status"))
     .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .setProperty("event_object", body())
-    .setProperty("kpi_event_object", body())
-    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
-    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("event_key", simple("${headers[kafka.KEY]}"))
+    .log(LoggingLevel.INFO,"Processing case user event: offset=${exchangeProperty.event_topic_offset}, event_status = ${exchangeProperty.event_status} ...")
+    .log(LoggingLevel.DEBUG,"event_key=${exchangeProperty.event_key}.")
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
-      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCOUNT_CREATED))
-        .setProperty("kpi_component_route_name", simple("processCaseUserAccountCreated"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
+      .when(exchangeProperty("event_status").isEqualTo(CaseUserEvent.STATUS.ACCOUNT_CREATED.name()))
         .to("direct:processCaseUserAccountCreated")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
         .endChoice()
       .end();
     ;
@@ -1061,18 +1053,68 @@ public class CcmJustinAdapter extends RouteBuilder {
 
   private void processCaseUserAccountCreated() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN:
+    //   exchange properties:
+    //     event_object: case user event object
+    //     event_key: case user event key (aka PART_ID)
+    //     event_topic_name: event topic name
+    //     event_topic_offset: event topic offset
+
     from("direct:" + routeId)
     .log("Updating user status (DEMS flag to true) in JUSTIN ...")
+
+    // publish event KPI - processing started
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
+        String kpi_event_topic_name = exchange.getProperty("kpi_event_topic_name", String.class);
+        String kpi_event_topic_offset = exchange.getProperty("kpi_event_topic_offset", String.class);
+
+        EventKPI event_kpi = new EventKPI(
+          event, 
+          EventKPI.STATUS.EVENT_PROCESSING_STARTED
+        );
+
+        event_kpi.setComponent_route_name(routeId);
+        event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        event_kpi.setEvent_topic_name(kpi_event_topic_name);
+        event_kpi.setEvent_topic_offset(kpi_event_topic_offset);
+
+        exchange.setProperty("event_kpi_object", routeId);
+        exchange.getMessage().setBody(event_kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .to("direct:publishBodyAsEventKPI")
+
+    // update JUSTIN user status
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .setBody(simple(""))
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    //.setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .setHeader(Exchange.HTTP_QUERY, simple("part_id=${body[partId]}"))
     //https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/demsUserSet?part_id=85056.0734
-    .toD("https://{{justin.host}}/demsUserSet")
+    .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
     .log("User status updated in JUSTIN.")
+
+    // publish event KPI - processing completed
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        EventKPI event_kpi = exchange.getProperty("event_kpi_object", EventKPI.class);
+
+        event_kpi.setKpi_dtm(DateTimeUtils.generateCurrentDtm());
+        event_kpi.setKpi_status(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name());
+
+        exchange.getMessage().setBody(event_kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .to("direct:publishBodyAsEventKPI")
     ;
   }
 
@@ -1151,6 +1193,21 @@ public class CcmJustinAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+  
+  private void publishBodyAsEventKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: body = EventKPI json
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
+    .log(LoggingLevel.DEBUG,"body: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
 

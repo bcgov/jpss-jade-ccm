@@ -29,7 +29,8 @@ if [ "$env" = "prod" ]; then
         return 1
     fi
 else
-    logging_level="DEBUG"
+    #logging_level="DEBUG"
+    logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."
@@ -44,6 +45,7 @@ kamel -n $ns run \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
+  --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait dependencies.enabled=true \
   --trait route.enabled=false \

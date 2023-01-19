@@ -40,6 +40,7 @@ kamel -n $ns run \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
   --profile openshift \
+  --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false \
   --trait route.enabled=false

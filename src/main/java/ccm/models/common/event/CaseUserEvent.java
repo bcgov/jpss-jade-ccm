@@ -98,6 +98,7 @@ public class CaseUserEvent extends BaseEvent {
     this();
 
     this.setEvent_source(SOURCE.PIDP.name());
+    this.setEvent_status(STATUS.ACCOUNT_CREATED.name());
     this.setEvent_key(pidpEvent.getPartId());
     this.setPidp_event_time(pidpEvent.getEventTime());
   }
