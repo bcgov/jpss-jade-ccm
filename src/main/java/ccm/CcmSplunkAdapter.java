@@ -42,8 +42,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     publishEventKPIToSplunk();
   }
 
-  private void attachExceptionHandlers() {
-
+  private void deadLetterChannelExample() {
     errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
       e.getMessage()
       .setHeader(Exchange.FILE_NAME, e);
@@ -52,6 +51,9 @@ public class CcmSplunkAdapter extends RouteBuilder {
      .useOriginalMessage()
      .logStackTrace(false)
      .maximumRedeliveries(0));
+  }
+
+  private void attachExceptionHandlers() {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
@@ -97,7 +99,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .setProperty("error_event_object", body())
     .handled(true)
-    .to("kafka:{{kafka.topic.kpis.name}}")
+    //.to("kafka:{{kafka.topic.kpis.name}}")
     .end();
  
     onException(CamelException.class)
@@ -135,7 +137,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .log("Caught CamelException exception")
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .setProperty("error_event_object", body())
-    .to("kafka:{{kafka.topic.kpis.name}}")
+    //.to("kafka:{{kafka.topic.kpis.name}}")
     .handled(true)
     .end();
 
@@ -175,7 +177,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .log("Caught General exception exception")
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .setProperty("error_event_object", body())
-    .to("kafka:{{kafka.topic.kpis.name}}")
+    //.to("kafka:{{kafka.topic.kpis.name}}")
     .handled(true)
     .end();
 
