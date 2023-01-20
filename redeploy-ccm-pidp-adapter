@@ -29,30 +29,29 @@ if [ "$env" = "prod" ]; then
         return 1
     fi
 else
-    logging_level="DEBUG"
+    #logging_level="DEBUG"
+    logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
 
-kamel -n $ns delete ccm-pidp-adapter2
+kamel -n $ns delete ccm-pidp-adapter
 kamel -n $ns run \
-  CcmJustinAdapter.java \
+  CcmPidpAdapter.java \
   --resource file:../../../../target/classes/ccm-models.jar \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-oneRCC.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-empty.json \
-  --resource file:../../../../mapping/data/system/justin/sampleEventRecord.json \
-  --property file:ccmPidpAdapter2.properties \
+  --property file:ccmPidpAdapter.properties \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
+  --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait dependencies.enabled=true \
   --trait route.enabled=false \
   --trait service.enabled=true \
   --trait service.node-port=false
+
   # --dev
   # --dependency file://./models.jar \
   # --dependency github:agahchen/jpss-jade-ccm-models \

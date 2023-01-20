@@ -1,36 +1,34 @@
 package ccm.models.system.pidp;
 
-import java.util.Date;
-
 public class PidpUserModificationEvent {
-  private Date EventTime;
-  private String PartId;
-  private String Event;
-  private Integer AccessRequestId;
+  private String eventTime;
+  private String partId;
+  private String event;
+  private Long accessRequestId;
   
-  public Date getEventTime() {
-    return EventTime;
+  public String getEventTime() {
+    return eventTime;
   }
-  public void setEventTime(Date eventTime) {
-    EventTime = eventTime;
+  public void setEventTime(String eventTime) {
+    this.eventTime = eventTime;
   }
   public String getPartId() {
-    return PartId;
+    return partId;
   }
   public void setPartId(String partId) {
-    PartId = partId;
+    this.partId = partId;
   }
   public String getEvent() {
-    return Event;
+    return event;
   }
   public void setEvent(String event) {
-    Event = event;
+    this.event = event;
   }
-  public Integer getAccessRequestId() {
-    return AccessRequestId;
+  public Long getAccessRequestId() {
+    return this.accessRequestId;
   }
-  public void setAccessRequestId(Integer accessRequestId) {
-    AccessRequestId = accessRequestId;
+  public void setAccessRequestId(Long accessRequestId) {
+    this.accessRequestId = accessRequestId;
   }
 
 }
