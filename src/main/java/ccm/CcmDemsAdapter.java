@@ -945,10 +945,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
         .log(LoggingLevel.INFO,"Adding person to case ...")
         .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants")
-        .log(LoggingLevel.DEBUG,"Person added to case.")
+        .log(LoggingLevel.INFO,"Person added to case.")
       .endChoice()
     .otherwise()
-      .log(LoggingLevel.DEBUG,"Court case id was not defined. Skipped linking to a case.")
+      .log(LoggingLevel.INFO,"Court case id was not defined. Skipped linking to a case.")
     .endChoice()
     ;
   }

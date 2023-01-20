@@ -1040,14 +1040,15 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setProperty("event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .setProperty("event_key", simple("${headers[kafka.KEY]}"))
-    .log(LoggingLevel.INFO,"Processing case user event: offset=${exchangeProperty.event_topic_offset}, event_status = ${exchangeProperty.event_status} ...")
     .log(LoggingLevel.DEBUG,"event_key=${exchangeProperty.event_key}.")
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
       .when(exchangeProperty("event_status").isEqualTo(CaseUserEvent.STATUS.ACCOUNT_CREATED.name()))
+        .log(LoggingLevel.INFO,"Processing case user event: offset=${exchangeProperty.event_topic_offset}, event_status = ${exchangeProperty.event_status} ...")
         .to("direct:processCaseUserAccountCreated")
+        .log(LoggingLevel.INFO,"Case user event processed.")
         .endChoice()
-      .end();
+      .end()
     ;
   }
 
