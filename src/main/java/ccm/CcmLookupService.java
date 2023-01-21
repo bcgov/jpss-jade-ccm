@@ -50,15 +50,7 @@ public class CcmLookupService extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
-    errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
-      e.getMessage()
-      .setHeader(Exchange.FILE_NAME, e);
-   })
-     
-     .useOriginalMessage()
-     .logStackTrace(false)
-     .maximumRedeliveries(0));
-
+   
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
      .backOffMultiplier(2)
@@ -74,11 +66,14 @@ public class CcmLookupService extends RouteBuilder {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
        ccm.models.common.event.Error error = new ccm.models.common.event.Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+
+       log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
@@ -102,18 +97,22 @@ public class CcmLookupService extends RouteBuilder {
    .to("kafka:{{kafka.topic.kpis.name}}")
    .end();
 
+   // Camel Exception
    onException(CamelException.class)
    .process(new Processor() {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+       
        ccm.models.common.event.Error error = new ccm.models.common.event.Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("CamelException");
        error.setError_summary("Unable to process event, CamelException raised.");
       
+       log.error("Camel caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("Camel Exception event info : " + event.getEvent_source());
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -143,7 +142,7 @@ public class CcmLookupService extends RouteBuilder {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
        ccm.models.common.event.Error error = new ccm.models.common.event.Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
@@ -151,6 +150,8 @@ public class CcmLookupService extends RouteBuilder {
        error.setError_code("General Exception");
        error.setError_details(event);
       
+       log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("General Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));

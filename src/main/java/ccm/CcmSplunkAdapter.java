@@ -29,8 +29,6 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.splunk.SplunkEventLog;
-import ccm.utils.DateTimeUtils;
-import ccm.utils.KafkaComponentUtils;
 
 
 public class CcmSplunkAdapter extends RouteBuilder {
@@ -70,74 +68,25 @@ public class CcmSplunkAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-       
-        ccm.models.common.event.Error error = new  ccm.models.common.event.Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_code("HttpOperationFailed");
-        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
-
-        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
-        // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-          exchange.getProperty("derived_event_recordmetadata"));
-          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-          exchange.setProperty("kpi_component_route_name", failedRouteId);
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("HttpOperation Exception event info : " + event.getEvent_source());
       }
     })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught HttpOperationFailed exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
     .handled(true)
-    //.to("kafka:{{kafka.topic.kpis.name}}")
     .end();
  
+    // Camel Exception
     onException(CamelException.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-       
-        ccm.models.common.event.Error error = new  ccm.models.common.event.Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_code("CamelException");
-        error.setError_summary("Unable to process event, CamelException raised.");
-       
-       
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
-
-        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
-        // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-          exchange.getProperty("derived_event_recordmetadata"));
-          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-          exchange.setProperty("kpi_component_route_name", failedRouteId);
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("CamelException caught, exception message : " + cause.getMessage());
+        log.error("CamelException Exception event info : " + event.getEvent_source());
       }
     })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught CamelException exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
-    //.to("kafka:{{kafka.topic.kpis.name}}")
     .handled(true)
     .end();
 
@@ -147,40 +96,13 @@ public class CcmSplunkAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-       
-        ccm.models.common.event.Error error = new  ccm.models.common.event.Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_summary("Unable to process event., general Exception raised.");
-        error.setError_code("General Exception");
-        error.setError_details(event);
-       
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
-
-        // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
-        // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-          exchange.getProperty("derived_event_recordmetadata"));
-          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-          exchange.setProperty("kpi_component_route_name", failedRouteId);
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("General Exception caught, exception message : " + cause.getMessage());
+        log.error("General Exception event info : " + event.getEvent_source());
       }
     })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught General exception exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
-    //.to("kafka:{{kafka.topic.kpis.name}}")
     .handled(true)
     .end();
-
   }
 
   private void processEventKPIs() {

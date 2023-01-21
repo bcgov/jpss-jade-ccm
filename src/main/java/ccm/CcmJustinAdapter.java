@@ -88,15 +88,7 @@ public class CcmJustinAdapter extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
-    errorHandler(deadLetterChannel("file:/{{doc.location}}/csv").onPrepareFailure(e->{
-      e.getMessage()
-      .setHeader(Exchange.FILE_NAME, e);
-   })
-     
-     .useOriginalMessage()
-     .logStackTrace(false)
-     .maximumRedeliveries(0));
-
+   
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
      .backOffMultiplier(2)
@@ -117,6 +109,9 @@ public class CcmJustinAdapter extends RouteBuilder {
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
@@ -136,8 +131,8 @@ public class CcmJustinAdapter extends RouteBuilder {
    .log("Caught HttpOperationFailed exception")
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
    .setProperty("error_event_object", body())
-   .handled(true)
    .to("kafka:{{kafka.topic.kpis.name}}")
+   .handled(true)
    .end();
 
    onException(CamelException.class)
@@ -145,12 +140,15 @@ public class CcmJustinAdapter extends RouteBuilder {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
        Error error = new Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-       error.setError_code("CamelException");
+      
        error.setError_summary("Unable to process event, CamelException raised.");
       
+      
+       log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("HttpOperation Exception event info : " + event.getEvent_source());
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -533,7 +531,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.chargeassessments.name}}")
+      .to("kafka:{{kafka.topic.chargeassessments.name}}")    // ---- > Error produced here -TWuolle
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
