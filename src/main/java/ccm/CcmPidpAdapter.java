@@ -35,11 +35,12 @@ import ccm.utils.CcmAppUtils;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
+
 public class CcmPidpAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     
-    attachExceptionHandlers();
+    //attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
   }
