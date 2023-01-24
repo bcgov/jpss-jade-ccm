@@ -72,7 +72,7 @@ public class CcmLookupService extends RouteBuilder {
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
 
-       log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -111,7 +111,7 @@ public class CcmLookupService extends RouteBuilder {
        error.setError_code("CamelException");
        error.setError_summary("Unable to process event, CamelException raised.");
       
-       log.error("Camel caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("Camel caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("Camel Exception event info : " + event.getEvent_source());
       
        // KPI
@@ -132,7 +132,7 @@ public class CcmLookupService extends RouteBuilder {
    .log("Caught CamelException exception")
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
    .setProperty("error_event_object", body())
-   .to("kafka:{{kafka.topic.kpis.name}}")
+   .to("kafka:{{kafka.topic.general-errors.name}}")
    .handled(true)
    .end();
 
@@ -150,7 +150,7 @@ public class CcmLookupService extends RouteBuilder {
        error.setError_code("General Exception");
        error.setError_details(event);
       
-       log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("General Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -171,11 +171,12 @@ public class CcmLookupService extends RouteBuilder {
    .log("Caught General exception exception")
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
    .setProperty("error_event_object", body())
-   .to("kafka:{{kafka.topic.kpis.name}}")
+   .to("kafka:{{kafka.topic.general-errors.name}}")
    .handled(true)
    .end();
 
  }
+ 
   private void getCourtCaseDetails_old() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

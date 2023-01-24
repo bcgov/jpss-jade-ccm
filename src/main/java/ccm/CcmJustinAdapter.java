@@ -110,7 +110,7 @@ public class CcmJustinAdapter extends RouteBuilder {
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-        log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -146,9 +146,7 @@ public class CcmJustinAdapter extends RouteBuilder {
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
       
        error.setError_summary("Unable to process event, CamelException raised.");
-      
-      
-       log.error("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("HttpOperation Exception event info : " + event.getEvent_source());
       
        // KPI

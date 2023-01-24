@@ -81,7 +81,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_code("HttpOperationFailed");
         error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
 
-        log.error("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.debug("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -154,7 +154,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_code("General Exception");
         error.setError_details(event);
        
-        log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("General Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);

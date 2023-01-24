@@ -108,7 +108,7 @@ public class CcmDemsAdapter extends RouteBuilder {
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
 
-       log.error("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
 
        // KPI
@@ -151,7 +151,7 @@ public class CcmDemsAdapter extends RouteBuilder {
        error.setError_summary("Unable to process event, CamelException raised.");
       
       
-       log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("CamelException Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
