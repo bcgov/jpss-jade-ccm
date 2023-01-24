@@ -9,8 +9,12 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
+// camel-k: dependency=mvn:io.strimzi:kafka-oauth-common:0.10.0
+// comment-camel-k: dependency=mvn:io.confluent:kafka-schema-registry-client:6.2.0
+// comment-camel-k: dependency=mvn:io.confluent:kafka-avro-serializer:6.2.0
 
 import java.io.File;
+import java.util.Collections;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -32,6 +36,7 @@ import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.utils.CcmAppUtils;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
+//import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 
 public class CcmPidpAdapter extends RouteBuilder {
   @Override
@@ -47,10 +52,17 @@ public class CcmPidpAdapter extends RouteBuilder {
 
     log.info("Defining '" + routeId + "' ...");
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId=" + CcmAppUtils.getAppName())
-    .routeId("saslSSLKafkaConsumer")
+    // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
+    // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
+
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}?" + 
+      "groupId={{pidp.kafka.consumergroup.name}}"
+      //+ "&valueDeserializer=" + kafkaAvroDeserializer.getClass().getName()
+    )
+    .routeId(routeId)
     .log("Received user creation event from PIDP.")
     .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
+    .log(LoggingLevel.INFO,"(DEBUG) PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
     .process(new Processor() {

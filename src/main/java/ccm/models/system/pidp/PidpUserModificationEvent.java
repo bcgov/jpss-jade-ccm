@@ -3,7 +3,8 @@ package ccm.models.system.pidp;
 public class PidpUserModificationEvent {
   private String eventTime;
   private String partId;
-  private String event;
+  private String eventType;
+  private Boolean successful;
   private Long accessRequestId;
   
   public String getEventTime() {
@@ -18,17 +19,23 @@ public class PidpUserModificationEvent {
   public void setPartId(String partId) {
     this.partId = partId;
   }
-  public String getEvent() {
-    return event;
+  public String getEventType() {
+    return eventType;
   }
-  public void setEvent(String event) {
-    this.event = event;
+  public void setEventType(String event) {
+    this.eventType = event;
   }
   public Long getAccessRequestId() {
     return this.accessRequestId;
   }
   public void setAccessRequestId(Long accessRequestId) {
     this.accessRequestId = accessRequestId;
+  }
+  public Boolean getSuccessful() {
+    return successful;
+  }
+  public void setSuccessful(Boolean success) {
+    this.successful = success;
   }
 
 }
