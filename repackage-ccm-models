@@ -1,7 +1,7 @@
 mvn clean test
 if [[ "$?" -ne 0 ]] ; then
   echo 'could not perform tests';
-  exit $rc
+  return $rc
 fi
 
 # preserve current directory

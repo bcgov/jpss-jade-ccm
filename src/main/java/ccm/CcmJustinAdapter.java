@@ -78,6 +78,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     publishBodyAsEventKPI();
     publishUnknownEventKPIError();
     publishJustinEventKPIError();
+
+    callJUSTINDEMSUserSet();
   }
 
   private void courtFileCreated() {
@@ -1033,7 +1035,12 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
     .routeId(routeId)
-    .log("body = ${body}")
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    "    on the topic ${headers[kafka.TOPIC]}\n" +
+    "    on the partition ${headers[kafka.PARTITION]}\n" +
+    "    with the offset ${headers[kafka.OFFSET]}\n" +
+    "    with the key ${headers[kafka.KEY]}")
+    .log(LoggingLevel.DEBUG,"body = ${body}")
     .setProperty("event_status", jsonpath("$.event_status"))
     .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .setProperty("event_object", body())
@@ -1063,15 +1070,14 @@ public class CcmJustinAdapter extends RouteBuilder {
     //     event_topic_offset: event topic offset
 
     from("direct:" + routeId)
-    .log("Updating user status (DEMS flag to true) in JUSTIN ...")
-
+    .routeId(routeId)
     // publish event KPI - processing started
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
-        String kpi_event_topic_name = exchange.getProperty("kpi_event_topic_name", String.class);
-        String kpi_event_topic_offset = exchange.getProperty("kpi_event_topic_offset", String.class);
+        String event_topic_name = exchange.getProperty("event_topic_name", String.class);
+        String event_topic_offset = exchange.getProperty("event_topic_offset", String.class);
 
         EventKPI event_kpi = new EventKPI(
           event, 
@@ -1080,10 +1086,10 @@ public class CcmJustinAdapter extends RouteBuilder {
 
         event_kpi.setComponent_route_name(routeId);
         event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        event_kpi.setEvent_topic_name(kpi_event_topic_name);
-        event_kpi.setEvent_topic_offset(kpi_event_topic_offset);
+        event_kpi.setEvent_topic_name(event_topic_name);
+        event_kpi.setEvent_topic_offset(event_topic_offset);
 
-        exchange.setProperty("event_kpi_object", routeId);
+        exchange.setProperty("event_kpi_object", event_kpi);
         exchange.getMessage().setBody(event_kpi);
       }
     })
@@ -1094,13 +1100,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setBody(simple(""))
+    .setBody(simple("{\"part_id\": \"${exchangeProperty.event_key}\"}"))
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    //https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/demsUserSet?part_id=85056.0734
+    .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
     .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
-    .log("User status updated in JUSTIN.")
+    .log("User DEMS flag updated in JUSTIN.")
 
     // publish event KPI - processing completed
     .process(new Processor() {
@@ -1116,6 +1122,30 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
+    ;
+  }
+
+  private void callJUSTINDEMSUserSet() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    //from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("part_id", simple("${headerpart_id}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setBody(simple("{\"part_id\": \"${exchangeProperty.part_id}\"}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    //.setHeader("part_id",simple("${exchangeProperty.part_id}"))
+    .log(LoggingLevel.INFO,"Calling JUSTIN demsUserSet: PART_ID = '${exchangeProperty.part_id}' ...")
+    .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.part_id}")
+    .log(LoggingLevel.INFO,"JUSTIN demsUserSet requested posted successfully.")
     ;
   }
 
