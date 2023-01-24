@@ -85,7 +85,8 @@ public class CcmNotificationService extends RouteBuilder {
         log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+        kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -120,7 +121,9 @@ public class CcmNotificationService extends RouteBuilder {
        
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+      
+        kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -155,7 +158,9 @@ public class CcmNotificationService extends RouteBuilder {
         log.error("General Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+       
+        kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -174,7 +179,26 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
 
   }
-
+ 
+  private String getKafkaTopicByEventType(String eventType ) {
+    String kafkaTopic = "ccm-general-errors";
+    if (eventType != null) {
+     switch(eventType){
+       case "ChargeAssessmentEvent" :
+         kafkaTopic = "ccm-chargeassessment-errors";
+         break;
+         case "CaseUserEvent" :{
+           kafkaTopic = "ccm-caseuser-errors";
+           break;
+         }
+         case "CourtCaseEvent" :{
+           kafkaTopic = "ccm-courtcase-errors";
+           break;
+         }
+     }
+    }
+    return kafkaTopic;
+  }
   private void processChargeAssessmentEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

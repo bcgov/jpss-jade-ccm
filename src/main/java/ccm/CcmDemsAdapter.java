@@ -89,10 +89,11 @@ public class CcmDemsAdapter extends RouteBuilder {
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
      .backOffMultiplier(2)
+     
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
-     .handled(true)
+     .handled(false)
      .end();
 
    // HttpOperation Failed
@@ -112,6 +113,9 @@ public class CcmDemsAdapter extends RouteBuilder {
 
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+      
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -151,7 +155,11 @@ public class CcmDemsAdapter extends RouteBuilder {
        log.error("CamelException Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        // KPI
+       
+        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+        
+        kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -187,7 +195,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+        
+        kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -210,6 +220,25 @@ public class CcmDemsAdapter extends RouteBuilder {
 
  }
 
+ private String getKafkaTopicByEventType(String eventType ) {
+  String kafkaTopic = "ccm-general-errors";
+  if (eventType != null) {
+   switch(eventType){
+     case "DemsChargeAssessmentCaseData" :
+       kafkaTopic = "ccm-chargeassessment-errors";
+       break;
+       case "DemsPersonData" :{
+         kafkaTopic = "ccm-caseuser-errors";
+         break;
+       }
+       case "DemsCaseParticipantData" :{
+         kafkaTopic = "ccm-caseuser-errors";
+         break;
+       }
+   }
+  }
+  return kafkaTopic;
+}
   private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -344,6 +373,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    //.toD("http://httpstat.us:443/500") // --> testing code, remove later
     //.toD("rest:get:org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
     //.toD("netty-http:https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     .setProperty("length",jsonpath("$.length()"))

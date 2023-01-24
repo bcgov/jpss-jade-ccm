@@ -95,7 +95,7 @@ public class CcmJustinAdapter extends RouteBuilder {
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
-     .handled(true)
+     .handled(false)
      .end();
 
    // HttpOperation Failed
@@ -104,7 +104,7 @@ public class CcmJustinAdapter extends RouteBuilder {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       String kafkaTopic =  getKafkaTopicByEventType(event.getEvent_type());
        Error error = new Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("HttpOperationFailed");
@@ -114,7 +114,8 @@ public class CcmJustinAdapter extends RouteBuilder {
         log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+    
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -152,7 +153,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+       
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -187,7 +190,9 @@ public class CcmJustinAdapter extends RouteBuilder {
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+     
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -209,6 +214,22 @@ public class CcmJustinAdapter extends RouteBuilder {
    .end();
 
  }
+
+ private String getKafkaTopicByEventType(String eventType ) {
+  String kafkaTopic = "ccm-general-errors";
+       if (eventType != null) {
+        switch(eventType){
+          case "CourtCaseEvent" :
+            kafkaTopic = "ccm-courtcase-errors";
+            break;
+            case "CaseUserEvent" :{
+              kafkaTopic = "ccm-caseuser-errors";
+              break;
+            }
+        }
+       }
+  return kafkaTopic;
+}
   private void courtFileCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -352,7 +373,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
-    //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
+       //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
