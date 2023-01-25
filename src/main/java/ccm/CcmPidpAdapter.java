@@ -1,11 +1,18 @@
 package ccm;
 
+import java.io.File;
+import java.util.Collections;
+
+import org.apache.camel.CamelException;
+
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.component.kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
@@ -13,10 +20,6 @@ package ccm;
 // comment-camel-k: dependency=mvn:io.confluent:kafka-schema-registry-client:6.2.0
 // comment-camel-k: dependency=mvn:io.confluent:kafka-avro-serializer:6.2.0
 
-import java.io.File;
-import java.util.Collections;
-
-import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -25,7 +28,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
-import org.apache.camel.http.base.HttpOperationFailedException;
+//import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
@@ -51,7 +54,7 @@ public class CcmPidpAdapter extends RouteBuilder {
   }
 
   private void attachExceptionHandlers() {
-
+/*
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
     .process(new Processor() {
@@ -85,7 +88,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .handled(true)
     .to("kafka:{{kafka.topic.kpis.name}}")
     .end();
- 
+ */
     // Camel Exception
     onException(CamelException.class)
     .process(new Processor() {
