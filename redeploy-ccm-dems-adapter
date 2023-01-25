@@ -4,6 +4,8 @@ if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
     env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
 else
     env=""
 fi
@@ -13,6 +15,20 @@ if [ "$env" = "" ]; then
    return 1
 else
    ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+else
+    #logging_level="DEBUG"
+    logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."
@@ -27,6 +43,7 @@ kamel -n $ns run \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
+  --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait container.request-cpu=25m \
   --trait container.request-memory=500mi \

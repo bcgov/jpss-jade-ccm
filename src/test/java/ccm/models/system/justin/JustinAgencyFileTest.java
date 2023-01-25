@@ -25,7 +25,7 @@ import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinCourtFile;
 import ccm.utils.JsonParseUtils;
-import ccm.models.common.data.ChargeAssessmentCaseData;
+import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.system.dems.DemsChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsFieldData;
 import ccm.models.system.dems.DemsPersonData;
@@ -78,7 +78,7 @@ public class JustinAgencyFileTest {
     public void testInitiatingAgency() {
         JustinAgencyFile agencyFile = getTestJustinFile();
 
-        ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+        ChargeAssessmentData businessFile = new ChargeAssessmentData(agencyFile);
         // Initiating Agency: "$MAPID8: $MAPID7" INITIATING_AGENCY_IDENTIFIER: INITIATING_AGENCY_NAME
         
         assertEquals("105: Kelowna Municipal RCMP", businessFile.getInitiating_agency());
@@ -130,7 +130,7 @@ public class JustinAgencyFileTest {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-            ChargeAssessmentCaseData businessFile = new ChargeAssessmentCaseData(agencyFile);
+            ChargeAssessmentData businessFile = new ChargeAssessmentData(agencyFile);
             DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("28", businessFile);
 
             // since Last JUSTIN Update is current date, set it to blank, so test doesn't fail

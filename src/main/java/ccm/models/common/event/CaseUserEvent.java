@@ -3,6 +3,7 @@ package ccm.models.common.event;
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
+import ccm.models.system.pidp.PidpUserModificationEvent;
 
 public class CaseUserEvent extends BaseEvent {
   private int justin_event_message_id;
@@ -13,6 +14,9 @@ public class CaseUserEvent extends BaseEvent {
   private String justin_part_id;
   private String justin_rcc_id;
 
+  private String pidp_event_time;
+  private Long pidp_access_request_id;
+
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_PART_ID = "PART_ID";
@@ -20,10 +24,12 @@ public class CaseUserEvent extends BaseEvent {
 
   public enum SOURCE {
     JUSTIN,
+    PIDP,
     JADE_CCM
   }
   
   public enum STATUS {
+    ACCOUNT_CREATED,
     ACCESS_ADDED,
     ACCESS_REMOVED;
   }
@@ -88,6 +94,15 @@ public class CaseUserEvent extends BaseEvent {
     this.justin_part_id = another.justin_part_id;
   }
 
+  public CaseUserEvent(PidpUserModificationEvent pidpEvent) {
+    this();
+
+    this.setEvent_source(SOURCE.PIDP.name());
+    this.setEvent_status(STATUS.ACCOUNT_CREATED.name());
+    this.setEvent_key(pidpEvent.getPartId());
+    this.setPidp_event_time(pidpEvent.getEventTime());
+  }
+
   public int getJustin_event_message_id() {
     return justin_event_message_id;
   }
@@ -142,5 +157,21 @@ public class CaseUserEvent extends BaseEvent {
 
   public void setJustin_rcc_id(String justin_rcc_id) {
     this.justin_rcc_id = justin_rcc_id;
+  }
+
+  public String getPidp_event_time() {
+    return pidp_event_time;
+  }
+
+  public void setPidp_event_time(String pidp_event_time) {
+    this.pidp_event_time = pidp_event_time;
+  }
+
+  public Long getPidp_access_request_id() {
+    return pidp_access_request_id;
+  }
+
+  public void setPidp_access_request_id(Long pidp_access_request_id) {
+    this.pidp_access_request_id = pidp_access_request_id;
   }
 }

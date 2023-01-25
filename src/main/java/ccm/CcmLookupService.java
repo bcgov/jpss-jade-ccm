@@ -18,6 +18,7 @@ package ccm;
 import java.util.Calendar;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 
@@ -55,7 +56,7 @@ public class CcmLookupService extends RouteBuilder {
       }
     })
     .transform(simple("{\"audit_type\": \"get_court_case_details\", \"user_id\": \"${header.user_id}\", \"court_case_number\": \"${header.court_case_number}\", \"audit_datetime\": \"${header.audit_datetime}\"}"))
-    .log("body (after transform): '${body}'")
+    .log(LoggingLevel.DEBUG,"body (after transform): '${body}'")
     .to("kafka:{{kafka.topic.name}}")
     ;
   }
@@ -73,11 +74,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     //.setProperty("name",simple("${header[number]}"))
-    .log("Processing getCourtCaseExists request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing getCourtCaseExists request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getCourtCaseExists")
-    .log("Lookup response = '${body}'")
+    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
   }
 
@@ -91,11 +92,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseDetails")
-    .log("response from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
@@ -109,11 +110,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing getCourtCaseAuthList request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing getCourtCaseAuthList request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseAuthList")
-    .log("response from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
@@ -127,11 +128,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseMetadata")
-    .log("response from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
@@ -145,11 +146,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseAppearanceSummaryList")
-    .log("response from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
@@ -163,11 +164,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseCrownAssignmentList")
-    .log("response from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
@@ -181,11 +182,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Processing request... key = ${header[key]}")
+    .log(LoggingLevel.DEBUG,"Processing request... key = ${header[key]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getPersonExists")
-    .log("Lookup response = '${body}'")
+    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
   }  
 
@@ -201,14 +202,14 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("Looking up case list by user key (${header.key}) ...")
+    .log(LoggingLevel.DEBUG,"Looking up case list by user key (${header.key}) ...")
     .to("http://ccm-dems-adapter/getCaseListByUserKey?throwExceptionOnFailure=false")
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
-        .log("User found.")
+        .log(LoggingLevel.DEBUG,"User found.")
         .endChoice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
-        .log("User not found.  Error message from DEMS: ${body}")
+        .log(LoggingLevel.DEBUG,"User not found.  Error message from DEMS: ${body}")
         .endChoice()
     .end()
     ;

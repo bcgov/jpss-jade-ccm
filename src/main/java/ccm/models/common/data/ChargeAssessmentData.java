@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinAgencyFile;
 
-public class ChargeAssessmentCaseData {
+public class ChargeAssessmentData {
     private String rcc_id;
     private String agency_file;
     private String security_clearance_level;
@@ -32,10 +32,10 @@ public class ChargeAssessmentCaseData {
 
     private List<CaseAccused> accused_persons;
 
-    public ChargeAssessmentCaseData() {
+    public ChargeAssessmentData() {
     }
 
-    public ChargeAssessmentCaseData(JustinAgencyFile jaf) {
+    public ChargeAssessmentData(JustinAgencyFile jaf) {
         setRcc_id(jaf.getRcc_id());
         setAgency_file(jaf.getInitiating_agency_identifier() + ": " + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());

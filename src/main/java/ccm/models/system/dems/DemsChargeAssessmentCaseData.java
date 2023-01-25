@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
-import ccm.models.common.data.ChargeAssessmentCaseData;
+import ccm.models.common.data.ChargeAssessmentData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsChargeAssessmentCaseData {
@@ -23,7 +23,7 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentCaseData commonData) {
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData commonData) {
 
         StringBuilder case_name = new StringBuilder();
         for (CaseAccused ba : commonData.getAccused_persons()) {

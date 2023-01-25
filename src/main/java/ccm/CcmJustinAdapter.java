@@ -28,15 +28,15 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 //import org.apache.camel.component.kafka.KafkaConstants;
 //import org.apache.camel.model.;
 
-import ccm.models.common.data.ApprovedCourtCaseData;
+import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
-import ccm.models.common.data.ChargeAssessmentCaseData;
-import ccm.models.common.event.ApprovedCourtCaseEvent;
+import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
-import ccm.models.common.event.ChargeAssessmentCaseEvent;
+import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.justin.*;
@@ -69,10 +69,17 @@ public class CcmJustinAdapter extends RouteBuilder {
     getCourtCaseMetadata();
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
+
+    processCaseUserEvents();
+    processCaseUserAccountCreated();
+
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
+    publishBodyAsEventKPI();
     publishUnknownEventKPIError();
     publishJustinEventKPIError();
+
+    callJUSTINDEMSUserSet();
   }
 
   private void courtFileCreated() {
@@ -84,11 +91,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log("body (before unmarshalling): '${body}'")
+    .log(LoggingLevel.DEBUG,"body (before unmarshalling): '${body}'")
     .unmarshal().json()
     .transform(simple("{\"number\": \"${body[number]}\", \"status\": \"created\", \"sensitive_content\": \"${body[sensitive_content]}\", \"public_content\": \"${body[public_content]}\", \"created_datetime\": \"${body[created_datetime]}\"}"))
-    .log("body (after unmarshalling): '${body}'")
-    .to("kafka:{{kafka.topic.chargeassessmentcases.name}}");
+    .log(LoggingLevel.DEBUG,"body (after unmarshalling): '${body}'")
+    .to("kafka:{{kafka.topic.chargeassessments.name}}");
 
     
   }
@@ -100,7 +107,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/v1/health?httpMethodRestrict=GET")
       .routeId(routeId)
       .removeHeaders("CamelHttp*")
-      .log("/v1/health request received")
+      .log(LoggingLevel.DEBUG,"/v1/health request received")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
@@ -114,9 +121,9 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
     .routeId(routeId)
-    //.log("Processing file with content: ${body}")
+    //.log(LoggingLevel.DEBUG,"Processing file with content: ${body}")
     //.to("direct:processJustinEventBatch")
-    .log("Re-queueing event(s)...")
+    .log(LoggingLevel.DEBUG,"Re-queueing event(s)...")
     //.removeHeaders("*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -160,7 +167,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Re-queueing JUSTIN event: id = ${header.id} ...")
+    .log(LoggingLevel.INFO,"Re-queueing JUSTIN event: id = ${header.id} ...")
     .setProperty("id", header("id"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -169,7 +176,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
-    .log("Event re-queued.")
+    .log(LoggingLevel.INFO,"Event re-queued.")
     ;
   }
 
@@ -181,11 +188,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Re-queueing JUSTIN events: from id ${header.id} to id ${header.idEnd} ...")
+    .log(LoggingLevel.INFO,"Re-queueing JUSTIN events: from id ${header.id} to id ${header.idEnd} ...")
     .setProperty("id", simple("${header.id}"))
     .setProperty("idEnd", simple("${header.idEnd}"))
     .loopDoWhile(simple("${exchangeProperty.id} <= ${exchangeProperty.idEnd}"))
-      .log("Requeuing JUSTIN event ${exchangeProperty.id} ...")
+      .log(LoggingLevel.INFO,"Requeuing JUSTIN event ${exchangeProperty.id} ...")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
@@ -193,7 +200,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-justin-adapter/requeueJustinEvent")
-      .log("JUSTIN event ${exchangeProperty.id} requeued.")
+      .log(LoggingLevel.INFO,"JUSTIN event ${exchangeProperty.id} requeued.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -203,7 +210,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .end()
-    .log("All JUSTIN events requeued.")
+    .log(LoggingLevel.INFO,"All JUSTIN events requeued.")
     ;
   }
 
@@ -218,11 +225,11 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
-    //.log("Marking all new events in JUSTIN as 'in progress': ${body}")
+    //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
-    //.log("Processing in progress events from JUSTIN: ${body}")
+    //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
     .to("direct:processJustinEventBatch")
     ;
   }
@@ -247,13 +254,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.to("direct:processNewJUSTINEvents");
-    //.log("Processing new JUSTIN events: ${body}")
+    //.log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
     //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
     .choice()
       .when(simple("${exchangeProperty.numOfEvents} > 0"))
-        .log("Event batch count: ${exchangeProperty.numOfEvents}")
+        .log(LoggingLevel.INFO,"Event batch count: ${exchangeProperty.numOfEvents}")
         .endChoice()
       .end()
     .setProperty("justin_events")
@@ -264,7 +271,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.message_event_type_cd")
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
-      .log("Event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      .log(LoggingLevel.INFO,"Event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
@@ -294,7 +301,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           .to("direct:processUserDProvEvent")
           .endChoice()
         .otherwise()
-          .log("message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
+          .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
           .endChoice()
         .end()
@@ -311,7 +318,7 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("direct:" + routeId)
     .routeId(routeId)
-    .log("Processing new JUSTIN events: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .process(new Processor() {
       // example: https://github.com/apache/camel-examples/tree/main/examples/transformer-demo/src/main/java/org/apache/camel/example/transformer/demo
@@ -346,15 +353,15 @@ public class CcmJustinAdapter extends RouteBuilder {
 
             if (e.isAgenFileEvent()) {
               // court case changed.  generate new business event.
-              ChargeAssessmentCaseEvent bce = new ChargeAssessmentCaseEvent(e);
+              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
               System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
             } else if (e.isAuthListEvent()) {
               // auth list changed.  Generate new business event.
-              ChargeAssessmentCaseEvent bce = new ChargeAssessmentCaseEvent(e);
+              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
               System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
             } else if (e.isCourtFileEvent()) {
               // court file changed.  Generate new business event.
-              ApprovedCourtCaseEvent bcme = new ApprovedCourtCaseEvent(e);
+              CourtCaseEvent bcme = new CourtCaseEvent(e);
               System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + bcme.getJustin_mdoc_no() + "')..");
             } else {
               System.out.println(" Unknown JUSTIN event type; Do nothing.");
@@ -364,7 +371,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         exchange.getMessage().setBody("OK");
       }
     })
-    .log("Getting ready to send to Kafka: ${body}")
+    .log(LoggingLevel.DEBUG,"Getting ready to send to Kafka: ${body}")
     ;
   }
 
@@ -377,7 +384,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing AGEN_FILE event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing AGEN_FILE event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -388,24 +395,24 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+          ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
       
-          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
-      .log("Set kpi event object")
+      .log(LoggingLevel.DEBUG,"Set kpi event object")
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
-      .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.chargeassessments.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -416,7 +423,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -434,7 +441,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing AUTH_LIST event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing AUTH_LIST event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -445,24 +452,24 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ChargeAssessmentCaseEvent be = new ChargeAssessmentCaseEvent(je);
+          ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
       
-          exchange.getMessage().setBody(be, ChargeAssessmentCaseEvent.class);
+          exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseEvent.class)
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
       .setProperty("business_event", body())
-      .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.chargeassessmentcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessmentcases.name}}"))
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.chargeassessments.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -473,7 +480,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -491,7 +498,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing USER_PROV event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing USER_PROV event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -510,7 +517,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .setProperty("business_event", body())
-      .log("Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.caseusers.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.caseusers.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -518,8 +525,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -530,7 +537,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -548,7 +555,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing USER_DPROV event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing USER_DPROV event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -570,7 +577,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .setProperty("business_event", body())
-      .log("Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.caseusers.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.caseusers.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -578,8 +585,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -590,7 +597,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -608,7 +615,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing COURT_FILE event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing COURT_FILE event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -619,20 +626,20 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
-      .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.courtcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.courtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -643,7 +650,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -664,7 +671,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing APPR event: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing APPR event: ${body}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -675,23 +682,23 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
-      .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.courtcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.courtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -702,7 +709,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -720,7 +727,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log("Processing CRN_ASSIGN event: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing CRN_ASSIGN event: ${body}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -731,23 +738,23 @@ public class CcmJustinAdapter extends RouteBuilder {
       
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
       
-          ApprovedCourtCaseEvent be = new ApprovedCourtCaseEvent(je);
+          CourtCaseEvent be = new CourtCaseEvent(je);
       
-          exchange.getMessage().setBody(be, ApprovedCourtCaseEvent.class);
+          exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseEvent.class)
-      .log("Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.approvedcourtcases.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.approvedcourtcases.name}}"))
+      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.courtcases.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.courtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -758,7 +765,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -774,7 +781,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("Ignoring unknown event: ${body}")
+    .log(LoggingLevel.DEBUG,"Ignoring unknown event: ${body}")
     .setProperty("justin_event", body())
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
@@ -805,8 +812,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .to("kafka:{{kafka.topic.general-errors.name}}")
       // mark JUSTIN event as processed
     .doCatch(Exception.class)
-      .log("General Exception thrown.")
-      .log("${exception}")
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
@@ -817,7 +824,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log("finally, send confirmation for justin event")
+      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
@@ -840,7 +847,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .jsonpath("$.event_message_id")
     .setProperty("message_event_type_cd")
       .jsonpath("$.message_event_type_cd")
-    .log("Marking event ${exchangeProperty.event_message_id} (${exchangeProperty.message_event_type_cd}) as processed.")
+    .log(LoggingLevel.DEBUG,"Marking event ${exchangeProperty.event_message_id} (${exchangeProperty.message_event_type_cd}) as processed.")
     //.removeHeader("message_event_type_cd")
     //.removeHeader("event_message_id")
     //.removeHeader("is_success")
@@ -853,18 +860,18 @@ public class CcmJustinAdapter extends RouteBuilder {
       //.to("https://{{justin.host}}/eventStatus")
       .toD("https://{{justin.host}}/eventStatus?event_message_id=${exchangeProperty.event_message_id}&is_success=T")
     .doCatch(Exception.class)
-      .log("Exception: ${exception}")
-      .log("Exchange Context: ${exchange.context}")
+      .log(LoggingLevel.DEBUG,"Exception: ${exception}")
+      .log(LoggingLevel.DEBUG,"Exchange Context: ${exchange.context}")
       .choice()
         //.when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("404"))
         .when().simple("${exception.statusCode} == 400")
           .log(LoggingLevel.INFO,"Bad request.  HTTP response code = ${exception.statusCode}")
-          .log("Exception: '${exception}'")
-          .log("Headers: '${headers}'")
+          .log(LoggingLevel.DEBUG,"Exception: '${exception}'")
+          .log(LoggingLevel.DEBUG,"Headers: '${headers}'")
         .endChoice()
         .otherwise()
           .log(LoggingLevel.ERROR,"Unknown error.  HTTP response code = ${exception.statusCode}")
-          .log("Headers: '${headers}'")
+          .log(LoggingLevel.DEBUG,"Headers: '${headers}'")
         .endChoice()
       .end()
     .end()
@@ -878,7 +885,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseDetails request received. number = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"getCourtCaseDetails request received. number = ${header[number]}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -887,18 +894,18 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .removeHeader("rcc_id")
     .toD("https://{{justin.host}}/agencyFile?rcc_id=${header[number]}")
-    .log("Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAgencyFile.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         JustinAgencyFile j = exchange.getIn().getBody(JustinAgencyFile.class);
-        ChargeAssessmentCaseData b = new ChargeAssessmentCaseData(j);
-        exchange.getMessage().setBody(b, ChargeAssessmentCaseData.class);
+        ChargeAssessmentData b = new ChargeAssessmentData(j);
+        exchange.getMessage().setBody(b, ChargeAssessmentData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentCaseData.class)
-    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -909,7 +916,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseAuthList request received. rcc_id = ${header.number}")
+    .log(LoggingLevel.DEBUG,"getCourtCaseAuthList request received. rcc_id = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -917,7 +924,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/authUsers?rcc_id=${header.number}")
-    .log("Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinAuthUsersList.class)
     .process(new Processor() {
       @Override
@@ -928,7 +935,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
-    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -939,7 +946,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.DEBUG,"getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -947,7 +954,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
-    .log("Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtAppearanceSummaryList.class)
     .process(new Processor() {
       @Override
@@ -958,7 +965,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
-    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -969,7 +976,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseMetadata request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.DEBUG,"getCourtCaseMetadata request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -977,18 +984,18 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
-    .log("Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCourtFile.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         JustinCourtFile j = exchange.getIn().getBody(JustinCourtFile.class);
-        ApprovedCourtCaseData b = new ApprovedCourtCaseData(j);
-        exchange.getMessage().setBody(b, ApprovedCourtCaseData.class);
+        CourtCaseData b = new CourtCaseData(j);
+        exchange.getMessage().setBody(b, CourtCaseData.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ApprovedCourtCaseData.class)
-    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -999,7 +1006,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log("getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.DEBUG,"getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1007,7 +1014,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
-    .log("Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinCrownAssignmentList.class)
     .process(new Processor() {
       @Override
@@ -1018,7 +1025,127 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
-    .log("Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+  }
+  
+  private void processCaseUserEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    "    on the topic ${headers[kafka.TOPIC]}\n" +
+    "    on the partition ${headers[kafka.PARTITION]}\n" +
+    "    with the offset ${headers[kafka.OFFSET]}\n" +
+    "    with the key ${headers[kafka.KEY]}")
+    .log(LoggingLevel.DEBUG,"body = ${body}")
+    .setProperty("event_status", jsonpath("$.event_status"))
+    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("event_object", body())
+    .setProperty("event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("event_key", simple("${headers[kafka.KEY]}"))
+    .log(LoggingLevel.DEBUG,"event_key=${exchangeProperty.event_key}.")
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .choice()
+      .when(exchangeProperty("event_status").isEqualTo(CaseUserEvent.STATUS.ACCOUNT_CREATED.name()))
+        .log(LoggingLevel.INFO,"Processing case user event: offset=${exchangeProperty.event_topic_offset}, event_status = ${exchangeProperty.event_status} ...")
+        .to("direct:processCaseUserAccountCreated")
+        .log(LoggingLevel.INFO,"Case user event processed.")
+        .endChoice()
+      .end()
+    ;
+  }
+
+  private void processCaseUserAccountCreated() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN:
+    //   exchange properties:
+    //     event_object: case user event object
+    //     event_key: case user event key (aka PART_ID)
+    //     event_topic_name: event topic name
+    //     event_topic_offset: event topic offset
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    // publish event KPI - processing started
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
+        String event_topic_name = exchange.getProperty("event_topic_name", String.class);
+        String event_topic_offset = exchange.getProperty("event_topic_offset", String.class);
+
+        EventKPI event_kpi = new EventKPI(
+          event, 
+          EventKPI.STATUS.EVENT_PROCESSING_STARTED
+        );
+
+        event_kpi.setComponent_route_name(routeId);
+        event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        event_kpi.setEvent_topic_name(event_topic_name);
+        event_kpi.setEvent_topic_offset(event_topic_offset);
+
+        exchange.setProperty("event_kpi_object", event_kpi);
+        exchange.getMessage().setBody(event_kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .to("direct:publishBodyAsEventKPI")
+
+    // update JUSTIN user status
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setBody(simple("{\"part_id\": \"${exchangeProperty.event_key}\"}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
+    .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
+    .log("User DEMS flag updated in JUSTIN.")
+
+    // publish event KPI - processing completed
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        EventKPI event_kpi = exchange.getProperty("event_kpi_object", EventKPI.class);
+
+        event_kpi.setKpi_dtm(DateTimeUtils.generateCurrentDtm());
+        event_kpi.setKpi_status(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name());
+
+        exchange.getMessage().setBody(event_kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .to("direct:publishBodyAsEventKPI")
+    ;
+  }
+
+  private void callJUSTINDEMSUserSet() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    //from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("part_id", simple("${headerpart_id}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setBody(simple("{\"part_id\": \"${exchangeProperty.part_id}\"}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    //.setHeader("part_id",simple("${exchangeProperty.part_id}"))
+    .log(LoggingLevel.INFO,"Calling JUSTIN demsUserSet: PART_ID = '${exchangeProperty.part_id}' ...")
+    .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.part_id}")
+    .log(LoggingLevel.INFO,"JUSTIN demsUserSet requested posted successfully.")
     ;
   }
 
@@ -1095,8 +1222,23 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Event kpi: ${body}")
+    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+  
+  private void publishBodyAsEventKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: body = EventKPI json
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
+    .log(LoggingLevel.DEBUG,"body: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
 
@@ -1110,7 +1252,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setBody(simple("${exchangeProperty.kpi_object}"))
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Event kpi: ${body}")
+    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
@@ -1144,10 +1286,10 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     .setProperty("kpi_object", body())
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Generate kpi event: ${body}")
+    .log(LoggingLevel.DEBUG,"Generate kpi event: ${body}")
     // send to the general errors topic
     .to("kafka:{{kafka.topic.general-errors.name}}")
-    .log("kpi event added to general errors topic")
+    .log(LoggingLevel.DEBUG,"kpi event added to general errors topic")
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setBody(simple("${exchangeProperty.kpi_object}"))
     .process(new Processor() {
@@ -1185,7 +1327,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }})
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Event kpi: ${body}")
+    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }

@@ -4,7 +4,7 @@ import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class ChargeAssessmentCaseEvent extends BaseEvent {
+public class ChargeAssessmentEvent extends BaseEvent {
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
@@ -29,11 +29,11 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     AUTH_LIST_CHANGED;
   }
 
-  public ChargeAssessmentCaseEvent() {
+  public ChargeAssessmentEvent() {
     super();
   }
 
-  public ChargeAssessmentCaseEvent(JustinEvent je) {
+  public ChargeAssessmentEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -79,7 +79,7 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     setEvent_key(getJustin_rcc_id());
   }
 
-  public ChargeAssessmentCaseEvent(SOURCE source, ChargeAssessmentCaseEvent another) {
+  public ChargeAssessmentEvent(SOURCE source, ChargeAssessmentEvent another) {
     super(source.name(), another);
 
     this.justin_event_message_id = another.justin_event_message_id;
@@ -90,7 +90,7 @@ public class ChargeAssessmentCaseEvent extends BaseEvent {
     this.justin_rcc_id = another.justin_rcc_id;
   }
 
-  public ChargeAssessmentCaseEvent(SOURCE source, CaseUserEvent another) {
+  public ChargeAssessmentEvent(SOURCE source, CaseUserEvent another) {
     super(source.name(), another);
 
     this.justin_event_message_id = another.getJustin_event_message_id();

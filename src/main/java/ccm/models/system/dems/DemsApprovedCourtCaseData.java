@@ -3,7 +3,7 @@ package ccm.models.system.dems;
 import java.util.List;
 import java.util.ArrayList;
 
-import ccm.models.common.data.ApprovedCourtCaseData;
+import ccm.models.common.data.CourtCaseData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsApprovedCourtCaseData {
@@ -17,7 +17,7 @@ public class DemsApprovedCourtCaseData {
     public DemsApprovedCourtCaseData() {
     }
 
-    public DemsApprovedCourtCaseData(String key, String name, ApprovedCourtCaseData commonData) {
+    public DemsApprovedCourtCaseData(String key, String name, CourtCaseData commonData) {
         setKey(key);
         setName(name);
 

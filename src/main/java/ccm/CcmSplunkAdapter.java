@@ -15,6 +15,7 @@ package ccm;
 
 
 import org.apache.camel.Exchange;
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -37,12 +38,12 @@ public class CcmSplunkAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter")
     .routeId(routeId)
-    .log("Event from Kafka {{kafka.topic.kpis.name}} topic:\n" + 
+    .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.kpis.name}} topic:\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" + 
       "    and key ${headers[kafka.KEY]}")
-    //.log("Event KPI: ${body}")
+    //.log(LoggingLevel.DEBUG,"Event KPI: ${body}")
     .to("direct:publishEventKPIToSplunk")
     ;
 
@@ -68,11 +69,11 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
-    .log("Publishing event KPI to splunk. Body = ${body} ...")
+    .log(LoggingLevel.INFO,"Publishing event KPI to splunk. Body = ${body} ...")
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
     //.to("{{splunk.host}}")
     .to("https://{{splunk.host}}")
-    .log("Event KPI published.")
+    .log(LoggingLevel.INFO,"Event KPI published.")
     ;
 
   }

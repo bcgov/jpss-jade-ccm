@@ -17,7 +17,9 @@ else
    ns="$ns_set-$env"
 fi
 
-export TITLEPREFIX="DEMS Adapter $ns "
+echo "`basename $0` to $ns ..."
 
-echo -ne "\e]0;DEMS Adapter $ns\a"
-kamel -n $ns log ccm-dems-adapter
+export TITLEPREFIX="PIDP Adapter $ns "
+echo -ne "\e]0;PIDP Adapter $ns\a"
+
+kamel -n $ns log ccm-pidp-adapter

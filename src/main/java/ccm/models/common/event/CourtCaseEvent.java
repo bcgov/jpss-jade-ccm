@@ -4,7 +4,7 @@ import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class ApprovedCourtCaseEvent extends BaseEvent {
+public class CourtCaseEvent extends BaseEvent {
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
@@ -28,11 +28,11 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
     CROWN_ASSIGNMENT_CHANGED
   }
 
-  public ApprovedCourtCaseEvent() {
+  public CourtCaseEvent() {
     super();
   }
 
-  public ApprovedCourtCaseEvent(JustinEvent je) {
+  public CourtCaseEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -80,7 +80,7 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
     setEvent_key(getJustin_mdoc_no());
   }
 
-  public ApprovedCourtCaseEvent(String event_source, ApprovedCourtCaseEvent another) {
+  public CourtCaseEvent(String event_source, CourtCaseEvent another) {
     super(event_source, another);
 
     this.justin_event_message_id = another.justin_event_message_id;
@@ -91,8 +91,8 @@ public class ApprovedCourtCaseEvent extends BaseEvent {
     this.justin_mdoc_no = another.justin_mdoc_no;
   }
 
-  public ApprovedCourtCaseEvent copy(String event_source) {
-    return new ApprovedCourtCaseEvent(event_source, this);
+  public CourtCaseEvent copy(String event_source) {
+    return new CourtCaseEvent(event_source, this);
   }
 
   public int getJustin_event_message_id() {
