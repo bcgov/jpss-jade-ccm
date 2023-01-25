@@ -69,6 +69,15 @@ public class CcmNotificationService extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
+   // handle network connectivity errors
+   onException(ConnectException.class, SocketTimeoutException.class)
+     .backOffMultiplier(2)
+     .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
+     .setBody(constant("An unexpected network error occurred"))
+     .retryAttemptedLogLevel(LoggingLevel.ERROR)
+     .handled(true)
+     .end();
+
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
     .process(new Processor() {
@@ -153,8 +162,9 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_summary("Unable to process event., general Exception raised.");
         error.setError_code("General Exception");
         error.setError_details(event);
-       
-        log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
+  
+        log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("General Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
