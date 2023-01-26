@@ -57,8 +57,9 @@ public class CcmJustinAdapter extends RouteBuilder {
     requeueJustinEvent();
     requeueJustinEventRange();
     
-    processTimer();
-    processJustinEventBatch();
+    processJustinEventsMainTimer();
+    processJustinEventsBulkTimer();
+    processJustinEvents();
     //processNewJUSTINEvents();
     processAgenFileEvent();
     processAuthListEvent();
@@ -84,8 +85,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     publishBodyAsEventKPI();
     publishUnknownEventKPIError();
     publishJustinEventKPIError();
-
-    callJUSTINDEMSUserSet();
   }
 
   private void attachExceptionHandlers() {
@@ -362,27 +361,51 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
   }
 
-  private void processTimer() {
+  private void processJustinEventsMainTimer() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{notification.check.frequency}}")
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .setHeader("system", simple("{{justin.main.queue.name}}"))
     .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
        //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .setHeader("system", simple("{{justin.queue.main.name}}"))
     .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
-    .to("direct:processJustinEventBatch")
+    .to("direct:processJustinEvents")
     ;
   }
 
-  private void processJustinEventBatch() {
+  private void processJustinEventsBulkTimer() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .setHeader("system", simple("{{justin.bulk.queue.name}}"))
+    .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
+       //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .setHeader("system", simple("{{justin.queue.bulk.name}}"))
+    .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
+    //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
+    .to("direct:processJustinEvents")
+    ;
+  }
+
+  private void processJustinEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -1270,30 +1293,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
-    ;
-  }
-
-  private void callJUSTINDEMSUserSet() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: header = id
-    //from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setProperty("part_id", simple("${headerpart_id}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setBody(simple("{\"part_id\": \"${exchangeProperty.part_id}\"}"))
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    //.setHeader("part_id",simple("${exchangeProperty.part_id}"))
-    .log(LoggingLevel.INFO,"Calling JUSTIN demsUserSet: PART_ID = '${exchangeProperty.part_id}' ...")
-    .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.part_id}")
-    .log(LoggingLevel.INFO,"JUSTIN demsUserSet requested posted successfully.")
     ;
   }
 

@@ -177,7 +177,6 @@ public class CcmPidpAdapter extends RouteBuilder {
     .routeId(routeId)
     .log("Received user creation event from PIDP.")
     .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
-    .log(LoggingLevel.INFO,"(DEBUG) PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
     .process(new Processor() {
@@ -193,7 +192,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
-    .log("Publishing user creation event ...")
+    .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
     .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
     .log("User creation event published.")
 
