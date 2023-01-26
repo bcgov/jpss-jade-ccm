@@ -1135,34 +1135,16 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .log(LoggingLevel.DEBUG,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups?throwExceptionOnFailure=false")
-    .choice()
-      .when().simple("${header.CamelHttpResponseCode} == 200")
-        // create initial case group map
-        .convertBodyTo(String.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
-            exchange.setProperty("dems_case_group_map", caseGroupMap);
-          }
-        })
-        .endChoice()
-      .otherwise()
-        .log(LoggingLevel.ERROR,"Case groups lookup error.  " + 
-            "Response status code = ${header.CamelHttpResponseCode}.  " + 
-            "Response body = '${body}'.  " + 
-            "Assume no case groups.")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap();
-            exchange.setProperty("dems_case_group_map", caseGroupMap);
-          }
-        })
-        .setHeader("CamelHttpResponseCode", simple("200"))
-        .endChoice()
-    .end()
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups")
+    // create initial case group map
+    .convertBodyTo(String.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
+        exchange.setProperty("dems_case_group_map", caseGroupMap);
+      }
+    })
     ;
   }
 
