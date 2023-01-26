@@ -59,8 +59,9 @@ public class CcmJustinAdapter extends RouteBuilder {
     
     processJustinEventsMainTimer();
     processJustinEventsBulkTimer();
-    processJustinEvents();
-    //processNewJUSTINEvents();
+    processJustinMainEvents();
+    processJustinBulkEvents();
+
     processAgenFileEvent();
     processAuthListEvent();
     processCourtFileEvent();
@@ -371,15 +372,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .setHeader("system", simple("{{justin.main.queue.name}}"))
-    .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
+    .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.main.name}}") // mark all new events as "in progress"
        //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .setHeader("system", simple("{{justin.queue.main.name}}"))
-    .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
+    .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.main.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
-    .to("direct:processJustinEvents")
+    .to("direct:processJustinMainEvents")
     ;
   }
 
@@ -393,19 +392,17 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .setHeader("system", simple("{{justin.bulk.queue.name}}"))
-    .to("https://{{justin.host}}/newEventsBatch") // mark all new events as "in progres"
+    .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.bulk.name}}") // mark all new events as "in progress"
        //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .setHeader("system", simple("{{justin.queue.bulk.name}}"))
-    .to("https://{{justin.host}}/inProgressEvents") // retrieve all "in progress" events
+    .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.bulk.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
-    .to("direct:processJustinEvents")
+    .to("direct:processJustinBulkEvents")
     ;
   }
 
-  private void processJustinEvents() {
+  private void processJustinMainEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -431,7 +428,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .jsonpath("$.events.length()")
     .choice()
       .when(simple("${exchangeProperty.numOfEvents} > 0"))
-        .log(LoggingLevel.INFO,"Event batch count: ${exchangeProperty.numOfEvents}")
+        .log(LoggingLevel.INFO,"Main event batch count: ${exchangeProperty.numOfEvents}")
         .endChoice()
       .end()
     .setProperty("justin_events")
@@ -442,7 +439,81 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.message_event_type_cd")
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
-      .log(LoggingLevel.INFO,"Event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      .log(LoggingLevel.INFO,"Main bvent batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      .choice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
+          .to("direct:processAgenFileEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_FILE))
+          .to("direct:processAgenFileEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_CFILE))
+          .to("direct:processCourtFileEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AUTH_LIST))
+          .to("direct:processAuthListEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.COURT_FILE))
+          .to("direct:processCourtFileEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.APPR))
+          .to("direct:processApprEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.CRN_ASSIGN))
+          .to("direct:processCrnAssignEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_PROV))
+          .to("direct:processUserProvEvent")
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
+          .to("direct:processUserDProvEvent")
+          .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
+          .to("direct:processUnknownEvent")
+          .endChoice()
+        .end()
+    ;
+  }
+
+  private void processJustinBulkEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    /* 
+     * To kick off processing, execute the following on the 'service/ccm-justin-adapter' pod:
+     *    cp /etc/camel/resources/eventBatch-oneRCC.json /tmp
+     */
+    //from("timer://simpleTimer?period={{notification.check.frequency}}")
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    //from("file:/etc/camel/resources/?fileName=eventBatch-oneRCC.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=eventBatch-empty.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //from("file:/etc/camel/resources/?fileName=eventBatch.json&noop=true&exchangePattern=InOnly&readLock=none")
+    //.to("splunk-hec://hec.monitoring.ag.gov.bc.ca:8088/services/collector/f38b6861-1947-474b-bf6c-a743f2c6a413?")
+    // .to("https://{{justin.host}}/inProgressEvents")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    //.to("direct:processNewJUSTINEvents");
+    //.log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
+    //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
+    .setProperty("numOfEvents")
+      .jsonpath("$.events.length()")
+    .choice()
+      .when(simple("${exchangeProperty.numOfEvents} > 0"))
+        .log(LoggingLevel.INFO,"Bulk event batch count: ${exchangeProperty.numOfEvents}")
+        .endChoice()
+      .end()
+    .setProperty("justin_events")
+      .jsonpath("$.events")
+    .split()
+      .jsonpathWriteAsString("$.events")  // https://stackoverflow.com/questions/51124978/splitting-a-json-array-with-camel
+      .setProperty("message_event_type_cd")
+        .jsonpath("$.message_event_type_cd")
+      .setProperty("event_message_id")
+        .jsonpath("$.event_message_id")
+      .log(LoggingLevel.INFO,"Bulk event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
