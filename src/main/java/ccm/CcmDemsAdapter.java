@@ -23,7 +23,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-import  org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.data.CourtCaseData;
@@ -107,6 +107,7 @@ public class CcmDemsAdapter extends RouteBuilder {
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+       error.setError_details(cause.getResponseBody());
 
        log.error("DEMS HttpOperationFailed caught, exception message : " + cause.getMessage());
        for(StackTraceElement trace : cause.getStackTrace())
@@ -115,34 +116,37 @@ public class CcmDemsAdapter extends RouteBuilder {
        }
        log.error("Returned status code : " + cause.getStatusCode());
        log.error("Returned body : " + cause.getResponseBody());
+       exchange.getMessage().setHeader("error_detail", cause.getResponseBody());
+
        if(event != null) {
          log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+
+          // KPI
+          EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+          
+          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+          kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+          kpi.setError(error);
+          exchange.getMessage().setBody(kpi);
+
+          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+          exchange.setProperty("kpi_component_route_name", failedRouteId);
        }
-
-       // KPI
-       EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-      
-       kpi.setEvent_topic_name(kafkaTopic);
-       kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
-       kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-       kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-       kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-       kpi.setError(error);
-       exchange.getMessage().setBody(kpi);
-
-         String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-         exchange.setProperty("kpi_component_route_name", failedRouteId);
      }
    })
+/* -- Leave for the notification service to log the kpi event.
    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
    .log(LoggingLevel.INFO,"Derived event KPI published.")
    .log("Caught HttpOperationFailed exception")
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-   .setProperty("error_event_object", body())
-   .handled(true)
-   .to("kafka:{{kafka.topic.kpis.name}}")
+   .setProperty("error_event_object", body())*/
+   //.handled(true)
+   /*.to("kafka:{{kafka.topic.kpis.name}}") */
    .end();
 
    // Handle Camel Exception
@@ -1136,6 +1140,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1143,9 +1148,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .log(LoggingLevel.INFO,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
+    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups")
     // create initial case group map
     .convertBodyTo(String.class)
+    //.log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
