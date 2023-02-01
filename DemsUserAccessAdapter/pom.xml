@@ -117,7 +117,21 @@
             <groupId>io.strimzi</groupId>
             <artifactId>kafka-oauth-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jackson</artifactId>
 
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core-languages</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jsonpath</artifactId>
+
+        </dependency>
         <!-- Test -->
         <dependency>
             <groupId>io.strimzi</groupId>
@@ -152,6 +166,11 @@
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-mock</artifactId>
             <version>3.18.3.redhat-00024</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
 

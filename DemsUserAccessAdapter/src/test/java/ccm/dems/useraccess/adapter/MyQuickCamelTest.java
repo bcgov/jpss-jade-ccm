@@ -6,6 +6,7 @@ import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit5.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
+//@QuarkusTest
 public class MyQuickCamelTest extends CamelTestSupport {
 
     @Test
@@ -15,6 +16,14 @@ public class MyQuickCamelTest extends CamelTestSupport {
         template.sendBody("direct:start", "Hello World");
         var route = createRouteBuilder();
         assertMockEndpointsSatisfied();
+
+    }
+
+    @Test
+    public void TestSyncUser() throws Exception {
+        // AdviceWith.adviceWith(context, "start", a -> a.mockEndpoints());
+        // MockEndpoint mock = getMockEndpoint("mock:direct://syncCaseUserList");
+        // template.sendBody("direct://syncCaseUserList", new AuthUserList());
 
     }
 

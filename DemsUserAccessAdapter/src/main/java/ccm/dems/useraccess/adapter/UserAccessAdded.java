@@ -2,20 +2,56 @@ package ccm.dems.useraccess.adapter;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import ccm.dems.useraccess.adapter.models.common.data.AuthUserList;
 import ccm.dems.useraccess.adapter.models.event.CaseUserEvent;
+import ccm.dems.useraccess.adapter.models.event.EventKPI;
+import ccm.dems.useraccess.adapter.models.system.dems.DemsAuthUsersList;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 public class UserAccessAdded extends RouteBuilder {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserAccessAdded.class);
+
     @Override
     public void configure() throws Exception {
+        processCaseUserEvents();
         processCaseUserAccessAdded();
         processCourtCaseAuthListChanged();
         processCourtCaseAuthListUpdated();
+        syncCaseUserList();
+    }
+
+    private void processCaseUserEvents() {
+        // use method name as route id
+        String routeId = new Object() {
+        }.getClass().getEnclosingMethod().getName();
+
+        // from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
+        from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service").routeId(routeId).log(
+                LoggingLevel.INFO,
+                "Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n"
+                        + "    on the topic ${headers[kafka.TOPIC]}\n"
+                        + "    on the partition ${headers[kafka.PARTITION]}\n"
+                        + "    with the offset ${headers[kafka.OFFSET]}\n" + "    with the key ${headers[kafka.KEY]}")
+                .setHeader("event_key").jsonpath("$.event_key").setHeader("event_status").jsonpath("$.event_status")
+                .setHeader("event").simple("${body}").unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+                .setProperty("event_object", body()).setProperty("kpi_event_object", body())
+                .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+                .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}")).marshal()
+                .json(JsonLibrary.Jackson, CaseUserEvent.class).choice()
+                .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_ADDED))
+                .setProperty("kpi_component_route_name", simple("processCaseUserAccessAdded"))
+                .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+                .to("direct:publishEventKPI").setBody(header("event")).to("direct:processCaseUserAccessAdded")
+                .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+                .to("direct:publishEventKPI").endChoice().end();
     }
 
     private void processCaseUserAccessAdded() {
@@ -23,6 +59,7 @@ public class UserAccessAdded extends RouteBuilder {
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
 
+        logger.debug("### PROCESS CASE USER ACCESS ADDED CALLED");
         // IN
         // property: event_object
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -44,7 +81,7 @@ public class UserAccessAdded extends RouteBuilder {
         // use method name as route id
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
-
+        logger.debug("### processCourtCaseAuthListChanged");
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
                 .log(LoggingLevel.DEBUG, "event_key = ${header[event_key]}")
                 .setHeader("number", simple("${header[event_key]}")).to("http://ccm-lookup-service/getCourtCaseExists")
@@ -58,6 +95,7 @@ public class UserAccessAdded extends RouteBuilder {
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
 
+        logger.debug("### processCourtCaseAuthListUpdated");
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
                 .log(LoggingLevel.DEBUG, "event_key = ${header[event_key]}")
                 .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -69,4 +107,42 @@ public class UserAccessAdded extends RouteBuilder {
                 .setHeader("temp-body", simple("${body}")).to("http://ccm-dems-adapter/syncCaseUserList");
     }
 
+    // DEMS Adapter code
+    private void syncCaseUserList() {
+        // use method name as route id
+        String routeId = new Object() {
+        }.getClass().getEnclosingMethod().getName();
+
+        logger.debug("SyncCaseuserList called");
+        from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+                .log(LoggingLevel.DEBUG, "Processing request: ${body}").unmarshal()
+                .json(JsonLibrary.Jackson, AuthUserList.class).process(new Processor() {
+                    public void process(Exchange exchange) {
+                        AuthUserList b = exchange.getIn().getBody(AuthUserList.class);
+                        DemsAuthUsersList da = new DemsAuthUsersList(b);
+                        exchange.getMessage().setBody(da);
+                        exchange.setProperty("auth_user_list_object", b);
+                    }
+                }).marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class).setProperty("dems_auth_user_list")
+                .simple("${body}").log(LoggingLevel.DEBUG, "DEMS-bound case users sync request data: '${body}'.")
+                .setProperty("sync_data", simple("${body}"))
+                // get case id
+                // exchangeProperty.key already set
+                .to("direct:getCourtCaseIdByKey").setProperty("dems_case_id", jsonpath("$.id"))
+                // sync case users
+                .removeHeader("CamelHttpUri").removeHeader("CamelHttpBaseUri").removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
+                .setBody(simple("${exchangeProperty.dems_auth_user_list}"))
+                .log(LoggingLevel.DEBUG, "Synchronizing case users ...")
+                .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
+                .log(LoggingLevel.DEBUG, "Case users synchronized.")
+                // retrieve DEMS case group map
+                .to("direct:getGroupMapByCaseId")
+                // create DEMS case group members sync helper list
+                .to("direct:prepareDemsCaseGroupMembersSyncHelperList")
+                // sync case group members
+                .to("direct:syncCaseGroupMembers");
+    }
 }
