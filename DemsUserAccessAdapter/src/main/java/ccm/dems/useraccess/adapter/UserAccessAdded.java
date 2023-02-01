@@ -3,9 +3,11 @@ package ccm.dems.useraccess.adapter;
 import javax.enterprise.context.ApplicationScoped;
 
 import ccm.dems.useraccess.adapter.models.common.data.AuthUserList;
+import ccm.dems.useraccess.adapter.models.event.BaseEvent;
 import ccm.dems.useraccess.adapter.models.event.CaseUserEvent;
 import ccm.dems.useraccess.adapter.models.event.EventKPI;
 import ccm.dems.useraccess.adapter.models.system.dems.DemsAuthUsersList;
+import ccm.dems.useraccess.adapter.utils.DateTimeUtils;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -22,6 +24,7 @@ public class UserAccessAdded extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         processCaseUserEvents();
+        publishEventKPI();
         processCaseUserAccessAdded();
         processCourtCaseAuthListChanged();
         processCourtCaseAuthListUpdated();
@@ -145,4 +148,39 @@ public class UserAccessAdded extends RouteBuilder {
                 // sync case group members
                 .to("direct:syncCaseGroupMembers");
     }
+
+    private void publishEventKPI() {
+        // use method name as route id
+        String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+        //IN: property = kpi_event_object
+        //IN: property = kpi_event_topic_name
+        //IN: property = kpi_event_topic_offset
+        //IN: property = kpi_status
+        //IN: property = kpi_component_route_name
+        from("direct:" + routeId)
+                .routeId(routeId)
+                .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+                .process(new Processor() {
+                    @Override
+                    public void process(Exchange exchange) throws Exception {
+                        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+                        String kpi_status = (String) exchange.getProperty("kpi_status");
+
+                        // KPI
+                        EventKPI kpi = new EventKPI(event, kpi_status);
+                        kpi.setKpi_dtm(DateTimeUtils.generateCurrentDtm());
+                        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+                        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+                        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+                        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+                        exchange.getMessage().setBody(kpi);
+
+                    }
+                })
+                .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+                .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
+                .to("kafka:{{kafka.topic.kpis.name}}");
+    }
+
 }
