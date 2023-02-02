@@ -159,33 +159,24 @@ public class CcmSplunkAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .doTry()
-      .unmarshal().json(JsonLibrary.Jackson, EventKPI.class)
-      .setProperty("namespace",simple("{{env:NAMESPACE}}"))
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          EventKPI kpiEvent = (EventKPI)exchange.getMessage().getBody();
-          SplunkEventLog splunkLog = new SplunkEventLog((String)exchange.getProperty("namespace"),kpiEvent);
-          exchange.getMessage().setBody(splunkLog);
-        }
-      })
-      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
-      .log(LoggingLevel.INFO,"Publishing event KPI to splunk. Body = ${body} ...")
-      .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
-      //.to("{{splunk.host}}")
-      .to("https://{{splunk.host}}")
-      .log(LoggingLevel.INFO,"Event KPI published.")
-    .doCatch(Exception.class)
-      .log(LoggingLevel.INFO,"General Exception thrown.")
-      .log(LoggingLevel.INFO,"${exception}")
-      .log(LoggingLevel.INFO, "${body}")
-      .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
-      .to("direct:publishSplunkEventKPIError")
-    .end()
+    .unmarshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .setProperty("namespace",simple("{{env:NAMESPACE}}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        EventKPI kpiEvent = (EventKPI)exchange.getMessage().getBody();
+        SplunkEventLog splunkLog = new SplunkEventLog((String)exchange.getProperty("namespace"),kpiEvent);
+        exchange.getMessage().setBody(splunkLog);
+      }
+    })
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
+    .log(LoggingLevel.INFO,"Publishing event KPI to splunk. Body = ${body} ...")
+    .setHeader("Authorization", simple("Splunk {{splunk.token}}"))
+    //.to("{{splunk.host}}")
+    .to("https://{{splunk.host}}")
+    .log(LoggingLevel.INFO,"Event KPI published.")
     ;
 
   }
