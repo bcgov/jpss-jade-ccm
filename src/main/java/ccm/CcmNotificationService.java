@@ -84,14 +84,23 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
         Error error = new Error();
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_code("HttpOperationFailed");
-        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+        error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
+        error.setError_summary(cause.getMessage());
+        error.setError_details(cause.getResponseBody());
 
-        log.debug("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("HttpOperationFailed caught, exception message : " + cause.getMessage());
+        //for(StackTraceElement trace : cause.getStackTrace())
+        //{
+        // log.error(trace.toString());
+        //}
+        log.error("Returned status code : " + cause.getStatusCode());
         log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+        exchange.setProperty("error_status_code", cause.getStatusCode());
+
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
@@ -106,11 +115,31 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
     .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught HttpOperationFailed exception")
+    .log(LoggingLevel.INFO,"Caught HttpOperationFailed exception")
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .setProperty("error_event_object", body())
     .handled(true)
     .to("kafka:{{kafka.topic.kpis.name}}")
+    //re-queue based on the event type
+    /*.choice()
+      .when(simple("${exchangeProperty.error_status_code} == '503'"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+            log.error("toString event: " + event.toString());
+            
+            String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+            exchange.setProperty("kafka_topic_name", kafkaTopic);
+          }
+        })
+        .log(LoggingLevel.INFO, "retry the message")
+        .log(LoggingLevel.INFO, "${exchangeProperty.kafka_topic_name}")
+        .setBody(header("event"))
+            .to("kafka:{{kafka.topic.caseusers.name}}")
+
+      .end()*/
+
     .end();
  
     // Camel Exception
@@ -158,6 +187,7 @@ public class CcmNotificationService extends RouteBuilder {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
         Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
         Error error = new Error();
+        log.error("General Exception body: " + exchange.getMessage().getBody());
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_summary("Unable to process event., general Exception raised.");
         error.setError_code("General Exception");
@@ -166,7 +196,11 @@ public class CcmNotificationService extends RouteBuilder {
   
         log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("General Exception event info : " + event.getEvent_source());
-        // KPI
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
+         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
        
@@ -178,6 +212,7 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.getMessage().setBody(kpi);
       }
     })
+    //.log(LoggingLevel.INFO, "Headers: ${headers}")
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
     .log(LoggingLevel.DEBUG,"Derived event KPI published.")
@@ -209,6 +244,7 @@ public class CcmNotificationService extends RouteBuilder {
     }
     return kafkaTopic;
   }
+
   private void processChargeAssessmentEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -533,7 +569,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
@@ -561,6 +597,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
     .log(LoggingLevel.DEBUG,"Update court case auth list in DEMS.  Court case auth list = ${body}")
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .setHeader("temp-body", simple("${body}"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
@@ -573,7 +610,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -622,7 +659,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
@@ -630,9 +667,9 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.getMessage().setHeader("event_key", event.getJustin_rcc_id());
       }
     })
-    .log(LoggingLevel.DEBUG,"Calling route processCourtCaseAuthListChanged( rcc_id = ${header[event_key]} ) ...")
+    .log(LoggingLevel.INFO,"Calling route processCourtCaseAuthListChanged( rcc_id = ${header[event_key]} ) ...")
     .to("direct:processCourtCaseAuthListChanged")
-    .log(LoggingLevel.DEBUG,"Returned from processCourtCaseAuthListChanged().")
+    .log(LoggingLevel.INFO,"Returned from processCourtCaseAuthListChanged().")
     ;
   }
 
@@ -764,6 +801,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
@@ -811,17 +849,26 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
         .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
       .end()
-
-      // reset the original values
-      .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
-      .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-      .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-      .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
-      .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
-      .setBody(simple("${exchangeProperty.metadata_data}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+      .to("http://ccm-lookup-service/getCourtCaseExists")// requery if court case exists in DEMS, in case prev logic created the record.
+      .unmarshal().json()
+      .setProperty("caseFound").simple("${body[id]}")
+      .choice()
+        .when(simple("${exchangeProperty.caseFound} != ''"))
+          // reset the original values
+          .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
+          .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
+          .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+          .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
+          .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+          .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
+          .endChoice()
+      .end()
     .end()
     ;
   }
