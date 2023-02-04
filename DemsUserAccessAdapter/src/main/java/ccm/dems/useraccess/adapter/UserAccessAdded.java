@@ -18,6 +18,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +27,12 @@ public class UserAccessAdded extends RouteBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAccessAdded.class);
     private static final String AdapterName = "CcmDemsUserAccessAdapter";
+
+
+
     @Override
     public void configure() throws Exception {
+
         processCaseUserEvents();
         publishEventKPI();
         processCaseUserAccessAdded();
