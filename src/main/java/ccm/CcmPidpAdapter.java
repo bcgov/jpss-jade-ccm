@@ -17,8 +17,9 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-common:0.10.0
-// comment-camel-k: dependency=mvn:io.confluent:kafka-schema-registry-client:6.2.0
-// comment-camel-k: dependency=mvn:io.confluent:kafka-avro-serializer:6.2.0
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
+// camel-k: dependency=mvn:io.quarkus:quarkus-apicurio-registry-avro
+// camel-k: dependency=mvn:io.apicurio:apicurio-registry-serdes-avro-serde
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -26,19 +27,21 @@ import org.apache.camel.Processor;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+
+/*
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 //import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
+*/
 
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.pidp.PidpUserModificationEvent;
-import ccm.utils.CcmAppUtils;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 //import io.confluent.kafka.serializers.KafkaAvroDeserializer;
@@ -194,6 +197,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
     .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
     .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+    // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log("User creation event published.")
 
     // generate event KPI
@@ -224,7 +229,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     log.info("Route '" + routeId + "' defined.");
   }
 
-  private void processEvent() {
+/*   
+private void processEvent() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -236,8 +242,10 @@ public class CcmPidpAdapter extends RouteBuilder {
     .process(exchange -> {
       exchange.getIn().setBody("Hello World");
     });
-  }
+  } 
+*/
 
+/* 
   private void processCaseUserAccountCreated_old() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -309,7 +317,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     })
     .to("direct:publishBodyAsEventKPI")
     ;
-  }
+  } */
   
   private void publishBodyAsEventKPI() {
     // use method name as route id
@@ -322,6 +330,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
     .log(LoggingLevel.DEBUG,"body: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+    // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
