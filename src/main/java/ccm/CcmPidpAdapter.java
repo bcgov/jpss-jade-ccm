@@ -1,20 +1,24 @@
 package ccm;
 
+import java.io.File;
+import java.util.Collections;
+
+import org.apache.camel.CamelException;
+
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.component.kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-common:0.10.0
 // comment-camel-k: dependency=mvn:io.confluent:kafka-schema-registry-client:6.2.0
 // comment-camel-k: dependency=mvn:io.confluent:kafka-avro-serializer:6.2.0
-
-import java.io.File;
-import java.util.Collections;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -24,6 +28,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
+//import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
 import org.apache.camel.support.jsse.SSLContextParameters;
@@ -38,12 +43,122 @@ import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 //import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 
+
 public class CcmPidpAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-  
+    
+    attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
+  }
+
+  private void attachExceptionHandlers() {
+/*
+    // HttpOperation Failed
+    onException(HttpOperationFailedException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_code("HttpOperationFailed");
+        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+
+        log.debug("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught HttpOperationFailed exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .handled(true)
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .end();
+ */
+    // Camel Exception
+    onException(CamelException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_code("CamelException");
+        error.setError_summary("Unable to process event, CamelException raised.");
+       
+        log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("CamelException Exception event info : " + event.getEvent_source());
+       
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught CamelException exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .handled(true)
+    .end();
+
+    // General Exception
+     onException(Exception.class)
+     .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        Error error = new Error();
+        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+        error.setError_summary("Unable to process event., general Exception raised.");
+        error.setError_code("General Exception");
+        error.setError_details(event);
+       
+        log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("General Exception event info : " + event.getEvent_source());
+        // KPI
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        kpi.setError(error);
+        exchange.getMessage().setBody(kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log("Caught General exception exception")
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+    .setProperty("error_event_object", body())
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    .handled(true)
+    .end();
+
   }
 
   private void processCaseUserAccountCreated() throws Exception {
@@ -62,7 +177,6 @@ public class CcmPidpAdapter extends RouteBuilder {
     .routeId(routeId)
     .log("Received user creation event from PIDP.")
     .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
-    .log(LoggingLevel.INFO,"(DEBUG) PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
     .process(new Processor() {
@@ -78,7 +192,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
-    .log("Publishing user creation event ...")
+    .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
     .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
     .log("User creation event published.")
 

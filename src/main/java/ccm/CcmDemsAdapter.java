@@ -1,5 +1,7 @@
 package ccm;
 
+import org.apache.camel.CamelException;
+
 // To run this integration use:
 // kamel run CcmDemsEdgeAdapter.java --property file:application.properties --profile openshift
 // 
@@ -21,9 +23,12 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.event.BaseEvent;
+import ccm.models.common.event.EventKPI;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
@@ -32,8 +37,11 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
 import ccm.models.system.dems.*;
+import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +53,7 @@ public class CcmDemsAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     
+    attachExceptionHandlers();
     version();
     dems_version();
     getDemsFieldMappings();
@@ -74,6 +83,174 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseListByUserKey();
   }
 
+  private void attachExceptionHandlers() {
+
+   
+   // handle network connectivity errors
+   onException(ConnectException.class, SocketTimeoutException.class)
+     .backOffMultiplier(2)
+     
+     .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
+     .setBody(constant("An unexpected network error occurred"))
+     .retryAttemptedLogLevel(LoggingLevel.ERROR)
+     .handled(false)
+     .end();
+
+   // HttpOperation Failed
+   onException(HttpOperationFailedException.class)
+   .process(new Processor() {
+     @Override
+     public void process(Exchange exchange) throws Exception {
+       BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+       HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+       ccm.models.common.event.Error error = new ccm.models.common.event.Error();
+       error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+       error.setError_code("HttpOperationFailed");
+       error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+       error.setError_details(cause.getResponseBody());
+
+       log.error("DEMS HttpOperationFailed caught, exception message : " + cause.getMessage());
+       for(StackTraceElement trace : cause.getStackTrace())
+       {
+        log.error(trace.toString());
+       }
+       log.error("Returned status code : " + cause.getStatusCode());
+       log.error("Returned body : " + cause.getResponseBody());
+       exchange.getMessage().setHeader("error_detail", cause.getResponseBody());
+
+       if(event != null) {
+         log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+
+          // KPI
+          EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+          
+          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+          kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+          kpi.setError(error);
+          exchange.getMessage().setBody(kpi);
+
+          String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+          exchange.setProperty("kpi_component_route_name", failedRouteId);
+       }
+     }
+   })
+/* -- Leave for the notification service to log the kpi event.
+   .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+   .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+   .log(LoggingLevel.INFO,"Derived event KPI published.")
+   .log("Caught HttpOperationFailed exception")
+   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+   .setProperty("error_event_object", body())*/
+   //.handled(true)
+   /*.to("kafka:{{kafka.topic.kpis.name}}") */
+   .end();
+
+   // Handle Camel Exception
+   onException(CamelException.class)
+   .process(new Processor() {
+     @Override
+     public void process(Exchange exchange) throws Exception {
+       BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+       Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+       ccm.models.common.event.Error error = new ccm.models.common.event.Error();
+       error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+       error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+       error.setError_code("CamelException");
+       error.setError_summary("Unable to process event, CamelException raised.");
+      
+      
+       log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("CamelException Exception event info : " + event.getEvent_source());
+       // KPI
+       EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+        // KPI
+       
+        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+        
+        kpi.setEvent_topic_name(kafkaTopic);
+       kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+       kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+       kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+       kpi.setError(error);
+       exchange.getMessage().setBody(kpi);
+         String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+         exchange.setProperty("kpi_component_route_name", failedRouteId);
+     }
+   })
+   .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+   .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+   .log(LoggingLevel.INFO,"Derived event KPI published.")
+   .log("Caught CamelException exception")
+   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+   .setProperty("error_event_object", body())
+   .to("kafka:{{kafka.topic.kpis.name}}")
+   .handled(true)
+   .end();
+
+   // General Exception
+    onException(Exception.class)
+    .process(new Processor() {
+     @Override
+     public void process(Exchange exchange) throws Exception {
+       BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+      
+       ccm.models.common.event.Error error = new ccm.models.common.event.Error();
+       error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+       error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+       error.setError_summary("Unable to process event., general Exception raised.");
+       error.setError_code("General Exception");
+       error.setError_details(event);
+      
+       // KPI
+       EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+       String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+        
+        kpi.setEvent_topic_name(kafkaTopic);
+       kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+       kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+       kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+       kpi.setError(error);
+       exchange.getMessage().setBody(kpi);
+
+         String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+         exchange.setProperty("kpi_component_route_name", failedRouteId);
+     }
+   })
+   .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+   .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+   .log(LoggingLevel.INFO,"Derived event KPI published.")
+   .log("Caught General exception exception")
+   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+   .setProperty("error_event_object", body())
+   .to("kafka:{{kafka.topic.kpis.name}}")
+   .handled(true)
+   .end();
+
+ }
+
+ private String getKafkaTopicByEventType(String eventType ) {
+  String kafkaTopic = "ccm-general-errors";
+  if (eventType != null) {
+   switch(eventType){
+     case "DemsChargeAssessmentCaseData" :
+       kafkaTopic = "ccm-chargeassessment-errors";
+       break;
+       case "DemsPersonData" :{
+         kafkaTopic = "ccm-caseuser-errors";
+         break;
+       }
+       case "DemsCaseParticipantData" :{
+         kafkaTopic = "ccm-caseuser-errors";
+         break;
+       }
+   }
+  }
+  return kafkaTopic;
+}
   private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -81,7 +258,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/v1/version?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"version query request received")
+    .log(LoggingLevel.INFO,"version query request received")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -92,7 +269,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("version").simple("${body}")
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setBody().simple("${exchangeProperty.version}${exchangeProperty.version}")
-        .log(LoggingLevel.DEBUG,"Response: ${exchangeProperty.version}")
+        .log(LoggingLevel.INFO,"Response: ${exchangeProperty.version}")
       .otherwise()
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -109,7 +286,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/dems/v1/version?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"DEMS version query request received")
+    .log(LoggingLevel.INFO,"DEMS version query request received")
     .choice()
       .when(simple("${header.authorization} == 'Bearer {{adapter.token}}'"))
         .removeHeader("CamelHttpUri")
@@ -143,7 +320,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/fields")
-    .log(LoggingLevel.DEBUG,"Retrieved dems field mappings.")
+    .log(LoggingLevel.INFO,"Retrieved dems field mappings.")
     ;
   }
 
@@ -200,7 +377,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"key = ${exchangeProperty.key}...")
+    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -208,6 +385,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+    //.toD("http://httpstat.us:443/500") // --> testing code, remove later
     //.toD("rest:get:org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
     //.toD("netty-http:https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     .setProperty("length",jsonpath("$.length()"))
@@ -221,7 +399,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setProperty("id", simple(""))
           .setBody(simple("{\"id\": \"\"}"))
           .setHeader("CamelHttpResponseCode", simple("200"))
-          .log(LoggingLevel.DEBUG,"Case not found.")
+          .log(LoggingLevel.INFO,"Case not found.")
         .endChoice()
       .end()
     ;
@@ -235,7 +413,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request (id=${exchangeProperty.id})...")
+    .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -243,7 +421,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
-    .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
+    .log(LoggingLevel.INFO,"Retrieved court case data by id.")
     ;
   }
 
@@ -256,7 +434,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request")
+    .log(LoggingLevel.INFO,"Processing request")
     .to("direct:getCourtCaseIdByKey")
     .setProperty("id", jsonpath("$.id"))
     .to("direct:getCourtCaseDataById")
@@ -272,7 +450,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request")
+    .log(LoggingLevel.INFO,"Processing request")
     .to("direct:getCourtCaseDataByKey")
     .setProperty("courtCaseName",jsonpath("$.name"))
     .log(LoggingLevel.DEBUG,"DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtCaseName}")
@@ -289,7 +467,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request")
+    .log(LoggingLevel.INFO,"Processing request")
     .setProperty("caseFlagName", simple("K"))
     .to("direct:getDemsCaseFlagId")
     .log(LoggingLevel.DEBUG,"case flag K id = '${exchangeProperty.caseFlagId}'.")
@@ -340,7 +518,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases")
-    .log(LoggingLevel.DEBUG,"Court case created.")
+    .log(LoggingLevel.INFO,"Court case created.")
     .setProperty("courtCaseId", jsonpath("$.id"))
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
     .split()
@@ -472,8 +650,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.DEBUG,"Court case updated.")
-    .log(LoggingLevel.DEBUG,"Create participants")
+    .log(LoggingLevel.INFO,"Court case updated.")
+    .log(LoggingLevel.INFO,"Create participants")
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()
       .jsonpathWriteAsString("$.accused_persons")
@@ -528,7 +706,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.DEBUG,"Court case updated.")
+    .log(LoggingLevel.INFO,"Court case updated.")
     ;
   }
 
@@ -575,7 +753,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.DEBUG,"Court case updated.")
+    .log(LoggingLevel.INFO,"Court case updated.")
     ;
   }
 
@@ -627,9 +805,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .setBody(simple("${exchangeProperty.dems_auth_user_list}"))
-    .log(LoggingLevel.DEBUG,"Synchronizing case users ...")
+    .log(LoggingLevel.INFO,"Synchronizing case users ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
-    .log(LoggingLevel.DEBUG,"Case users synchronized.")
+    .log(LoggingLevel.INFO,"Case users synchronized.")
     // retrieve DEMS case group map
     .to("direct:getGroupMapByCaseId")
     // create DEMS case group members sync helper list
@@ -717,7 +895,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Case group sync processing started.")
+    .log(LoggingLevel.INFO,"Case group sync processing started.")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -740,9 +918,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, DemsCaseGroupMembersSyncData.class)
       .log(LoggingLevel.DEBUG,"Syncing case group (name='${exchangeProperty.dems_case_group_name}', id='${exchangeProperty.dems_case_group_id}'). sync data = '${body}' ...")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups/${exchangeProperty.dems_case_group_id}/sync")
-      .log(LoggingLevel.DEBUG,"Case group (name='${exchangeProperty.dems_case_group_name}', id='${exchangeProperty.dems_case_group_id}') members synchronized.")
+      .log(LoggingLevel.INFO,"Case group (name='${exchangeProperty.dems_case_group_name}', id='${exchangeProperty.dems_case_group_id}') members synchronized.")
       .end()
-    .log(LoggingLevel.DEBUG,"Case group sync processing completed.")
+    .log(LoggingLevel.INFO,"Case group sync processing completed.")
     ;
   }
 
@@ -761,7 +939,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
-    .log(LoggingLevel.DEBUG,"Check whether person exists in DEMS")
+    .log(LoggingLevel.INFO,"Check whether person exists in DEMS")
     .to("direct:getPersonExists")
     .log(LoggingLevel.DEBUG,"${body}")
     .unmarshal().json()
@@ -824,7 +1002,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
         // person not found
-        .log(LoggingLevel.DEBUG,"Participant not found.")
+        .log(LoggingLevel.INFO,"Participant not found.")
         .setBody(simple("{\"id\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .endChoice()
@@ -923,7 +1101,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("participantType").simple("Accused")
     .setProperty("key").simple("${header.key}")
     .setProperty("courtCaseId").simple("${header.courtCaseId}")
-    .log(LoggingLevel.DEBUG,"addParticipantToCase.  key = ${header[key]} case = ${header[courtCaseId]}")
+    .log(LoggingLevel.INFO,"addParticipantToCase.  key = ${header[key]} case = ${header[courtCaseId]}")
     .choice()
       .when(simple("${header[courtCaseId]} != '' && ${header[courtCaseId]} != null"))
         .process(new Processor() {
@@ -962,41 +1140,26 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.DEBUG,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups?throwExceptionOnFailure=false")
-    .choice()
-      .when().simple("${header.CamelHttpResponseCode} == 200")
-        // create initial case group map
-        .convertBodyTo(String.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
-            exchange.setProperty("dems_case_group_map", caseGroupMap);
-          }
-        })
-        .endChoice()
-      .otherwise()
-        .log(LoggingLevel.ERROR,"Case groups lookup error.  " + 
-            "Response status code = ${header.CamelHttpResponseCode}.  " + 
-            "Response body = '${body}'.  " + 
-            "Assume no case groups.")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap();
-            exchange.setProperty("dems_case_group_map", caseGroupMap);
-          }
-        })
-        .setHeader("CamelHttpResponseCode", simple("200"))
-        .endChoice()
-    .end()
+    .log(LoggingLevel.INFO,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
+    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups")
+    // create initial case group map
+    .convertBodyTo(String.class)
+    //.log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
+        exchange.setProperty("dems_case_group_map", caseGroupMap);
+      }
+    })
     ;
   }
 
@@ -1031,7 +1194,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRefList.class)
-        .log(LoggingLevel.DEBUG,"User found; case list size = ${exchangeProperty.case_list_size}.")
+        .log(LoggingLevel.INFO,"User found; case list size = ${exchangeProperty.case_list_size}.")
         .endChoice()
       .when().simple("${header.CamelHttpResponseCode} == 404")
         .log(LoggingLevel.DEBUG,"User not found.  Message from DEMS: ${body}")

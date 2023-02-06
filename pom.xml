@@ -93,7 +93,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>[2.12.6.1,)</version>
+      <version>[2.3,)</version>
     </dependency>
 
     <!-- junit 5, unit test -->
@@ -104,18 +104,17 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-core</artifactId>
-      <version>2.21.2</version>
-    </dependency> -->
-
     <!-- https://mvnrepository.com/artifact/org.apache.camel/camel-kafka -->
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-kafka</artifactId>
       <version>[2.15.1,)</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.camel/camel-http-base -->
+     <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-http-base</artifactId>
+    </dependency> 
 
     <dependency>
       <groupId>io.confluent</groupId>
