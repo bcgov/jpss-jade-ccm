@@ -1,0 +1,1 @@
+git show-ref --abbrev=7 | sort

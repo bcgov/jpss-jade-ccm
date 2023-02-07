@@ -51,7 +51,7 @@ public class CcmPidpAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     
-    attachExceptionHandlers();
+    //attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
   }
@@ -164,7 +164,7 @@ public class CcmPidpAdapter extends RouteBuilder {
 
   }
 
-  private void processCaseUserAccountCreated() throws Exception {
+  private void processCaseUserAccountCreated_avro_serdes() throws Exception {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -173,13 +173,18 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}?" + 
-      "groupId={{pidp.kafka.consumergroup.name}}"
-      //+ "&valueDeserializer=" + kafkaAvroDeserializer.getClass().getName()
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}" + 
+      "?groupId={{pidp.kafka.consumergroup.name}}" +
+      "&autoOffsetReset=earliest"
     )
     .routeId(routeId)
-    .log("Received user creation event from PIDP.")
-    .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG, "Received user creation event from PIDP ...  Headers = '${headers}'")
+    .log("Received user creation event from PIDP 1...")
+    //.log("Received user creation event from PIDP 2...")
+    //.log("Received user creation event from PIDP 3... body = '${body}'.")
+    //.log("(DEBUG) PIDP payload: ${body}")
+    //.log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
     .process(new Processor() {
@@ -225,8 +230,74 @@ public class CcmPidpAdapter extends RouteBuilder {
     .to("direct:publishBodyAsEventKPI")
     .log("Event KPI published.")
     ;
+  }
 
-    log.info("Route '" + routeId + "' defined.");
+  private void processCaseUserAccountCreated() throws Exception {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    log.info("Defining '" + routeId + "' ...");
+
+    // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
+    // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
+
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}" + 
+      "?groupId={{pidp.kafka.consumergroup.name}}" // +
+      //"&autoOffsetReset=earliest"
+    )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG, "Received user creation event from PIDP ...  Headers = '${headers}'")
+    .log("Received user creation event from PIDP 1...")
+    //.log("Received user creation event from PIDP 2...")
+    //.log("Received user creation event from PIDP 3... body = '${body}'.")
+    //.log("(DEBUG) PIDP payload: ${body}")
+    //.log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
+    .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
+    .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        PidpUserModificationEvent pidpUserEvent = exchange.getIn().getBody(PidpUserModificationEvent.class);
+        CaseUserEvent event = new CaseUserEvent(pidpUserEvent);
+
+        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+        exchange.setProperty("event_object", event);
+        exchange.getMessage().setBody(event);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
+    .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
+    .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+    // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+    .log("User creation event published.")
+
+    // generate event KPI
+    .setProperty("event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
+        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_CREATED);
+        String event_topic = exchange.getProperty("event_topic", String.class);
+        String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+          exchange.getProperty("event_recordmetadata")
+        );
+
+        kpi.setComponent_route_name(routeId);
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setEvent_topic_name(event_topic);
+        kpi.setEvent_topic_offset(event_offset);
+        exchange.getMessage().setBody(kpi);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log("Publishing event KPI ...")
+    .to("direct:publishBodyAsEventKPI")
+    .log("Event KPI published.")
+    ;
   }
 
 /*   
