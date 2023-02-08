@@ -7,7 +7,7 @@ import org.apache.camel.CamelException;
 
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.component.kafka
+
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
@@ -26,8 +26,8 @@ import org.apache.camel.Processor;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.component.kafka.KafkaComponent;
-import org.apache.camel.component.kafka.KafkaConfiguration;
+//import org.apache.camel.component.kafka.KafkaComponent;
+//import org.apache.camel.component.kafka.KafkaConfiguration;
 //import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.support.jsse.KeyManagersParameters;
 import org.apache.camel.support.jsse.KeyStoreParameters;
@@ -255,21 +255,21 @@ public class CcmPidpAdapter extends RouteBuilder {
     sslContext.setKeyManagers(keyManagers);
 
     // Configure Kafka component and set the SSL context parameters
-    KafkaComponent kafka = new KafkaComponent();
+    //KafkaComponent kafka = new KafkaComponent();
     //// kafka.setSslContextParameters(sslContext);
-    getContext().addComponent("kafka", kafka);
+    //getContext().addComponent("kafka", kafka);
 
     // Configure OIDC authentication parameters
-    KafkaConfiguration kafkaConfig = new KafkaConfiguration();
-    kafkaConfig.setSaslMechanism("OAUTHBEARER");
-    kafkaConfig.setSecurityProtocol("SASL_SSL");
-    kafkaConfig.setSaslJaasConfig("org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required "
-        + "oidc.provider.url='https://oidc-provider.com' "
-        + "oidc.client.id='client-id' "
-        + "oidc.client.secret='client-secret' "
-        + "oidc.token.endpoint='https://token-endpoint.com' "
-        + "oidc.username.claim='sub' "
-        + "oidc.groups.claim='groups';");
+    // KafkaConfiguration kafkaConfig = new KafkaConfiguration();
+    // kafkaConfig.setSaslMechanism("OAUTHBEARER");
+    // kafkaConfig.setSecurityProtocol("SASL_SSL");
+    // kafkaConfig.setSaslJaasConfig("org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required "
+    //     + "oidc.provider.url='https://oidc-provider.com' "
+    //     + "oidc.client.id='client-id' "
+    //     + "oidc.client.secret='client-secret' "
+    //     + "oidc.token.endpoint='https://token-endpoint.com' "
+    //     + "oidc.username.claim='sub' "
+    //     + "oidc.groups.claim='groups';");
 
     //from("kafka:{{pidp.kafka.topic.usercreation.name}}?brokers={{pidp.kafka.bootstrapservers.url}}&groupId=jade-ccm&configuration=#kafkaConfig")
     from("direct:hey")

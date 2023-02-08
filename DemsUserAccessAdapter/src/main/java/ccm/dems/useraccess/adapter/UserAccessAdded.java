@@ -1,11 +1,14 @@
 package ccm.dems.useraccess.adapter;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import ccm.dems.useraccess.TestConfig;
 import ccm.dems.useraccess.adapter.models.common.data.AuthUser;
 import ccm.dems.useraccess.adapter.models.common.data.AuthUserList;
 import ccm.dems.useraccess.adapter.models.event.BaseEvent;
@@ -13,12 +16,14 @@ import ccm.dems.useraccess.adapter.models.event.CaseUserEvent;
 import ccm.dems.useraccess.adapter.models.event.EventKPI;
 import ccm.dems.useraccess.adapter.models.system.dems.*;
 import ccm.dems.useraccess.adapter.utils.DateTimeUtils;
+import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.properties.PropertiesComponent;
+import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +31,7 @@ import org.slf4j.LoggerFactory;
 public class UserAccessAdded extends RouteBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAccessAdded.class);
+    // private static final Logger LOG = Logger.getLogger(UserAccessAdded.class);
     private static final String AdapterName = "CcmDemsUserAccessAdapter";
 
 
@@ -33,6 +39,10 @@ public class UserAccessAdded extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
+        PropertiesComponent pc = (PropertiesComponent) this.getCamelContext().getPropertiesComponent();
+        pc.setLocation("classpath:application.properties");
+        pc.loadProperties();
+        attachExceptionHandlers();
         processCaseUserEvents();
         publishEventKPI();
         processCaseUserAccessAdded();
@@ -40,8 +50,152 @@ public class UserAccessAdded extends RouteBuilder {
         processCourtCaseAuthListUpdated();
         syncCaseUserList();
         getGroupMapByCaseId();
+        getCourtCaseDataById();
+
+        getCourtCaseIdByKey();
         prepareDemsCaseGroupMembersSyncHelperList();
         syncCaseGroupMembers();
+    }
+
+    private void attachExceptionHandlers() {
+
+        // handle network connectivity errors
+        onException(ConnectException.class, SocketTimeoutException.class).backOffMultiplier(2)
+                .log(LoggingLevel.ERROR, "onException(ConnectException, SocketTimeoutException) called.")
+                .setBody(constant("An unexpected network error occurred")).retryAttemptedLogLevel(LoggingLevel.ERROR)
+                .handled(true).end();
+
+        // HttpOperation Failed
+        onException(HttpOperationFailedException.class).process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                BaseEvent event = (BaseEvent) exchange.getProperty("kpi_event_object");
+                Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                ccm.dems.useraccess.adapter.models.event.Error error = new ccm.dems.useraccess.adapter.models.event.Error();
+                error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+                error.setError_code("HttpOperationFailed");
+                error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
+
+                log.debug("HttpOperationFailed caught, exception message : " + cause.getMessage() + " stack trace : "
+                        + cause.getStackTrace());
+                log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+                // KPI
+                EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+                String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+                kpi.setEvent_topic_name(kafkaTopic);
+                kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+                kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+                kpi.setComponent_route_name((String) exchange.getProperty("kpi_component_route_name"));
+                kpi.setError(error);
+                exchange.getMessage().setBody(kpi);
+            }
+        }).marshal().json(JsonLibrary.Jackson, EventKPI.class)
+                .log(LoggingLevel.ERROR, "Publishing derived event KPI in Exception handler ...")
+                .log(LoggingLevel.DEBUG, "Derived event KPI published.").log("Caught HttpOperationFailed exception")
+                .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+                .setProperty("error_event_object", body()).handled(true).to("kafka:{{kafka.topic.kpis.name}}").end();
+
+        // Camel Exception
+        onException(CamelException.class).process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                BaseEvent event = (BaseEvent) exchange.getProperty("kpi_event_object");
+                Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                ccm.dems.useraccess.adapter.models.event.Error error = new ccm.dems.useraccess.adapter.models.event.Error();
+                error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+                error.setError_code("CamelException");
+                error.setError_summary("Unable to process event, CamelException raised.");
+
+                log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : "
+                        + cause.getStackTrace());
+                log.error("CamelException Exception event info : " + event.getEvent_source());
+
+                // KPI
+                EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+                String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+
+                kpi.setEvent_topic_name(kafkaTopic);
+                kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+                kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+                kpi.setComponent_route_name((String) exchange.getProperty("kpi_component_route_name"));
+                kpi.setError(error);
+                exchange.getMessage().setBody(kpi);
+            }
+        }).marshal().json(JsonLibrary.Jackson, EventKPI.class)
+                .log(LoggingLevel.ERROR, "Publishing derived event KPI in Exception handler ...")
+                .log(LoggingLevel.DEBUG, "Derived event KPI published.").log("Caught CamelException exception")
+                .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+                .setProperty("error_event_object", body()).to("kafka:{{kafka.topic.kpis.name}}").handled(true).end();
+
+        // General Exception
+        onException(Exception.class).process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                BaseEvent event = (BaseEvent) exchange.getProperty("kpi_event_object");
+                Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                ccm.dems.useraccess.adapter.models.event.Error error = new ccm.dems.useraccess.adapter.models.event.Error();
+                error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+                error.setError_summary("Unable to process event., general Exception raised.");
+                error.setError_code("General Exception");
+                error.setError_details(event);
+                log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : "
+                        + cause.getLocalizedMessage());
+
+                log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : "
+                        + cause.getStackTrace());
+                log.error("General Exception event info : " + event.getEvent_source());
+                // KPI
+                EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+                String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+
+                kpi.setEvent_topic_name(kafkaTopic);
+                kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+                kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+                kpi.setComponent_route_name((String) exchange.getProperty("kpi_component_route_name"));
+                kpi.setError(error);
+                exchange.getMessage().setBody(kpi);
+            }
+        }).marshal().json(JsonLibrary.Jackson, EventKPI.class)
+                .log(LoggingLevel.ERROR, "Publishing derived event KPI in Exception handler ...")
+                .log(LoggingLevel.DEBUG, "Derived event KPI published.").log("Caught General exception exception")
+                .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+                .setProperty("error_event_object", body()).to("kafka:{{kafka.topic.kpis.name}}").handled(true).end();
+
+    }
+
+    private void getCourtCaseDataById() {
+        // use method name as route id
+        String routeId = new Object() {
+        }.getClass().getEnclosingMethod().getName();
+
+        // IN: exchangeProperty.id
+        from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+                .log(LoggingLevel.DEBUG, "Processing request (id=${exchangeProperty.id})...")
+                .removeHeader("CamelHttpUri").removeHeader("CamelHttpBaseUri").removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("Authorization")
+                .simple("Bearer " + "{{dems.token}}").toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
+                .log(LoggingLevel.DEBUG, "Retrieved court case data by id.");
+    }
+
+    private String getKafkaTopicByEventType(String eventType) {
+        String kafkaTopic = "ccm-general-errors";
+        if (eventType != null) {
+            switch (eventType) {
+            case "ChargeAssessmentEvent":
+                kafkaTopic = "ccm-chargeassessment-errors";
+                break;
+            case "CaseUserEvent": {
+                kafkaTopic = "ccm-caseuser-errors";
+                break;
+            }
+            case "CourtCaseEvent": {
+                kafkaTopic = "ccm-courtcase-errors";
+                break;
+            }
+            }
+        }
+        return kafkaTopic;
     }
 
     private void processCaseUserEvents() {
@@ -75,7 +229,7 @@ public class UserAccessAdded extends RouteBuilder {
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
 
-        logger.debug("### PROCESS CASE USER ACCESS ADDED CALLED");
+        // LOG.debug("### PROCESS CASE USER ACCESS ADDED CALLED");
         // IN
         // property: event_object
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -87,7 +241,7 @@ public class UserAccessAdded extends RouteBuilder {
                         exchange.getMessage().setHeader("event_key", event.getJustin_rcc_id());
                     }
                 })
-                .log(LoggingLevel.DEBUG,
+                .log(LoggingLevel.INFO,
                         "Calling route processCourtCaseAuthListChanged( rcc_id = ${header[event_key]} ) ...")
                 .to("direct:processCourtCaseAuthListChanged")
                 .log(LoggingLevel.DEBUG, "Returned from processCourtCaseAuthListChanged().");
@@ -97,9 +251,9 @@ public class UserAccessAdded extends RouteBuilder {
         // use method name as route id
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
-        logger.debug("### processCourtCaseAuthListChanged");
+        // LOG.debug("### processCourtCaseAuthListChanged");
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-                .log(LoggingLevel.DEBUG, "event_key = ${header[event_key]}")
+                .log(LoggingLevel.INFO, "event_key = ${header[event_key]}")
                 .setHeader("number", simple("${header[event_key]}")).to("http://ccm-lookup-service/getCourtCaseExists")
                 .unmarshal().json().setProperty("caseFound").simple("${body[id]}").setProperty("autoCreateFlag")
                 .simple("{{dems.case.auto.creation}}").choice().when(simple("${exchangeProperty.caseFound} != ''"))
@@ -118,9 +272,9 @@ public class UserAccessAdded extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("number")
                 .simple("${header.event_key}").log(LoggingLevel.DEBUG, "Retrieve court case auth list")
                 .to("http://ccm-lookup-service/getCourtCaseAuthList")
-                .log(LoggingLevel.DEBUG, "Update court case auth list in DEMS.  Court case auth list = ${body}")
+                .log(LoggingLevel.INFO, "Update court case auth list in DEMS.  Court case auth list = ${body}")
                 // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
-                .setHeader("temp-body", simple("${body}")).to("http://ccm-dems-adapter/syncCaseUserList");
+                .setHeader("temp-body", simple("${body}")).to("direct:syncCaseUserList");
     }
 
     // DEMS Adapter code
@@ -129,9 +283,8 @@ public class UserAccessAdded extends RouteBuilder {
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
 
-        logger.debug("SyncCaseuserList called");
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-                .log(LoggingLevel.DEBUG, "Processing request: ${body}").unmarshal()
+                .log(LoggingLevel.INFO, "Processing request: ${body}").unmarshal()
                 .json(JsonLibrary.Jackson, AuthUserList.class).process(new Processor() {
                     public void process(Exchange exchange) {
                         AuthUserList b = exchange.getIn().getBody(AuthUserList.class);
@@ -140,8 +293,8 @@ public class UserAccessAdded extends RouteBuilder {
                         exchange.setProperty("auth_user_list_object", b);
                     }
                 }).marshal().json(JsonLibrary.Jackson, DemsAuthUsersList.class).setProperty("dems_auth_user_list")
-                .simple("${body}").log(LoggingLevel.DEBUG, "DEMS-bound case users sync request data: '${body}'.")
-                .setProperty("sync_data", simple("${body}"))
+                .simple("${body}").log(LoggingLevel.INFO, "DEMS-bound case users sync request data: '${body}'.")
+                .setProperty("sync_data", simple("${body}")).log(LoggingLevel.INFO, "calling getCourtCaseById")
                 // get case id
                 // exchangeProperty.key already set
                 .to("direct:getCourtCaseIdByKey").setProperty("dems_case_id", jsonpath("$.id"))
@@ -160,6 +313,35 @@ public class UserAccessAdded extends RouteBuilder {
                 .to("direct:prepareDemsCaseGroupMembersSyncHelperList")
                 // sync case group members
                 .to("direct:syncCaseGroupMembers");
+    }
+
+    private void getCourtCaseIdByKey() {
+        // use method name as route id
+        String routeId = new Object() {
+        }.getClass().getEnclosingMethod().getName();
+        // String demsUrl = "wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1";
+
+
+        // IN: exchangeProeprty.key
+        from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+                 .log(LoggingLevel.INFO, "key = ${exchangeProperty.key}...").removeHeader("CamelHttpUri")
+                 .removeHeader("CamelHttpBaseUri").removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("Authorization")
+                .simple("Bearer " + "{{dems.token}}")
+                .toD("https://{{dems.host}}/org-units/${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+                // .toD("https://" + demsUrl +
+                // "${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+                // .toD("http://httpstat.us:443/500") // --> testing code, remove later
+                // .toD("rest:get:org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
+                // .toD("netty-http:https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+                .setProperty("length", jsonpath("$.length()")).choice()
+                .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+                .setProperty("id", jsonpath("$[0].id")).setBody(simple("{\"id\": \"${exchangeProperty.id}\"}"))
+                .endChoice().when(simple("${header.CamelHttpResponseCode} == 200"))
+                .log(LoggingLevel.DEBUG, "body = '${body}'.").setProperty("id", simple(""))
+                .setBody(simple("{\"id\": \"\"}")).setHeader("CamelHttpResponseCode", simple("200"))
+                .log(LoggingLevel.DEBUG, "Case not found.").endChoice().end();
     }
 
     private void getGroupMapByCaseId() {
