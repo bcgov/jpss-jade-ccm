@@ -39,9 +39,7 @@ public class UserAccessAdded extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
-        PropertiesComponent pc = (PropertiesComponent) this.getCamelContext().getPropertiesComponent();
-        pc.setLocation("classpath:application.properties");
-        pc.loadProperties();
+
         attachExceptionHandlers();
         processCaseUserEvents();
         publishEventKPI();
@@ -203,6 +201,9 @@ public class UserAccessAdded extends RouteBuilder {
         String routeId = new Object() {
         }.getClass().getEnclosingMethod().getName();
 
+        PropertiesComponent pc = (PropertiesComponent) this.getCamelContext().getPropertiesComponent();
+        pc.setLocation("classpath:application.properties");
+        pc.loadProperties();
         // from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
         from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service").routeId(routeId).log(
                 LoggingLevel.INFO,
