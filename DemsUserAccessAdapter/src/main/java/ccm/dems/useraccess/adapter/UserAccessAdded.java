@@ -8,7 +8,6 @@ import java.util.List;
 
 import javax.enterprise.context.ApplicationScoped;
 
-import ccm.dems.useraccess.TestConfig;
 import ccm.dems.useraccess.adapter.models.common.data.AuthUser;
 import ccm.dems.useraccess.adapter.models.common.data.AuthUserList;
 import ccm.dems.useraccess.adapter.models.event.BaseEvent;
@@ -24,6 +23,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,11 +34,8 @@ public class UserAccessAdded extends RouteBuilder {
     // private static final Logger LOG = Logger.getLogger(UserAccessAdded.class);
     private static final String AdapterName = "CcmDemsUserAccessAdapter";
 
-
-
     @Override
     public void configure() throws Exception {
-
 
         attachExceptionHandlers();
         processCaseUserEvents();
@@ -322,12 +319,17 @@ public class UserAccessAdded extends RouteBuilder {
         }.getClass().getEnclosingMethod().getName();
         // String demsUrl = "wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1";
 
+        @ConfigProperty(name = "dems-host-url")
+        String dems_host;
+
+        @ConfigProperty(name = "dems-org-unit-id")
+        String dems_org_unit_id;
 
         // IN: exchangeProeprty.key
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-                 .log(LoggingLevel.INFO, "key = ${exchangeProperty.key}...").removeHeader("CamelHttpUri")
-                 .removeHeader("CamelHttpBaseUri").removeHeaders("CamelHttp*")
-                .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                .log(LoggingLevel.INFO, "key = ${exchangeProperty.key}...").removeHeader("CamelHttpUri")
+                .log(LoggingLevel.INFO, "dems_host = " + dems_host).removeHeader("CamelHttpBaseUri")
+                .removeHeaders("CamelHttp*").setHeader(Exchange.HTTP_METHOD, simple("GET"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("Authorization")
                 .simple("Bearer " + "{{dems.token}}")
                 .toD("https://{{dems.host}}/org-units/${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
