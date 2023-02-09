@@ -43,6 +43,7 @@ import ccm.utils.JsonParseUtils;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -617,6 +618,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("caseFlags", simple("${header.caseFlags}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .setProperty("CourtCaseMetadata").body()
     // retrieve court case name from DEMS
@@ -627,10 +629,21 @@ public class CcmDemsAdapter extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
+        String caseFlags = exchange.getProperty("caseFlags", String.class);
+        if(caseFlags != null && caseFlags.length() > 2) {
+          caseFlags = caseFlags.substring(1, caseFlags.length() - 1);
+        } else {
+          caseFlags = null;
+        }
+        //log.error(caseFlags);
+        List<String> existingCaseFlags = new ArrayList<String>();
+        if(caseFlags != null) {
+          existingCaseFlags = Arrays.asList(caseFlags.split(", "));
+        }
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm);
+        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags);
         exchange.getMessage().setBody(d);
       }
     })
