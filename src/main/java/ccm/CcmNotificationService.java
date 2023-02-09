@@ -30,6 +30,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
@@ -252,7 +253,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -351,7 +352,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -854,6 +855,22 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("caseFound").simple("${body[id]}")
       .choice()
         .when(simple("${exchangeProperty.caseFound} != ''"))
+          // grab the case mappings from justin, for overriding case flags.
+          .to("http://ccm-lookup-service/getCourtCaseDetails")
+          //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
+          .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+
+          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+              log.error(b.getCase_flags().toString());
+              exchange.getMessage().setBody(b.getCase_flags());
+            }
+          })
+          .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
+          .setHeader("caseFlags", simple("${body}"))
           // reset the original values
           .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
           .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
@@ -921,6 +938,21 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
         .to("direct:processChargeAssessmentCreated")
       .end()
+      // grab the case mappings from justin, for overriding case flags.
+      .to("http://ccm-lookup-service/getCourtCaseDetails")
+      //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
+      .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+
+      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+          exchange.getMessage().setBody(b.getCase_flags());
+        }
+      })
+      .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
+      .setHeader("caseFlags", simple("${body}"))
       // reset the original values
       .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
       .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
@@ -935,7 +967,7 @@ public class CcmNotificationService extends RouteBuilder {
 
 
     .doTry()
-      .log(LoggingLevel.DEBUG,"Create new crown assignment changed event.")
+      .log(LoggingLevel.INFO,"Create new crown assignment changed event.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -951,10 +983,9 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.courtcases.name}}")
 
-
       .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
-      .log(LoggingLevel.DEBUG,"Derived event published.")
+      .log(LoggingLevel.INFO,"Derived event published.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -980,15 +1011,11 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
       .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-      .log(LoggingLevel.DEBUG,"Publishing derived event KPI ...")
+      .log(LoggingLevel.INFO,"Publishing derived event KPI ...")
       .to("direct:publishBodyAsEventKPI")
-      .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+      .log(LoggingLevel.INFO,"Derived event KPI published.")
 
-
-
-
-
-      .log(LoggingLevel.DEBUG,"Create new appearance summary changed event.")
+      .log(LoggingLevel.INFO,"Create new appearance summary changed event.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -1004,10 +1031,9 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.courtcases.name}}")
 
-
       .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
-      .log(LoggingLevel.DEBUG,"Derived event published.")
+      .log(LoggingLevel.INFO,"Derived event published.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -1033,15 +1059,13 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
       .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-      .log(LoggingLevel.DEBUG,"Publishing derived event KPI ...")
+      .log(LoggingLevel.INFO,"Publishing derived event KPI ...")
       .to("direct:publishBodyAsEventKPI")
-      .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-
-
+      .log(LoggingLevel.INFO,"Derived event KPI published.")
 
       .doCatch(Exception.class)
-        .log(LoggingLevel.DEBUG,"General Exception thrown.")
-        .log(LoggingLevel.DEBUG,"${exception}")
+        .log(LoggingLevel.INFO,"General Exception thrown.")
+        .log(LoggingLevel.INFO,"${exception}")
         .setProperty("error_event_object", body())
         .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
         .to("direct:publishJustinEventKPIError")
@@ -1052,7 +1076,6 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
     .end()
-  
 
     ;
   }
@@ -1094,7 +1117,7 @@ public class CcmNotificationService extends RouteBuilder {
           .to("http://ccm-dems-adapter/updateCourtCaseWithAppearanceSummary")
           .endChoice()
         .otherwise()
-          .log(LoggingLevel.DEBUG,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
+          .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
           .endChoice()
         .end()
     .end()
@@ -1284,7 +1307,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Generate kpi event: ${body}")
     // send to the chargeassessmentcase errors topic
     .to("kafka:{{kafka.topic.chargeassessment-errors.name}}")
-    .log(LoggingLevel.DEBUG,"kpi event added to chargeassessmentcase errors topic")
+    .log(LoggingLevel.INFO,"kpi event added to chargeassessmentcase errors topic")
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setBody(simple("${exchangeProperty.kpi_object}"))
     .process(new Processor() {
