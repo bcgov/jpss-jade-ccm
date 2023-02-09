@@ -612,6 +612,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header.rcc_id
+    // IN: header.caseFlags
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
