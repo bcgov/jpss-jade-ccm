@@ -870,10 +870,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             if (syncData != null) {
               // add user to sync data
               syncData.getValues().add(user.getPart_id());
-              System.out.println("DEBUG: User added to sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id());
+              // System.out.println("DEBUG: User added to sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id());
             }
           } else {
-            System.out.println("ERROR: Cannot add user sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id() + ", user JRS role = " + user.getJrs_role());
+            // System.out.println("ERROR: Cannot add user sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id() + ", user JRS role = " + user.getJrs_role());
           }
         }
 
@@ -885,7 +885,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           if (syncData != null) {
             // add sync data to helper list
             helper = new DemsCaseGroupMembersSyncHelper(actualDemsCaseGroupId, actualDemsCaseGroupName, syncData);
-            System.out.println("DEBUG: found case group: " + actualDemsCaseGroupName);
+            // System.out.println("DEBUG: found case group: " + actualDemsCaseGroupName);
           } else {
             // add empty sync data to helper list
             DemsCaseGroupMembersSyncData emptySyncData = new DemsCaseGroupMembersSyncData();
