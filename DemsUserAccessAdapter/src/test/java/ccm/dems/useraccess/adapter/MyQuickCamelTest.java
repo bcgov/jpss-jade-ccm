@@ -12,7 +12,15 @@ public class MyQuickCamelTest extends CamelTestSupport {
     @Test
     public void testMock() throws Exception {
         MockEndpoint mock = getMockEndpoint("mock:output");
-
+        // //camelContextService.init();
+        // PropertiesComponent pc = (PropertiesComponent) this.context.getPropertiesComponent();
+        // pc.setLocation("classpath:application.properties");
+        // template.request("url:https://{{dems.url}}", new Processor() {
+        // @Override
+        // public void process(Exchange exchange) throws Exception {
+        //
+        // }
+        // });
         template.sendBody("direct:start", "Hello World");
         var route = createRouteBuilder();
         assertMockEndpointsSatisfied();

@@ -23,7 +23,6 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -254,7 +253,8 @@ public class UserAccessAdded extends RouteBuilder {
                 .log(LoggingLevel.INFO, "event_key = ${header[event_key]}")
                 .setHeader("number", simple("${header[event_key]}")).to("http://ccm-lookup-service/getCourtCaseExists")
                 .unmarshal().json().setProperty("caseFound").simple("${body[id]}").setProperty("autoCreateFlag")
-                .simple("{{dems.case.auto.creation}}").choice().when(simple("${exchangeProperty.caseFound} != ''"))
+                .simple("false").choice().when(simple("${exchangeProperty.caseFound} != ''"))
+                // .simple("{{dems.case.auto.creation}}").choice().when(simple("${exchangeProperty.caseFound} != ''"))
                 .to("direct:processCourtCaseAuthListUpdated").end();
     }
 
@@ -319,20 +319,15 @@ public class UserAccessAdded extends RouteBuilder {
         }.getClass().getEnclosingMethod().getName();
         // String demsUrl = "wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1";
 
-        @ConfigProperty(name = "dems-host-url")
-        String dems_host;
-
-        @ConfigProperty(name = "dems-org-unit-id")
-        String dems_org_unit_id;
-
         // IN: exchangeProeprty.key
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
                 .log(LoggingLevel.INFO, "key = ${exchangeProperty.key}...").removeHeader("CamelHttpUri")
-                .log(LoggingLevel.INFO, "dems_host = " + dems_host).removeHeader("CamelHttpBaseUri")
+                .log(LoggingLevel.INFO, "dems_host = {{dems-host-url}}").removeHeader("CamelHttpBaseUri")
                 .removeHeaders("CamelHttp*").setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                .removeHeader(Exchange.HTTP_URI).removeHeader(Exchange.HTTP_PATH)
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("Authorization")
-                .simple("Bearer " + "{{dems.token}}")
-                .toD("https://{{dems.host}}/org-units/${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+                .simple("Bearer " + "V1FCSTFQeGNWYmdUU2tsaExsakpFOTJTWQ==")
+                .toD("https://wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1/org-units/1/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
                 // .toD("https://" + demsUrl +
                 // "${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
                 // .toD("http://httpstat.us:443/500") // --> testing code, remove later
