@@ -60,6 +60,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
+    processBulkCaseUserEvents();
     processCaseUserAccessAdded();
     processCaseUserAccessRemoved();
     processUnknownStatus();
@@ -612,6 +613,53 @@ public class CcmNotificationService extends RouteBuilder {
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("event_object", body())
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_ADDED))
+        .setProperty("kpi_component_route_name", simple("processCaseUserAccessAdded"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCaseUserAccessAdded")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_REMOVED))
+        .setProperty("kpi_component_route_name", simple("processCaseUserAccessRemoved"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCaseUserAccessRemoved")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+  
+  private void processBulkCaseUserEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
