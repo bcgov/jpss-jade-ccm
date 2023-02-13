@@ -439,7 +439,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .jsonpath("$.message_event_type_cd")
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
-      .log(LoggingLevel.INFO,"Main bvent batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      .log(LoggingLevel.INFO,"Main event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
