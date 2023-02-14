@@ -183,9 +183,17 @@ public class JustinAgencyFileTest {
             String extractedValue = JsonParseUtils.getJsonArrayElementValue(stringBuilder.toString(), "/fields", "/name", "Court File Unique ID", "/value");
             String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "/fields", "/name", "Case Flags", "/value")
                                                                      , "", "", "11", "");
+            JsonNode node = JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "/fields", "/name", "Case Flag New", "/value");
+            String kFileValueNew = JsonParseUtils.readJsonElementKeyValue(node, "", "/name", "K", "/id");
+            JsonNode node2 = JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "/fields", "/name", "Case Flag Empty", "/value");
+            String kFileValueEmpty = JsonParseUtils.readJsonElementKeyValue(node2, "", "/name", "K", "/id");
             //System.out.println(extractedValue);
+            //System.out.println(kFileValue);
+            //System.out.println(kFileValueNew);
             assertEquals("11", kFileValue);
             assertEquals("39137", extractedValue);
+            assertEquals("11", kFileValueNew);
+            assertEquals("", kFileValueEmpty);
 
         } catch (IOException e) {
             e.printStackTrace();
