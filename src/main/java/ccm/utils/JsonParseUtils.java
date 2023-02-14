@@ -63,6 +63,7 @@ public class JsonParseUtils {
         }
       }
     } catch(Exception ex) {
+      ex.printStackTrace();
       // issue converting json response to json. ignore.
     }
     return "";

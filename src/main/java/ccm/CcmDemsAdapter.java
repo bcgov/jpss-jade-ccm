@@ -469,9 +469,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request")
-    .setProperty("caseFlagName", simple("K"))
-    .to("direct:getDemsCaseFlagId")
-    .log(LoggingLevel.DEBUG,"case flag K id = '${exchangeProperty.caseFlagId}'.")
     .to("direct:getCourtCaseDataByKey")
     .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
     .process(new Processor() {
@@ -482,12 +479,12 @@ public class CcmDemsAdapter extends RouteBuilder {
         String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
         exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
         String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
-                                                                     , "", "", caseFlagId, "");
+                                                                     , "", "/name", "K", "/id");
         exchange.setProperty("kFileValue", kFileValue);
       }
 
     })
-    .log(LoggingLevel.DEBUG,"DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtFileUniqueId}:  ${exchangeProperty.kFileValue}")
+    .log(LoggingLevel.INFO,"DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtFileUniqueId}:  ${exchangeProperty.kFileValue}")
     ;
   }
 
@@ -552,7 +549,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
 
-        // If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
+        // JADE-1927-  If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
         String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
         String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);

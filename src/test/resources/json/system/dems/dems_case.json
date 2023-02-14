@@ -115,6 +115,62 @@
             ]
         },
         {
+            "id": 29,
+            "name": "Case Flag New",
+            "value": [
+              {
+                "id": 14,
+                "name": "DO/LTO"
+              },
+              {
+                "id": 11,
+                "name": "K"
+              },
+              {
+                "id": 12,
+                "name": "Indigenous"
+              },
+              {
+                "id": 9,
+                "name": "VUL1"
+              },
+              {
+                "id": 10,
+                "name": "CHI1"
+              },
+              {
+                "id": 15,
+                "name": "HROIP"
+              }
+            ]
+        },
+        {
+            "id": 29,
+            "name": "Case Flag Empty",
+            "value": [
+              {
+                "id": 14,
+                "name": "DO/LTO"
+              },
+              {
+                "id": 12,
+                "name": "Indigenous"
+              },
+              {
+                "id": 9,
+                "name": "VUL1"
+              },
+              {
+                "id": 10,
+                "name": "CHI1"
+              },
+              {
+                "id": 15,
+                "name": "HROIP"
+              }
+            ]
+        },
+        {
             "id": 31,
             "name": "Proposed Process Type",
             "value": null
