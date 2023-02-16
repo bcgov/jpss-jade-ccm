@@ -23,6 +23,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +51,9 @@ public class UserAccessAdded extends RouteBuilder {
         getCourtCaseIdByKey();
         prepareDemsCaseGroupMembersSyncHelperList();
         syncCaseGroupMembers();
+
+
+
     }
 
     private void attachExceptionHandlers() {
@@ -323,11 +328,13 @@ public class UserAccessAdded extends RouteBuilder {
         from("direct:" + routeId).routeId(routeId).streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
                 .log(LoggingLevel.INFO, "key = ${exchangeProperty.key}...").removeHeader("CamelHttpUri")
                 .log(LoggingLevel.INFO, "dems_host = {{dems-host-url}}").removeHeader("CamelHttpBaseUri")
-                .removeHeaders("CamelHttp*").setHeader(Exchange.HTTP_METHOD, simple("GET"))
-                .removeHeader(Exchange.HTTP_URI).removeHeader(Exchange.HTTP_PATH)
+                // .removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                // .removeHeader(Exchange.HTTP_URI).removeHeader(Exchange.HTTP_PATH)
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setHeader("Authorization")
-                .simple("Bearer " + "V1FCSTFQeGNWYmdUU2tsaExsakpFOTJTWQ==")
+                .simple("Bearer {{dems.token}}")
                 .toD("https://wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1/org-units/1/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+
                 // .toD("https://" + demsUrl +
                 // "${dems.org-unit.id}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
                 // .toD("http://httpstat.us:443/500") // --> testing code, remove later
