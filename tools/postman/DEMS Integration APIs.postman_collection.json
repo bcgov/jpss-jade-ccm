@@ -208,13 +208,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{DEMS-API-URI}}/cases/63/groups",
+									"raw": "{{DEMS-API-URI}}/cases/110/groups",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
 									"path": [
 										"cases",
-										"63",
+										"110",
 										"groups"
 									]
 								}
