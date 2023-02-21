@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="camel-quarkus-examples-kafka" />
+        <module name="ccm.dems.useraccess-adapter" />
+        <module name="ccm-dems-useraccess-adapter" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="camel-quarkus-examples-kafka" options="-Xlint:unchecked" />
+      <module name="ccm-dems-useraccess-adapter" options="-Xlint:unchecked" />
+      <module name="ccm.dems.useraccess-adapter" options="-Xlint:unchecked" />
+    </option>
+  </component>
+</project>

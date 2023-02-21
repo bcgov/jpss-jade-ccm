@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="camel-test-junit5-3.18.5">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/src/main/resources/camel-test-junit5-3.18.5.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
