@@ -422,8 +422,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
-
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
           ReportEvent be = new ReportEvent(je);
       
@@ -432,7 +430,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         }})
       .log(LoggingLevel.INFO,"Set kpi event object")
       .setProperty("kpi_event_object", body())
-      //.marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+      .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
       .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
@@ -440,7 +438,7 @@ public class CcmJustinAdapter extends RouteBuilder {
      
       .to("kafka:{{kafka.topic.report.name}}")    // ---- > Error produced here -TWuolle
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.report.name}}"))
-      //.setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")

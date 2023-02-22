@@ -1,9 +1,5 @@
 package ccm.models.common.event;
-
-
-
 import java.util.Iterator;
-
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
@@ -240,6 +236,4 @@ public class ReportEvent extends BaseEvent{
     public void setReport_url(String report_url) {
       this.report_url = report_url;
     }
-
-    
 }
