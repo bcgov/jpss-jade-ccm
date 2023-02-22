@@ -413,29 +413,34 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("report_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log(LoggingLevel.DEBUG,"Processing Report event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.INFO,"Processing Report event: ${exchangeProperty.justin_event}")
     .doTry()
-      .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .log(LoggingLevel.INFO, "attempting to unmarshal Justin Event")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
       
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
           ReportEvent be = new ReportEvent(je);
       
           exchange.getMessage().setBody(be, ReportEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
-      .log(LoggingLevel.DEBUG,"Set kpi event object")
+      .log(LoggingLevel.INFO,"Set kpi event object")
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      //.marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+     
       .to("kafka:{{kafka.topic.report.name}}")    // ---- > Error produced here -TWuolle
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.report.name}}"))
-      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      //.setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
       .to("direct:preprocessAndPublishEventCreatedKPI")
@@ -447,8 +452,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
-
-          throw exchange.getException();
+          Exception myException = exchange.getException();
+          log.info("exception caught " + myException.getStackTrace());
+          throw myException;
+          //throw exchange.getException();
         }
       })
     .doFinally()
@@ -527,7 +534,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT_EVENT))
+          
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
+          .log(LoggingLevel.INFO,"### found report event ###")
           .to("direct:processReportEvents")
           .endChoice()
         .otherwise()
@@ -604,7 +613,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT_EVENT))
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
           .to("direct:processReportEvents")
           .endChoice()
         .otherwise()

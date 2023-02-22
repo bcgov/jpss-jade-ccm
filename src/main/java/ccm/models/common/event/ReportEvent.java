@@ -14,10 +14,22 @@ public class ReportEvent extends BaseEvent{
     private String justin_fetched_date;
     private String justin_guid;
     private String justin_rcc_id;
-  
+    private String generation_date;
+    private String guid;
+    private String mdoc_justin_no;
+    private String report_name;
+    private String report_type;
+    private String report_url;
+    
+
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
     public static final String JUSTIN_GUID = "GUID";
     public static final String JUSTIN_RCC_ID = "RCC_ID";  
+    public static final String GENERATION_DATE = "GENERATION_DATE";
+    public static final String MDOC_JUSTIN_NO = "MDOC_JUSTIN_NO";
+    public static final String REPORT_NAME = "REPORT_NAME";
+    public static final String REPORT_TYPE = "REPORT_TYPE";
+    public static final String REPORT_URL = "REPORT_URL";
   
     public enum SOURCE {
       JUSTIN,
@@ -44,7 +56,9 @@ public class ReportEvent extends BaseEvent{
       setJustin_event_message_id(je.getEvent_message_id());
       setJustin_message_event_type_cd(je.getMessage_event_type_cd());
       setJustin_event_dtm(je.getEvent_dtm());
-  
+
+     
+      
       switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
         case AGEN_FILE:
           setEvent_status(STATUS.CHANGED.toString());
@@ -55,6 +69,34 @@ public class ReportEvent extends BaseEvent{
         case AUTH_LIST:
         case USER_PROV:
           setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
+          break;
+          case REPORT:
+          setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
+          if (je.getEvent_data() != null) {
+            for( JustinEventDataElement dataElement : je.getEvent_data()) {
+                  switch(dataElement.getData_element_nm()){
+                    case GENERATION_DATE:
+                    this.setGeneration_date(dataElement.getData_value_txt());
+                    break;
+                    case JUSTIN_GUID:
+                    this.setGuid(dataElement.getData_value_txt());
+                    break;
+                    case MDOC_JUSTIN_NO:
+                    this.setMdoc_justin_no(dataElement.getData_value_txt());
+                    break;
+                    case REPORT_NAME :
+                    this.setReport_name(dataElement.getData_value_txt());
+                    break;
+                    case REPORT_TYPE:
+                    this.setReport_type(dataElement.getData_value_txt());
+                    break;
+                    case REPORT_URL:
+                    this.setReport_url(dataElement.getData_value_txt());
+                    break;
+                  }
+            }
+          }
+          
           break;
         default:
           // unknown status
@@ -150,4 +192,54 @@ public class ReportEvent extends BaseEvent{
     public void setJustin_rcc_id(String justin_rcc_id) {
       this.justin_rcc_id = justin_rcc_id;
     }
+
+    public String getGeneration_date() {
+      return generation_date;
+    }
+
+    public void setGeneration_date(String generation_date) {
+      this.generation_date = generation_date;
+    }
+
+    public String getGuid() {
+      return guid;
+    }
+
+    public void setGuid(String guid) {
+      this.guid = guid;
+    }
+
+    public String getMdoc_justin_no() {
+      return mdoc_justin_no;
+    }
+
+    public void setMdoc_justin_no(String mdoc_justin_no) {
+      this.mdoc_justin_no = mdoc_justin_no;
+    }
+
+    public String getReport_name() {
+      return report_name;
+    }
+
+    public void setReport_name(String report_name) {
+      this.report_name = report_name;
+    }
+
+    public String getReport_type() {
+      return report_type;
+    }
+
+    public void setReport_type(String report_type) {
+      this.report_type = report_type;
+    }
+
+    public String getReport_url() {
+      return report_url;
+    }
+
+    public void setReport_url(String report_url) {
+      this.report_url = report_url;
+    }
+
+    
 }

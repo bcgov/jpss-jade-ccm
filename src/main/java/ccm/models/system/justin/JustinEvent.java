@@ -23,7 +23,7 @@ public class JustinEvent {
     MANU_CFILE,
     USER_PROV,
     USER_DPROV,
-    REPORT_EVENT;
+    REPORT;
 
   }
 
