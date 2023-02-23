@@ -450,10 +450,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
-          Exception myException = exchange.getException();
-          log.info("exception caught " + myException.getStackTrace());
-          throw myException;
-          //throw exchange.getException();
+          throw exchange.getException();
         }
       })
     .doFinally()
@@ -532,9 +529,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
           .endChoice()
-          
           .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
-          .log(LoggingLevel.INFO,"### found report event ###")
           .to("direct:processReportEvents")
           .endChoice()
         .otherwise()
