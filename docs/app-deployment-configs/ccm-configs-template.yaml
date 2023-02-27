@@ -1,0 +1,16 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ccm-configs
+data:
+  pidp-kafka-topic-usercreation-name: tbd
+  dems-case-auto-creation: tbd
+  pidp-oauth-token-endpoint-url: tbd
+  dems-case-template-id: tbd
+  dems-host-url: tbd
+  dems-org-unit-id: tbd
+  justin-host-url: tbd
+  pidp-kafka-bootstrapservers-url: tbd
+  splunk-host-url: tbd
+  pidp-kafka-apicurioregistry-url: tbd
+  pidp-oauth-client-id: tbd

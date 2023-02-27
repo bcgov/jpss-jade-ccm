@@ -43,6 +43,7 @@ import ccm.utils.JsonParseUtils;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -468,9 +469,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request")
-    .setProperty("caseFlagName", simple("K"))
-    .to("direct:getDemsCaseFlagId")
-    .log(LoggingLevel.DEBUG,"case flag K id = '${exchangeProperty.caseFlagId}'.")
     .to("direct:getCourtCaseDataByKey")
     .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
     .process(new Processor() {
@@ -481,12 +479,12 @@ public class CcmDemsAdapter extends RouteBuilder {
         String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
         exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
         String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
-                                                                     , "", "", caseFlagId, "");
+                                                                     , "", "/name", "K", "/id");
         exchange.setProperty("kFileValue", kFileValue);
       }
 
     })
-    .log(LoggingLevel.DEBUG,"DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtFileUniqueId}:  ${exchangeProperty.kFileValue}")
+    .log(LoggingLevel.INFO,"DEMS court case name (key = ${exchangeProperty.key}): ${exchangeProperty.courtFileUniqueId}:  ${exchangeProperty.kFileValue}")
     ;
   }
 
@@ -551,7 +549,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
 
-        // If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
+        // JADE-1927-  If DEMS case already exists, and is an approved court case (custom field "Court File Unique ID" is not null), the K flag will not be overridden.
         String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
         String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
@@ -611,12 +609,14 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header.rcc_id
+    // IN: header.caseFlags
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("caseFlags", simple("${header.caseFlags}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .setProperty("CourtCaseMetadata").body()
     // retrieve court case name from DEMS
@@ -627,10 +627,21 @@ public class CcmDemsAdapter extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
+        String caseFlags = exchange.getProperty("caseFlags", String.class);
+        if(caseFlags != null && caseFlags.length() > 2) {
+          caseFlags = caseFlags.substring(1, caseFlags.length() - 1);
+        } else {
+          caseFlags = null;
+        }
+        //log.error(caseFlags);
+        List<String> existingCaseFlags = new ArrayList<String>();
+        if(caseFlags != null) {
+          existingCaseFlags = Arrays.asList(caseFlags.split(", "));
+        }
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm);
+        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags);
         exchange.getMessage().setBody(d);
       }
     })
@@ -856,10 +867,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             if (syncData != null) {
               // add user to sync data
               syncData.getValues().add(user.getPart_id());
-              System.out.println("DEBUG: User added to sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id());
+              // System.out.println("DEBUG: User added to sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id());
             }
           } else {
-            System.out.println("ERROR: Cannot add user sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id() + ", user JRS role = " + user.getJrs_role());
+            // System.out.println("ERROR: Cannot add user sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id() + ", user JRS role = " + user.getJrs_role());
           }
         }
 
@@ -871,7 +882,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           if (syncData != null) {
             // add sync data to helper list
             helper = new DemsCaseGroupMembersSyncHelper(actualDemsCaseGroupId, actualDemsCaseGroupName, syncData);
-            System.out.println("DEBUG: found case group: " + actualDemsCaseGroupName);
+            // System.out.println("DEBUG: found case group: " + actualDemsCaseGroupName);
           } else {
             // add empty sync data to helper list
             DemsCaseGroupMembersSyncData emptySyncData = new DemsCaseGroupMembersSyncData();
