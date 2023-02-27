@@ -913,11 +913,11 @@ public class CcmNotificationService extends RouteBuilder {
             @Override
             public void process(Exchange exchange) {
               ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-              log.error(b.getCase_flags().toString());
+              //log.debug(b.getCase_flags().toString());
               exchange.getMessage().setBody(b.getCase_flags());
             }
           })
-          .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
+          .log(LoggingLevel.INFO, "Case Flags: ${body}")
           .setHeader("caseFlags", simple("${body}"))
           // reset the original values
           .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
