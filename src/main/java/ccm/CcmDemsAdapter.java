@@ -629,7 +629,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseFlags = exchange.getProperty("caseFlags", String.class);
         if(caseFlags != null && caseFlags.length() > 2) {
-          caseFlags = caseFlags.substring(1, caseFlags.length() - 1);
+          if(caseFlags.startsWith("[")) {
+            caseFlags = caseFlags.substring(1, caseFlags.length() - 1);
+          }
         } else {
           caseFlags = null;
         }
