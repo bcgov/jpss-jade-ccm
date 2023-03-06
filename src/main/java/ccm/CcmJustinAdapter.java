@@ -79,6 +79,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     getCourtCaseMetadata();
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
+    getImageData();
 
     processCaseUserEvents();
     processCaseUserAccountCreated();
@@ -1214,7 +1215,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -1337,7 +1338,39 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
-  
+
+  private void getImageData() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"getImageData request received.")
+    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .toD("https://{{justin.host}}/imageDataGet")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
+        //CaseCrownAssignmentList b = new CaseCrownAssignmentList(j);
+        //exchange.getMessage().setBody(b, CaseCrownAssignmentList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+  }
+
+
   private void processCaseUserEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

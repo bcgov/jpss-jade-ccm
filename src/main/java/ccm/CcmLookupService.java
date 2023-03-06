@@ -44,6 +44,7 @@ public class CcmLookupService extends RouteBuilder {
     getCourtCaseMetadata();
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
+    getImageData();
     getPersonExists();
     getCaseListByUserKey();
   }
@@ -308,6 +309,25 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseCrownAssignmentList")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+    ;
+  }
+
+  private void getImageData() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Sending to JUSTIN: ${body}")
+    .setProperty("image_request", body())
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-adapter/getImageData")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }

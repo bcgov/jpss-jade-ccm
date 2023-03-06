@@ -36,6 +36,8 @@ import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
+import ccm.models.common.event.ReportEvent;
+import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
@@ -49,6 +51,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     processChargeAssessmentEvents();
     processCourtCaseEvents();
+    processReportEvents();
     processChargeAssessmentChanged();
     processManualChargeAssessmentChanged();
     processChargeAssessmentCreated();
@@ -315,6 +318,64 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseAuthListChanged")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processReportEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.report.name}}?groupId=ccm-notification-service")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.report.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("report_type")
+      .jsonpath("$.report_type")
+    .setHeader("event").simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .choice()
+      .when(header("report_type").isEqualTo(ReportEvent.REPORT_TYPES.NARRATIVE.name()))
+        //.setProperty("kpi_component_route_name", simple("processReportEvents"))
+        //.setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        //.to("direct:publishEventKPI")
+        .setBody(header("event"))
+
+        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+            
+            ex.getMessage().setBody(keyList);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+        .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+        .to("http://ccm-lookup-service/getImageData")
+        //.log(LoggingLevel.INFO,"Received image data: '${body}'")
+        //.to("direct:processChargeAssessmentChanged")
+        //.setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        //.to("direct:publishEventKPI")
         .endChoice()
       .otherwise()
         .to("direct:processUnknownStatus")

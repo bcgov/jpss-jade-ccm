@@ -39,6 +39,21 @@ public class ReportEvent extends BaseEvent{
       MANUALLY_CHANGED,
       AUTH_LIST_CHANGED;
     }
+
+    public enum REPORT_TYPES {
+      NARRATIVE,
+      WITNESS_STATEMENT,
+      CIPC_DOC,
+      VEHICLE,
+      DV_IPV_RISK,
+      DM_ATTACHMENT,
+      SUPPLEMENTAL,
+      SYNOPSIS,
+      RECORD_OF_PROCEEDINGS,
+      CONVICTION_LIST,
+      DV_ATTACHMENT
+
+    }
   
     public ReportEvent() {
       super();
