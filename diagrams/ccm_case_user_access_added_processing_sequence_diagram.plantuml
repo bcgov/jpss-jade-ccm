@@ -11,11 +11,9 @@ Available colours
 https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
 '/
 
-collections case_users_topic as "Case User Events"
-
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
-collections case_users_topic as "Case User Events"
+collections bulk_case_users_topic as "Bulk Case User Events"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
 control d_adapter as "DEMS Adapter"
@@ -27,7 +25,7 @@ end title
 
 autonumber
 
-case_users_topic o-> notification_service : Process ACCESS_ADDED event
+bulk_case_users_topic o-> notification_service : Process ACCESS_ADDED event
 activate notification_service
 
 group Call route processCourtCaseAuthListChanged
@@ -103,6 +101,6 @@ end group
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated March 6, 2023
 end caption
 @enduml

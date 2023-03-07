@@ -1,7 +1,7 @@
-package ccm.models.common.versioning;
+package ccm.dems.useraccess.adapter.models.event.versioning;
 
 public enum Version {
-    V1_0("0.26.1");
+    V1_0("0.24.1");
 
     private String value;
 
