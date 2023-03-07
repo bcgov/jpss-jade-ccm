@@ -1,0 +1,56 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary p_interface as "PIDP Interface"
+control p_adapter as "PIDP Adapter"
+collections case_users_topic as "Case User Events"
+control j_adapter as "JUSTIN Adapter"
+boundary j_interface as "JUSTIN Interface"
+
+title
+CCM Case User ACCOUNT_CREATED Event Processing Sequence Diagram
+end title
+
+autonumber
+
+p_interface -> p_adapter: Notify user created (external)
+activate p_adapter
+p_adapter ->o case_users_topic : Produce ACCOUNT_CREATED event
+deactivate p_adapter
+
+case_users_topic o-> j_adapter: Consume ACCOUNT_CREATED event
+activate j_adapter
+j_adapter -> j_interface: Call DEMS User Set API
+activate j_interface
+
+break Part_id not provided
+j_interface --> j_adapter: HTTP 400
+end break
+
+break Part_id is not a staff part_id
+j_interface --> j_adapter: HTTP 403
+end break
+
+break Part_id does not exist
+j_interface --> j_adapter: HTTP 404
+end break
+
+j_interface --> j_adapter: Acknowledged
+
+deactivate j_interface
+deactivate j_adapter
+
+caption
+Prepared by David Agahchen | Updated March 6, 2023
+end caption
+@enduml
