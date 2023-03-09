@@ -42,7 +42,6 @@ public class DemsCaseRefList {
 
         for (int i = 0; i < array.size(); i++) {
             JsonObject o = array.getJsonObject(i);
-            //String key = o.getJsonString("key").getString();o.get("key").toString();
             //jade -2157 java.lang.ClassCastException: class javax.json.JsonValueImpl cannot be cast to class javax.json.JsonString
             String key =  o.get("key").toString();
             //this line is to get rid of the double quotes eg:"123454.5443" so only the value is passed and doesn't break the justin adapter 
