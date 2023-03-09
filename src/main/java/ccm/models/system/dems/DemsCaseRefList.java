@@ -42,7 +42,14 @@ public class DemsCaseRefList {
 
         for (int i = 0; i < array.size(); i++) {
             JsonObject o = array.getJsonObject(i);
-            String key = o.getJsonString("key").getString();
+            //String key = o.getJsonString("key").getString();o.get("key").toString();
+            //jade -2157 java.lang.ClassCastException: class javax.json.JsonValueImpl cannot be cast to class javax.json.JsonString
+            String key =  o.get("key").toString();
+            //this line is to get rid of the double quotes eg:"123454.5443" so only the value is passed and doesn't break the justin adapter 
+            if (key != null && key.length() >= 2 
+                && key.charAt(0) == '\"' && key.charAt(key.length() - 1) == '\"') {
+                    key = key.substring(1, key.length() - 1);
+            }
             Long id = o.getJsonNumber("id").longValue();
             //System.out.println("DEBUG: JsonArray: id of key (" + key + ") = " + id + ".");
             DemsCaseRef data = new DemsCaseRef();
