@@ -24,6 +24,8 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel.camel-cxf
 // camel-k: dependency=mvn:org.apache.camel.camel-netty-http
 // camel-k: dependency=mvn:org.slf4j.slf4j-api
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpcore
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpmime
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -37,7 +39,8 @@ import org.apache.camel.model.dataformat.MimeMultipartDataFormat;
 import org.apache.camel.reifier.dataformat.Base64DataFormatReifier;
 import org.apache.camel.reifier.dataformat.MimeMultipartDataFormatReifier;
 
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+//import org.apache.http.entity.mime.MultipartEntityBuilder;
+//import org.apache.http.entity.mime.HttpMultipartMode;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.BaseEvent;
@@ -49,6 +52,12 @@ import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
+import ccm.models.common.data.document.NarrativeDocumentData;
+import ccm.models.common.event.ReportEvent;
+import ccm.models.system.justin.JustinDocumentKeyList;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.dems.DemsRecordData;
+import ccm.models.system.dems.DemsRecordDocumentData;
 import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
@@ -97,8 +106,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     prepareDemsCaseGroupMembersSyncHelperList();
     syncCaseGroupMembers();
     getCaseListByUserKey();
+    processReportEvents();
+    processDocumentRecord();
     createCaseRecord();
     streamCaseRecord();
+    processUnknownStatus();
+    publishEventKPI();
   }
 
   private void attachExceptionHandlers() {
@@ -249,6 +262,164 @@ public class CcmDemsAdapter extends RouteBuilder {
    .end();
 
  }
+
+
+ private void processReportEvents() {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  from("kafka:{{kafka.topic.report.name}}?groupId=ccm-dems-adapter")
+  .routeId(routeId)
+  .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.report.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    "    on the topic ${headers[kafka.TOPIC]}\n" +
+    "    on the partition ${headers[kafka.PARTITION]}\n" +
+    "    with the offset ${headers[kafka.OFFSET]}\n" +
+    "    with the key ${headers[kafka.KEY]}")
+  .setHeader("event_key")
+    .jsonpath("$.event_key")
+  .setHeader("event_status")
+    .jsonpath("$.event_status")
+  .setHeader("report_type")
+    .jsonpath("$.report_type")
+  .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+  .setProperty("report_type", simple("${headers[report_type]}"))
+  .setHeader("event").simple("${body}")
+  .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+  .setProperty("kpi_event_object", body())
+  .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+  .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+  .log(LoggingLevel.INFO, "report_type = ${header[report_type]}")
+  .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+  .choice()
+    .when(/*header("event_status").isEqualTo(ReportEvent.STATUS.REPORT.name()) */header("report_type").isEqualTo(ReportEvent.REPORT_TYPES.NARRATIVE.name()))
+      .setProperty("kpi_component_route_name", simple("processReportEvents"))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+      .to("direct:publishEventKPI")
+      .setBody(header("event"))
+
+      .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+          JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+          
+          ex.getMessage().setBody(keyList);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+      .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+      .to("direct:processDocumentRecord")
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+      .to("direct:publishEventKPI")
+      .endChoice()
+    .otherwise()
+      .to("direct:processUnknownStatus")
+      .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+      .to("direct:publishEventKPI")
+      .endChoice()
+    .end();
+  ;
+}
+
+private void processDocumentRecord() throws HttpOperationFailedException {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  // IN
+  // property: event_object
+  // property: caseFound
+  from("direct:" + routeId)
+  .routeId(routeId)
+  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  // need to look-up rcc_id if it exists in the body.
+  .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+  .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+  .to("http://ccm-lookup-service/getImageData")
+  .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
+  .setProperty("justin_document").simple("${body}")
+  .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+  .process(new Processor() {
+    @Override
+    public void process(Exchange ex) {
+      JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
+      String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
+      log.info("event_message_id: "+event_message_id);
+      if(ex.getMessage().getHeader("report_type").equals(ReportEvent.REPORT_TYPES.NARRATIVE.name())) {
+        NarrativeDocumentData commonDocument = new NarrativeDocumentData(event_message_id, re);
+        DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+        if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
+          ex.getMessage().setHeader("rcc_id", re.getDocuments().get(0).getRcc_id());
+        }
+        ex.getMessage().setBody(demsRecord);
+      }
+
+    }
+
+  })
+  .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+  .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
+  .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
+  .setProperty("dems_record").simple("${bodyAs(String)}")
+
+  .setHeader("number", simple("${header[rcc_id]}"))
+  .to("http://ccm-lookup-service/getCourtCaseExists")
+  .unmarshal().json()
+  .setProperty("caseId").simple("${body[id]}")
+  .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+  .choice()
+    .when(simple("${exchangeProperty.caseId} != ''"))
+      .setBody(simple("${exchangeProperty.dems_record}"))
+      
+      .log(LoggingLevel.INFO, "dems_record: '${exchangeProperty.dems_record}'")
+      .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+      // proceed to create record in dems, base on the caseid
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("direct:createCaseRecord")
+      .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+      .setProperty("recordId", jsonpath("$.edtId"))
+      .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+      .endChoice()
+  .end()
+  .choice()
+    .when(simple("${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+      .setBody(simple("${exchangeProperty.justin_document}"))
+      .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
+          if(ex.getMessage().getHeader("report_type").equals(ReportEvent.REPORT_TYPES.NARRATIVE.name())) {
+  
+            if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
+              String caseId = (String)ex.getProperty("caseId", String.class);
+              String recordId = (String)ex.getProperty("recordId", String.class);
+              DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, re.getDocuments().get(0).getData());
+              ex.getMessage().setBody(demsRecordDoc);
+            }
+          }
+  
+        }
+  
+      })
+      .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
+      .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+      // proceed to create record in dems, base on the caseid
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-dems-adapter/streamCaseRecord")
+      //.log(LoggingLevel.INFO,"Created dems record: ${body}")
+      .endChoice()
+  .end()
+  ;
+}
+
 
  private String getKafkaTopicByEventType(String eventType ) {
   String kafkaTopic = "ccm-general-errors";
@@ -1237,7 +1408,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("platform-http:/" + routeId)
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request: ${body}")
@@ -1283,19 +1454,14 @@ public class CcmDemsAdapter extends RouteBuilder {
         //exchange.getMessage().setBody(b.getData());
         log.info("about to decode data");
         byte[] decodedBytes = Base64.getDecoder().decode(b.getData());
-
-
+        Base64DataFormat base = new Base64DataFormat();
+        MimeMultipartDataFormat mime = new MimeMultipartDataFormat();
 /*
         MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
         multipartEntityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-        String filename = exchange.getIn().getHeader(Exchange.FILE_NAME, String.class);
-        File file = exchange.getIn().getBody(File.class);
-        multipartEntityBuilder.addPart("file",
-                new FileBody(file, ContentType.MULTIPART_FORM_DATA, filename));
-        exchange.getOut().setBody(multipartEntityBuilder.build());
-*/
-
-
+        multipartEntityBuilder.addBinaryBody("file", decodedBytes);
+        exchange.getMessage().setBody(multipartEntityBuilder.build());
+ */
 
         String decodedString = new String(decodedBytes);
         //log.info("data:"+b.getData());
@@ -1310,12 +1476,58 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    //.marshal().mimeMultipart("mixed", true, true, "(included|x-.*)", true)
+    .marshal().mimeMultipart()
     .log(LoggingLevel.INFO,"Creating DEMS case record (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
     .to("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
     .log(LoggingLevel.INFO,"DEMS case record streamed. ${body}")
-*/
+ */
     ;
   }
 
+  private void processUnknownStatus() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    ;
+  }
+
+  private void publishEventKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_event_object
+    //IN: property = kpi_event_topic_name
+    //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_status
+    //IN: property = kpi_component_route_name
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {        
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        String kpi_status = (String) exchange.getProperty("kpi_status");
+
+        // KPI
+        EventKPI kpi = new EventKPI(event, kpi_status);
+
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        exchange.getMessage().setBody(kpi);
+       
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+  
 }
