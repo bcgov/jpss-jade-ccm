@@ -1,5 +1,6 @@
 package ccm.models.common.event;
 import java.util.Iterator;
+import java.util.List;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
@@ -16,6 +17,9 @@ public class ReportEvent extends BaseEvent{
     private String report_name;
     private String report_type;
     private String report_url;
+    private String participant_name;
+    private String part_id;
+
     
 
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
@@ -23,6 +27,8 @@ public class ReportEvent extends BaseEvent{
     public static final String JUSTIN_RCC_ID = "RCC_ID";  
     public static final String GENERATION_DATE = "GENERATION_DATE";
     public static final String MDOC_JUSTIN_NO = "MDOC_JUSTIN_NO";
+    public static final String PARTICIPANT_NAME = "PARTICIPANT_NAME";
+    public static final String PART_ID = "PART_ID";
     public static final String REPORT_NAME = "REPORT_NAME";
     public static final String REPORT_TYPE = "REPORT_TYPE";
     public static final String REPORT_URL = "REPORT_URL";
@@ -33,11 +39,7 @@ public class ReportEvent extends BaseEvent{
     }
     
     public enum STATUS {
-      CHANGED,
-      CREATED,
-      UPDATED,
-      MANUALLY_CHANGED,
-      AUTH_LIST_CHANGED;
+      REPORT;
     }
 
     public enum REPORT_TYPES {
@@ -68,51 +70,42 @@ public class ReportEvent extends BaseEvent{
       setJustin_message_event_type_cd(je.getMessage_event_type_cd());
       setJustin_event_dtm(je.getEvent_dtm());
 
-     
-      
-      switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
-        case AGEN_FILE:
-          setEvent_status(STATUS.CHANGED.toString());
-          break;
-        case MANU_FILE:
-          setEvent_status(STATUS.MANUALLY_CHANGED.toString());
-          break;
-        case AUTH_LIST:
-        case USER_PROV:
-          setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
-          break;
-          case REPORT:
-          setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
-          if (je.getEvent_data() != null) {
-            for( JustinEventDataElement dataElement : je.getEvent_data()) {
-                  switch(dataElement.getData_element_nm()){
-                    case GENERATION_DATE:
-                    this.setGeneration_date(dataElement.getData_value_txt());
-                    break;
-                    case JUSTIN_GUID:
-                    this.setGuid(dataElement.getData_value_txt());
-                    break;
-                    case MDOC_JUSTIN_NO:
-                    this.setMdoc_justin_no(dataElement.getData_value_txt());
-                    break;
-                    case REPORT_NAME :
-                    this.setReport_name(dataElement.getData_value_txt());
-                    break;
-                    case REPORT_TYPE:
-                    this.setReport_type(dataElement.getData_value_txt());
-                    break;
-                    case REPORT_URL:
-                    this.setReport_url(dataElement.getData_value_txt());
-                    break;
-                  }
+      if(je.getMessage_event_type_cd().equals("REPORT")) {
+
+        setEvent_status(je.getMessage_event_type_cd());
+        if (je.getEvent_data() != null) {
+          for( JustinEventDataElement dataElement : je.getEvent_data()) {
+            switch(dataElement.getData_element_nm()){
+              case GENERATION_DATE:
+              this.setGeneration_date(dataElement.getData_value_txt());
+              break;
+              case JUSTIN_GUID:
+              this.setGuid(dataElement.getData_value_txt());
+              break;
+              case MDOC_JUSTIN_NO:
+              this.setMdoc_justin_no(dataElement.getData_value_txt());
+              break;
+              case PARTICIPANT_NAME:
+              this.setParticipant_name(dataElement.getData_value_txt());
+              break;
+              case PART_ID:
+              this.setPart_id(dataElement.getData_value_txt());
+              break;
+              case REPORT_NAME :
+              this.setReport_name(dataElement.getData_value_txt());
+              break;
+              case REPORT_TYPE:
+              this.setReport_type(dataElement.getData_value_txt());
+              break;
+              case REPORT_URL:
+              this.setReport_url(dataElement.getData_value_txt());
+              break;
             }
           }
-          
-          break;
-        default:
+        }
+      } else {
           // unknown status
           setEvent_status("");
-          break;
       }
       
       Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
@@ -251,4 +244,22 @@ public class ReportEvent extends BaseEvent{
     public void setReport_url(String report_url) {
       this.report_url = report_url;
     }
+
+    public String getParticipant_name() {
+      return participant_name;
+    }
+
+    public void setParticipant_name(String participant_name) {
+      this.participant_name = participant_name;
+    }
+
+    public String getPart_id() {
+      return part_id;
+    }
+
+    public void setPart_id(String part_id) {
+      this.part_id = part_id;
+    }
+
+
 }

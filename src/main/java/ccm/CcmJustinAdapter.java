@@ -14,7 +14,7 @@ import org.apache.camel.CamelException;
 
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
-
+// camel-k: dependency=mvn:org.apache.camel.component.kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
 // camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
 // camel-k: dependency=mvn:org.apache.camel.camel-jackson
@@ -1361,8 +1361,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
-        //CaseCrownAssignmentList b = new CaseCrownAssignmentList(j);
-        //exchange.getMessage().setBody(b, CaseCrownAssignmentList.class);
+        exchange.getMessage().setBody(j, JustinDocumentList.class);
       }
     })
     .marshal().json(JsonLibrary.Jackson, JustinDocumentList.class)

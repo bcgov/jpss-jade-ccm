@@ -1,24 +1,15 @@
-package ccm.models.system.justin;
+package ccm.models.common.data.document;
 
 import java.util.List;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinDocument;
 
-public class JustinDocument {
-  private String report_type;
-  private String report_format;
-  private String document_type;
+public class AllDocumentData extends BaseDocumentData {
   private String rcc_id;
-  private String part_id;
-  private String participant_name;
-  private String mdoc_justin_no;
   private String submit_date;
   private String agency_file_no;
-  private String filed_ty;
-  private List<String> rcc_ids;
-  private String generation_date;
-  private String index;
-  private String data;
-  private String report_title;
-
+  private String part_id;
+  private String participant_name;
   private String witness_name;
   private String pin_number;
   private String witness_yn;
@@ -26,6 +17,7 @@ public class JustinDocument {
   private String police_officer_yn;
   private String victim_yn;
   private String filed_by;
+  private String mdoc_justin_no;
   private String sworn_date;
   private String form_type_cd;
   private String form_type_description;
@@ -34,6 +26,8 @@ public class JustinDocument {
   private String court_services_form_no;
   private String issue_date;
   private String court_location;
+  private String generation_date;
+  private List<String> rcc_ids;
   private String exclude_youth;
   private String include_525_512_3;
   private String include_810;
@@ -42,33 +36,15 @@ public class JustinDocument {
   private String include_non_disclosure;
   private String include_unknown_statutes;
 
-  private String filtered_yn;
-  private String report_object_url;
 
-  private String active_yn;
-
-  public String getReport_type() {
-    return report_type;
+  public AllDocumentData() {
   }
 
-  public void setReport_type(String report_type) {
-    this.report_type = report_type;
-  }
-
-  public String getReport_format() {
-    return report_format;
-  }
-
-  public void setReport_format(String report_format) {
-    this.report_format = report_format;
-  }
-
-  public String getDocument_type() {
-    return document_type;
-  }
-
-  public void setDocument_type(String document_type) {
-    this.document_type = document_type;
+  public AllDocumentData(JustinDocumentList jdl) {
+    super("", jdl);
+    if(jdl.getDocuments() != null && !jdl.getDocuments().isEmpty()) {
+      JustinDocument jd = jdl.getDocuments().get(0);
+    }
   }
 
   public String getRcc_id() {
@@ -77,30 +53,6 @@ public class JustinDocument {
 
   public void setRcc_id(String rcc_id) {
     this.rcc_id = rcc_id;
-  }
-
-  public String getPart_id() {
-    return part_id;
-  }
-
-  public void setPart_id(String part_id) {
-    this.part_id = part_id;
-  }
-
-  public String getParticipant_name() {
-    return participant_name;
-  }
-
-  public void setParticipant_name(String participant_name) {
-    this.participant_name = participant_name;
-  }
-
-  public String getMdoc_justin_no() {
-    return mdoc_justin_no;
-  }
-
-  public void setMdoc_justin_no(String mdoc_justin_no) {
-    this.mdoc_justin_no = mdoc_justin_no;
   }
 
   public String getSubmit_date() {
@@ -119,52 +71,20 @@ public class JustinDocument {
     this.agency_file_no = agency_file_no;
   }
 
-  public String getFiled_ty() {
-    return filed_ty;
+  public String getPart_id() {
+    return part_id;
   }
 
-  public void setFiled_ty(String filed_ty) {
-    this.filed_ty = filed_ty;
+  public void setPart_id(String part_id) {
+    this.part_id = part_id;
   }
 
-  public List<String> getRcc_ids() {
-    return rcc_ids;
+  public String getParticipant_name() {
+    return participant_name;
   }
 
-  public void setRcc_ids(List<String> rcc_ids) {
-    this.rcc_ids = rcc_ids;
-  }
-
-  public String getGeneration_date() {
-    return generation_date;
-  }
-
-  public void setGeneration_date(String generation_date) {
-    this.generation_date = generation_date;
-  }
-
-  public String getIndex() {
-    return index;
-  }
-
-  public void setIndex(String index) {
-    this.index = index;
-  }
-
-  public String getData() {
-    return data;
-  }
-
-  public void setData(String data) {
-    this.data = data;
-  }
-
-  public String getReport_title() {
-    return report_title;
-  }
-
-  public void setReport_title(String report_title) {
-    this.report_title = report_title;
+  public void setParticipant_name(String participant_name) {
+    this.participant_name = participant_name;
   }
 
   public String getWitness_name() {
@@ -221,6 +141,14 @@ public class JustinDocument {
 
   public void setFiled_by(String filed_by) {
     this.filed_by = filed_by;
+  }
+
+  public String getMdoc_justin_no() {
+    return mdoc_justin_no;
+  }
+
+  public void setMdoc_justin_no(String mdoc_justin_no) {
+    this.mdoc_justin_no = mdoc_justin_no;
   }
 
   public String getSworn_date() {
@@ -287,6 +215,22 @@ public class JustinDocument {
     this.court_location = court_location;
   }
 
+  public String getGeneration_date() {
+    return generation_date;
+  }
+
+  public void setGeneration_date(String generation_date) {
+    this.generation_date = generation_date;
+  }
+
+  public List<String> getRcc_ids() {
+    return rcc_ids;
+  }
+
+  public void setRcc_ids(List<String> rcc_ids) {
+    this.rcc_ids = rcc_ids;
+  }
+
   public String getExclude_youth() {
     return exclude_youth;
   }
@@ -343,28 +287,5 @@ public class JustinDocument {
     this.include_unknown_statutes = include_unknown_statutes;
   }
 
-  public String getFiltered_yn() {
-    return filtered_yn;
-  }
-
-  public void setFiltered_yn(String filtered_yn) {
-    this.filtered_yn = filtered_yn;
-  }
-
-  public String getReport_object_url() {
-    return report_object_url;
-  }
-
-  public void setReport_object_url(String report_object_url) {
-    this.report_object_url = report_object_url;
-  }
-
-  public String getActive_yn() {
-    return active_yn;
-  }
-
-  public void setActive_yn(String active_yn) {
-    this.active_yn = active_yn;
-  }
-
 }
+  
