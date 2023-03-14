@@ -1436,7 +1436,7 @@ private void processDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("platform-http:/" + routeId)
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
@@ -1469,18 +1469,20 @@ private void processDocumentRecord() throws HttpOperationFailedException {
         log.info("decoded data");
       }
     })
-/*
-    .removeHeader("CamelHttpUri")
+
+
+    //.unmarshal().base64()
+    //.marshal().mimeMultipart()
+/*    .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .marshal().mimeMultipart()
     .log(LoggingLevel.INFO,"Creating DEMS case record (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
     .to("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
     .log(LoggingLevel.INFO,"DEMS case record streamed. ${body}")
- */
+*/
     ;
   }
 
