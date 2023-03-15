@@ -4,6 +4,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import javax.json.JsonReader;
+import javax.json.JsonValue;
 import javax.json.JsonObject;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -43,12 +44,21 @@ public class DemsCaseRefList {
         for (int i = 0; i < array.size(); i++) {
             JsonObject o = array.getJsonObject(i);
             //jade -2157 java.lang.ClassCastException: class javax.json.JsonValueImpl cannot be cast to class javax.json.JsonString
-            String key =  o.get("key").toString();
-            //this line is to get rid of the double quotes eg:"123454.5443" so only the value is passed and doesn't break the justin adapter 
-            if (key != null && key.length() >= 2 
-                && key.charAt(0) == '\"' && key.charAt(key.length() - 1) == '\"') {
-                    key = key.substring(1, key.length() - 1);
+
+            String key = null;
+            String key2 = null;
+            String key3 = null;
+            JsonValue v = o.get("key");
+            if (v == JsonValue.NULL) {
+                key = null;
+            } else {
+                key = o.getString("key");
+                key2 = o.getString("key");
+                key3 = o.getJsonString("key").getString();
             }
+            System.out.println("o = '" + o.toString() + "'");
+            System.out.println("key2 = '" + key2 + "'");
+            System.out.println("key3 = '" + key3 + "'");
             Long id = o.getJsonNumber("id").longValue();
             //System.out.println("DEBUG: JsonArray: id of key (" + key + ") = " + id + ".");
             DemsCaseRef data = new DemsCaseRef();

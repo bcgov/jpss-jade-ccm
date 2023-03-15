@@ -743,11 +743,12 @@ public class CcmNotificationService extends RouteBuilder {
             //Will now stop further processing if an exception or failure occurred during processing of an org.apache.camel.
             // The default behavior is to not stop but continue processing till the end.
             .stopOnException()
-            .choice()
+            //.log("body.rcc_id = '${body.rcc_id}'")
+            .log("cast body = '${body.rcc_id}'")
+            /* .choice()
             //only cases containing actual RCC_ID values (not null) should be processed. 
               .when(simple("${header[event_key]} != null"))
                 .setProperty("rcc_id",jsonpath("$.rcc_id"))
-                .log(LoggingLevel.DEBUG,"Iterating through case list.  case ref = ${body}")
                 .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
                 .setHeader("event_key", jsonpath("$.rcc_id"))
                 .log(LoggingLevel.DEBUG,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
@@ -757,7 +758,7 @@ public class CcmNotificationService extends RouteBuilder {
               .otherwise()
               //nothing to do here
               .endChoice()
-            .end()
+            .end() */
           .endChoice()
           .when(simple("${header.CamelHttpResponseCode} == 404"))
             .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")
