@@ -34,8 +34,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.entity.ContentType;
-import org.apache.camel.model.dataformat.Base64DataFormat;
-import org.apache.camel.model.dataformat.MimeMultipartDataFormat;
+//import org.apache.camel.dataformat.mime.multipart.MimeMultipartDataFormat;
+//import org.apache.camel.dataformat.base64.Base64DataFormat;
 import org.apache.camel.reifier.dataformat.Base64DataFormatReifier;
 import org.apache.camel.reifier.dataformat.MimeMultipartDataFormatReifier;
 
@@ -52,7 +52,7 @@ import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
-import ccm.models.common.data.document.NarrativeDocumentData;
+import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.models.system.justin.JustinDocumentList;
@@ -281,6 +281,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .jsonpath("$.event_status")
   .setHeader("report_type")
     .jsonpath("$.report_type")
+  .setHeader("rcc_id")
+      .jsonpath("$.justin_rcc_id")
   .setHeader("event_message_id")
       .jsonpath("$.justin_event_message_id")
   .setProperty("report_type", simple("${headers[report_type]}"))
@@ -292,7 +294,7 @@ public class CcmDemsAdapter extends RouteBuilder {
   .log(LoggingLevel.INFO, "report_type = ${header[report_type]}")
   .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
   .choice()
-    .when(/*header("event_status").isEqualTo(ReportEvent.STATUS.REPORT.name()) */header("report_type").isEqualTo(ReportEvent.REPORT_TYPES.NARRATIVE.name()))
+    .when(header("rcc_id").isNotNull())
       .setProperty("kpi_component_route_name", simple("processReportEvents"))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
       .to("direct:publishEventKPI")
@@ -347,8 +349,8 @@ private void processDocumentRecord() throws HttpOperationFailedException {
       JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
       String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
       log.info("event_message_id: "+event_message_id);
-      if(ex.getMessage().getHeader("report_type").equals(ReportEvent.REPORT_TYPES.NARRATIVE.name())) {
-        NarrativeDocumentData commonDocument = new NarrativeDocumentData(event_message_id, re);
+      if(ex.getMessage().getHeader("rcc_id") != null) {
+        ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, re);
         DemsRecordData demsRecord = new DemsRecordData(commonDocument);
 
         if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
@@ -394,16 +396,14 @@ private void processDocumentRecord() throws HttpOperationFailedException {
         @Override
         public void process(Exchange ex) {
           JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
-          if(ex.getMessage().getHeader("report_type").equals(ReportEvent.REPORT_TYPES.NARRATIVE.name())) {
-  
-            if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
-              String caseId = (String)ex.getProperty("caseId", String.class);
-              String recordId = (String)ex.getProperty("recordId", String.class);
-              DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, re.getDocuments().get(0).getData());
-              ex.getMessage().setBody(demsRecordDoc);
-            }
+
+          if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
+            String caseId = (String)ex.getProperty("caseId", String.class);
+            String recordId = (String)ex.getProperty("recordId", String.class);
+            DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, re.getDocuments().get(0).getData());
+            ex.getMessage().setBody(demsRecordDoc);
           }
-  
+
         }
   
       })
@@ -413,7 +413,7 @@ private void processDocumentRecord() throws HttpOperationFailedException {
       // proceed to create record in dems, base on the caseid
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-dems-adapter/streamCaseRecord")
+      .to("direct:streamCaseRecord")
       //.log(LoggingLevel.INFO,"Created dems record: ${body}")
       .endChoice()
   .end()
@@ -696,7 +696,7 @@ private void processDocumentRecord() throws HttpOperationFailedException {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -761,7 +761,7 @@ private void processDocumentRecord() throws HttpOperationFailedException {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
@@ -1454,8 +1454,8 @@ private void processDocumentRecord() throws HttpOperationFailedException {
         //exchange.getMessage().setBody(b.getData());
         log.info("about to decode data");
         byte[] decodedBytes = Base64.getDecoder().decode(b.getData());
-        Base64DataFormat base = new Base64DataFormat();
-        MimeMultipartDataFormat mime = new MimeMultipartDataFormat();
+        //Base64DataFormat base = new Base64DataFormat();
+        //MimeMultipartDataFormat mime = new MimeMultipartDataFormat();
 /*
         MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
         multipartEntityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);

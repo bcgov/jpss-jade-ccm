@@ -432,7 +432,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.INFO,"Set kpi event object")
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
@@ -1215,7 +1215,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 

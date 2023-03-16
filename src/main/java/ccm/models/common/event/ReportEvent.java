@@ -43,17 +43,27 @@ public class ReportEvent extends BaseEvent{
     }
 
     public enum REPORT_TYPES {
-      NARRATIVE,
-      WITNESS_STATEMENT,
-      CIPC_DOC,
-      VEHICLE,
-      DV_IPV_RISK,
-      DM_ATTACHMENT,
-      SUPPLEMENTAL,
-      SYNOPSIS,
-      RECORD_OF_PROCEEDINGS,
-      CONVICTION_LIST,
-      DV_ATTACHMENT
+      NARRATIVE("NARRATIVE"),
+      WITNESS_STATEMENT("WITNESS_STATEMENT"),
+      CIPC("CPIC-CR"),
+      VEHICLE("VEHICLE"),
+      DV_IPV_RISK("BC DV / IPV RISK SUMMARY"),
+      DM_ATTACHMENT("DM_ATTACHMENT"),
+      SUPPLEMENTAL("SUPPLEMENTAL"),
+      SYNOPSIS("SYNOPSIS"),
+      RECORD_OF_PROCEEDINGS("RECORD_OF_PROCEEDINGS"),
+      CONVICTION_LIST("CONVICTION_LIST"),
+      DV_ATTACHMENT("BC DV / IPV RISK SUMMARY");
+
+      private String label;
+
+      private REPORT_TYPES(String label) {
+          this.label = label;
+      }
+
+      public String getLabel() {
+          return label;
+      }
 
     }
   

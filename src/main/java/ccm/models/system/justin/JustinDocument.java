@@ -12,7 +12,6 @@ public class JustinDocument {
   private String mdoc_justin_no;
   private String submit_date;
   private String agency_file_no;
-  private String filed_ty;
   private List<String> rcc_ids;
   private String generation_date;
   private String index;
@@ -21,6 +20,7 @@ public class JustinDocument {
 
   private String witness_name;
   private String pin_number;
+  private String officer_pin_number;
   private String witness_yn;
   private String expert_yn;
   private String police_officer_yn;
@@ -117,14 +117,6 @@ public class JustinDocument {
 
   public void setAgency_file_no(String agency_file_no) {
     this.agency_file_no = agency_file_no;
-  }
-
-  public String getFiled_ty() {
-    return filed_ty;
-  }
-
-  public void setFiled_ty(String filed_ty) {
-    this.filed_ty = filed_ty;
   }
 
   public List<String> getRcc_ids() {
@@ -365,6 +357,14 @@ public class JustinDocument {
 
   public void setActive_yn(String active_yn) {
     this.active_yn = active_yn;
+  }
+
+  public String getOfficer_pin_number() {
+    return officer_pin_number;
+  }
+
+  public void setOfficer_pin_number(String officer_pin_number) {
+    this.officer_pin_number = officer_pin_number;
   }
 
 }
