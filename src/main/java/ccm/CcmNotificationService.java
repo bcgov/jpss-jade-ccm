@@ -172,12 +172,12 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+    .log(LoggingLevel.ERROR,"Publishing error event KPI in Exception handler ...")
     .log("Caught CamelException exception")
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
     .setProperty("error_event_object", body())
     .to("kafka:{{kafka.topic.kpis.name}}")
+    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
     .handled(true)
     .end();
 
@@ -739,14 +739,25 @@ public class CcmNotificationService extends RouteBuilder {
           .log(LoggingLevel.DEBUG,"body = '${body}'.")
           .split()
             .jsonpathWriteAsString("$.case_list")
-            .setProperty("rcc_id",jsonpath("$.rcc_id"))
-            .log(LoggingLevel.DEBUG,"Iterating through case list.  case ref = ${body}")
-            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-            .setHeader("event_key", jsonpath("$.rcc_id"))
-            .log(LoggingLevel.DEBUG,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
-            .to("direct:processCourtCaseAuthListUpdated")
-            .log(LoggingLevel.DEBUG,"Returned from processCourtCaseAuthListUpdated().")
-            .end()
+            //The route should not continue through the rest of the cases in the list after an exception has occurred.
+            //Will now stop further processing if an exception or failure occurred during processing of an org.apache.camel.
+            // The default behavior is to not stop but continue processing till the end.
+            .stopOnException()
+            .setHeader("rcc_id", jsonpath("$.rcc_id"))
+            .choice()
+            //only cases containing actual RCC_ID values (not null) should be processed. 
+              .when(simple("${header[rcc_id]} != null"))
+                .setProperty("rcc_id",jsonpath("$.rcc_id"))
+                .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+                .setHeader("event_key", jsonpath("$.rcc_id"))
+                .log(LoggingLevel.DEBUG,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
+                .to("direct:processCourtCaseAuthListUpdated")
+                .log(LoggingLevel.DEBUG,"Returned from processCourtCaseAuthListUpdated().")
+              .endChoice()
+              .otherwise()
+              //nothing to do here
+              .endChoice()
+            .end() 
           .endChoice()
           .when(simple("${header.CamelHttpResponseCode} == 404"))
             .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")

@@ -4,6 +4,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import javax.json.JsonReader;
+import javax.json.JsonValue;
 import javax.json.JsonObject;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -42,12 +43,23 @@ public class DemsCaseRefList {
 
         for (int i = 0; i < array.size(); i++) {
             JsonObject o = array.getJsonObject(i);
-            String key = o.getJsonString("key").getString();
+            //jade -2157 java.lang.ClassCastException: class javax.json.JsonValueImpl cannot be cast to class javax.json.JsonString
+
+            String key = null;
+            JsonValue v = o.get("key");
+
+            if (v == JsonValue.NULL) {
+                key = null;
+            } else {
+                key = o.getString("key");
+            }
+
             Long id = o.getJsonNumber("id").longValue();
-            //System.out.println("DEBUG: JsonArray: id of key (" + key + ") = " + id + ".");
+
             DemsCaseRef data = new DemsCaseRef();
             data.setId(id);
             data.setKey(key);
+            
             list.add(data);
         }
     }
