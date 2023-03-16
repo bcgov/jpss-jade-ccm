@@ -45,20 +45,19 @@ public class DemsCaseRefList {
             JsonObject o = array.getJsonObject(i);
             //jade -2157 java.lang.ClassCastException: class javax.json.JsonValueImpl cannot be cast to class javax.json.JsonString
 
-            String key = null;
-            String key2 = null;
-            String key3 = null;
+             String key = null;
+            //String key2 = null;
+            //String key3 = null;
             JsonValue v = o.get("key");
             if (v == JsonValue.NULL) {
                 key = null;
+                //System.out.println("null = '" + key + "'");
             } else {
                 key = o.getString("key");
-                key2 = o.getString("key");
-                key3 = o.getJsonString("key").getString();
             }
-            System.out.println("o = '" + o.toString() + "'");
-            System.out.println("key2 = '" + key2 + "'");
-            System.out.println("key3 = '" + key3 + "'");
+            //System.out.println("o = '" + o.toString() + "'");
+            //System.out.println("key2 = '" + key2 + "'");
+            //System.out.println("key3 = '" + key3 + "'");
             Long id = o.getJsonNumber("id").longValue();
             //System.out.println("DEBUG: JsonArray: id of key (" + key + ") = " + id + ".");
             DemsCaseRef data = new DemsCaseRef();
