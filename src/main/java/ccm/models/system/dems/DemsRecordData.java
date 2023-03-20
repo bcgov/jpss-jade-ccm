@@ -2,6 +2,7 @@ package ccm.models.system.dems;
 
 import ccm.models.common.event.ReportEvent.REPORT_TYPES;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
+import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
@@ -45,7 +46,7 @@ public class DemsRecordData {
             setDescriptions(report.getLabel());
         }
 
-        if(report.equals(REPORT_TYPES.CIPC)) {
+        if(report.equals(REPORT_TYPES.CPIC)) {
             if(nrd.getParticipant_name() != null) {
                 setTitle(nrd.getParticipant_name().toUpperCase());
             } else {
@@ -67,7 +68,7 @@ public class DemsRecordData {
         setOriginalFileNumber(nrd.getAgency_file_no());
 
 
-        if(report.equals(REPORT_TYPES.CIPC)) {
+        if(report.equals(REPORT_TYPES.CPIC)) {
             setType("BIOGRAPHICAL");
         } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
             setType("STATEMENT");
@@ -92,6 +93,48 @@ public class DemsRecordData {
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+    }
+
+    public DemsRecordData(CourtCaseDocumentData nrd) {
+        // find the report type
+        REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
+            setDescriptions("CONVICTION LIST-FILTERED");
+        } else {
+            setDescriptions(report.getLabel());
+        }
+
+        if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
+            //$MAPID67 $MAPID69
+            setTitle(nrd.getParticipant_name().toUpperCase() + nrd.getCourt_file_no());
+        } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
+            setTitle(nrd.getCourt_file_no());
+        } else {
+            setTitle(nrd.getParticipant_name().toUpperCase());
+        }
+        // TODO: Lookup the destination DEMS Case ID that this record is being added to, and use that value for this mapping
+        //setOriginalFileNumber(nrd.getAgency_file_no());
+
+
+        if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS)) {
+            setType("COURT RECORD");
+        } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
+            setType("JUSTIN RECORD");
+        } else {
+            setType("BIOGRAPHICAL");
+        }
+
+
+        setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getGeneration_date()));
+        setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        setSource("JUSTIN");
+        setFolder("JUSTIN");
+        //setLocation(nrd.getLocation());
+        setFileExtension(".pdf");
+        setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
     }
 
     public String getTitle() {
