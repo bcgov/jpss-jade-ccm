@@ -103,6 +103,14 @@ ACCUSED_HISTORY_REPORT
           return label;
       }
 
+      public static REPORT_TYPES fromString(String text) {
+        for (REPORT_TYPES b : REPORT_TYPES.values()) {
+            if (b.name().equalsIgnoreCase(text)) {
+                return b;
+            }
+        }
+        return null;
+      }
     }
   
     public ReportEvent() {
@@ -125,44 +133,44 @@ ACCUSED_HISTORY_REPORT
           for( JustinEventDataElement dataElement : je.getEvent_data()) {
             switch(dataElement.getData_element_nm()){
               case GENERATION_DATE:
-              this.setGeneration_date(dataElement.getData_value_txt());
-              break;
+                this.setGeneration_date(dataElement.getData_value_txt());
+                break;
               case JUSTIN_GUID:
-              this.setGuid(dataElement.getData_value_txt());
-              break;
+                this.setGuid(dataElement.getData_value_txt());
+                break;
               case MDOC_JUSTIN_NO:
-              this.setMdoc_justin_no(dataElement.getData_value_txt());
-              break;
+                this.setMdoc_justin_no(dataElement.getData_value_txt());
+                break;
               case PARTICIPANT_NAME:
-              this.setParticipant_name(dataElement.getData_value_txt());
-              break;
+                this.setParticipant_name(dataElement.getData_value_txt());
+                break;
               case PART_ID:
-              this.setPart_id(dataElement.getData_value_txt());
-              break;
+                this.setPart_id(dataElement.getData_value_txt());
+                break;
               case COURT_SERVICE_FORM:
-              this.setCourt_services_form_no(dataElement.getData_value_txt());
-              break;
+                this.setCourt_services_form_no(dataElement.getData_value_txt());
+                break;
               case FILTERED_YN:
-              this.setFiltered_yn(dataElement.getData_value_txt());
-              break;
+                this.setFiltered_yn(dataElement.getData_value_txt());
+                break;
               case RCC_IDS:
-              ObjectMapper objectMapper = new ObjectMapper();
-              try {
-                String[] rcc_id_list = objectMapper.readValue(dataElement.getData_value_txt(), String[].class);
-                this.setRcc_ids(Arrays.asList(rcc_id_list));
-              } catch(Exception e) {
-                e.printStackTrace();
-              }
-              break;
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                  String[] rcc_id_list = objectMapper.readValue(dataElement.getData_value_txt(), String[].class);
+                  this.setRcc_ids(Arrays.asList(rcc_id_list));
+                } catch(Exception e) {
+                  e.printStackTrace();
+                }
+                break;
               case REPORT_NAME :
-              this.setReport_name(dataElement.getData_value_txt());
-              break;
+                this.setReport_name(dataElement.getData_value_txt());
+                break;
               case REPORT_TYPE:
-              this.setReport_type(dataElement.getData_value_txt());
-              break;
+                this.setReport_type(dataElement.getData_value_txt());
+                break;
               case REPORT_URL:
-              this.setReport_url(dataElement.getData_value_txt());
-              break;
+                this.setReport_url(dataElement.getData_value_txt());
+                break;
             }
           }
         }

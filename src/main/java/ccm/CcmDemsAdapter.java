@@ -272,11 +272,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("report_type")
       .jsonpath("$.report_type")
     .setHeader("rcc_id")
-        .jsonpath("$.justin_rcc_id")
+      .jsonpath("$.justin_rcc_id")
     .setHeader("part_id")
-        .jsonpath("$.part_id")
+      .jsonpath("$.part_id")
     .setHeader("mdoc_justin_no")
-        .jsonpath("$.mdoc_justin_no")
+      .jsonpath("$.mdoc_justin_no")
+    .setHeader("rcc_ids")
+      .jsonpath("$.rcc_ids")
     .setHeader("event_message_id")
         .jsonpath("$.justin_event_message_id")
     .setProperty("report_type", simple("${headers[report_type]}"))
@@ -286,6 +288,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .log(LoggingLevel.INFO, "report_type = ${header[report_type]}")
+    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]}")
+    .log(LoggingLevel.INFO, "part_id = ${header[part_id]}")
+    .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
+    .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
       .when(header("rcc_id").isNotNull()) // static rcc based reports
@@ -332,6 +338,28 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
+      .when(header("rcc_ids").isNotNull()) // rcc id list based reports
+        .setProperty("kpi_component_route_name", simple("processReportEvents"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+
+        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+            
+            ex.getMessage().setBody(keyList);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+        .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+        .to("direct:processDocumentRecord")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .otherwise()
         .to("direct:processUnknownStatus")
         .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
@@ -354,7 +382,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
-    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+    .setProperty("justin_request", simple("${bodyAs(String)}"))
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
     .to("http://ccm-lookup-service/getImageData")
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("justin_document", simple("${bodyAs(String)}"))
@@ -362,23 +391,32 @@ public class CcmDemsAdapter extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
-        JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
+        ReportEvent report_event = (ReportEvent)ex.getProperty("justin_request");
+        JustinDocumentList jdl = ex.getIn().getBody(JustinDocumentList.class);
         String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
         log.info("event_message_id: "+event_message_id);
         if(ex.getMessage().getHeader("rcc_id") != null) {
-          ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, re);
+          ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, jdl);
           DemsRecordData demsRecord = new DemsRecordData(commonDocument);
 
-          if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
-            ex.getMessage().setHeader("rcc_id", re.getDocuments().get(0).getRcc_id());
+          if(jdl.getDocuments() != null && !jdl.getDocuments().isEmpty()) {
+            ex.getMessage().setHeader("rcc_id", jdl.getDocuments().get(0).getRcc_id());
           }
           ex.getMessage().setBody(demsRecord);
         } else {
-          CourtCaseDocumentData commonDocument = new CourtCaseDocumentData(event_message_id, re);
+          CourtCaseDocumentData commonDocument = new CourtCaseDocumentData(event_message_id, jdl);
           DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+          if(commonDocument.getRcc_ids() == null || commonDocument.getRcc_ids().isEmpty()) {
+            commonDocument.setRcc_ids(report_event.getRcc_ids());
+          }
+          if(commonDocument.getMdoc_justin_no() == null) {
+            commonDocument.setMdoc_justin_no(report_event.getMdoc_justin_no());
+          }
+          
+          ex.setProperty("court_case_document", commonDocument);
 
-          if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
-            ex.getMessage().setHeader("mdoc_justin_no", re.getDocuments().get(0).getMdoc_justin_no());
+          if(jdl.getDocuments() != null && !jdl.getDocuments().isEmpty()) {
+            ex.getMessage().setHeader("mdoc_justin_no", jdl.getDocuments().get(0).getMdoc_justin_no());
           }
           ex.getMessage().setBody(demsRecord);
         }
@@ -388,6 +426,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
     .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
     .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
+    .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
     .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
     .setProperty("dems_record").simple("${bodyAs(String)}")
     .choice()
@@ -400,6 +439,14 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when(simple("${header.mdoc_justin_no} != null"))
         .log(LoggingLevel.INFO,"MDOC based report")
         // need to look-up the list of rcc ids associated to the mdoc
+
+        .endChoice()
+      .when(simple("${header.rcc_ids} != null"))
+        .log(LoggingLevel.INFO,"rcc id list based report")
+        // need to parse through the list of rcc ids
+        /*if(caseFlags.startsWith("[")) {
+          caseFlags = caseFlags.substring(1, caseFlags.length() - 1);
+        }*/
 
         .endChoice()
       .otherwise()
