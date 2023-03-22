@@ -16,6 +16,12 @@ public class JustinDocumentKeyList {
     documentKey.setPart_id(re.getPart_id());
     documentKey.setReport_types(re.getReport_type());
     documentKey.setReport_object_url(re.getReport_url());
+    documentKey.setRcc_ids(re.getRcc_ids());
+    documentKey.setFiltered_yn(re.getFiltered_yn());
+    documentKey.setCourt_services_form_no(re.getCourt_services_form_no());
+    documentKey.setParticipant_name(re.getParticipant_name());
+    documentKey.setGeneration_date(re.getGeneration_date());
+    //documentKey.setFetched_date(re.getJustin_fetched_date());
 
     keyValues.add(documentKey);
     setDocument_keys(keyValues);

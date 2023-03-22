@@ -1347,7 +1347,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    .log(LoggingLevel.INFO,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

@@ -3,7 +3,6 @@ package ccm.models.common.event;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
@@ -24,7 +23,7 @@ public class ReportEvent extends BaseEvent{
     private String part_id;
     private String court_services_form_no;
     private String filtered_yn;
-    private List<String> rcc_ids;
+    private String rcc_ids;
 
 
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
@@ -154,13 +153,7 @@ ACCUSED_HISTORY_REPORT
                 this.setFiltered_yn(dataElement.getData_value_txt());
                 break;
               case RCC_IDS:
-                ObjectMapper objectMapper = new ObjectMapper();
-                try {
-                  String[] rcc_id_list = objectMapper.readValue(dataElement.getData_value_txt(), String[].class);
-                  this.setRcc_ids(Arrays.asList(rcc_id_list));
-                } catch(Exception e) {
-                  e.printStackTrace();
-                }
+                this.setRcc_ids(dataElement.getData_value_txt());
                 break;
               case REPORT_NAME :
                 this.setReport_name(dataElement.getData_value_txt());
@@ -352,11 +345,11 @@ ACCUSED_HISTORY_REPORT
       this.filtered_yn = filtered_yn;
     }
 
-    public List<String> getRcc_ids() {
+    public String getRcc_ids() {
       return rcc_ids;
     }
 
-    public void setRcc_ids(List<String> rcc_ids) {
+    public void setRcc_ids(String rcc_ids) {
       this.rcc_ids = rcc_ids;
     }
 

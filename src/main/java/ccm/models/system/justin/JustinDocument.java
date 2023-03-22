@@ -12,7 +12,7 @@ public class JustinDocument {
   private String mdoc_justin_no;
   private String submit_date;
   private String agency_file_no;
-  private List<String> rcc_ids;
+  private String rcc_ids;
   private String generation_date;
   private String index;
   private String data;
@@ -119,11 +119,11 @@ public class JustinDocument {
     this.agency_file_no = agency_file_no;
   }
 
-  public List<String> getRcc_ids() {
+  public String getRcc_ids() {
     return rcc_ids;
   }
 
-  public void setRcc_ids(List<String> rcc_ids) {
+  public void setRcc_ids(String rcc_ids) {
     this.rcc_ids = rcc_ids;
   }
 
