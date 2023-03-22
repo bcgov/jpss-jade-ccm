@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "2ba4acf7-101b-4b2a-9974-e0881bde2725",
+		"_postman_id": "87079c23-5457-48d5-8f0b-d53c5cf53f50",
 		"name": "DEMS Integration APIs",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -61,6 +61,24 @@
 						},
 						{
 							"name": "GetCaseDataById",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/28",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"28"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseDataById Copy",
 							"request": {
 								"method": "GET",
 								"header": [],
@@ -458,15 +476,155 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{DEMS-API-URI}}/cases/86/records/7",
+									"raw": "{{DEMS-API-URI}}/cases/243/records/",
 									"host": [
 										"{{DEMS-API-URI}}"
 									],
 									"path": [
 										"cases",
-										"86",
+										"243",
 										"records",
-										"7"
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetRecord Copy",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteRecord",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records/2",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records",
+										"2"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddRecord",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"descriptions\": \"NARRATIVE\",\r\n  \"title\": \"105: 21-1510\",\r\n  \"startDate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"originalFileNumber\": \"105: 21-1510\",\r\n  \"dateToCrown\": \"2023-03-07T07:03:07.089Z\",\r\n  \"source\": \"JUSTIN\",\r\n  \"folder\": \"JUSTIN\",\r\n  \"documentId\": \"NARRATIVE105: 21-15102023-03-07T07:03:07.089Z\",\r\n  \"fileExtension\": \".pdf\",\r\n  \"primaryDateUtc\": \"2023-03-07T07:03:07.089Z\",\r\n  \"type\": \"NARRATIVE\",\r\n  \"lastApiRecordUpdate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"fields\": [\r\n    {\r\n      \"name\": \"Descriptions\",\r\n      \"value\": \"NARRATIVE\"\r\n    },\r\n    {\r\n      \"name\": \"Start Date\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Date to Crown\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Source\",\r\n      \"value\": \"JUSTIN\"\r\n    },\r\n    {\r\n      \"name\": \"File Extension\",\r\n      \"value\": \".pdf\"\r\n    },\r\n    {\r\n      \"name\": \"Document ID\",\r\n      \"value\": \"NARRATIVE105: 21-15102023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Title\",\r\n      \"value\": \"105: 21-1510\"\r\n    },\r\n    {\r\n      \"name\": \"Type\",\r\n      \"value\": \"\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/243/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"243",
+										"records"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AttachDocument",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "filepdf",
+											"type": "file",
+											"src": "/D:/dev/justice/dems/decodedFile.pdf"
+										}
+									],
+									"options": {
+										"raw": {
+											"language": "text"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/251/records/1/Native",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"251",
+										"records",
+										"1",
+										"Native"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddRecord Copy",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"title\": \"Test document\",\r\n  \"documentId\": \"TEST-001\",\r\n  \"fileExtension\": \".pdf\",\r\n  \"primaryDateUtc\": \"2023-03-07T07:03:07.089Z\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records"
 									]
 								}
 							},
@@ -541,6 +699,55 @@
 								"{{DEMS-API-URI}}"
 							],
 							"path": [
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetVersion DEV Gtwy",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1/version",
+							"protocol": "https",
+							"host": [
+								"wsgw",
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"bcpsdems",
+								"api",
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetVersion DEV Direct",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://api.edtdems-poc.maple-edt.io/api/v1/version",
+							"protocol": "https",
+							"host": [
+								"api",
+								"edtdems-poc",
+								"maple-edt",
+								"io"
+							],
+							"path": [
+								"api",
+								"v1",
 								"version"
 							]
 						}
