@@ -1,0 +1,18 @@
+echo "building ccm model and adding to local Maven"
+
+#./repackage-ccm-models 
+
+mvn install:install-file -Dfile=\target\\classes\\ccm-models.jar -DgroupId=ccm -DartifactId=ccm-models -Dversion=0.0.1-SNAPSHOT -Dpackaging=jar 
+
+echo "deploying CCM components.... "
+
+camel run  --properties=\src\\main\\java\\mock\\MockDemsApp.properties \src\\main\\java\\mock\\local-camel.properties --profile=local-camel --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console \src\\main\\java\\mock\\MockDemsApp.java --port 4410
+
+camel run  --properties=ccmJustinAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console CcmJustinAdapter.java --port 4411
+
+#camel run  --properties=ccmLookupService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console CcmLookupService.java --port 4412
+
+#camel run  --properties=ccmNotificationService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console CcmNotificationService.java --port 4413
+
+#camel run  --properties=ccmNotificationService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console CcmNotificationService.java --port 4413
+
