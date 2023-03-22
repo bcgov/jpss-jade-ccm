@@ -20,22 +20,19 @@ public class ChargeAssessmentDocumentData extends BaseDocumentData {
   public ChargeAssessmentDocumentData() {
   }
 
-  public ChargeAssessmentDocumentData(String event_id, JustinDocumentList jdl) {
-    super(event_id, jdl);
-    if(jdl.getDocuments() != null && !jdl.getDocuments().isEmpty()) {
-      JustinDocument jd = jdl.getDocuments().get(0);
-      setRcc_id(jd.getRcc_id());
-      setSubmit_date(jd.getSubmit_date());
-      setAgency_file_no(jd.getAgency_file_no());
-      setWitness_name(jd.getWitness_name());
-      setWitness_yn(jd.getWitness_yn());
-      setExpert_yn(jd.getExpert_yn());
-      setPolice_officer_yn(jd.getPolice_officer_yn());
-      setVictim_yn(jd.getVictim_yn());
-      setFiled_by(jd.getFiled_by());
-      setParticipant_name(jd.getParticipant_name());
-      setOfficer_pin_number(jd.getOfficer_pin_number());
-    }
+  public ChargeAssessmentDocumentData(String event_id, String create_date, JustinDocument jd) {
+    super(event_id, create_date, jd);
+    setRcc_id(jd.getRcc_id());
+    setSubmit_date(jd.getSubmit_date());
+    setAgency_file_no(jd.getAgency_file_no());
+    setWitness_name(jd.getWitness_name());
+    setWitness_yn(jd.getWitness_yn());
+    setExpert_yn(jd.getExpert_yn());
+    setPolice_officer_yn(jd.getPolice_officer_yn());
+    setVictim_yn(jd.getVictim_yn());
+    setFiled_by(jd.getFiled_by());
+    setParticipant_name(jd.getParticipant_name());
+    setOfficer_pin_number(jd.getOfficer_pin_number());
   }
 
   public String getRcc_id() {

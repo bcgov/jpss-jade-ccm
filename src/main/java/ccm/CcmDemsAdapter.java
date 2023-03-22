@@ -47,6 +47,7 @@ import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinDocument;
 import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
@@ -389,102 +390,123 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Lookup message: '${body}'")
     .to("http://ccm-lookup-service/getImageData")
 
+    .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
+    .setProperty("justin_document", simple("${bodyAs(String)}"))
+
     // TODO: for cases like witness statement, there can be multiple docs returned.
     // need to refactor this to split through each of the documents.
 
-    .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
-    .setProperty("justin_document", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        JustinDocumentList jdl = ex.getIn().getBody(JustinDocumentList.class);
-        String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
 
-        log.info("event_message_id: "+event_message_id);
-        if(ex.getMessage().getHeader("rcc_id") != null) {
-          log.info("processing into charge assessment document record");
-          ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, jdl);
-          DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+    .setProperty("create_date") .jsonpath("$.create_date")
+    .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
+    //.marshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    .log(LoggingLevel.INFO,"Parsing through justin documents")
+    .split()
+      .jsonpathWriteAsString("$.documents")
+      .log(LoggingLevel.INFO,"Parsing through justin documents")
+      //.log(LoggingLevel.INFO,"Body: ${body}")
 
-          ex.getMessage().setBody(demsRecord);
-        } else {
-          log.info("justin_request: " + ex.getProperty("justin_request",String.class));
-          //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
-          log.info("processing into court case document record");
-          CourtCaseDocumentData commonDocument = new CourtCaseDocumentData(event_message_id, jdl);
-          DemsRecordData demsRecord = new DemsRecordData(commonDocument);
 
-          Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
-          String rcc_list = ex.getProperty("rcc_ids", String.class);
-          log.info("mdoc_justin_no:" + mdoc_justin_no);
-          log.info("rcc_ids:" + rcc_list);
-          if(commonDocument.getRcc_ids() == null && rcc_list != null) {
-            log.info("setting list from header.");
-            // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-              System.out.println(rcc_list);
-              String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
-              commonDocument.setRcc_ids(Arrays.asList(rcc_id_list));
-            } catch(Exception e) {
-              e.printStackTrace();
+
+
+
+
+
+
+      .unmarshal().json(JsonLibrary.Jackson, JustinDocument.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          JustinDocument jdl = ex.getIn().getBody(JustinDocument.class);
+          String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
+          String create_date = ex.getProperty("create_date", String.class);
+
+          log.info("event_message_id: "+event_message_id);
+          if(ex.getMessage().getHeader("rcc_id") != null) {
+            log.info("processing into charge assessment document record");
+            ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+            ex.getMessage().setBody(demsRecord);
+          } else {
+            log.info("justin_request: " + ex.getProperty("justin_request",String.class));
+            //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
+            log.info("processing into court case document record");
+            CourtCaseDocumentData commonDocument = new CourtCaseDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+            String rcc_list = ex.getProperty("rcc_ids", String.class);
+            log.info("obj mdoc_justin_no:" + mdoc_justin_no);
+            log.info("string rcc_ids:" + rcc_list);
+            if((commonDocument.getRcc_ids() == null || commonDocument.getRcc_ids().isEmpty()) && rcc_list != null) {
+              log.info("setting list from header.");
+              // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
+              ObjectMapper objectMapper = new ObjectMapper();
+              try {
+                System.out.println(rcc_list);
+                String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
+                commonDocument.setRcc_ids(Arrays.asList(rcc_id_list));
+              } catch(Exception e) {
+                e.printStackTrace();
+              }
+
             }
 
+            if(commonDocument.getMdoc_justin_no() == null && mdoc_justin_no != null) {
+              commonDocument.setMdoc_justin_no((String)mdoc_justin_no);
+            }
+
+            ex.setProperty("court_case_document", commonDocument);
+
+            // make sure the header has most up to date values.
+            ex.getMessage().setHeader("rcc_ids", commonDocument.getRcc_ids());
+            ex.getMessage().setHeader("mdoc_justin_no", commonDocument.getMdoc_justin_no());
+
+            ex.getMessage().setBody(demsRecord);
           }
-
-          if(commonDocument.getMdoc_justin_no() == null && mdoc_justin_no != null) {
-            commonDocument.setMdoc_justin_no((String)mdoc_justin_no);
-          }
-
-          ex.setProperty("court_case_document", commonDocument);
-
-          // make sure the header has most up to date values.
-          ex.getMessage().setHeader("rcc_ids", commonDocument.getRcc_ids());
-          ex.getMessage().setHeader("mdoc_justin_no", commonDocument.getMdoc_justin_no());
-
-          ex.getMessage().setBody(demsRecord);
         }
-      }
 
-    })
-    .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-    .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
-    .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
-    .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
-    .log(LoggingLevel.INFO,"Generating derived dems record: ${body}")
-    .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
-    .choice()
-      .when(simple("${header.rcc_id} != null"))
-        .log(LoggingLevel.INFO,"RCC based report")
+      })
+      .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
+      .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
+      .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
+      .log(LoggingLevel.INFO,"Generating derived dems record: ${body}")
+      .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
+      .choice()
+        .when(simple("${header.rcc_id} != null"))
+          .log(LoggingLevel.INFO,"RCC based report")
 
-        .setHeader("number", simple("${header[rcc_id]}"))
-        .to("direct:createDocumentRecord")
-      .endChoice()
-      .when(simple("${header.mdoc_justin_no} != null"))
-        .log(LoggingLevel.INFO,"MDOC based report")
-        // need to look-up the list of rcc ids associated to the mdoc
-
-        .endChoice()
-      .when(simple("${header.rcc_ids} != null"))
-        .log(LoggingLevel.INFO,"rcc id list based report")
-        // need to parse through the list of rcc ids
-        .setBody(simple("${exchangeProperty.court_case_document}"))
-        .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
-        .split()
-          .jsonpathWriteAsString("$.rcc_ids")
-          .setProperty("rcc_id",jsonpath("$"))
-          .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-          .setBody(simple("${exchangeProperty.dems_record}"))
+          .setHeader("number", simple("${header[rcc_id]}"))
           .to("direct:createDocumentRecord")
+        .endChoice()
+        .when(simple("${header.mdoc_justin_no} != null"))
+          .log(LoggingLevel.INFO,"MDOC based report")
+          // need to look-up the list of rcc ids associated to the mdoc
+
+          .endChoice()
+        .when(simple("${header.rcc_ids} != null"))
+          .log(LoggingLevel.INFO,"rcc id list based report")
+          // need to parse through the list of rcc ids
+          .setBody(simple("${exchangeProperty.court_case_document}"))
+          .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
+          .split()
+            .jsonpathWriteAsString("$.rcc_ids")
+            .setProperty("rcc_id",jsonpath("$"))
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+            .setBody(simple("${exchangeProperty.dems_record}"))
+            .to("direct:createDocumentRecord")
           .end()
-        .endChoice()
-      .otherwise()
-        .log(LoggingLevel.INFO,"No identifying values, so skipped.")
-        .endChoice()
+          .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
+          .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+          .endChoice()
 
       .end()
-
+    .end()
+    .log(LoggingLevel.INFO, "end of processDocumentRecord")
     ;
   }
 
@@ -509,6 +531,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
     .choice()
       .when(simple("${exchangeProperty.caseId} != ''"))
+        .log(LoggingLevel.INFO, "Creating record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
         
         .log(LoggingLevel.INFO, "dems_record: '${exchangeProperty.dems_record}'")
@@ -524,7 +547,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
     .end()
     .choice()
-      .when(simple("${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+        .log(LoggingLevel.INFO, "attempt to stream the record's content.")
         // if inserting the record to dems was successful, then go ahead and stream the data to the record.
         .setBody(simple("${exchangeProperty.justin_document}"))
         .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
@@ -553,6 +577,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         //.log(LoggingLevel.INFO,"Created dems record: ${body}")
         .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "end of createDocumentRecord")
     ;
   }
 
@@ -1562,7 +1587,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Creating DEMS case record (key = ${exchangeProperty.key}) ...")
+    .log(LoggingLevel.INFO,"Creating DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
     .log(LoggingLevel.INFO,"DEMS case record created.")
     .setProperty("recordId", jsonpath("$.edtId"))

@@ -15,16 +15,13 @@ public class BaseDocumentData {
   public BaseDocumentData() {
   }
 
-  public BaseDocumentData(String event_id, JustinDocumentList jdl) {
-    setCreate_date(jdl.getCreate_date());
-    if(jdl.getDocuments() != null && !jdl.getDocuments().isEmpty()) {
-      JustinDocument jd = jdl.getDocuments().get(0);
-      setReport_type(jd.getReport_type());
-      setReport_format(jd.getReport_format());
-      setDocument_type(jd.getDocument_type());
-      setLocation(event_id);
-      setData(jd.getData());
-    }
+  public BaseDocumentData(String event_id, String create_date, JustinDocument jd) {
+    setCreate_date(create_date);
+    setReport_type(jd.getReport_type());
+    setReport_format(jd.getReport_format());
+    setDocument_type(jd.getDocument_type());
+    setLocation(event_id);
+    setData(jd.getData());
   }
 
   public String getCreate_date() {
