@@ -917,7 +917,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(b.getCase_flags());
             }
           })
-          .log(LoggingLevel.INFO, "Case Flags: ${body}")
+          .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
           .setHeader("caseFlags", simple("${body}"))
           // reset the original values
           .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
