@@ -3,15 +3,18 @@
 // camel-k: dependency=camel:jackson
 // camel-k: dependency=camel:http
 // camel-k: dependency=camel:base64
+// camel-k: dependency=camel:attachments
 // camel-k: property=quarkus.http.port=8080
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.Base64DataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.builder.ValueBuilder;
+import org.apache.camel.attachment.AttachmentMessage;
 
-import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.Map;
 
 public class FileTransferRouteBuilder extends RouteBuilder {
 
@@ -36,28 +39,14 @@ public class FileTransferRouteBuilder extends RouteBuilder {
                 exchange.getMessage().setBody(fileContentBase64);
             })
             .unmarshal(base64)
-            .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
             .process(exchange -> {
                 String fileName = exchange.getMessage().getHeader("CamelFileName", String.class);
-                String boundary = "simpleboundary";
                 byte[] fileContent = exchange.getMessage().getBody(byte[].class);
-                String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
-                String multipartFooter = "\r\n" + "--" + boundary + "--";
-
-                byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
-                byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
-
-                byte[] multipartBody = new byte[headerBytes.length + fileContent.length + footerBytes.length];
-
-                System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
-                System.arraycopy(fileContent, 0, multipartBody, headerBytes.length, fileContent.length);
-                System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + fileContent.length, footerBytes.length);
-
-                exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
-                exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
-                exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data;boundary=" + boundary));
-                exchange.getMessage().setBody(multipartBody);
+                InputStream inputStream = new ByteArrayInputStream(fileContent);
+                AttachmentMessage inMessage = exchange.getMessage(AttachmentMessage.class);
+                inMessage.addAttachment(fileName, inputStream, "application/octet-stream");
             })
+            .setHeader("CamelHttpMethod", constant("PUT"))
             .to("http://remote-endpoint-url");
     }
 }
