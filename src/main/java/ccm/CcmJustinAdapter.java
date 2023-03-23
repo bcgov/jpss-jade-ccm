@@ -437,8 +437,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
      
-      .to("kafka:{{kafka.topic.report.name}}")    // ---- > Error produced here -TWuolle
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.report.name}}"))
+      .to("kafka:{{kafka.topic.reports.name}}")    // ---- > Error produced here -TWuolle
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
