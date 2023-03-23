@@ -12,6 +12,7 @@ import org.apache.camel.model.dataformat.Base64DataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.attachment.AttachmentMessage;
 
+import javax.activation.DataHandler;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Map;
@@ -43,8 +44,9 @@ public class FileTransferRouteBuilder extends RouteBuilder {
                 String fileName = exchange.getMessage().getHeader("CamelFileName", String.class);
                 byte[] fileContent = exchange.getMessage().getBody(byte[].class);
                 InputStream inputStream = new ByteArrayInputStream(fileContent);
+                DataHandler dataHandler = new DataHandler(inputStream, "application/octet-stream");
                 AttachmentMessage inMessage = exchange.getMessage(AttachmentMessage.class);
-                inMessage.addAttachment(fileName, inputStream, "application/octet-stream");
+                inMessage.addAttachment(fileName, dataHandler);
             })
             .setHeader("CamelHttpMethod", constant("PUT"))
             .to("http://remote-endpoint-url");
