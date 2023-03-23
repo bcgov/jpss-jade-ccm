@@ -7,6 +7,7 @@ import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
 
+    private String reportType;
     private String descriptions;
     private String title;
     private String startDate;
@@ -28,60 +29,63 @@ public class DemsRecordData {
     public DemsRecordData(ChargeAssessmentDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
-        if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
-            //"If $MAPID21 = Y then ""STATEMENT - VICTIM"";
-            //ELSE If $MAPID19 = Y then ""STATEMENT - EXPERT"";
-            //ELSE If $MAPID20 = Y then ""STATEMENT - POLICE"";
-            //ELSE If $MAPID18 = Y then ""STATEMENT - CIVILIAN"""
-            if(nrd.getVictim_yn() != null && nrd.getVictim_yn().equalsIgnoreCase("Y")) {
-                setDescriptions("STATEMENT - VICTIM");
-            } else if(nrd.getExpert_yn() != null && nrd.getExpert_yn().equalsIgnoreCase("Y")) {
-                setDescriptions("STATEMENT - EXPERT");
-            } else if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")) {
-                setDescriptions("STATEMENT - POLICE");
+        if(report != null) {
+            if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
+                //"If $MAPID21 = Y then ""STATEMENT - VICTIM"";
+                //ELSE If $MAPID19 = Y then ""STATEMENT - EXPERT"";
+                //ELSE If $MAPID20 = Y then ""STATEMENT - POLICE"";
+                //ELSE If $MAPID18 = Y then ""STATEMENT - CIVILIAN"""
+                if(nrd.getVictim_yn() != null && nrd.getVictim_yn().equalsIgnoreCase("Y")) {
+                    setDescriptions("STATEMENT - VICTIM");
+                } else if(nrd.getExpert_yn() != null && nrd.getExpert_yn().equalsIgnoreCase("Y")) {
+                    setDescriptions("STATEMENT - EXPERT");
+                } else if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")) {
+                    setDescriptions("STATEMENT - POLICE");
+                } else {
+                    setDescriptions("STATEMENT - CIVILIAN");
+                }
             } else {
-                setDescriptions("STATEMENT - CIVILIAN");
-            }
-        } else {
-            setDescriptions(report.getLabel());
-        }
-
-        if(report.equals(REPORT_TYPES.CPIC)) {
-            if(nrd.getParticipant_name() != null) {
-                setTitle(nrd.getParticipant_name().toUpperCase());
-            } else {
-              setTitle("CRIMINAL RECORD");
-            }
-        } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
-            //"""If ($MAPID20 = Y AND $MAPID17 is not empty) then """"$MAPID16 (PIN$MAPID17)""""
-            //Else $MAPID16"""
-            if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")
-               && nrd.getOfficer_pin_number() != null) {
-                setTitle(nrd.getWitness_name() + "(" + nrd.getOfficer_pin_number() + ")");
-            } else {
-                setTitle(nrd.getWitness_name());
+                setDescriptions(report.getLabel());
             }
 
-        } else {
-            setTitle(nrd.getAgency_file_no());
-        }
-        setOriginalFileNumber(nrd.getAgency_file_no());
+            if(report.equals(REPORT_TYPES.CPIC)) {
+                if(nrd.getParticipant_name() != null) {
+                    setTitle(nrd.getParticipant_name().toUpperCase());
+                } else {
+                setTitle("CRIMINAL RECORD");
+                }
+            } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
+                //"""If ($MAPID20 = Y AND $MAPID17 is not empty) then """"$MAPID16 (PIN$MAPID17)""""
+                //Else $MAPID16"""
+                if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")
+                && nrd.getOfficer_pin_number() != null) {
+                    setTitle(nrd.getWitness_name() + "(" + nrd.getOfficer_pin_number() + ")");
+                } else {
+                    setTitle(nrd.getWitness_name());
+                }
+
+            } else {
+                setTitle(nrd.getAgency_file_no());
+            }
+            setOriginalFileNumber(nrd.getAgency_file_no());
 
 
-        if(report.equals(REPORT_TYPES.CPIC)) {
-            setType("BIOGRAPHICAL");
-        } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
-            setType("STATEMENT");
-        } else if(report.equals(REPORT_TYPES.DV_IPV_RISK)) {
-            setType("OPERATIONAL");
-        } else if(report.equals(REPORT_TYPES.DV_ATTACHMENT)) {
-            setType("OPERATIONAL");
-        } else if(report.equals(REPORT_TYPES.DM_ATTACHMENT)) {
-            setType("ADMINISTRATIVE");
-        } else if(report.equals(REPORT_TYPES.VEHICLE)) {
-            setType("PARTNER AGENCY");
-        } else if(report.equals(REPORT_TYPES.SUPPLEMENTAL)) {
-            setType("OPERATIONAL");
+            if(report.equals(REPORT_TYPES.CPIC)) {
+                setType("BIOGRAPHICAL");
+            } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
+                setType("STATEMENT");
+            } else if(report.equals(REPORT_TYPES.DV_IPV_RISK)) {
+                setType("OPERATIONAL");
+            } else if(report.equals(REPORT_TYPES.DV_ATTACHMENT)) {
+                setType("OPERATIONAL");
+            } else if(report.equals(REPORT_TYPES.DM_ATTACHMENT)) {
+                setType("ADMINISTRATIVE");
+            } else if(report.equals(REPORT_TYPES.VEHICLE)) {
+                setType("PARTNER AGENCY");
+            } else if(report.equals(REPORT_TYPES.SUPPLEMENTAL)) {
+                setType("OPERATIONAL");
+            }
+
         }
 
 
@@ -99,32 +103,33 @@ public class DemsRecordData {
     public DemsRecordData(CourtCaseDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
-        if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
-            setDescriptions("CONVICTION LIST-FILTERED");
-        } else {
-            setDescriptions(report.getLabel());
+        if(report != null) {
+            if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
+                setDescriptions("CONVICTION LIST-FILTERED");
+            } else {
+                setDescriptions(report.getLabel());
+            }
+
+            if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
+                //$MAPID67 $MAPID69
+                setTitle(nrd.getParticipant_name().toUpperCase() + nrd.getCourt_file_no());
+            } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
+                setTitle(nrd.getCourt_file_no());
+            } else {
+                setTitle(nrd.getParticipant_name().toUpperCase());
+            }
+            // TODO: Lookup the destination DEMS Case ID that this record is being added to, and use that value for this mapping
+            //setOriginalFileNumber(nrd.getAgency_file_no());
+
+
+            if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS)) {
+                setType("COURT RECORD");
+            } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
+                setType("JUSTIN RECORD");
+            } else {
+                setType("BIOGRAPHICAL");
+            }
         }
-
-        if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
-            //$MAPID67 $MAPID69
-            setTitle(nrd.getParticipant_name().toUpperCase() + nrd.getCourt_file_no());
-        } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
-            setTitle(nrd.getCourt_file_no());
-        } else {
-            setTitle(nrd.getParticipant_name().toUpperCase());
-        }
-        // TODO: Lookup the destination DEMS Case ID that this record is being added to, and use that value for this mapping
-        //setOriginalFileNumber(nrd.getAgency_file_no());
-
-
-        if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS)) {
-            setType("COURT RECORD");
-        } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
-            setType("JUSTIN RECORD");
-        } else {
-            setType("BIOGRAPHICAL");
-        }
-
 
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getGeneration_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
@@ -135,6 +140,14 @@ public class DemsRecordData {
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+    }
+
+    public String getReportType() {
+        return reportType;
+    }
+
+    public void setReportType(String reportType) {
+        this.reportType = reportType;
     }
 
     public String getTitle() {

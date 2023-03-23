@@ -407,12 +407,6 @@ public class CcmDemsAdapter extends RouteBuilder {
       //.log(LoggingLevel.INFO,"Body: ${body}")
 
 
-
-
-
-
-
-
       .unmarshal().json(JsonLibrary.Jackson, JustinDocument.class)
       .process(new Processor() {
         @Override
@@ -485,6 +479,40 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.INFO,"MDOC based report")
           // need to look-up the list of rcc ids associated to the mdoc
 
+          .setHeader("number", simple("${header[mdoc_justin_no]}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          //.log(LoggingLevel.INFO, "headers: ${headers}")
+          .to("http://ccm-lookup-service/getCourtCaseMetadata")
+          .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+          .setProperty("metadata_data", simple("${bodyAs(String)}"))
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .setProperty("CourtCaseMetadata").body()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange ex) {
+              CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+              CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
+              ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
+              // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+              DemsRecordData demsRecord = new DemsRecordData(ccdd);
+              ex.getMessage().setBody(demsRecord);
+            }
+
+          })
+          .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+          .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+    
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .split()
+            .jsonpathWriteAsString("$.related_agency_file")
+            .setProperty("rcc_id",jsonpath("$.rcc_id"))
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+            .setBody(simple("${exchangeProperty.dems_record}"))
+            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+            .to("direct:createDocumentRecord")
+          .end()
+
           .endChoice()
         .when(simple("${header.rcc_ids} != null"))
           .log(LoggingLevel.INFO,"rcc id list based report")
@@ -531,10 +559,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
     .choice()
       .when(simple("${exchangeProperty.caseId} != ''"))
-        .log(LoggingLevel.INFO, "Creating record in dems")
+        .log(LoggingLevel.INFO, "Creating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
         
-        .log(LoggingLevel.INFO, "dems_record: '${exchangeProperty.dems_record}'")
+        .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
         .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
 
         // proceed to create record in dems, base on the caseid
