@@ -924,7 +924,7 @@ public class CcmNotificationService extends RouteBuilder {
             @Override
             public void process(Exchange exchange) {
               ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-              log.error(b.getCase_flags().toString());
+              //log.debug(b.getCase_flags().toString());
               exchange.getMessage().setBody(b.getCase_flags());
             }
           })

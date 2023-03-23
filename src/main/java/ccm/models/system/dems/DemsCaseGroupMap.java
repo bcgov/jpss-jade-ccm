@@ -50,7 +50,7 @@ public class DemsCaseGroupMap {
             String name = o.getJsonString("name").getString();
             Long id = o.getJsonNumber("id").longValue();
             Boolean isUserGroup = o.getBoolean("isUserGroup");
-            System.out.println("DEBUG: JsonArray: id of name (" + name + ") = " + id + ". isUserGroup = " + isUserGroup);
+            //System.out.println("DEBUG: JsonArray: id of name (" + name + ") = " + id + ". isUserGroup = " + isUserGroup);
             DemsCaseGroupData data = new DemsCaseGroupData();
             data.setId(id);
             data.setName(name);
