@@ -52,8 +52,9 @@ public class MockJustinApp extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     version();
+    getInProgressEvents();
+    newEventsBatch();
   }
-
   private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -68,4 +69,31 @@ public class MockJustinApp extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Response: ${body}")
     ;
   }
+  private void getInProgressEvents() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/v1/inProgressEvents?httpMethodRestrict=GET")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"version query request received")
+    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setBody().simple("{ \"[]\" }")
+    .log(LoggingLevel.DEBUG,"Response: ${body}");
+  }
+
+  private void newEventsBatch() {
+
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/v1/newEventsBatch?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"version query request received")
+    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setBody().simple("{ \"[]\" }")
+    .log(LoggingLevel.DEBUG,"Response: ${body}");
+  }
+
 }
