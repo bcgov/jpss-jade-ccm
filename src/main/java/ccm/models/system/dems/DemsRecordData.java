@@ -1,5 +1,7 @@
 package ccm.models.system.dems;
 
+import java.util.ArrayList;
+import java.util.List;
 import ccm.models.common.event.ReportEvent.REPORT_TYPES;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
@@ -7,7 +9,6 @@ import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
 
-    private String reportType;
     private String descriptions;
     private String title;
     private String startDate;
@@ -22,6 +23,7 @@ public class DemsRecordData {
     private String primaryDateUtc;
     private String type;
     private String lastApiRecordUpdate;
+    private List<DemsFieldData> fields;
 
     public DemsRecordData() {
     }
@@ -98,6 +100,43 @@ public class DemsRecordData {
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+        
+        if(getDocumentId() != null) {
+            DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
+            fieldData.add(documentId);
+        }
+        if(getType() != null) {
+            DemsFieldData type = new DemsFieldData("Type", getType());
+            fieldData.add(type);
+        }
+        if(getDescriptions() != null) {
+            DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
+            fieldData.add(descriptions);
+        }
+        if(getTitle() != null) {
+            DemsFieldData title = new DemsFieldData("Title", getTitle());
+            fieldData.add(title);
+        }
+        if(getStartDate() != null) {
+            DemsFieldData startDate = new DemsFieldData("Start Date", getStartDate());
+            fieldData.add(startDate);
+        }
+        if(getDateToCrown() != null) {
+            DemsFieldData dateToCrown = new DemsFieldData("Date To Crown", getDateToCrown());
+            fieldData.add(dateToCrown);
+        }
+        if(getSource() != null) {
+            DemsFieldData source = new DemsFieldData("Source", getSource());
+            fieldData.add(source);
+        }
+        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
+        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+        //fieldData.add(location);
+        //fieldData.add(folder);
+        
+        setFields(fieldData);
     }
 
     public DemsRecordData(CourtCaseDocumentData nrd) {
@@ -140,14 +179,38 @@ public class DemsRecordData {
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-    }
 
-    public String getReportType() {
-        return reportType;
-    }
-
-    public void setReportType(String reportType) {
-        this.reportType = reportType;
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+        
+        if(getDocumentId() != null) {
+            DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
+            fieldData.add(documentId);
+        }
+        if(getType() != null) {
+            DemsFieldData type = new DemsFieldData("Type", getType());
+            fieldData.add(type);
+        }
+        if(getDescriptions() != null) {
+            DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
+            fieldData.add(descriptions);
+        }
+        if(getTitle() != null) {
+            DemsFieldData title = new DemsFieldData("Title", getTitle());
+            fieldData.add(title);
+        }
+        if(getStartDate() != null) {
+            DemsFieldData startDate = new DemsFieldData("Start Date", getStartDate());
+            fieldData.add(startDate);
+        }
+        if(getDateToCrown() != null) {
+            DemsFieldData dateToCrown = new DemsFieldData("Date To Crown", getDateToCrown());
+            fieldData.add(dateToCrown);
+        }
+        if(getSource() != null) {
+            DemsFieldData source = new DemsFieldData("Source", getSource());
+            fieldData.add(source);
+        }        
+        setFields(fieldData);
     }
 
     public String getTitle() {
@@ -262,6 +325,13 @@ public class DemsRecordData {
         this.lastApiRecordUpdate = lastApiRecordUpdate;
     }
 
+    public List<DemsFieldData> getFields() {
+        return fields;
+    }
+
+    public void setFields(List<DemsFieldData> fields) {
+        this.fields = fields;
+    }
 
 
 }
