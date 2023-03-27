@@ -18,6 +18,18 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:org.slf4j.slf4j-api
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpcore
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpmime
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-mail
+// camel-k: dependency=mvn:org.apache.camel:camel-kamelet
+// camel-k: dependency=mvn:org.apache.camel:camel-java-joor-dsl
+// camel-k: dependency=mvn:org.apache.camel:camel-endpointdsl
+// camel-k: dependency=mvn:org.apache.camel:camel-rest
+// camel-k: dependency=mvn:org.apache.camel:camel-http
+// camel-k: dependency=mvn:org.apache.camel:camel-kafka
+// camel-k: dependency=mvn:org.apache.camel:camel-core-languages
+// camel-k: dependency=mvn:org.apache.camel:camel-mail
+// camel-k: dependency=mvn:org.apache.camel:camel-attachments
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -25,12 +37,10 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import java.nio.charset.StandardCharsets;
+import org.apache.camel.support.builder.ValueBuilder;
 import org.apache.http.entity.ContentType;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-//import org.apache.http.entity.mime.MultipartEntityBuilder;
-//import org.apache.http.entity.mime.HttpMultipartMode;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.BaseEvent;
@@ -52,7 +62,6 @@ import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
-import java.io.File;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -1642,7 +1651,6 @@ public class CcmDemsAdapter extends RouteBuilder {
   private void streamCaseRecord() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1651,45 +1659,44 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("dems_case_id", jsonpath("$.caseId"))
     .setProperty("dems_record_id", jsonpath("$.recordId"))
     // decode the data element from Base64
-    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .log(LoggingLevel.DEBUG,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    .log(LoggingLevel.DEBUG,"dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) {
+      public void process(Exchange exchange) throws Exception{
         DemsRecordDocumentData b = exchange.getIn().getBody(DemsRecordDocumentData.class);
-        //exchange.getMessage().setBody(b.getData());
-        log.info("about to decode data");
+        //log.info("about to decode data"+ b.getData());
         byte[] decodedBytes = Base64.getDecoder().decode(b.getData());
-        //Base64DataFormat base = new Base64DataFormat();
-        //MimeMultipartDataFormat mime = new MimeMultipartDataFormat();
-/*
-        MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
-        multipartEntityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-        multipartEntityBuilder.addBinaryBody("file", decodedBytes);
-        exchange.getMessage().setBody(multipartEntityBuilder.build());
- */
-
-        String decodedString = new String(decodedBytes);
-        //log.info("data:"+b.getData());
-        exchange.getMessage().setBody(decodedBytes);
-        log.info("decoded data");
+        exchange.getIn().setBody(decodedBytes);
+        //log.info("decodedBytes" + decodedBytes);
+        //log.info("decoded data");
+        String fileName = "myfile.pdf";
+        String boundary = "simpleboundary";
+        String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
+        String multipartFooter = "\r\n" + "--" + boundary + "--";
+        byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
+        byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
+        byte[] multipartBody = new byte[headerBytes.length + decodedBytes.length + footerBytes.length];
+        System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
+        System.arraycopy(decodedBytes, 0, multipartBody, headerBytes.length, decodedBytes.length);
+        System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + decodedBytes.length, footerBytes.length);
+        exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+        exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+        exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+        exchange.getMessage().setBody(multipartBody);
       }
     })
-
-
-    //.unmarshal().base64()
-    //.marshal().mimeMultipart()
-/*    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Creating DEMS case record (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
-    .to("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
-    .log(LoggingLevel.INFO,"DEMS case record streamed. ${body}")
-*/
+    .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "body: ${body}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
+    .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
     ;
   }
 
