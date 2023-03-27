@@ -432,13 +432,13 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.INFO,"Set kpi event object")
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
      
-      .to("kafka:{{kafka.topic.report.name}}")    // ---- > Error produced here -TWuolle
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.report.name}}"))
+      .to("kafka:{{kafka.topic.reports.name}}")    // ---- > Error produced here -TWuolle
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
@@ -1215,7 +1215,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
@@ -1347,7 +1347,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    .log(LoggingLevel.INFO,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

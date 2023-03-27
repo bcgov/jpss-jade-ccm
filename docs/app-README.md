@@ -4,9 +4,9 @@ Return to [JADE-CCM repo README doc](../README.md).
 
 BC Prosecution Services (BCPS) is implementing a Digital Evidence & Disclosure Management Solution (DEMS) which will house police evidence and disclosure, electronically. BCPS is working in partnership with the Cascadia and EDT company who are providing the overall evidence management application.
 
-The ISB Integration Delivery Service Team is responsible for providing the integration solution between EDT DEMS application and Ministry applications needed in the overall solution called JUSTIN and CORNET.
+The ISB Integration Delivery Services Team is responsible for providing the integration solution between EDT DEMS application and Ministry applications needed in the overall solution called JUSTIN and CORNET.
 
-For the ISB Integration Delivery Service Team to successfully deliver a working solution (JADE-CCM), they will need to work in partnership with the DEMS project other service providers, the EDT Team responsible for the DEMS product and NTT Data responsible for JUSTIN and CORNET application changes.
+For the ISB Integration Delivery Services Team to successfully deliver a working solution (JADE-CCM), they will need to work in partnership with the DEMS project other service providers, the EDT Team responsible for the DEMS product and NTT Data responsible for JUSTIN and CORNET application changes.
 
 To learn more about JADE and the Justice and Public Sector Integration Delivery Service, please visit: https://integrations.justice.gov.bc.ca/
 
@@ -35,6 +35,7 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Approved Court Case | CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_changed_processing_sequence_diagram.plantuml))|
 | Approved Court Case | APPEARANCE_CHANGED |[Diagram](../diagrams/img/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.png) ([source](../diagrams/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.plantuml))|
 | Approved Court Case | CROWN_ASSIGNMENT_CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.plantuml))|
+| Case User | ACCOUNT_CREATED |[Diagram](../diagrams/img/ccm_case_user_account_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_account_created_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_ADDED |[Diagram](../diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_REMOVED |[Diagram](../diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
 
@@ -76,24 +77,6 @@ PlantUML requires a separate installation of GraphViz dot in order to render net
 ## Java
 
 JADE-CCM is built on Camel K, and requires compilation of the Plain-Old Java Object (POJO) data models using OpenJDK 11.
-
-## Known Re-Queuable JUSTIN Change Notifications in Dev
-
-The following re-queuable Dev JUSTIN change notifications will be used to support "create case in DEMS" (5.2.1) and "sync user list in DEMS" (5.3.1) functional development.
-
-| event_type | event_message_id | RCC_ID |
-| --- | --- | --- |
-| AGEN_FILE | 2045 | 50419.0734 |
-| AGEN_FILE | 2060 | 50422.0734 |
-| AGEN_FILE | 2063 | 50422.0734 |
-| AGEN_FILE | 2064 | 50419.0734 |
-| AUTH_LIST | 2065 | 50419.0734 |
-| AGEN_FILE | 2071 | 50420.0734 |
-| AUTH_LIST | 2072 | 50420.0734 |
-| AUTH_LIST | 2077 | 50421.0734 |
-| AGEN_FILE | 2078 | 50421.0734 |
-
-Postman collection file for JUSTIN APIs: tools/JUSTIN-DEMS.postman_collection.json
 
 ## Deploy JADE-Events Cluster to Dev Environment in OCP Silver Cluster (cef5dd-dev)
 

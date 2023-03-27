@@ -1,4 +1,7 @@
 package ccm.models.system.justin;
+
+import java.util.List;
+
 public class JustinDocumentKey {
   private String rcc_id;
   private String part_id;
@@ -13,6 +16,11 @@ public class JustinDocumentKey {
   private String report_object_url;
 
   private String active_yn;
+  private String rcc_ids;
+  private String court_services_form_no;
+  private String participant_name;
+  private String generation_date;
+  private String fetched_date;
 
   public String getRcc_id() {
     return rcc_id;
@@ -100,6 +108,38 @@ public class JustinDocumentKey {
 
   public void setActive_yn(String active_yn) {
     this.active_yn = active_yn;
+  }
+
+  public String getRcc_ids() {
+    return rcc_ids;
+  }
+
+  public void setRcc_ids(String rcc_ids) {
+    this.rcc_ids = rcc_ids;
+  }
+
+  public String getCourt_services_form_no() {
+    return court_services_form_no;
+  }
+
+  public void setCourt_services_form_no(String court_services_form_no) {
+    this.court_services_form_no = court_services_form_no;
+  }
+
+  public String getParticipant_name() {
+    return participant_name;
+  }
+
+  public void setParticipant_name(String participant_name) {
+    this.participant_name = participant_name;
+  }
+
+  public String getGeneration_date() {
+    return generation_date;
+  }
+
+  public void setGeneration_date(String generation_date) {
+    this.generation_date = generation_date;
   }
 
 }

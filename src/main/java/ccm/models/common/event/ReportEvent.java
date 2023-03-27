@@ -1,4 +1,6 @@
 package ccm.models.common.event;
+
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import ccm.models.system.justin.JustinEvent;
@@ -19,8 +21,10 @@ public class ReportEvent extends BaseEvent{
     private String report_url;
     private String participant_name;
     private String part_id;
+    private String court_services_form_no;
+    private String filtered_yn;
+    private String rcc_ids;
 
-    
 
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
     public static final String JUSTIN_GUID = "GUID";
@@ -32,6 +36,9 @@ public class ReportEvent extends BaseEvent{
     public static final String REPORT_NAME = "REPORT_NAME";
     public static final String REPORT_TYPE = "REPORT_TYPE";
     public static final String REPORT_URL = "REPORT_URL";
+    public static final String COURT_SERVICE_FORM = "COURT_SERVICES_FORM_NO";
+    public static final String FILTERED_YN = "FILTERED_YN";
+    public static final String RCC_IDS = "RCC_IDS";
   
     public enum SOURCE {
       JUSTIN,
@@ -43,18 +50,66 @@ public class ReportEvent extends BaseEvent{
     }
 
     public enum REPORT_TYPES {
-      NARRATIVE,
-      WITNESS_STATEMENT,
-      CIPC_DOC,
-      VEHICLE,
-      DV_IPV_RISK,
-      DM_ATTACHMENT,
-      SUPPLEMENTAL,
-      SYNOPSIS,
-      RECORD_OF_PROCEEDINGS,
-      CONVICTION_LIST,
-      DV_ATTACHMENT
+      NARRATIVE("NARRATIVE"),
+      WITNESS_STATEMENT("WITNESS_STATEMENT"),
+      CPIC("CPIC-CR"),
+      VEHICLE("VEHICLE"),
+      DV_IPV_RISK("BC DV / IPV RISK SUMMARY"),
+      DV_ATTACHMENT("BC DV / IPV RISK SUMMARY"),
+      DM_ATTACHMENT("DIGITAL MEDIA RETENTION"),
+      SUPPLEMENTAL("SUPPLEMENTAL"),
+      SYNOPSIS("SYNOPSIS"),
 
+      RECORD_OF_PROCEEDINGS("RECORD OF PROCEEDINGS"),
+      CONVICTION_LIST("CONVICTION LIST-DEFAULT"),
+
+      CLIENT_HISTORY_REPORT_DISPOSITION("CLIENT HISTORY REPORT - DISPOSITION AND REPORTS"),
+      CLIENT_HISTORY_REPORT_FULL("CLIENT HISTORY REPORT - FULL"),
+      FILE_SUMMARY_REPORT("FILE SUMMARY REPORT"),
+      ACCUSED_HISTORY_REPORT("ACCUSED HISTORY REPORT");
+/*
+NARRATIVE
+WITNESS_STATEMENT
+CPIC_DOC
+CPIC
+VEHICLE
+DV_IPV_RISK
+DV_ATTACHMENT
+DM_ATTACHMENT
+SUPPLEMENTAL
+SYNOPSIS
+
+mdoc_justin_no + part_id
+RECORD_OF_PROCEEDINGS
+
+part_id + rcc_ids
+CONVICTION_LIST
+
+part_id + rcc_ids
+CLIENT_HISTORY_REPORT_DISPOSITION
+CLIENT_HISTORY_REPORT_FULL
+FILE_SUMMARY_REPORT
+ACCUSED_HISTORY_REPORT
+
+*/
+      private String label;
+
+      private REPORT_TYPES(String label) {
+          this.label = label;
+      }
+
+      public String getLabel() {
+          return label;
+      }
+
+      public static REPORT_TYPES fromString(String text) {
+        for (REPORT_TYPES b : REPORT_TYPES.values()) {
+            if (b.name().equalsIgnoreCase(text)) {
+                return b;
+            }
+        }
+        return null;
+      }
     }
   
     public ReportEvent() {
@@ -77,29 +132,38 @@ public class ReportEvent extends BaseEvent{
           for( JustinEventDataElement dataElement : je.getEvent_data()) {
             switch(dataElement.getData_element_nm()){
               case GENERATION_DATE:
-              this.setGeneration_date(dataElement.getData_value_txt());
-              break;
+                this.setGeneration_date(dataElement.getData_value_txt());
+                break;
               case JUSTIN_GUID:
-              this.setGuid(dataElement.getData_value_txt());
-              break;
+                this.setGuid(dataElement.getData_value_txt());
+                break;
               case MDOC_JUSTIN_NO:
-              this.setMdoc_justin_no(dataElement.getData_value_txt());
-              break;
+                this.setMdoc_justin_no(dataElement.getData_value_txt());
+                break;
               case PARTICIPANT_NAME:
-              this.setParticipant_name(dataElement.getData_value_txt());
-              break;
+                this.setParticipant_name(dataElement.getData_value_txt());
+                break;
               case PART_ID:
-              this.setPart_id(dataElement.getData_value_txt());
-              break;
+                this.setPart_id(dataElement.getData_value_txt());
+                break;
+              case COURT_SERVICE_FORM:
+                this.setCourt_services_form_no(dataElement.getData_value_txt());
+                break;
+              case FILTERED_YN:
+                this.setFiltered_yn(dataElement.getData_value_txt());
+                break;
+              case RCC_IDS:
+                this.setRcc_ids(dataElement.getData_value_txt());
+                break;
               case REPORT_NAME :
-              this.setReport_name(dataElement.getData_value_txt());
-              break;
+                this.setReport_name(dataElement.getData_value_txt());
+                break;
               case REPORT_TYPE:
-              this.setReport_type(dataElement.getData_value_txt());
-              break;
+                this.setReport_type(dataElement.getData_value_txt());
+                break;
               case REPORT_URL:
-              this.setReport_url(dataElement.getData_value_txt());
-              break;
+                this.setReport_url(dataElement.getData_value_txt());
+                break;
             }
           }
         }
@@ -125,7 +189,11 @@ public class ReportEvent extends BaseEvent{
         }
       }
   
-      setEvent_key(getJustin_rcc_id());
+      if(getJustin_rcc_id() != null) {
+        setEvent_key(getJustin_rcc_id());
+      } else if(getMdoc_justin_no() != null) {
+        setEvent_key(getMdoc_justin_no());
+      }
     }
   
     public ReportEvent(SOURCE source, ReportEvent another) {
@@ -259,6 +327,30 @@ public class ReportEvent extends BaseEvent{
 
     public void setPart_id(String part_id) {
       this.part_id = part_id;
+    }
+
+    public String getCourt_services_form_no() {
+      return court_services_form_no;
+    }
+
+    public void setCourt_services_form_no(String court_services_form_no) {
+      this.court_services_form_no = court_services_form_no;
+    }
+
+    public String getFiltered_yn() {
+      return filtered_yn;
+    }
+
+    public void setFiltered_yn(String filtered_yn) {
+      this.filtered_yn = filtered_yn;
+    }
+
+    public String getRcc_ids() {
+      return rcc_ids;
+    }
+
+    public void setRcc_ids(String rcc_ids) {
+      this.rcc_ids = rcc_ids;
     }
 
 

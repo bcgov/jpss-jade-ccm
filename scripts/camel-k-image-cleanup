@@ -1,0 +1,95 @@
+#!/bin/bash
+
+ns_set="cef5dd"
+
+if [ "$1" = "" ]; then
+   echo "Error.  Environment must be specified"
+   echo "Usage: $0 <dev|test|prod>\n"
+   return 1
+fi
+
+env=$(echo $1 | tr '[:lower:]' '[:upper:]')
+env_lower=$(echo $1 | tr '[:upper:]' '[:lower:]')
+
+if [ "$env" = "DEV" ]; then
+elif [ "$env" = "TEST" ]; then
+elif [ "$env" = "PROD" ]; then
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1"
+   echo "Usage: $0 <dev|test|prod>\n"
+   return 1
+else
+   ns="$ns_set-$env_lower"
+fi
+
+# Confirm script execution if target is production
+if [ "$env" = "PROD" ]; then
+    echo "WARNING:  You are about to execute $0 in PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting image cleanup."
+        return 1
+    fi
+fi
+
+echo "\nExecuting $0 in $env environment ($ns namespace)...\n"
+
+# Get the list of camel-k-kit images
+image_list=($(oc -n $ns get is | grep 'camel-k-kit' | awk '{print $1}'))
+
+# Get the list of camel-k integrations (formatted as 'name phase kit')
+integration_list_tokens=($(kamel -n $ns get))
+integration_list=()
+if [ ${#integration_list_tokens[@]} -gt 4 ]; then
+    i=4
+    while [ $i -lt ${#integration_list_tokens[@]} ]; do
+        # Construct the integration_item as 'name phase kit'
+        integration_item="${integration_list_tokens[$i]} ${integration_list_tokens[$i+1]} ${integration_list_tokens[$i+2]}"
+
+        # Add to integration_list
+        integration_list+=("$integration_item")
+
+        # Increment i by 3
+        ((i+=3))
+    done
+fi
+
+total=${#image_list[@]}
+deleted=0
+
+# Loop through the list of images
+for image_name in $image_list
+do
+  # Get the Camel K kit name
+  kit_name=$(echo $image_name | sed 's/^camel-k-//')
+
+  echo "Checking image_name = '$image_name' ..."
+
+  keep_image_name=""
+
+  # Loop through the list of integrations
+  for integration_item in $integration_list
+  do
+    # Check if the image is in use by a camel-k integration
+    if [[ $integration_item == *"$kit_name"* ]]; then
+        integration_name=$(echo $integration_item | awk '{print $1}')
+        echo "In use by $integration_name"
+        keep_image_name=$image_name
+    fi
+  done
+
+  if [ -z $keep_image_name ]; then
+    ((deleted++))
+    echo "$image_name is NOT in use; Deleting ..."
+    oc -n $ns delete is $image_name
+  else
+    echo "... skipping image stream."
+  fi
+
+  echo ""
+done
+echo "$deleted / $total image streams deleted.\n"
