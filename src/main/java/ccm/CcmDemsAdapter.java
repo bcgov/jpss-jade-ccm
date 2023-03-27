@@ -1477,7 +1477,7 @@ private void processDocumentRecord() throws HttpOperationFailedException {
         exchange.getIn().setBody(decodedBytes);
         log.info("decodedBytes" + decodedBytes);
         log.info("decoded data");
-        String fileName = "myfile.txt";
+        String fileName = "myfile.pdf";
         String boundary = "simpleboundary";
         // byte[] fileContent = exchange.getMessage().getBody(byte[].class);
         String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
