@@ -40,27 +40,11 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
-import org.apache.camel.attachment.AttachmentMessage;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.http.entity.ContentType;
-import org.apache.camel.model.dataformat.Base64DataFormat;
-import org.apache.camel.model.dataformat.MimeMultipartDataFormat;
-import org.apache.camel.spi.CamelEvent.ExchangeEvent;
-//import org.apache.camel.reifier.dataformat.Base64DataFormatReifier;
-//import org.apache.camel.reifier.dataformat.MimeMultipartDataFormatReifier;
-import javax.activation.DataHandler;
-import javax.mail.util.ByteArrayDataSource;
-import javax.activation.DataSource;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMultipart;
 import java.nio.charset.StandardCharsets;
-//import org.apache.http.entity.mime.MultipartEntityBuilder;
-//import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.camel.support.builder.ValueBuilder;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.BaseEvent;
@@ -1462,24 +1446,20 @@ private void processDocumentRecord() throws HttpOperationFailedException {
     .setProperty("dems_case_id", jsonpath("$.caseId"))
     .setProperty("dems_record_id", jsonpath("$.recordId"))
     // decode the data element from Base64
-    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .log(LoggingLevel.DEBUG,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    .log(LoggingLevel.DEBUG,"dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
-  //.setHeader(Exchange.HTTP_METHOD, constant("POST"))
-    //.setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception{
         DemsRecordDocumentData b = exchange.getIn().getBody(DemsRecordDocumentData.class);
-        //exchange.getMessage().setBody(b.getData());
-        log.info("about to decode data"+ b.getData());
+        //log.info("about to decode data"+ b.getData());
         byte[] decodedBytes = Base64.getDecoder().decode(b.getData());
         exchange.getIn().setBody(decodedBytes);
-        log.info("decodedBytes" + decodedBytes);
-        log.info("decoded data");
+        //log.info("decodedBytes" + decodedBytes);
+        //log.info("decoded data");
         String fileName = "myfile.pdf";
         String boundary = "simpleboundary";
-        // byte[] fileContent = exchange.getMessage().getBody(byte[].class);
         String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
         String multipartFooter = "\r\n" + "--" + boundary + "--";
         byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
@@ -1498,15 +1478,12 @@ private void processDocumentRecord() throws HttpOperationFailedException {
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    //.setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    //.marshal().mimeMultipart()
-    .log(LoggingLevel.INFO,"Creating DEMS case record (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
-    .log(LoggingLevel.INFO, "headers: ${headers}")
-    .log(LoggingLevel.INFO, "body: ${body}")
-    //.to("file:output?fileName=debug.txt")
+    .log(LoggingLevel.DEBUG,"Creating DEMS case record (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "body: ${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
-    .log(LoggingLevel.INFO,"DEMS case record streamed. ${body}")
+    .log(LoggingLevel.DEBUG,"DEMS case record streamed. ${body}")
     ;
   }
 
