@@ -5,6 +5,7 @@ import java.util.List;
 import ccm.models.common.event.ReportEvent.REPORT_TYPES;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
+import ccm.models.common.data.document.ImageDocumentData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
@@ -210,6 +211,79 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }        
+        setFields(fieldData);
+    }
+
+    public DemsRecordData(ImageDocumentData nrd) {
+        // find the report type
+        REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        if(report != null) {
+            if(nrd.getForm_type_description() != null) {
+                setDescriptions(nrd.getForm_type_description().toUpperCase());
+
+                if(report.equals(REPORT_TYPES.INFORMATION)) {
+                    setType("COURT RECORD");
+                } else if(report.equals(REPORT_TYPES.DOCUMENT)) {
+                    if(nrd.getForm_type_description().contains("Release")) {
+                        setType("STATEMENT");
+                    } else {
+                        setType("COURT RECORD");
+                    }
+                }
+            }
+
+            if(report.equals(REPORT_TYPES.INFORMATION)) {
+                setStartDate(nrd.getSworn_date());
+            } else {
+                setStartDate(nrd.getIssue_date());
+            }
+        }
+
+
+        setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        setSource("JUSTIN");
+        setFolder("JUSTIN");
+        //setLocation(nrd.getLocation());
+        setFileExtension(".pdf");
+        setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+        
+        if(getDocumentId() != null) {
+            DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
+            fieldData.add(documentId);
+        }
+        if(getType() != null) {
+            DemsFieldData type = new DemsFieldData("Type", getType());
+            fieldData.add(type);
+        }
+        if(getDescriptions() != null) {
+            DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
+            fieldData.add(descriptions);
+        }
+        if(getTitle() != null) {
+            DemsFieldData title = new DemsFieldData("Title", getTitle());
+            fieldData.add(title);
+        }
+        if(getStartDate() != null) {
+            DemsFieldData startDate = new DemsFieldData("Start Date", getStartDate());
+            fieldData.add(startDate);
+        }
+        if(getDateToCrown() != null) {
+            DemsFieldData dateToCrown = new DemsFieldData("Date To Crown", getDateToCrown());
+            fieldData.add(dateToCrown);
+        }
+        if(getSource() != null) {
+            DemsFieldData source = new DemsFieldData("Source", getSource());
+            fieldData.add(source);
+        }
+        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
+        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+        //fieldData.add(location);
+        //fieldData.add(folder);
+        
         setFields(fieldData);
     }
 

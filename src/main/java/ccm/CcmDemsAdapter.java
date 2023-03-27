@@ -44,6 +44,7 @@ import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
+import ccm.models.common.data.document.ImageDocumentData;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.models.system.justin.JustinDocumentList;
@@ -281,8 +282,10 @@ public class CcmDemsAdapter extends RouteBuilder {
       .jsonpath("$.mdoc_justin_no")
     .setHeader("rcc_ids")
       .jsonpath("$.rcc_ids")
+    .setHeader("image_id")
+      .jsonpath("$.image_id")
     .setHeader("event_message_id")
-        .jsonpath("$.justin_event_message_id")
+      .jsonpath("$.justin_event_message_id")
     .setProperty("report_type", simple("${headers[report_type]}"))
     .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
     .setHeader("event").simple("${body}")
@@ -297,51 +300,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
-      .when(header("rcc_id").isNotNull()) // static rcc based reports
-        .setProperty("kpi_component_route_name", simple("processReportEvents"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-            
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-        .to("direct:processDocumentRecord")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .when(header("mdoc_justin_no").isNotNull()) // static mdoc based reports
-        .setProperty("kpi_component_route_name", simple("processReportEvents"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-            
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-        .to("direct:processDocumentRecord")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .when(header("rcc_ids").isNotNull()) // rcc id list based reports
+      .when(header("report_type").isNotNull()) // static rcc based reports
         .setProperty("kpi_component_route_name", simple("processReportEvents"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -420,6 +379,13 @@ public class CcmDemsAdapter extends RouteBuilder {
             log.info("processing into charge assessment document record");
             ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, jdl);
             DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+            ex.getMessage().setBody(demsRecord);
+          } else if(jdl.getPrimary_rcc_id() != null) {
+            log.info("processing into charge assessment document record");
+            ImageDocumentData commonDocument = new ImageDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+            ex.getMessage().setHeader("rcc_id", jdl.getPrimary_rcc_id());
 
             ex.getMessage().setBody(demsRecord);
           } else {

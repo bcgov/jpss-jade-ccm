@@ -7,6 +7,7 @@ public class JustinDocumentKey {
   private String part_id;
   private String mdoc_justin_no;
   private String image_id;
+  private String docm_id;
   private String court_agen_id;
   private String sequence_numbers;
   private String report_types;
@@ -52,6 +53,14 @@ public class JustinDocumentKey {
 
   public void setImage_id(String image_id) {
     this.image_id = image_id;
+  }
+
+  public String getDocm_id() {
+    return docm_id;
+  }
+
+  public void setDocm_id(String docm_id) {
+    this.docm_id = docm_id;
   }
 
   public String getCourt_agen_id() {
