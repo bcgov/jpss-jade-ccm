@@ -183,6 +183,9 @@ ACCUSED_HISTORY_REPORT
           // unknown status
           setEvent_status("");
       }
+      if(je.getMessage_event_type_cd().equals(STATUS.DOCM.name())) {
+        this.setReport_type("DOCUMENT");
+      }
       
       Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
       while(i.hasNext()) {

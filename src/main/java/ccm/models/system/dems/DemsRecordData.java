@@ -239,6 +239,12 @@ public class DemsRecordData {
             }
         }
 
+        if(report.equals(REPORT_TYPES.INFORMATION) && nrd.getCourt_file_number() != null) {
+            //$MAPID67 $MAPID69
+            setTitle(nrd.getCourt_file_number());
+        } else {
+            setTitle(nrd.getParticipant_name() + " " + nrd.getCourt_file_number());
+        }
 
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");

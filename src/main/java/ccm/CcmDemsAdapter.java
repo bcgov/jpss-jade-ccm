@@ -236,13 +236,16 @@ public class CcmDemsAdapter extends RouteBuilder {
        error.setError_summary("Unable to process event., general Exception raised.");
        error.setError_code("General Exception");
        error.setError_details(event);
-       exchange.getException().printStackTrace();
+       Exception ex = exchange.getException();
+       if(ex != null) {
+        ex.printStackTrace();
+       }
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
         
-        kpi.setEvent_topic_name(kafkaTopic);
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -281,12 +284,8 @@ public class CcmDemsAdapter extends RouteBuilder {
       .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
-    .setHeader("report_type")
-      .jsonpath("$.report_type")
     .setHeader("rcc_id")
       .jsonpath("$.justin_rcc_id")
-    .setHeader("part_id")
-      .jsonpath("$.part_id")
     .setHeader("mdoc_justin_no")
       .jsonpath("$.mdoc_justin_no")
     .setHeader("rcc_ids")
@@ -295,21 +294,20 @@ public class CcmDemsAdapter extends RouteBuilder {
       .jsonpath("$.image_id")
     .setHeader("event_message_id")
       .jsonpath("$.justin_event_message_id")
-    .setProperty("report_type", simple("${headers[report_type]}"))
     .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
     .setHeader("event").simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .log(LoggingLevel.INFO, "report_type = ${header[report_type]}")
     .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]}")
     .log(LoggingLevel.INFO, "part_id = ${header[part_id]}")
     .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
     .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
+    .log(LoggingLevel.INFO, "image_id = ${header[image_id]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
-      .when(header("report_type").isNotNull()) // static rcc based reports
+      .when(header("event_status").isNotNull())
         .setProperty("kpi_component_route_name", simple("processReportEvents"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
@@ -361,8 +359,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("justin_document", simple("${bodyAs(String)}"))
 
-    // TODO: for cases like witness statement, there can be multiple docs returned.
-    // need to refactor this to split through each of the documents.
+    // For cases like witness statement, there can be multiple docs returned.
+    // This will split through each of the documents and process them individually.
 
 
     .setProperty("create_date") .jsonpath("$.create_date")
@@ -371,8 +369,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Parsing through justin documents")
     .split()
       .jsonpathWriteAsString("$.documents")
-      .log(LoggingLevel.INFO,"Parsing through justin documents")
-      //.log(LoggingLevel.INFO,"Body: ${body}")
+      .log(LoggingLevel.INFO,"Parsing through single justin document")
+      .log(LoggingLevel.DEBUG,"Body: ${body}")
 
 
       .unmarshal().json(JsonLibrary.Jackson, JustinDocument.class)
@@ -394,7 +392,14 @@ public class CcmDemsAdapter extends RouteBuilder {
             log.info("processing into charge assessment document record");
             ImageDocumentData commonDocument = new ImageDocumentData(event_message_id, create_date, jdl);
             DemsRecordData demsRecord = new DemsRecordData(commonDocument);
-            ex.getMessage().setHeader("rcc_id", jdl.getPrimary_rcc_id());
+            ex.getMessage().setHeader("primary_rcc_id", jdl.getPrimary_rcc_id());
+
+            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+            if(commonDocument.getMdoc_justin_no() != null && mdoc_justin_no == null) {
+              ex.getMessage().setHeader("mdoc_justin_no", jdl.getMdoc_justin_no());
+            }
+
+            ex.setProperty("image_document", commonDocument);
 
             ex.getMessage().setBody(demsRecord);
           } else {
@@ -441,6 +446,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
       .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
       .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
+      .log(LoggingLevel.INFO,"image_id: ${header[image_id]}")
       .log(LoggingLevel.INFO,"Generating derived dems record: ${body}")
       .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
       .choice()
@@ -467,26 +473,46 @@ public class CcmDemsAdapter extends RouteBuilder {
             @Override
             public void process(Exchange ex) {
               CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+              ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
               CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
-              ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
-              // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
-              DemsRecordData demsRecord = new DemsRecordData(ccdd);
+              DemsRecordData demsRecord = null;
+              if(ccdd != null) { // This is an mdoc based report
+                ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
+                // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                demsRecord = new DemsRecordData(ccdd);
+              } else if(id != null) { // This is a primary_rcc_id based report
+                id.setCourt_file_number(cdd.getCourt_file_number_seq_type());
+                // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                demsRecord = new DemsRecordData(id);
+              }
               ex.getMessage().setBody(demsRecord);
             }
 
           })
           .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
           .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
-    
-          .setBody(simple("${exchangeProperty.metadata_data}"))
-          .split()
-            .jsonpathWriteAsString("$.related_agency_file")
-            .setProperty("rcc_id",jsonpath("$.rcc_id"))
-            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-            .setBody(simple("${exchangeProperty.dems_record}"))
-            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-            .to("direct:createDocumentRecord")
-          .end()
+          // 2 possible cases, this is an mdoc based record, or a primary_rcc_id one.
+          // in case of mdoc, go through list of rcc_ids returned from metadata, and add file to each.
+          // in case of the primary_rcc_id on, just call for that particular record.
+          .choice()
+            .when(simple("${header.primary_rcc_id} != null"))
+              .log(LoggingLevel.INFO,"Primary RCC based report")
+
+              .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
+              .setHeader("number", simple("${header[rcc_id]}"))
+              .to("direct:createDocumentRecord")
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.metadata_data}"))
+              .split()
+                .jsonpathWriteAsString("$.related_agency_file")
+                .setProperty("rcc_id",jsonpath("$.rcc_id"))
+                .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+                .setBody(simple("${exchangeProperty.dems_record}"))
+                .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+                .to("direct:createDocumentRecord")
+              .end()
+            .endChoice()
 
           .endChoice()
         .when(simple("${header.rcc_ids} != null"))
@@ -1625,8 +1651,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("dems_case_id", jsonpath("$.caseId"))
     .setProperty("dems_record_id", jsonpath("$.recordId"))
     // decode the data element from Base64
-    .log(LoggingLevel.DEBUG,"dems_case_id: ${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.DEBUG,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
     .process(new Processor() {
       @Override
