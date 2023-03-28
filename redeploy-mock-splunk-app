@@ -1,4 +1,7 @@
+echo "starting Mock Splunk App on port 4413"
+
 ns_set="cef5dd"
+
 
 if [ "$1" = "dev" ]; then
     env="dev"
@@ -6,6 +9,8 @@ elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -25,26 +30,17 @@ if [ "$env" = "prod" ]; then
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
         return 1
-    else
-        echo "PRODUCTION deployment not supported at this time."
-        return 1
     fi
 else
-    logging_level="DEBUG"
-    #logging_level="INFO"
+    #logging_level="DEBUG" 
+    logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/mock
+if [ "$env" = "local" ]; then 
 
-kamel -n $ns delete mock-justin-app
-kamel -n $ns run \
-  MockDemsApp.java \
-  --property file:MockJustinApp.properties \
-  --profile openshift \
-  --trait logging.level=$logging_level \
-  --trait environment.vars=TZ="Canada/Pacific" \
-  --trait service.node-port=false
-
+camel run  --properties=MockSplunkApp.properties  --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console MockSplunkApp.java  --port 4413 "$OLDPWD"/src/main/java/ccm/local/local.properties
+fi
 popd

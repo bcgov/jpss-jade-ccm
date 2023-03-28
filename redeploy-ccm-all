@@ -2,6 +2,9 @@ if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
     env="test"
+
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
