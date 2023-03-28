@@ -14,8 +14,9 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
-collections approved_court_cases_topic as "Approved Court Case Events"
+collections court_cases_topic as "Court Case Events"
 collections case_users_topic as "Case User Events"
+collections reports_topic as "Report Events"
 
 title
 CCM JUSTIN Event Processing Sequence Diagram
@@ -40,15 +41,19 @@ loop Every 5 minutes
         else AUTH_LIST
             j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
         else COURT_FILE
-            j_adapter ->o approved_court_cases_topic: Produce CHANGED event
+            j_adapter ->o court_cases_topic: Produce CHANGED event
         else APPR
-            j_adapter ->o approved_court_cases_topic: Produce APPEARANCE_CHANGED event
+            j_adapter ->o court_cases_topic: Produce APPEARANCE_CHANGED event
         else CRN_ASSIGN
-            j_adapter ->o approved_court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
+            j_adapter ->o court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
         else USER_PROV
             j_adapter ->o case_users_topic: Produce ACCESS_ADDED event
         else USER_DPROV
             j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
+        else REPORT
+            j_adapter ->o reports_topic: Produce REPORT event
+        else DOCM
+            j_adapter ->o reports_topic: Produce DOCM event
         else Unknown JUSTIN Event
             j_adapter -> j_adapter: No operation (future functionality)
         end
@@ -61,6 +66,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated March 28, 2023
 end caption
 @enduml
