@@ -1,8 +1,6 @@
 package ccm.models.common.event;
 
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
@@ -24,7 +22,8 @@ public class ReportEvent extends BaseEvent{
     private String court_services_form_no;
     private String filtered_yn;
     private String rcc_ids;
-
+    private String image_id;
+    private String docm_id;
 
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
     public static final String JUSTIN_GUID = "GUID";
@@ -39,6 +38,8 @@ public class ReportEvent extends BaseEvent{
     public static final String COURT_SERVICE_FORM = "COURT_SERVICES_FORM_NO";
     public static final String FILTERED_YN = "FILTERED_YN";
     public static final String RCC_IDS = "RCC_IDS";
+    public static final String IMAGE_ID = "IMAGE_ID";
+    public static final String DOCM_ID = "DOCM_ID";
   
     public enum SOURCE {
       JUSTIN,
@@ -46,7 +47,8 @@ public class ReportEvent extends BaseEvent{
     }
     
     public enum STATUS {
-      REPORT;
+      REPORT,
+      DOCM;
     }
 
     public enum REPORT_TYPES {
@@ -66,7 +68,10 @@ public class ReportEvent extends BaseEvent{
       CLIENT_HISTORY_REPORT_DISPOSITION("CLIENT HISTORY REPORT - DISPOSITION AND REPORTS"),
       CLIENT_HISTORY_REPORT_FULL("CLIENT HISTORY REPORT - FULL"),
       FILE_SUMMARY_REPORT("FILE SUMMARY REPORT"),
-      ACCUSED_HISTORY_REPORT("ACCUSED HISTORY REPORT");
+      ACCUSED_HISTORY_REPORT("ACCUSED HISTORY REPORT"),
+
+      INFORMATION("SWORN INFORMATION"),
+      DOCUMENT("DOCUMENT");
 /*
 NARRATIVE
 WITNESS_STATEMENT
@@ -125,7 +130,8 @@ ACCUSED_HISTORY_REPORT
       setJustin_message_event_type_cd(je.getMessage_event_type_cd());
       setJustin_event_dtm(je.getEvent_dtm());
 
-      if(je.getMessage_event_type_cd().equals("REPORT")) {
+      if(je.getMessage_event_type_cd().equals(STATUS.REPORT.name()) ||
+         je.getMessage_event_type_cd().equals(STATUS.DOCM.name())) {
 
         setEvent_status(je.getMessage_event_type_cd());
         if (je.getEvent_data() != null) {
@@ -164,12 +170,21 @@ ACCUSED_HISTORY_REPORT
               case REPORT_URL:
                 this.setReport_url(dataElement.getData_value_txt());
                 break;
+              case IMAGE_ID:
+                this.setImage_id(dataElement.getData_value_txt());
+                break;
+              case DOCM_ID:
+                this.setDocm_id(dataElement.getData_value_txt());
+                break;
             }
           }
         }
       } else {
           // unknown status
           setEvent_status("");
+      }
+      if(je.getMessage_event_type_cd().equals(STATUS.DOCM.name())) {
+        this.setReport_type("DOCUMENT");
       }
       
       Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
@@ -206,17 +221,8 @@ ACCUSED_HISTORY_REPORT
       this.justin_guid = another.justin_guid;
       this.justin_rcc_id = another.justin_rcc_id;
     }
-  
-    public ReportEvent(SOURCE source, CaseUserEvent another) {
-      super(source.name(), another);
-  
-      this.justin_event_message_id = another.getJustin_event_message_id();
-      this.justin_message_event_type_cd = another.getJustin_message_event_type_cd();
-      this.justin_event_dtm = another.getJustin_event_dtm();
-      this.justin_fetched_date = another.getJustin_fetched_date();
-      this.justin_guid = another.getJustin_guid();
-    }
-  
+
+
     public int getJustin_event_message_id() {
       return justin_event_message_id;
     }
@@ -353,5 +359,20 @@ ACCUSED_HISTORY_REPORT
       this.rcc_ids = rcc_ids;
     }
 
+    public String getImage_id() {
+      return image_id;
+    }
+
+    public void setImage_id(String image_id) {
+      this.image_id = image_id;
+    }
+
+    public String getDocm_id() {
+      return docm_id;
+    }
+
+    public void setDocm_id(String docm_id) {
+      this.docm_id = docm_id;
+    }
 
 }

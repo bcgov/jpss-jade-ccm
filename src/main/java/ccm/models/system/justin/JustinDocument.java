@@ -10,6 +10,8 @@ public class JustinDocument {
   private String part_id;
   private String participant_name;
   private String mdoc_justin_no;
+  private String primary_rcc_id;
+  private String image_id;
   private String submit_date;
   private String agency_file_no;
   private String rcc_ids;
@@ -28,8 +30,10 @@ public class JustinDocument {
   private String filed_by;
   private String sworn_date;
   private String form_type_cd;
+  private String form_type_code;
   private String form_type_description;
   private String court_file_no;
+  private String court_file_number;
   private String document_id;
   private String court_services_form_no;
   private String issue_date;
@@ -46,6 +50,7 @@ public class JustinDocument {
   private String report_object_url;
 
   private String active_yn;
+
 
   public String getReport_type() {
     return report_type;
@@ -101,6 +106,22 @@ public class JustinDocument {
 
   public void setMdoc_justin_no(String mdoc_justin_no) {
     this.mdoc_justin_no = mdoc_justin_no;
+  }
+
+  public String getPrimary_rcc_id() {
+    return primary_rcc_id;
+  }
+
+  public void setPrimary_rcc_id(String primary_rcc_id) {
+    this.primary_rcc_id = primary_rcc_id;
+  }
+
+  public String getImage_id() {
+    return image_id;
+  }
+
+  public void setImage_id(String image_id) {
+    this.image_id = image_id;
   }
 
   public String getSubmit_date() {
@@ -231,6 +252,14 @@ public class JustinDocument {
     this.form_type_cd = form_type_cd;
   }
 
+  public String getForm_type_code() {
+    return form_type_code;
+  }
+
+  public void setForm_type_code(String form_type_code) {
+    this.form_type_code = form_type_code;
+  }
+
   public String getForm_type_description() {
     return form_type_description;
   }
@@ -245,6 +274,14 @@ public class JustinDocument {
 
   public void setCourt_file_no(String court_file_no) {
     this.court_file_no = court_file_no;
+  }
+
+  public String getCourt_file_number() {
+    return court_file_number;
+  }
+
+  public void setCourt_file_number(String court_file_number) {
+    this.court_file_number = court_file_number;
   }
 
   public String getDocument_id() {
