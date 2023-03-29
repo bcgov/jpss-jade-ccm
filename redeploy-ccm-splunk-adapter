@@ -37,7 +37,7 @@ echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
-    camel run  --properties=ccmSplunkAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmSplunkAdapter.java --port 4416 local/local.properties
+    camel run  --properties=ccmSplunkAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmSplunkAdapter.java --port 4416 local/local.properties 
     
 else
 kamel -n $ns delete ccm-splunk-adapter
