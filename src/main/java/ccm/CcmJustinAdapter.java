@@ -378,7 +378,21 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.main.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
-    .to("direct:processJustinMainEvents")
+
+    // process events
+    .setProperty("numOfEvents")
+      .jsonpath("$.events.length()")
+    .loopDoWhile(simple("${exchangeProperty.numOfEvents} > 0"))
+      .to("direct:processJustinMainEvents")
+
+      // check to see if there are more events to process
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+      .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.main.name}}") // mark all new events as "in progress"
+      .setProperty("numOfEvents")
+        .jsonpath("$.events.length()")
+    .end()
     ;
   }
 
@@ -410,6 +424,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
       .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.bulk.name}}") // mark all new events as "in progress"
+      .setProperty("numOfEvents")
+        .jsonpath("$.events.length()")
     .end()
     ;
   }
