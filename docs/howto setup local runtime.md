@@ -15,7 +15,7 @@ Before attempting to run locally, the JADE-Events instructions above will have t
 
 1. Follow the instructions here https://camel.apache.org/manual/camel-jbang.html to install JBang and Camel JBang.
 
-2. After making your changes to the Jade CCM classes you will have to run the jpss-jade-ccm/build-install-ccm-models script which will 
+2. After making your changes to the Jade CCM classes, you will have to run the jpss-jade-ccm/build-install-ccm-models script which will:
     a) rebuild ccm-models.jar file
     b) install in the local Maven repository
 
@@ -30,11 +30,8 @@ Before attempting to run locally, the JADE-Events instructions above will have t
 ./redeploy-ccm-notification-service local
 ./redeploy-ccm-splunk-adapter local
 ./redeploy-ccm-justin-adapter local
+./redeploy-ccm-pidp-adapter local (this will require more set up for pidp specific end points, likely to need a mock PIDPAdapter )
 
-For the Mock services , run : 
-./redeploy-mock-dems-app local
-./redeploy-mock-justin-app local
-./redeploy-mock-splunk-app local
 
 Please note these will ALL have to be run in a separate console window and using Bash. 
 
