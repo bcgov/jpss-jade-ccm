@@ -35,7 +35,7 @@ else
 fi
 
 echo "`basename $0` to $ns ..."
-
+ 
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
     camel run  --properties=ccmDemsAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmDemsAdapter.java --port 4414 local/local.properties
