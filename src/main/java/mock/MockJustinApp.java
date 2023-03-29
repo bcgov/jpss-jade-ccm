@@ -78,7 +78,7 @@ public class MockJustinApp extends RouteBuilder {
     .log(LoggingLevel.INFO,"version query request received")
     .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setBody().simple("{ \"[]\" }")
+    .setBody().simple("{ \"events\": [] }")
     .log(LoggingLevel.DEBUG,"Response: ${body}");
   }
 
@@ -92,7 +92,7 @@ public class MockJustinApp extends RouteBuilder {
     .log(LoggingLevel.INFO,"version query request received")
     .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setBody().simple("{ \"[]\" }")
+    .setBody().simple("{ \"events\": [] }")
     .log(LoggingLevel.DEBUG,"Response: ${body}");
   }
 
