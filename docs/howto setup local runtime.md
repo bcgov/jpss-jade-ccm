@@ -11,6 +11,7 @@ This document provides instructions around how to run JADE-CCM locally.
         - broker
 
 ## Deploy JADE-CCM locally
+Before attempting to run locally, the JADE-Events instructions above will have to be carried out for a local Kafka server to be established. 
 
 1. Follow the instructions here https://camel.apache.org/manual/camel-jbang.html to install JBang and Camel JBang.
 
@@ -23,5 +24,17 @@ This document provides instructions around how to run JADE-CCM locally.
     b) ./redeploy-mock-justin-app local
     c) ./redeploy-mock-splunk-app local
 
-4. Run the redeploy script for the program you which to have running locally. For example, for DEMS Adapter run : 
+4. Run the redeploy script for the program you which to have running locally. For example, these could be run: 
 ./redeploy-ccm-dems-adapter local
+./redeploy-ccm-lookup-service local
+./redeploy-ccm-notification-service local
+./redeploy-ccm-splunk-adapter local
+./redeploy-ccm-justin-adapter local
+
+For the Mock services , run : 
+./redeploy-mock-dems-app local
+./redeploy-mock-justin-app local
+./redeploy-mock-splunk-app local
+
+Please note these will ALL have to be run in a separate console window and using Bash. 
+
