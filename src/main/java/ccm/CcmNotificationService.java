@@ -32,12 +32,14 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
+import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.ReportEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -362,6 +364,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
@@ -946,6 +950,28 @@ public class CcmNotificationService extends RouteBuilder {
           .endChoice()
       .end()
     .end()
+    .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
+    // create Report Event for an INFORMATION type report.
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+        ReportEvent re = new ReportEvent();
+        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+        re.setEvent_key(bcm.getCourt_file_id());
+        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+        re.setMdoc_justin_no(bcm.getCourt_file_id());
+        re.setReport_type(ReportEvent.REPORT_TYPES.INFORMATION.name());
+        exchange.getMessage().setBody(re, ReportEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .to("kafka:{{kafka.topic.reports.name}}")
     ;
   }
 
@@ -956,12 +982,12 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .log(LoggingLevel.INFO,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
@@ -1135,7 +1161,28 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
     .end()
-
+    .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
+    // create Report Event for an INFORMATION type report.
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+        ReportEvent re = new ReportEvent();
+        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+        re.setEvent_key(bcm.getCourt_file_id());
+        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+        re.setMdoc_justin_no(bcm.getCourt_file_id());
+        re.setReport_type(ReportEvent.REPORT_TYPES.INFORMATION.name());
+        exchange.getMessage().setBody(re, ReportEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .to("kafka:{{kafka.topic.reports.name}}")
     ;
   }
 
