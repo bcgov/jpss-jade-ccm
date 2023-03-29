@@ -998,20 +998,9 @@ public class CcmNotificationService extends RouteBuilder {
           .to("direct:processChargeAssessmentCreated")
         .endChoice()
         .otherwise()
-          .process(new Processor() {
-            @Override
-            public void process(Exchange ex) {
-
-              ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
-              derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.UPDATED.toString());
-              derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
-
-              ex.getMessage().setBody(derived_event);
-            }
-          })
           .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
           .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-          .to("direct:processChargeAssessmentUpdated")
+          .to("direct:processCourtCaseAuthListChanged")
         .endChoice()
       .end()
       // grab the case mappings from justin, for overriding case flags.
