@@ -950,7 +950,7 @@ public class CcmNotificationService extends RouteBuilder {
           .endChoice()
       .end()
     .end()
-    .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
+    /*.log(LoggingLevel.INFO, "Create ReportEvent for Information report")
     // create Report Event for an INFORMATION type report.
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
@@ -971,7 +971,7 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-    .to("kafka:{{kafka.topic.reports.name}}")
+    .to("kafka:{{kafka.topic.reports.name}}")*/
     ;
   }
 
@@ -1161,7 +1161,7 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
     .end()
-    .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
+    /*.log(LoggingLevel.INFO, "Create ReportEvent for Information report")
     // create Report Event for an INFORMATION type report.
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
@@ -1182,7 +1182,7 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-    .to("kafka:{{kafka.topic.reports.name}}")
+    .to("kafka:{{kafka.topic.reports.name}}")*/
     ;
   }
 
