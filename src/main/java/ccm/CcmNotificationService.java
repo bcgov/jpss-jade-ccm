@@ -426,14 +426,13 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO, "Inside processChargeAssessmentChanged")
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-    .log(LoggingLevel.INFO,"overrideFlag = ${exchangeProperty.overrideFlag}")
+    .log(LoggingLevel.DEBUG,"overrideFlag = ${exchangeProperty.overrideFlag}")
     .choice()
       .when(simple("${exchangeProperty.autoCreateFlag} == 'true' || ${exchangeProperty.caseFound} != '' || ${exchangeProperty.overrideFlag} == 'true'"))
         .process(new Processor() {
@@ -493,7 +492,6 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO, "Inside processManualChargeAssessmentChanged")
     .setProperty("overrideFlag", simple("true"))
     .to("direct:processChargeAssessmentChanged")
     ;
@@ -815,7 +813,6 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO, "Inside processCourtCaseChanged")
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -836,7 +833,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
       .setProperty("caseFound").simple("${body[id]}")
       .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-      .log(LoggingLevel.INFO,"overrideFlag = ${exchangeProperty.overrideFlag}")
+      .log(LoggingLevel.DEBUG,"overrideFlag = ${exchangeProperty.overrideFlag}")
       .choice()
         .when(simple("${exchangeProperty.autoCreateFlag} == 'true' && ${exchangeProperty.caseFound} == '' && ${exchangeProperty.overrideFlag} == 'true'"))
         .process(new Processor() {
@@ -921,7 +918,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO, "Inside processManualCourtCaseChanged")
+    .log(LoggingLevel.DEBUG, "Inside processManualCourtCaseChanged")
     .setProperty("overrideFlag", simple("true"))
     .to("direct:processCourtCaseChanged")
 
