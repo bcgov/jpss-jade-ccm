@@ -46,11 +46,15 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.justin.*;
 import ccm.utils.DateTimeUtils;
+import ccm.models.common.versioning.Version;
 
 public class CcmJustinAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     attachExceptionHandlers();
+
+    version();
+
     courtFileCreated();
     healthCheck();
     //readRCCFileSystem();
@@ -214,6 +218,23 @@ public class CcmJustinAdapter extends RouteBuilder {
    .end();
 
  }
+
+ private void version() {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  // IN: header = id
+  from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
+  .routeId(routeId)
+  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  .process(new Processor() {
+    @Override
+    public void process(Exchange exchange) throws Exception {
+      exchange.getMessage().setBody(Version.V1_0.toString());
+    }
+  })
+  ;
+}
 
  private String getKafkaTopicByEventType(String eventType ) {
   String kafkaTopic = "ccm-general-errors";
