@@ -987,7 +987,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log(LoggingLevel.INFO,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
