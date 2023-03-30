@@ -1,8 +1,10 @@
 package ccm.models.common.event;
 
 import java.util.Iterator;
+
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
+import ccm.utils.DateTimeUtils;
 
 public class ReportEvent extends BaseEvent{
     private int justin_event_message_id;
@@ -119,6 +121,7 @@ ACCUSED_HISTORY_REPORT
   
     public ReportEvent() {
       super();
+      setJustin_event_dtm(DateTimeUtils.generateCurrentDtm());
     }
   
     public ReportEvent(JustinEvent je) {

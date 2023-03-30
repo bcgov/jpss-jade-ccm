@@ -146,7 +146,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"NARRATIVE,WITNESS_STATEMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50286.0734\",\r\n\t\t\t\"report_types\": \"CPIC_DOC,NARRATIVE\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"part_id\": \"115700.0734\",\r\n\t\t\t\"docm_id\": \"\",\r\n\t\t\t\"mdoc_justin_no\": \"\",\r\n\t\t\t\"report_types\": \"INFORMATION,RELEASE_DOCUMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"part_id\": \"112817.0734\",\r\n\t\t\t\"court_agen_id\": \"83.0001\",\r\n\t\t\t\"court_file_no\": \"20200709\",\r\n\t\t\t\"court_level_cd\": \"P\",\r\n\t\t\t\"court_class_cd\": \"A\",\r\n\t\t\t\"ticket_series_txt\": \"\",\r\n\t\t\t\"ref_type_cd\": \"\",\r\n\t\t\t\"info_seq_no\": \"1\",\r\n\t\t\t\"report_types\": \"RECORD_OF_PROCEEDINGS\"\r\n\t\t}\r\n\t]\r\n}",
+					"raw": "{\r\n    \"document_keys\": [\r\n        {\r\n            \"mdoc_justin_no\": \"40020\",\r\n            \"report_types\": \"INFORMATION\"\r\n        }\r\n    ]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -154,21 +154,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -182,7 +172,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"NARRATIVE,WITNESS_STATEMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50286.0734\",\r\n\t\t\t\"report_types\": \"CPIC_DOC,NARRATIVE\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"part_id\": \"115700.0734\",\r\n\t\t\t\"docm_id\": \"\",\r\n\t\t\t\"mdoc_justin_no\": \"\",\r\n\t\t\t\"report_types\": \"INFORMATION,RELEASE_DOCUMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"part_id\": \"112817.0734\",\r\n\t\t\t\"court_agen_id\": \"83.0001\",\r\n\t\t\t\"court_file_no\": \"20200709\",\r\n\t\t\t\"court_level_cd\": \"P\",\r\n\t\t\t\"court_class_cd\": \"A\",\r\n\t\t\t\"ticket_series_txt\": \"\",\r\n\t\t\t\"ref_type_cd\": \"\",\r\n\t\t\t\"info_seq_no\": \"1\",\r\n\t\t\t\"report_types\": \"RECORD_OF_PROCEEDINGS\"\r\n\t\t}\r\n\t]\r\n}",
+					"raw": "{\"document_keys\":\r\n[\r\n    {\r\n        \"image_id\": \"39954.0734\",\r\n        \"report_types\": \"DOCUMENT\"\r\n    }\r\n]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -190,21 +180,37 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
+						"imageDataGet"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DEMS Image Sentence Doc",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"document_keys\":\r\n[\r\n    {\r\n        \"image_id\": \"39639.0734\",\r\n        \"report_types\": \"DOCUMENT\"\r\n    }\r\n]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
 						"imageDataGet"
 					]
 				}
@@ -218,7 +224,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"NARRATIVE,WITNESS_STATEMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50286.0734\",\r\n\t\t\t\"report_types\": \"CPIC_DOC,NARRATIVE\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"part_id\": \"115700.0734\",\r\n\t\t\t\"docm_id\": \"\",\r\n\t\t\t\"mdoc_justin_no\": \"\",\r\n\t\t\t\"report_types\": \"INFORMATION,RELEASE_DOCUMENT\"\r\n\t\t},\r\n\t\t{\r\n\t\t\t\"part_id\": \"112817.0734\",\r\n\t\t\t\"court_agen_id\": \"83.0001\",\r\n\t\t\t\"court_file_no\": \"20200709\",\r\n\t\t\t\"court_level_cd\": \"P\",\r\n\t\t\t\"court_class_cd\": \"A\",\r\n\t\t\t\"ticket_series_txt\": \"\",\r\n\t\t\t\"ref_type_cd\": \"\",\r\n\t\t\t\"info_seq_no\": \"1\",\r\n\t\t\t\"report_types\": \"RECORD_OF_PROCEEDINGS\"\r\n\t\t}\r\n\t]\r\n}",
+					"raw": "{\"document_keys\":[{\"rcc_id\":null,\"part_id\":null,\"mdoc_justin_no\":null,\"image_id\":\"39954.0734\",\"docm_id\":null,\"court_agen_id\":null,\"sequence_numbers\":null,\"report_types\":null,\"report_title\":null,\"filtered_yn\":null,\"report_object_url\":null,\"active_yn\":null,\"rcc_ids\":null,\"court_services_form_no\":null,\"participant_name\":null,\"generation_date\":null}]}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -226,21 +232,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -290,7 +286,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"NARRATIVE\"\r\n\t\t}\r\n    ]\r\n}",
+					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"SYNOPSIS\"\r\n\t\t}\r\n    ]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -298,21 +294,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -326,7 +312,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50569.0734\",\r\n\t\t\t\"report_types\": \"WITNESS_STATEMENT\"\r\n\t\t}\r\n    ]\r\n}",
+					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50610.0734\",\r\n\t\t\t\"report_types\": \"WITNESS_STATEMENT\"\r\n\t\t}\r\n    ]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -334,21 +320,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -362,7 +338,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"CPIC_DOC\"\r\n\t\t}\r\n    ]\r\n}",
+					"raw": "{\r\n\t\"document_keys\": [\r\n\t\t{\r\n\t\t\t\"rcc_id\": \"50285.0734\",\r\n\t\t\t\"report_types\": \"CPIC\"\r\n\t\t}\r\n    ]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -370,21 +346,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -406,21 +372,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -442,21 +398,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -478,21 +424,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -514,21 +450,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -550,21 +476,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -586,21 +502,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -622,21 +528,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -658,21 +554,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -686,7 +572,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
+					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"filtered_yn\": \"Y\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -694,21 +580,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -722,7 +598,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
+					"raw": "{\"document_keys\":[{\"rcc_id\":null,\"part_id\":\"100798.0734\",\"mdoc_justin_no\":null,\"image_id\":null,\"court_agen_id\":null,\"sequence_numbers\":null,\"report_types\":\"CONVICTION_LIST\",\"report_title\":null,\"filtered_yn\":\"N\",\"report_object_url\":\"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\",\"active_yn\":null,\"rcc_ids\":[\"50394.0734\",\"50395.0734\",\"50396.0734\",\"50422.0734\"],\"court_services_form_no\":null,\"participant_name\":\"Johnson, kyle\",\"generation_date\":\"2023-03-13 12:13\",\"fetched_date\":\"NULL\"}]}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -730,26 +606,46 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
 			},
 			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{JUSTIN-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
 		}
 	]
 }
