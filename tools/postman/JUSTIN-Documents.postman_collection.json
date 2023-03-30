@@ -372,21 +372,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -408,21 +398,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -444,21 +424,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -480,21 +450,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -516,21 +476,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -552,21 +502,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -588,21 +528,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -624,21 +554,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -652,7 +572,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
+					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"filtered_yn\": \"Y\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -660,21 +580,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
@@ -688,7 +598,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n\t\"document_keys\": [\r\n{\r\n            \"report_types\": \"CONVICTION_LIST\",\r\n            \"part_id\": \"100798.0734\",\r\n            \"rcc_ids\": [50394.0734,50395.0734,50396.0734,50422.0734],\r\n            \"report_object_url\": \"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\"\r\n        }]\r\n}",
+					"raw": "{\"document_keys\":[{\"rcc_id\":null,\"part_id\":\"100798.0734\",\"mdoc_justin_no\":null,\"image_id\":null,\"court_agen_id\":null,\"sequence_numbers\":null,\"report_types\":\"CONVICTION_LIST\",\"report_title\":null,\"filtered_yn\":\"N\",\"report_object_url\":\"http://zb-rp.dev.ag.gov.bc.ca/AEM/reportServer.do?param1=JRSR0007&param3=justindev&param2=BIHXEWEDoGvvmIBciGHsKePQAkkgUMQDifGTtLefONbbMErAFKGSFdcBsrEYjVGWl70362&document_format=pdfa\",\"active_yn\":null,\"rcc_ids\":[\"50394.0734\",\"50395.0734\",\"50396.0734\",\"50422.0734\"],\"court_services_form_no\":null,\"participant_name\":\"Johnson, kyle\",\"generation_date\":\"2023-03-13 12:13\",\"fetched_date\":\"NULL\"}]}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -696,21 +606,11 @@
 					}
 				},
 				"url": {
-					"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/imageDataGet",
-					"protocol": "https",
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
 					"host": [
-						"dev",
-						"jag",
-						"gov",
-						"bc",
-						"ca"
+						"{{JUSTIN-API-URI}}"
 					],
 					"path": [
-						"ords",
-						"devj",
-						"justinords",
-						"dems",
-						"v1",
 						"imageDataGet"
 					]
 				}
