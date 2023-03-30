@@ -6,6 +6,8 @@ elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -35,7 +37,9 @@ fi
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmLookupService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmLookupService.java --port 4419 local/local.properties 
+else
 kamel -n $ns delete ccm-lookup-service
 kamel -n $ns run \
   CcmLookupService.java \
@@ -46,7 +50,7 @@ kamel -n $ns run \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false \
   --trait route.enabled=false
-
+fi
 popd
 
 # kamel -n cef5dd-test log ccm-lookup-service

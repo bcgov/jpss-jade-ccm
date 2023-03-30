@@ -269,7 +269,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
     .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
-    .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    .to("kafka:ccm-caseusers?brokers={{camel.component.kafka.brokers}}&securityProtocol=PLAINTEXT")
     // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log("User creation event published.")
@@ -400,7 +400,7 @@ private void processEvent() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
     .log(LoggingLevel.DEBUG,"body: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    .to("kafka:{{kafka.topic.kpis.name}}?brokers={{camel.component.kafka.brokers}}&securityProtocol=PLAINTEXT")
     // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log(LoggingLevel.DEBUG,"Event KPI published.")

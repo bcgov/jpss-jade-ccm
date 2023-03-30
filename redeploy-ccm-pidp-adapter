@@ -6,6 +6,8 @@ elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -35,7 +37,9 @@ fi
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmPidpAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmPidpAdapter.java --port 4417 local/local.properties 
+else
 kamel -n $ns delete ccm-pidp-adapter
 kamel -n $ns run \
   CcmPidpAdapter.java \
@@ -57,7 +61,7 @@ kamel -n $ns run \
   # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
   # --resource file:../../mapping/justin2businessCourtCaseData.adm \
   # --trait logging.level=DEBUG
-
+fi
 popd
 
 # kamel -n cef5dd-test log ccm-justin-adapter

@@ -1,0 +1,22 @@
+ns_set="cef5dd"
+
+if [ "$1" = "local" ]; then
+    env="local"
+else
+    env="local"
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+echo "`basename $0` to $ns ..."
+
+# Stop existing JADE Events instance
+docker compose -f scripts/jade-events/docker-compose.yml down
+
+# Start JADE Events instance
+docker compose -f scripts/jade-events/docker-compose.yml up -d

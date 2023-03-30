@@ -1,11 +1,14 @@
 ns_set="cef5dd"
 
+
 if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -28,14 +31,17 @@ if [ "$env" = "prod" ]; then
         return 1
     fi
 else
-    #logging_level="DEBUG"
+    #logging_level="DEBUG" 
     logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."
-
+ 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmDemsAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmDemsAdapter.java --port 4414 local/local.properties
+    
+else
 kamel -n $ns delete ccm-dems-adapter
 kamel -n $ns run \
   CcmDemsAdapter.java \
@@ -51,7 +57,7 @@ kamel -n $ns run \
   --trait container.limit-cpu=200m \
   --trait container.limit-memory=1000mi \
   --trait service.node-port=false
-
+fi
   ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
 
   #--trait route.tls-termination=edge \
