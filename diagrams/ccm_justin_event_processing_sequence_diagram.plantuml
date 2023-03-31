@@ -55,9 +55,9 @@ par Main Processing
                 else USER_DPROV
                     j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
                 else REPORT
-                    j_adapter ->o reports_topic: Produce REPORT event
+                    j_adapter ->o reports_topic: <font color=grey>Produce REPORT event (Disabled)</font>
                 else DOCM
-                    j_adapter ->o reports_topic: Produce DOCM event
+                    j_adapter ->o reports_topic: <font color=grey>Produce DOCM event (Disabled)</font>
                 else Unknown JUSTIN Event
                     j_adapter -> j_adapter: No operation (future functionality)
                 end
@@ -107,6 +107,6 @@ end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated March 29, 2023
+Prepared by David Agahchen | Updated March 30, 2023
 end caption
 @enduml
