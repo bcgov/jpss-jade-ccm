@@ -67,7 +67,8 @@ public class DemsListItemFieldData {
         ADMINISTRATOR("JRS_ADMINISTRATOR","Administrator"),
         LAWYER("JRS_BASE_LAWYER","Lawyer"),
         LEGAL_ASSISTANT("JRS_BASE_LEGAL_ASST","Legal Assistant"),
-        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal");
+        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal"),
+        DEMS_SYSTEM_SUPPORT("JRS_DEMS_SYSTEM_SUPPORT","DEMS System Support");
 
         private String justin_name;
         private String dems_name;
@@ -106,6 +107,8 @@ public class DemsListItemFieldData {
                 caseGroup = LEGAL_ASSISTANT;
             } else if (PARALEGAL.getJustin_name().equals(justin_name)) {
                 caseGroup = PARALEGAL;
+            } else if (DEMS_SYSTEM_SUPPORT.getJustin_name().equals(justin_name)) {
+                caseGroup = DEMS_SYSTEM_SUPPORT;
             }
             
             return caseGroup;
