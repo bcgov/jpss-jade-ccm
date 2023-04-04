@@ -18,6 +18,18 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 // camel-k: dependency=mvn:org.slf4j.slf4j-api
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpcore
+// camel-k: dependency=mvn:org.apache.httpcomponents.httpmime
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-mail
+// camel-k: dependency=mvn:org.apache.camel:camel-kamelet
+// camel-k: dependency=mvn:org.apache.camel:camel-java-joor-dsl
+// camel-k: dependency=mvn:org.apache.camel:camel-endpointdsl
+// camel-k: dependency=mvn:org.apache.camel:camel-rest
+// camel-k: dependency=mvn:org.apache.camel:camel-http
+// camel-k: dependency=mvn:org.apache.camel:camel-kafka
+// camel-k: dependency=mvn:org.apache.camel:camel-core-languages
+// camel-k: dependency=mvn:org.apache.camel:camel-mail
+// camel-k: dependency=mvn:org.apache.camel:camel-attachments
 
 
 
@@ -28,6 +40,10 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import java.nio.charset.StandardCharsets;
+import org.apache.camel.support.builder.ValueBuilder;
+import org.apache.http.entity.ContentType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.BaseEvent;
@@ -39,6 +55,13 @@ import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
+import ccm.models.common.data.document.ChargeAssessmentDocumentData;
+import ccm.models.common.data.document.CourtCaseDocumentData;
+import ccm.models.common.data.document.ImageDocumentData;
+import ccm.models.common.event.ReportEvent;
+import ccm.models.system.justin.JustinDocumentKeyList;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinDocument;
 import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
@@ -47,6 +70,7 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 
@@ -85,6 +109,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     prepareDemsCaseGroupMembersSyncHelperList();
     syncCaseGroupMembers();
     getCaseListByUserKey();
+    processReportEvents();
+    processDocumentRecord();
+    createDocumentRecord();
+    createCaseRecord();
+    streamCaseRecord();
+    processUnknownStatus();
+    publishEventKPI();
   }
 
   private void attachExceptionHandlers() {
@@ -208,12 +239,16 @@ public class CcmDemsAdapter extends RouteBuilder {
        error.setError_summary("Unable to process event., general Exception raised.");
        error.setError_code("General Exception");
        error.setError_details(event);
+       Exception ex = exchange.getException();
+       if(ex != null) {
+        ex.printStackTrace();
+       }
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
         
-        kpi.setEvent_topic_name(kafkaTopic);
+       kpi.setEvent_topic_name(kafkaTopic);
        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -234,27 +269,372 @@ public class CcmDemsAdapter extends RouteBuilder {
    .handled(true)
    .end();
 
- }
-
- private String getKafkaTopicByEventType(String eventType ) {
-  String kafkaTopic = "ccm-general-errors";
-  if (eventType != null) {
-   switch(eventType){
-     case "DemsChargeAssessmentCaseData" :
-       kafkaTopic = "ccm-chargeassessment-errors";
-       break;
-       case "DemsPersonData" :{
-         kafkaTopic = "ccm-caseuser-errors";
-         break;
-       }
-       case "DemsCaseParticipantData" :{
-         kafkaTopic = "ccm-caseuser-errors";
-         break;
-       }
-   }
   }
-  return kafkaTopic;
-}
+
+
+  private void processReportEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("rcc_id")
+      .jsonpath("$.justin_rcc_id")
+    .setHeader("mdoc_justin_no")
+      .jsonpath("$.mdoc_justin_no")
+    .setHeader("rcc_ids")
+      .jsonpath("$.rcc_ids")
+    .setHeader("image_id")
+      .jsonpath("$.image_id")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
+    .setHeader("event").simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]}")
+    .log(LoggingLevel.INFO, "part_id = ${header[part_id]}")
+    .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
+    .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
+    .log(LoggingLevel.INFO, "image_id = ${header[image_id]}")
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .choice()
+      .when(header("event_status").isNotNull())
+        .setProperty("kpi_component_route_name", simple("processReportEvents"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+
+        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+            
+            ex.getMessage().setBody(keyList);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+        .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+        .to("direct:processDocumentRecord")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processDocumentRecord() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    // property: caseFound
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .setProperty("justin_request").body()
+    .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+    .to("http://ccm-lookup-service/getImageData")
+
+    .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
+    .setProperty("justin_document", simple("${bodyAs(String)}"))
+
+    // For cases like witness statement, there can be multiple docs returned.
+    // This will split through each of the documents and process them individually.
+
+
+    .setProperty("create_date") .jsonpath("$.create_date")
+    .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
+    //.marshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    .log(LoggingLevel.INFO,"Parsing through justin documents")
+    .split()
+      .jsonpathWriteAsString("$.documents")
+      .log(LoggingLevel.INFO,"Parsing through single justin document")
+      .log(LoggingLevel.DEBUG,"Body: ${body}")
+
+
+      .unmarshal().json(JsonLibrary.Jackson, JustinDocument.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          JustinDocument jdl = ex.getIn().getBody(JustinDocument.class);
+          String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
+          String create_date = ex.getProperty("create_date", String.class);
+
+          log.info("event_message_id: "+event_message_id);
+          if(ex.getMessage().getHeader("rcc_id") != null) {
+            log.info("processing into charge assessment document record");
+            ChargeAssessmentDocumentData commonDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+            ex.getMessage().setBody(demsRecord);
+          } else if(jdl.getPrimary_rcc_id() != null) {
+            log.info("processing into charge assessment document record");
+            ImageDocumentData commonDocument = new ImageDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+            ex.getMessage().setHeader("primary_rcc_id", jdl.getPrimary_rcc_id());
+
+            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+            if(commonDocument.getMdoc_justin_no() != null && mdoc_justin_no == null) {
+              ex.getMessage().setHeader("mdoc_justin_no", jdl.getMdoc_justin_no());
+            }
+
+            ex.setProperty("image_document", commonDocument);
+
+            ex.getMessage().setBody(demsRecord);
+          } else {
+            log.info("justin_request: " + ex.getProperty("justin_request",String.class));
+            //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
+            log.info("processing into court case document record");
+            CourtCaseDocumentData commonDocument = new CourtCaseDocumentData(event_message_id, create_date, jdl);
+            DemsRecordData demsRecord = new DemsRecordData(commonDocument);
+
+            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+            String rcc_list = ex.getProperty("rcc_ids", String.class);
+            log.info("obj mdoc_justin_no:" + mdoc_justin_no);
+            log.info("string rcc_ids:" + rcc_list);
+            if((commonDocument.getRcc_ids() == null || commonDocument.getRcc_ids().isEmpty()) && rcc_list != null) {
+              log.info("setting list from header.");
+              // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
+              ObjectMapper objectMapper = new ObjectMapper();
+              try {
+                System.out.println(rcc_list);
+                String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
+                commonDocument.setRcc_ids(Arrays.asList(rcc_id_list));
+              } catch(Exception e) {
+                e.printStackTrace();
+              }
+
+            }
+
+            if(commonDocument.getMdoc_justin_no() == null && mdoc_justin_no != null) {
+              commonDocument.setMdoc_justin_no((String)mdoc_justin_no);
+            }
+
+            ex.setProperty("court_case_document", commonDocument);
+
+            // make sure the header has most up to date values.
+            ex.getMessage().setHeader("rcc_ids", commonDocument.getRcc_ids());
+            ex.getMessage().setHeader("mdoc_justin_no", commonDocument.getMdoc_justin_no());
+
+            ex.getMessage().setBody(demsRecord);
+          }
+        }
+
+      })
+      .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
+      .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
+      .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
+      .log(LoggingLevel.INFO,"image_id: ${header[image_id]}")
+      .log(LoggingLevel.INFO,"Generating derived dems record: ${body}")
+      .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
+      .choice()
+        .when(simple("${header.rcc_id} != null"))
+          .log(LoggingLevel.INFO,"RCC based report")
+
+          .setHeader("number", simple("${header[rcc_id]}"))
+          .to("direct:createDocumentRecord")
+        .endChoice()
+        .when(simple("${header.mdoc_justin_no} != null"))
+          .log(LoggingLevel.INFO,"MDOC based report")
+          // need to look-up the list of rcc ids associated to the mdoc
+
+          .setHeader("number", simple("${header[mdoc_justin_no]}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          //.log(LoggingLevel.INFO, "headers: ${headers}")
+          .to("http://ccm-lookup-service/getCourtCaseMetadata")
+          .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+          .setProperty("metadata_data", simple("${bodyAs(String)}"))
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .setProperty("CourtCaseMetadata").body()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange ex) {
+              CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+              ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
+              CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
+              DemsRecordData demsRecord = null;
+              if(ccdd != null) { // This is an mdoc based report
+                ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
+                // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                demsRecord = new DemsRecordData(ccdd);
+              } else if(id != null) { // This is a primary_rcc_id based report
+                id.setCourt_file_number(cdd.getCourt_file_number_seq_type());
+                // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                demsRecord = new DemsRecordData(id);
+              }
+              ex.getMessage().setBody(demsRecord);
+            }
+
+          })
+          .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+          .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+          // 2 possible cases, this is an mdoc based record, or a primary_rcc_id one.
+          // in case of mdoc, go through list of rcc_ids returned from metadata, and add file to each.
+          // in case of the primary_rcc_id on, just call for that particular record.
+          .choice()
+            .when(simple("${header.primary_rcc_id} != null"))
+              .log(LoggingLevel.INFO,"Primary RCC based report")
+
+              .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
+              .setHeader("number", simple("${header[rcc_id]}"))
+              .to("direct:createDocumentRecord")
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.metadata_data}"))
+              .split()
+                .jsonpathWriteAsString("$.related_agency_file")
+                .setProperty("rcc_id",jsonpath("$.rcc_id"))
+                .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+                .setBody(simple("${exchangeProperty.dems_record}"))
+                .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+                .to("direct:createDocumentRecord")
+              .end()
+            .endChoice()
+
+          .endChoice()
+        .when(simple("${header.rcc_ids} != null"))
+          .log(LoggingLevel.INFO,"rcc id list based report")
+          // need to parse through the list of rcc ids
+          .setBody(simple("${exchangeProperty.court_case_document}"))
+          .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
+          .split()
+            .jsonpathWriteAsString("$.rcc_ids")
+            .setProperty("rcc_id",jsonpath("$"))
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+            .setBody(simple("${exchangeProperty.dems_record}"))
+            .to("direct:createDocumentRecord")
+          .end()
+          .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
+          .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+          .endChoice()
+
+      .end()
+    .end()
+    .log(LoggingLevel.INFO, "end of processDocumentRecord")
+    ;
+  }
+
+  private void createDocumentRecord() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    // property: caseFound
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != ''"))
+        .log(LoggingLevel.INFO, "Creating document record in dems")
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        
+        .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
+        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("direct:createCaseRecord")
+        .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+        .setProperty("recordId", jsonpath("$.edtId"))
+        .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+        .endChoice()
+    .end()
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+        .log(LoggingLevel.INFO, "attempt to stream the record's content.")
+        // if inserting the record to dems was successful, then go ahead and stream the data to the record.
+        .setBody(simple("${exchangeProperty.justin_document}"))
+        .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            JustinDocumentList re = ex.getIn().getBody(JustinDocumentList.class);
+
+            if(re.getDocuments() != null && !re.getDocuments().isEmpty()) {
+              String caseId = (String)ex.getProperty("caseId", String.class);
+              String recordId = (String)ex.getProperty("recordId", String.class);
+              DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, re.getDocuments().get(0).getData());
+              ex.getMessage().setBody(demsRecordDoc);
+            }
+
+          }
+    
+        })
+        .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
+        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("direct:streamCaseRecord")
+        //.log(LoggingLevel.INFO,"Created dems record: ${body}")
+        .endChoice()
+    .end()
+    .log(LoggingLevel.INFO, "end of createDocumentRecord")
+    ;
+  }
+
+
+
+  private String getKafkaTopicByEventType(String eventType ) {
+    String kafkaTopic = "ccm-general-errors";
+    if (eventType != null) {
+    switch(eventType){
+      case "DemsChargeAssessmentCaseData" :
+        kafkaTopic = "ccm-chargeassessment-errors";
+        break;
+        case "DemsPersonData" :{
+          kafkaTopic = "ccm-caseuser-errors";
+          break;
+        }
+        case "DemsCaseParticipantData" :{
+          kafkaTopic = "ccm-caseuser-errors";
+          break;
+        }
+    }
+    }
+    return kafkaTopic;
+  }
+
   private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -591,18 +971,34 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .log(LoggingLevel.DEBUG,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.INFO,"DEMS case updated.")
-    .setProperty("courtCaseId", jsonpath("$.id"))
-    .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-    .split()
-      .jsonpathWriteAsString("$.accused_persons")
-      .setHeader("key", jsonpath("$.identifier"))
-      .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-      .log(LoggingLevel.INFO,"Updating accused participant ...")
-      .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
-      .to("direct:processAccusedPerson")
-      .log(LoggingLevel.INFO,"Accused participant updated.")
+    //JADE-2293
+    .doTry()
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") 
+      .log(LoggingLevel.DEBUG,"DEMS case updated.")
+      .setProperty("courtCaseId", jsonpath("$.id"))
+      .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+      .split()
+        .jsonpathWriteAsString("$.accused_persons")
+        .setHeader("key", jsonpath("$.identifier"))
+        .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
+        .log(LoggingLevel.DEBUG,"Updating accused participant ...")
+        .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
+        .to("direct:processAccusedPerson")
+        .log(LoggingLevel.DEBUG,"Accused participant updated.")
+        .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"Exception: ${exception}")
+      .log(LoggingLevel.DEBUG,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.DEBUG, "Body: '${exception}'")
+          .log(LoggingLevel.DEBUG, "${exception.message}")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .transform(exceptionMessage())
+          .stop()
+        .endChoice()
+      .end()
     .end()
     ;
   }
@@ -1218,4 +1614,131 @@ public class CcmDemsAdapter extends RouteBuilder {
     .end()
     ;
   }
+  
+  private void createCaseRecord() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
+    .setProperty("key", simple("${header.rcc_id}"))
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("dems_case_id", jsonpath("$.id"))
+    // update case
+    .setBody(simple("${exchangeProperty.DemsRecordData}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log(LoggingLevel.INFO,"Creating DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
+    .log(LoggingLevel.INFO,"DEMS case record created.")
+    .setProperty("recordId", jsonpath("$.edtId"))
+    .log(LoggingLevel.INFO,"DEMS case record created. ${body}")
+    ;
+  }
+
+  private void streamCaseRecord() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .setProperty("DemsRecordDocumentData", simple("${bodyAs(String)}"))
+    .setProperty("dems_case_id", jsonpath("$.caseId"))
+    .setProperty("dems_record_id", jsonpath("$.recordId"))
+    // decode the data element from Base64
+    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .unmarshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception{
+        DemsRecordDocumentData b = exchange.getIn().getBody(DemsRecordDocumentData.class);
+        //log.info("about to decode data"+ b.getData());
+        byte[] decodedBytes = Base64.getDecoder().decode(b.getData());
+        exchange.getIn().setBody(decodedBytes);
+        //log.info("decodedBytes" + decodedBytes);
+        //log.info("decoded data");
+        String fileName = "myfile.pdf";
+        String boundary = "simpleboundary";
+        String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
+        String multipartFooter = "\r\n" + "--" + boundary + "--";
+        byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
+        byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
+        byte[] multipartBody = new byte[headerBytes.length + decodedBytes.length + footerBytes.length];
+        System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
+        System.arraycopy(decodedBytes, 0, multipartBody, headerBytes.length, decodedBytes.length);
+        System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + decodedBytes.length, footerBytes.length);
+        exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+        exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+        exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+        exchange.getMessage().setBody(multipartBody);
+      }
+    })
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "body: ${body}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
+    .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    ;
+  }
+
+  private void processUnknownStatus() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    ;
+  }
+
+  private void publishEventKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_event_object
+    //IN: property = kpi_event_topic_name
+    //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_status
+    //IN: property = kpi_component_route_name
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {        
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        String kpi_status = (String) exchange.getProperty("kpi_status");
+
+        // KPI
+        EventKPI kpi = new EventKPI(event, kpi_status);
+
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        exchange.getMessage().setBody(kpi);
+       
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}")
+    ;
+  }
+  
 }
