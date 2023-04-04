@@ -1679,6 +1679,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         exchange.getMessage().setBody(multipartBody);
       }
     })
+    //.to("file:/tmp/output?fileName=${exchangeProperty.dems_case_id}-${exchangeProperty.dems_record_id}-jade.pdf")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
