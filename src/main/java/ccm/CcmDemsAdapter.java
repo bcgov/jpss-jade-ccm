@@ -974,28 +974,41 @@ public class CcmDemsAdapter extends RouteBuilder {
     //JADE-2293
     .doTry()
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") 
-      .log(LoggingLevel.DEBUG,"DEMS case updated.")
+      .log(LoggingLevel.INFO,"DEMS case updated.")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
       .split()
         .jsonpathWriteAsString("$.accused_persons")
         .setHeader("key", jsonpath("$.identifier"))
         .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-        .log(LoggingLevel.DEBUG,"Updating accused participant ...")
+        .log(LoggingLevel.INFO,"Updating accused participant ...")
         .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
         .to("direct:processAccusedPerson")
-        .log(LoggingLevel.DEBUG,"Accused participant updated.")
+        .log(LoggingLevel.INFO,"Accused participant updated.")
         .endDoTry()
-    .doCatch(Exception.class)
-      .log(LoggingLevel.DEBUG,"Exception: ${exception}")
-      .log(LoggingLevel.DEBUG,"Exchange Context: ${exchange.context}")
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.INFO,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 400")
-          .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
-          .log(LoggingLevel.DEBUG, "Body: '${exception}'")
-          .log(LoggingLevel.DEBUG, "${exception.message}")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
-          .transform(exceptionMessage())
+          //.transform(exceptionMessage())
           .stop()
         .endChoice()
       .end()
@@ -1682,6 +1695,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         exchange.getMessage().setBody(multipartBody);
       }
     })
+    //.to("file:/tmp/output?fileName=${exchangeProperty.dems_case_id}-${exchangeProperty.dems_record_id}-jade.pdf")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
