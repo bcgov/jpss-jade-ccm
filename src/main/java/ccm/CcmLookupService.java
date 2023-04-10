@@ -19,6 +19,7 @@ import java.net.SocketTimeoutException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 import java.util.Calendar;
+import java.util.List;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -28,8 +29,12 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.common.data.AuthUser;
+import ccm.models.common.data.AuthUserList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
+import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.utils.DateTimeUtils;
 
 public class CcmLookupService extends RouteBuilder {
@@ -244,6 +249,7 @@ public class CcmLookupService extends RouteBuilder {
   private void getCourtCaseAuthList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    AuthUserList userAuthList = new AuthUserList();
 
     from("platform-http:/" + routeId)
     .routeId(routeId)
@@ -256,7 +262,23 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-adapter/getCourtCaseAuthList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
-    ;
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinAuthUsersList jal = exchange.getIn().getBody(JustinAuthUsersList.class);
+        userAuthList.addJustinAuthUserList(jal);
+
+      }})
+      .to("http://ccm-pdip-adapter/getCourtCaseAuthList")
+    
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          PIDPAuthUserList jal = exchange.getIn().getBody(PIDPAuthUserList.class);
+          userAuthList.AddPdipAuthUserList(jal);
+          exchange.getMessage().setBody(userAuthList, AuthUserList.class);
+        }});
+      
   }
 
   private void getCourtCaseMetadata() {

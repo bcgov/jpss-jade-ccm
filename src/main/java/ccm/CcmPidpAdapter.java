@@ -1,7 +1,9 @@
 package ccm;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.apache.camel.CamelException;
 
@@ -28,6 +30,9 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.common.data.AuthUser;
+import ccm.models.common.data.AuthUserList;
+
 /*
 import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
@@ -41,6 +46,7 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
@@ -54,6 +60,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     //attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
+    getCaseAuthList();
   }
 
   private void attachExceptionHandlers() {
@@ -300,6 +307,69 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
+  private void getCaseAuthList() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+     from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.DEBUG,"getCaseAuthList request received. key = ${header.number}")
+     .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpBaseUri")
+     .removeHeaders("CamelHttp*")
+     .to("direct:getKafkaToken")
+     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+     .setHeader("Authorization").simple("Bearer " + "${header.kafkaoauth.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
+     
+     .toD("https://{{pidp-host}}/evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+     .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+     .process(new Processor() {
+       @Override
+       public void process(Exchange exchange) {
+        ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
+         AuthUserList b = new AuthUserList();
+         for(String userName : j) {
+          b.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
+         }
+         exchange.getMessage().setBody(b, AuthUserList.class);
+       }
+     })
+     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+     .log(LoggingLevel.DEBUG,"Converted response (from PDIDP to Business model): '${body}'")
+     ;
+  }
+
+  private void getKafkaToken() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching()
+    .setHeader("CamelHttpMethod").simple("POST") 
+    
+    .setHeader("Content-Type")
+				.simple("application/x-www-form-urlencoded")
+			.setHeader("Accept")
+				.simple("application/json")
+			.setBody()
+				.constant("grant_type:password&oauth.client.id:{{configmap:ccm-configs/pidp-oauth-client-id}}&oauth.client.secret:{{secret:ccm-secrets/pidp-oauth-client-secret}}")
+        .to("{{configmap:ccm-configs/pidp-oauth-token-endpoint-url}}")
+        .convertBodyTo(String.class)
+			.log("response from API: " + body())
+			.choice()
+				.when().simple("${header.CamelHttpResponseCode} == 200")
+					.unmarshal().json(JsonLibrary.Jackson, AccessResponseToken.class)
+					.setHeader("kafkaoauth.token").simple("${body.access_token}")
+          .stop()
+					//.to("direct:<some direct route>")
+				.otherwise()
+					.log("Not Authenticated!!!")
+          .endChoice();
+  }
 /*   
 private void processEvent() {
     // use method name as route id
