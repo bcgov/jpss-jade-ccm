@@ -41,9 +41,9 @@ public class AuthUserList {
       if (this.auth_user_list == null) {
         this.auth_user_list = new ArrayList<AuthUser>();
       }
-      for (JustinAuthUser ja : pal.getAuthUserList()) {
-        AuthUser ba = new AuthUser(ja);
-        this.auth_user_list.add(ba);
+      for (AuthUser ja : pal.getAuthUserList()) {
+       
+        this.auth_user_list.add(ja);
       }
     }
     public AuthUserList(PIDPAuthUserList authList) {
