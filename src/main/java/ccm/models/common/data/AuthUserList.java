@@ -5,6 +5,7 @@ import java.util.List;
 
 import ccm.models.system.justin.JustinAuthUser;
 import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.pidp.PIDPAuthUserList;
 
 public class AuthUserList {
     private String rcc_id;
@@ -24,6 +25,33 @@ public class AuthUserList {
       }
 
       setAuth_user_list(l);
+    }
+
+    public void addJustinAuthUserList(JustinAuthUsersList jal) {
+      if (this.auth_user_list == null) {
+        this.auth_user_list = new ArrayList<AuthUser>();
+      }
+      for (JustinAuthUser ja : jal.getAuthuserslist()) {
+        AuthUser ba = new AuthUser(ja);
+        this.auth_user_list.add(ba);
+      }
+    }
+
+    public void AddPdipAuthUserList(PIDPAuthUserList pal) {
+      if (this.auth_user_list == null) {
+        this.auth_user_list = new ArrayList<AuthUser>();
+      }
+      for (JustinAuthUser ja : pal.getAuthUserList()) {
+        AuthUser ba = new AuthUser(ja);
+        this.auth_user_list.add(ba);
+      }
+    }
+    public AuthUserList(PIDPAuthUserList authList) {
+      List<AuthUser> l = new ArrayList<AuthUser>();
+
+      for(AuthUser user : authList.getAuthUserList()){
+        l.add(user);
+      }
     }
   
     public String getRcc_id() {
