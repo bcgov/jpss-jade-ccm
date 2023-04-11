@@ -1,8 +1,5 @@
 package ccm.models.common.data.document;
 
-import ccm.models.system.justin.JustinDocumentList;
-import ccm.models.system.justin.JustinDocument;
-
 public class BaseDocumentData {
   private String create_date;
   private String report_type;
@@ -15,13 +12,13 @@ public class BaseDocumentData {
   public BaseDocumentData() {
   }
 
-  public BaseDocumentData(String event_id, String create_date, JustinDocument jd) {
+  public BaseDocumentData(String event_id, String create_date, ReportDocument rd) {
     setCreate_date(create_date);
-    setReport_type(jd.getReport_type());
-    setReport_format(jd.getReport_format());
-    setDocument_type(jd.getDocument_type());
+    setReport_type(rd.getReport_type());
+    setReport_format(rd.getReport_format());
+    setDocument_type(rd.getDocument_type());
     setLocation(event_id);
-    setData(jd.getData());
+    setData(rd.getData());
   }
 
   public String getCreate_date() {
