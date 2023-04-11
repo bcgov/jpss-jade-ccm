@@ -29,6 +29,7 @@ import org.apache.camel.Processor;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.kafka.common.security.oauthbearer.OAuthBearerToken;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
@@ -61,6 +62,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
     getCaseAuthList();
+    getKafkaToken();
   }
 
   private void attachExceptionHandlers() {
@@ -318,7 +320,7 @@ public class CcmPidpAdapter extends RouteBuilder {
      .removeHeader("CamelHttpUri")
      .removeHeader("CamelHttpBaseUri")
      .removeHeaders("CamelHttp*")
-     .to("direct:getKafkaToken")
+     //.to("direct:getKafkaToken")
      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
      .setHeader("Authorization").simple("Bearer " + "${header.kafkaoauth.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
@@ -341,7 +343,7 @@ public class CcmPidpAdapter extends RouteBuilder {
      .log(LoggingLevel.DEBUG,"Converted response (from PDIDP to Business model): '${body}'")
      ;
   }
-
+  
   private void getKafkaToken() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -356,13 +358,13 @@ public class CcmPidpAdapter extends RouteBuilder {
 			.setHeader("Accept")
 				.simple("application/json")
 			.setBody()
-				.constant("grant_type:password&oauth.client.id:{{configmap:ccm-configs/pidp-oauth-client-id}}&oauth.client.secret:{{secret:ccm-secrets/pidp-oauth-client-secret}}")
-        .to("{{configmap:ccm-configs/pidp-oauth-token-endpoint-url}}")
+				.constant("grant_type:client_credentials&client_id:{pidp-api-oauth-client-id}&client_secret:{pidp-api-oauth-client-secret}")
+        .to("{pidp-api-oauth-token-endpoint-url}")
         .convertBodyTo(String.class)
 			.log("response from API: " + body())
 			.choice()
 				.when().simple("${header.CamelHttpResponseCode} == 200")
-					.unmarshal().json(JsonLibrary.Jackson, AccessResponseToken.class)
+					.unmarshal().json(JsonLibrary.Jackson, OAuthBearerToken.class)
 					.setHeader("kafkaoauth.token").simple("${body.access_token}")
           .stop()
 					//.to("direct:<some direct route>")
@@ -370,6 +372,7 @@ public class CcmPidpAdapter extends RouteBuilder {
 					.log("Not Authenticated!!!")
           .endChoice();
   }
+  
 /*   
 private void processEvent() {
     // use method name as route id

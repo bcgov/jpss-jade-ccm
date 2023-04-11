@@ -45,6 +45,8 @@ kamel -n $ns run \
   CcmLookupService.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
   --profile openshift \
   --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
