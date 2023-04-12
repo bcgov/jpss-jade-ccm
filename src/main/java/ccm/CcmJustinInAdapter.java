@@ -24,7 +24,6 @@ public class CcmJustinInAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     version();
-    healthCheck();
 
     handleGetCaseHyperlink();
   }
@@ -33,8 +32,10 @@ public class CcmJustinInAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    String path = "justin/api/v1/version";
+
     // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
+    from("platform-http:/" + path + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .process(new Processor() {
@@ -44,21 +45,6 @@ public class CcmJustinInAdapter extends RouteBuilder {
       }
     })
     ;
-  }
-
-  private void healthCheck() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/v1/health?httpMethodRestrict=GET")
-      .routeId(routeId)
-      .removeHeaders("CamelHttp*")
-      .log(LoggingLevel.DEBUG,"/v1/health request received")
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-      .to("https://{{justin.host}}/health");
-
   }
 
   private void handleGetCaseHyperlink() {
@@ -71,6 +57,23 @@ public class CcmJustinInAdapter extends RouteBuilder {
     from("platform-http:/" + path + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+/*     .choice()
+      .when(simple("${header.authorization} != 'Bearer {{justin.in.token}}'"))
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            JustinCaseHyperlinkData body = new JustinCaseHyperlinkData();
+            body.setMessage("Unauthorized.");
+            exchange.getMessage().setBody(body);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
+        .log(LoggingLevel.DEBUG,"HTTP response 401. Body: ${body}")
+        .stop()
+      .end() */
 
     .setProperty("rcc_id", simple("${header.rcc_id}"))
 
