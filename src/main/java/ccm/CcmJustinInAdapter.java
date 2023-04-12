@@ -102,7 +102,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
 
     // attempt to retrieve case id using getCourtCaseExists lookup endpoint.
     .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-    .to("http://ccm-lookup-service3/getCourtCaseExists")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
