@@ -1,0 +1,79 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        ns=""
+        return 1
+    fi
+else
+    #logging_level="DEBUG"
+    logging_level="INFO"
+fi
+
+echo "`basename $0` to $ns ..."
+
+pushd src/main/java/ccm
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmJustinInAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmJustinInAdapter.java --port 4420 local/local.properties
+    
+else
+kamel -n $ns delete ccm-justin-in-adapter
+kamel -n $ns run \
+  CcmJustinInAdapter.java \
+  --resource file:../../../../target/classes/ccm-models.jar \
+  --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
+  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-oneRCC.json \
+  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-empty.json \
+  --resource file:../../../../mapping/data/system/justin/sampleEventRecord.json \
+  --property file:ccmJustinInAdapter.properties \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
+  --profile openshift \
+  --trait logging.level=$logging_level \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait dependencies.enabled=true \
+  --trait route.enabled=true \
+  --trait route.host=jade-ccm-justin-adapter-$env.apps.silver.devops.gov.bc.ca \
+  --trait route.tls-termination=edge \
+  --trait route.tls-insecure-edge-termination-policy=Redirect \
+  --trait service.enabled=true \
+  --trait service.node-port=false
+
+  #--trait keda.enabled=true \
+  #--trait keda.minReplicas=2 \
+  #--trait keda.maxReplicas=2
+
+  # --dev
+  # --dependency file://./models.jar \
+  # --dependency github:agahchen/jpss-jade-ccm-models \
+  # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
+  # --resource file:../../mapping/justin2businessCourtCaseData.adm \
+  # --trait logging.level=DEBUG
+fi
+popd
+
+# kamel -n cef5dd-test log ccm-justin-adapter
