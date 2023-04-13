@@ -338,6 +338,7 @@ public class CcmPidpAdapter extends RouteBuilder {
        public void process(Exchange exchange) {
         ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
          PIDPAuthUserList b = new PIDPAuthUserList();
+         b.setKey("${header.number}");
          for(String userName : j) {
           b.getAuthUserList().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
          }
@@ -370,7 +371,8 @@ public class CcmPidpAdapter extends RouteBuilder {
 			.setHeader("Accept")
 				.simple("application/json")
       .setBody(simple("grant_type=client_credentials&client_id={{pidp-api-oauth-client-id}}&client_secret={{pidp-api-oauth-client-secret}}"))
-        .to("{{pidp-api-oauth-token-endpoint-url}}")
+        //.to("{{pidp-api-oauth-token-endpoint-url}}")
+        .to("https://{{pidp-api-oauth-token-endpoint-url}}")
         .convertBodyTo(String.class)
 			.log(LoggingLevel.INFO,"response from API: " + body())
 			.choice()
