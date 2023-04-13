@@ -62,7 +62,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     //readRCCFileSystem();
     requeueJustinEvent();
     requeueJustinEventRange();
-    
     processJustinEventsMainTimer();
     processJustinEventsBulkTimer();
     processJustinMainEvents();
@@ -391,7 +390,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -425,7 +424,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
