@@ -269,15 +269,15 @@ public class CcmLookupService extends RouteBuilder {
         userAuthList.addJustinAuthUserList(jal);
 
       }})
-      .to("http://ccm-pdip-adapter/getCourtCaseAuthList")
-    
+      .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
+      .log(LoggingLevel.DEBUG,"response from PIDP: ${body}")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
           PIDPAuthUserList jal = exchange.getIn().getBody(PIDPAuthUserList.class);
           userAuthList.AddPdipAuthUserList(jal);
           exchange.getMessage().setBody(userAuthList, AuthUserList.class);
-        }});
+        }}).end();
       
   }
 

@@ -18,11 +18,12 @@ public class AuthUserList {
       setRcc_id(jal.getRcc_id());
 
       List<AuthUser> l = new ArrayList<AuthUser>();
-      
+      if (jal != null) {
       for (JustinAuthUser ja : jal.getAuthuserslist()) {
         AuthUser ba = new AuthUser(ja);
         l.add(ba);
       }
+     }
 
       setAuth_user_list(l);
     }
@@ -31,9 +32,11 @@ public class AuthUserList {
       if (this.auth_user_list == null) {
         this.auth_user_list = new ArrayList<AuthUser>();
       }
+      if (jal != null) {
       for (JustinAuthUser ja : jal.getAuthuserslist()) {
         AuthUser ba = new AuthUser(ja);
         this.auth_user_list.add(ba);
+      }
       }
     }
 
@@ -41,17 +44,20 @@ public class AuthUserList {
       if (this.auth_user_list == null) {
         this.auth_user_list = new ArrayList<AuthUser>();
       }
+      if (pal != null) {
       for (AuthUser ja : pal.getAuthUserList()) {
        
         this.auth_user_list.add(ja);
       }
+      }
     }
     public AuthUserList(PIDPAuthUserList authList) {
       List<AuthUser> l = new ArrayList<AuthUser>();
-
+      if (authList != null) {
       for(AuthUser user : authList.getAuthUserList()){
         l.add(user);
       }
+     }
     }
   
     public String getRcc_id() {

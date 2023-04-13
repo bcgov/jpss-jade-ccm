@@ -14,5 +14,9 @@ data:
   pidp-kafka-bootstrapservers-url: tbd
   pidp-kafka-topic-usercreation-name: tbd
   pidp-kafka-apicurioregistry-url: tbd
-  pidp-oauth-client-id: tbd
-  pidp-oauth-token-endpoint-url: tbd
+  pidp-kafa-oauth-client-id: tbd
+  pidp-kafka-oauth-token-endpoint-url: tbd
+
+  pidp-api-host: tbd
+
+  pidp-api-oauth-token-endpoint-url: tbd

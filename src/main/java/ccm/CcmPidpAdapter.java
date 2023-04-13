@@ -61,7 +61,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     //attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
-    getCaseAuthList();
+    getCourtCaseAuthList();
     getKafkaToken();
   }
 
@@ -309,7 +309,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
-  private void getCaseAuthList() {
+  private void getCourtCaseAuthList() {
      // use method name as route id
      String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -320,53 +320,65 @@ public class CcmPidpAdapter extends RouteBuilder {
      .removeHeader("CamelHttpUri")
      .removeHeader("CamelHttpBaseUri")
      .removeHeaders("CamelHttp*")
-     //.to("direct:getKafkaToken")
+     .to("direct:getKafkaToken")
      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+     .log(LoggingLevel.INFO, "bearer set : ${header.pidp_access.token}")
      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-     .setHeader("Authorization").simple("Bearer " + "${header.kafkaoauth.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
-     
-     .toD("https://{{pidp-host}}/evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
-     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+     .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
+     //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+     .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+
+     .log(LoggingLevel.INFO,"Received response from Case Mgt API: '${body}'")
+     .choice()
+     .when().simple("${header.CamelHttpResponseCode} == 200")
+     .log(LoggingLevel.INFO, "Success! processing results")
      .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
      .process(new Processor() {
        @Override
        public void process(Exchange exchange) {
         ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
-         AuthUserList b = new AuthUserList();
+         PIDPAuthUserList b = new PIDPAuthUserList();
          for(String userName : j) {
-          b.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
+          b.getAuthUserList().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
          }
-         exchange.getMessage().setBody(b, AuthUserList.class);
+         exchange.getMessage().setBody(b, PIDPAuthUserList.class);
        }
      })
-     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
-     .log(LoggingLevel.DEBUG,"Converted response (from PDIDP to Business model): '${body}'")
-     ;
+     .marshal().json(JsonLibrary.Jackson, PIDPAuthUserList.class)
+     .log(LoggingLevel.INFO,"Converted response (from PDIDP to Business model): '${body}'")
+     .endChoice()
+     .otherwise()
+     .log(LoggingLevel.INFO, "Failed to retrieve PIDP auth users")
+     .endChoice();
+
   }
   
   private void getKafkaToken() {
     // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
+    // use method name as route id
+    String routeId = new Object() {
+    }.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching()
+    .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpBaseUri")
+     .removeHeaders("CamelHttp*")
     .setHeader("CamelHttpMethod").simple("POST") 
-    
     .setHeader("Content-Type")
 				.simple("application/x-www-form-urlencoded")
 			.setHeader("Accept")
 				.simple("application/json")
-			.setBody()
-				.constant("grant_type:client_credentials&client_id:{pidp-api-oauth-client-id}&client_secret:{pidp-api-oauth-client-secret}")
-        .to("{pidp-api-oauth-token-endpoint-url}")
+      .setBody(simple("grant_type=client_credentials&client_id={{pidp-api-oauth-client-id}}&client_secret={{pidp-api-oauth-client-secret}}"))
+        .to("{{pidp-api-oauth-token-endpoint-url}}")
         .convertBodyTo(String.class)
-			.log("response from API: " + body())
+			.log(LoggingLevel.INFO,"response from API: " + body())
 			.choice()
 				.when().simple("${header.CamelHttpResponseCode} == 200")
-					.unmarshal().json(JsonLibrary.Jackson, OAuthBearerToken.class)
-					.setHeader("kafkaoauth.token").simple("${body.access_token}")
-          .stop()
+				//	.unmarshal().json(JsonLibrary.Jackson, OAuthBearerToken.class)
+        .log(LoggingLevel.INFO,"token : $.access_token")
+					.setHeader("pidp_access.token").jsonpath("$.access_token")
+          .endChoice()
 					//.to("direct:<some direct route>")
 				.otherwise()
 					.log("Not Authenticated!!!")
