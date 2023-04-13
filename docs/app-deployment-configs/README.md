@@ -15,6 +15,7 @@ ConfigMap object: ccm-configs
 | pidp-kafka-bootstrapservers-url | PIDP Kafka Boostrap Servers URI | Host URI (without HTTP prefix) |
 | pidp-kafka-apicurioregistry-url | PIDP Kafka Apicurio Registry URI | Host URI (with HTTP prefix) |
 | pidp-oauth-client-id | PIDP Oauth Client Id | string |
+| kafka-broker-url | JADE Events Kafka Broker URI | string |
 
 Secret object: ccm-secrets
 

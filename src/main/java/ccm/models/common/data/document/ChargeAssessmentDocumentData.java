@@ -1,8 +1,5 @@
 package ccm.models.common.data.document;
 
-import ccm.models.system.justin.JustinDocumentList;
-import ccm.models.system.justin.JustinDocument;
-
 public class ChargeAssessmentDocumentData extends BaseDocumentData {
   private String rcc_id;
   private String submit_date;
@@ -20,19 +17,19 @@ public class ChargeAssessmentDocumentData extends BaseDocumentData {
   public ChargeAssessmentDocumentData() {
   }
 
-  public ChargeAssessmentDocumentData(String event_id, String create_date, JustinDocument jd) {
-    super(event_id, create_date, jd);
-    setRcc_id(jd.getRcc_id());
-    setSubmit_date(jd.getSubmit_date());
-    setAgency_file_no(jd.getAgency_file_no());
-    setWitness_name(jd.getWitness_name());
-    setWitness_yn(jd.getWitness_yn());
-    setExpert_yn(jd.getExpert_yn());
-    setPolice_officer_yn(jd.getPolice_officer_yn());
-    setVictim_yn(jd.getVictim_yn());
-    setFiled_by(jd.getFiled_by());
-    setParticipant_name(jd.getParticipant_name());
-    setOfficer_pin_number(jd.getOfficer_pin_number());
+  public ChargeAssessmentDocumentData(String event_id, String create_date, ReportDocument rd) {
+    super(event_id, create_date, rd);
+    setRcc_id(rd.getRcc_id());
+    setSubmit_date(rd.getSubmit_date());
+    setAgency_file_no(rd.getAgency_file_no());
+    setWitness_name(rd.getWitness_name());
+    setWitness_yn(rd.getWitness_yn());
+    setExpert_yn(rd.getExpert_yn());
+    setPolice_officer_yn(rd.getPolice_officer_yn());
+    setVictim_yn(rd.getVictim_yn());
+    setFiled_by(rd.getFiled_by());
+    setParticipant_name(rd.getParticipant_name());
+    setOfficer_pin_number(rd.getOfficer_pin_number());
   }
 
   public String getRcc_id() {

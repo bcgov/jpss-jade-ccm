@@ -16,3 +16,4 @@ data:
   pidp-kafka-apicurioregistry-url: tbd
   pidp-oauth-client-id: tbd
   pidp-oauth-token-endpoint-url: tbd
+  kafka-broker-url: tbd

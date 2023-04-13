@@ -82,7 +82,7 @@ public class DemsRecordData {
             } else if(report.equals(REPORT_TYPES.DV_ATTACHMENT)) {
                 setType("OPERATIONAL");
             } else if(report.equals(REPORT_TYPES.DM_ATTACHMENT)) {
-                setType("ADMINISTRATIVE");
+                setType("ADMIN");
             } else if(report.equals(REPORT_TYPES.VEHICLE)) {
                 setType("PARTNER AGENCY");
             } else if(report.equals(REPORT_TYPES.SUPPLEMENTAL)) {
@@ -91,12 +91,11 @@ public class DemsRecordData {
 
         }
 
-
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getSubmit_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        //setLocation(nrd.getLocation());
+        setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
@@ -132,11 +131,15 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
-        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
-        //fieldData.add(location);
-        //fieldData.add(folder);
-        
+        /*if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("Location", getLocation());
+            fieldData.add(location);
+        }
+        if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+
         setFields(fieldData);
     }
 
@@ -146,6 +149,8 @@ public class DemsRecordData {
         if(report != null) {
             if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
                 setDescriptions("CONVICTION LIST-FILTERED");
+            } else if(report.equals(REPORT_TYPES.CONVICTION_LIST)) {
+                setDescriptions("CONVICTION LIST-DEFAULT");
             } else {
                 setDescriptions(report.getLabel());
             }
@@ -158,9 +163,6 @@ public class DemsRecordData {
             } else {
                 setTitle(nrd.getParticipant_name().toUpperCase());
             }
-            // TODO: Lookup the destination DEMS Case ID that this record is being added to, and use that value for this mapping
-            //setOriginalFileNumber(nrd.getAgency_file_no());
-
 
             if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS)) {
                 setType("COURT RECORD");
@@ -175,7 +177,7 @@ public class DemsRecordData {
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        //setLocation(nrd.getLocation());
+        setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
@@ -210,7 +212,16 @@ public class DemsRecordData {
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
-        }        
+        }
+        /*if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("Location", getLocation());
+            fieldData.add(location);
+        }
+        if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+
         setFields(fieldData);
     }
 
@@ -249,7 +260,7 @@ public class DemsRecordData {
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        //setLocation(nrd.getLocation());
+        setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
@@ -285,11 +296,15 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
-        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
-        //fieldData.add(location);
-        //fieldData.add(folder);
-        
+        /*if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("Location", getLocation());
+            fieldData.add(location);
+        }
+        if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+
         setFields(fieldData);
     }
 

@@ -928,6 +928,122 @@ public class CcmNotificationService extends RouteBuilder {
           .endChoice()
       .end()
     .end()
+
+    .choice()
+      .when(simple(" ${exchangeProperty.createCase} == 'true'"))
+      .doTry()
+        .log(LoggingLevel.INFO,"Create new crown assignment changed event.")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
+            CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+            be.setEvent_status(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
+        
+            exchange.getMessage().setBody(be, CourtCaseEvent.class);
+            exchange.setProperty("derived_event_object", be);
+            exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+          }})
+        .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+        .to("kafka:{{kafka.topic.courtcases.name}}")
+
+        .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
+        .log(LoggingLevel.INFO,"Derived event published.")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseEvent derived_event = (CourtCaseEvent)exchange.getProperty("derived_event_object");
+
+            // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+            // extract the offset from response header.  Example format: "[some-topic-0@301]"
+            String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+              exchange.getProperty("derived_event_recordmetadata"));
+              
+            String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
+
+            EventKPI derived_event_kpi = new EventKPI(
+              derived_event, 
+              EventKPI.STATUS.EVENT_CREATED);
+
+            derived_event_kpi.setComponent_route_name(routeId);
+            derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+            derived_event_kpi.setEvent_topic_name(derived_event_topic);
+            derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+
+            exchange.getMessage().setBody(derived_event_kpi);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.INFO,"Publishing derived event KPI ...")
+        .to("direct:publishBodyAsEventKPI")
+        .log(LoggingLevel.INFO,"Derived event KPI published.")
+
+        .log(LoggingLevel.INFO,"Create new appearance summary changed event.")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
+            CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+            be.setEvent_status(CourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
+        
+            exchange.getMessage().setBody(be, CourtCaseEvent.class);
+            exchange.setProperty("derived_event_object", be);
+            exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+          }})
+        .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+        .to("kafka:{{kafka.topic.courtcases.name}}")
+
+        .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
+        .log(LoggingLevel.INFO,"Derived event published.")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseEvent derived_event = (CourtCaseEvent)exchange.getProperty("derived_event_object");
+
+            // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+            // extract the offset from response header.  Example format: "[some-topic-0@301]"
+            String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+              exchange.getProperty("derived_event_recordmetadata"));
+              
+            String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
+
+            EventKPI derived_event_kpi = new EventKPI(
+              derived_event, 
+              EventKPI.STATUS.EVENT_CREATED);
+
+            derived_event_kpi.setComponent_route_name(routeId);
+            derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+            derived_event_kpi.setEvent_topic_name(derived_event_topic);
+            derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+
+            exchange.getMessage().setBody(derived_event_kpi);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.INFO,"Publishing derived event KPI ...")
+        .to("direct:publishBodyAsEventKPI")
+        .log(LoggingLevel.INFO,"Derived event KPI published.")
+
+        .doCatch(Exception.class)
+          .log(LoggingLevel.INFO,"General Exception thrown.")
+          .log(LoggingLevel.INFO,"${exception}")
+          .setProperty("error_event_object", body())
+          .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+          .to("direct:publishJustinEventKPIError")
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+    
+              throw exchange.getException();
+            }
+          })
+      .end()
+      .endChoice()
+    .end()
+
     .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
     // create Report Event for an INFORMATION type report.
     .setBody(simple("${exchangeProperty.metadata_data}"))
