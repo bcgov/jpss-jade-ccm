@@ -12,6 +12,7 @@ public class AuthUserList {
     private List<AuthUser> auth_user_list;
 
     public AuthUserList() {
+      auth_user_list = new ArrayList<AuthUser>();
     }
 
     public AuthUserList(JustinAuthUsersList jal) {
