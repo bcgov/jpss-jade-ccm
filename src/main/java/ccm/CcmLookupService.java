@@ -47,6 +47,7 @@ public class CcmLookupService extends RouteBuilder {
     getImageData();
     getPersonExists();
     getCaseListByUserKey();
+    getCaseHyperlink();
   }
 
   private void attachExceptionHandlers() {
@@ -371,6 +372,43 @@ public class CcmLookupService extends RouteBuilder {
       .when().simple("${header.CamelHttpResponseCode} == 404")
         .log(LoggingLevel.DEBUG,"User not found.  Error message from DEMS: ${body}")
         .endChoice()
+    .end()
+    ;
+  }
+
+  private void getCaseHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  
+    // IN: header.key
+    // OUT: body as CaseHyperlinkData
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    //.setProperty("name",simple("${header[number]}"))
+    .log(LoggingLevel.DEBUG,"Processing getCourtCaseExists request... key = ${header[key]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+
+    // attempt to retrieve case id using getCaseHyperlink DEMS adapter endpoint.
+    .doTry()
+      .to("http://ccm-dems-adapter/getCaseHyperlink")
+      .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exception.getStatusCode());
+          exchange.getMessage().setBody(exception.getResponseBody());
+        }
+      })
+      .stop()
     .end()
     ;
   }
