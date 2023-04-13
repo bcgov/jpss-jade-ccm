@@ -23,7 +23,7 @@ Secret object: ccm-secrets
 | dems-adapter-secret-token | DEMS Adapter security token (deprecated) | masked string |
 | dems-security-token | DEMS API security token | masked string |
 | justin-security-token | JUSTIN API security token | masked string |
-| justin--in-security-token | JUSTIN Inbound API security token | masked string |
+| justin-in-security-token | JUSTIN Inbound API security token | masked string |
 | splunk-security-token | Splunk API security token | masked string |
 | pidp-oauth-client-secret | PIDP Oauth client secret | masked string |
 | pidp-kafka-client.p12-password | PIDP Kafka client PKCS (Java keystore) file password | masked string |

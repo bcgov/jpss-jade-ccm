@@ -45,10 +45,6 @@ kamel -n $ns delete ccm-justin-in-adapter
 kamel -n $ns run \
   CcmJustinInAdapter.java \
   --resource file:../../../../target/classes/ccm-models.jar \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-oneRCC.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-empty.json \
-  --resource file:../../../../mapping/data/system/justin/sampleEventRecord.json \
   --property file:ccmJustinInAdapter.properties \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
