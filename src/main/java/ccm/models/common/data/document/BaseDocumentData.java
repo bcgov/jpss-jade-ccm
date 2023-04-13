@@ -17,7 +17,7 @@ public class BaseDocumentData {
     setReport_type(rd.getReport_type());
     setReport_format(rd.getReport_format());
     setDocument_type(rd.getDocument_type());
-    setLocation(event_id);
+    //setLocation("ISL."+event_id);
     setData(rd.getData());
   }
 

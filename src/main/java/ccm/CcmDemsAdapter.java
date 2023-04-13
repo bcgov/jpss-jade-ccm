@@ -490,6 +490,7 @@ public class CcmDemsAdapter extends RouteBuilder {
                 demsRecord = new DemsRecordData(ccdd);
               } else if(id != null) { // This is a primary_rcc_id based report
                 id.setCourt_file_number(cdd.getCourt_file_number_seq_type());
+                log.info("CourtFileNumber:"+id.getCourt_file_number());
                 // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
                 demsRecord = new DemsRecordData(id);
               }
@@ -560,7 +561,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
     // check to see if the court case exists, before trying to insert record to dems.
@@ -583,66 +584,6 @@ public class CcmDemsAdapter extends RouteBuilder {
   }
 
 
-  private void updateDocumentRecord() throws HttpOperationFailedException {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN
-    // property: event_object
-    // property: caseFound
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
-    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-
-    // check to see if the court case exists, before trying to insert record to dems.
-    .to("http://ccm-lookup-service/getCourtCaseExists")
-    .unmarshal().json()
-    .setProperty("caseId").simple("${body[id]}")
-    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
-
-    .choice()
-      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
-        .log(LoggingLevel.INFO, "attempt to stream the record's content.")
-        // if inserting the record to dems was successful, then go ahead and stream the data to the record.
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
-            CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
-            ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
-            String data = null;
-            if(cadd != null) {
-              data = cadd.getData();
-            } else if(ccdd != null) {
-              data = ccdd.getData();
-            } else if(id != null) {
-              data = id.getData();
-            }
-
-            String caseId = (String)ex.getProperty("caseId", String.class);
-            String recordId = (String)ex.getProperty("recordId", String.class);
-            DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, data);
-            ex.getMessage().setBody(demsRecordDoc);
-
-          }
-    
-        })
-        .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
-        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
-
-        // proceed to create record in dems, base on the caseid
-        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("direct:streamCaseRecord")
-        .endChoice()
-    .end()
-    .log(LoggingLevel.INFO, "end of createDocumentRecord")
-    ;
-  }
-
   private void createDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -654,7 +595,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
     // check to see if the court case exists, before trying to insert record to dems.
@@ -719,6 +660,83 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+
+  private void updateDocumentRecord() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    // property: caseFound
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != ''"))
+        .log(LoggingLevel.INFO, "Updating document record in dems")
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        
+        .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
+        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("direct:updateCaseRecord")
+        .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+        .setProperty("recordId", jsonpath("$.edtId"))
+        .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+        .endChoice()
+    .end()
+
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+        .log(LoggingLevel.INFO, "attempt to stream the record's content.")
+        // if inserting the record to dems was successful, then go ahead and stream the data to the record.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
+            CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+            ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
+            String data = null;
+            if(cadd != null) {
+              data = cadd.getData();
+            } else if(ccdd != null) {
+              data = ccdd.getData();
+            } else if(id != null) {
+              data = id.getData();
+            }
+
+            String caseId = (String)ex.getProperty("caseId", String.class);
+            String recordId = (String)ex.getProperty("recordId", String.class);
+            DemsRecordDocumentData demsRecordDoc = new DemsRecordDocumentData(caseId, recordId, data);
+            ex.getMessage().setBody(demsRecordDoc);
+
+          }
+    
+        })
+        .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
+        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("direct:streamCaseRecord")
+        .endChoice()
+    .end()
+    .log(LoggingLevel.INFO, "end of updateDocumentRecord")
+    ;
+  }
 
 
   private String getKafkaTopicByEventType(String eventType ) {
@@ -1853,9 +1871,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.number}"))
-      .log(LoggingLevel.DEBUG,"Key = ${exchangeProperty.key}")
       .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
-      .log(LoggingLevel.INFO,"reportType = ${exchangeProperty.reportType}...")
       .to("direct:getCourtCaseIdByKey")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .choice()
@@ -1874,7 +1890,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+    .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${exchangeProperty.reportType}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
