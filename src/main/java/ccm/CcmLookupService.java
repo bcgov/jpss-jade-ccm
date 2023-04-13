@@ -21,10 +21,12 @@ import java.net.SocketTimeoutException;
 import java.util.Calendar;
 import java.util.List;
 
+import org.apache.camel.AggregationStrategy;
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.builder.AggregationStrategies;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -52,6 +54,8 @@ public class CcmLookupService extends RouteBuilder {
     getImageData();
     getPersonExists();
     getCaseListByUserKey();
+    getJustinAuthUserList();
+    getPidpAuthUserList();
   }
 
   private void attachExceptionHandlers() {
@@ -247,40 +251,119 @@ public class CcmLookupService extends RouteBuilder {
   }
 
   private void getCourtCaseAuthList() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     AuthUserList userAuthList = new AuthUserList();
 
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log(LoggingLevel.DEBUG,"Processing getCourtCaseAuthList request... number = ${header[number]}")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAuthList")
+    .multicast().to("direct:getJustinAuthUserList","direct:getPidpAuthUserList")
+    .aggregationStrategy(
+      new AggregationStrategy() {
+      public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
+        if (oldExchange != null) {
+         AuthUserList justinUserList =  oldExchange.getIn().getBody(AuthUserList.class);
+         if (justinUserList != null) {
+          userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+         }
+        }
+        if (newExchange != null) {
+          
+          AuthUserList pidpUserList =  newExchange.getIn().getBody(AuthUserList.class);
+          if (pidpUserList != null) {
+            userAuthList.getAuth_user_list().addAll(pidpUserList.getAuth_user_list());
+          }
+          if (oldExchange != null ) {
+            AuthUserList justinUserList =  oldExchange.getIn().getBody(AuthUserList.class);
+            if (justinUserList != null) {
+             userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+            }
+          }
+         
+          newExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
+         }
+         if (oldExchange != null) {
+         oldExchange.getMessage().setBody(userAuthList,AuthUserList.class);
+         oldExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
+         oldExchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
+        
+         return oldExchange;
+         }
+         else{
+          newExchange.getMessage().setBody(userAuthList,AuthUserList.class);
+          newExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
+          newExchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
+          return newExchange;
+         }
+      }
+    })
+    
+   
+    .log(LoggingLevel.DEBUG, " data: '${body}'.")
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class);
+    
+  }
+
+  private void getJustinAuthUserList() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    AuthUserList outUserList = new AuthUserList();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .to("http://ccm-justin-adapter/getCourtCaseAuthList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+    .choice()
+    .when().simple("${header.CamelHttpResponseCode} == 200")
+     .unmarshal().json(JsonLibrary.Jackson,AuthUserList.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        JustinAuthUsersList jal = exchange.getIn().getBody(JustinAuthUsersList.class);
-        userAuthList.addJustinAuthUserList(jal);
+        AuthUserList jal = exchange.getIn().getBody(AuthUserList.class);
+        outUserList.getAuth_user_list().addAll(jal.getAuth_user_list());
+        exchange.getMessage().setBody(outUserList , AuthUserList.class);
 
       }})
-      .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
+      .end();
+    
+  }
+
+  private void getPidpAuthUserList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    AuthUserList outUserList = new AuthUserList();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+   
+    .log(LoggingLevel.DEBUG,"Processing getCourtCaseAuthList request... number = ${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+  
+       .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
       .log(LoggingLevel.DEBUG,"response from PIDP: ${body}")
+      .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+      .unmarshal().json(JsonLibrary.Jackson,PIDPAuthUserList.class)
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
           PIDPAuthUserList jal = exchange.getIn().getBody(PIDPAuthUserList.class);
-          userAuthList.AddPdipAuthUserList(jal);
-          exchange.getMessage().setBody(userAuthList, AuthUserList.class);
-        }}).end();
-      
+          outUserList.AddPdipAuthUserList(jal);
+          exchange.getMessage().setBody(outUserList , AuthUserList.class);
+        }}).endChoice()
+        .otherwise()
+      .log("No PIDP auth users retrieved")
+      .end();
   }
-
   private void getCourtCaseMetadata() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
