@@ -1256,7 +1256,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
         // iterate through auth user list
         for (AuthUser user : userList.getAuth_user_list()) {
-          DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS demsCaseGroupListMapping = DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS.findCaseGroupByJustinName(user.getJrs_role());
+          DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS demsCaseGroupListMapping = DemsListItemFieldData.CASE_GROUP_FIELD_MAPPINGS.findCaseGroupByJustinName(user.getRole());
 
           String demsCaseGroupName = (demsCaseGroupListMapping == null) ? null : demsCaseGroupListMapping.getDems_name();
           Long demsCaseGroupId = (demsCaseGroupListMapping == null) ? null : demsCaseGroupMapForCase.getIdByName(demsCaseGroupName);
@@ -1267,7 +1267,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             // check if sync data is found
             if (syncData != null) {
               // add user to sync data
-              syncData.getValues().add(user.getPart_id());
+              syncData.getValues().add(user.getKey());
               // System.out.println("DEBUG: User added to sync data for DEMS group '" + demsCaseGroupName + "' (id=" + demsCaseGroupId + "), user id = " + user.getPart_id());
             }
           } else {

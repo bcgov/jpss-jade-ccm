@@ -30,8 +30,8 @@ if [ "$env" = "prod" ]; then
         return 1
     fi
 else
-    logging_level="DEBUG"
-    #logging_level="INFO"
+    #logging_level="DEBUG"
+    logging_level="INFO"
 fi
 
 echo "`basename $0` to $ns ..."

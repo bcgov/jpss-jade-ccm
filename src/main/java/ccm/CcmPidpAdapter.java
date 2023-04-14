@@ -337,15 +337,16 @@ public class CcmPidpAdapter extends RouteBuilder {
        @Override
        public void process(Exchange exchange) {
         ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
-         PIDPAuthUserList b = new PIDPAuthUserList();
-         b.setKey("${header.number}");
+        
+         AuthUserList authList = new AuthUserList();
+         authList.setRcc_id((String)exchange.getIn().getHeader("number"));
          for(String userName : j) {
-          b.getAuthUserList().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
+          authList.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
          }
-         exchange.getMessage().setBody(b, PIDPAuthUserList.class);
+         exchange.getMessage().setBody(authList, AuthUserList.class);
        }
      })
-     .marshal().json(JsonLibrary.Jackson, PIDPAuthUserList.class)
+     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
      .log(LoggingLevel.INFO,"Converted response (from PDIDP to Business model): '${body}'")
      .endChoice()
      .otherwise()

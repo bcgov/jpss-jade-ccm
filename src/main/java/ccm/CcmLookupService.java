@@ -19,24 +19,23 @@ import java.net.SocketTimeoutException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 import java.util.Calendar;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.apache.camel.AggregationStrategy;
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
-import org.apache.camel.builder.AggregationStrategies;
+import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
-import ccm.models.common.data.AuthUser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
-import ccm.models.system.justin.JustinAuthUsersList;
-import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.utils.DateTimeUtils;
 
 public class CcmLookupService extends RouteBuilder {
@@ -54,8 +53,6 @@ public class CcmLookupService extends RouteBuilder {
     getImageData();
     getPersonExists();
     getCaseListByUserKey();
-    getJustinAuthUserList();
-    getPidpAuthUserList();
   }
 
   private void attachExceptionHandlers() {
@@ -250,9 +247,10 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 
+ 
   private void getCourtCaseAuthList() {
     AuthUserList userAuthList = new AuthUserList();
-
+   
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     from("platform-http:/" + routeId)
@@ -261,109 +259,48 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .multicast().to("direct:getJustinAuthUserList","direct:getPidpAuthUserList")
-    .aggregationStrategy(
-      new AggregationStrategy() {
-      public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
-        if (oldExchange != null) {
-         AuthUserList justinUserList =  oldExchange.getIn().getBody(AuthUserList.class);
-         if (justinUserList != null) {
-          userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
-         }
-        }
-        if (newExchange != null) {
-          
-          AuthUserList pidpUserList =  newExchange.getIn().getBody(AuthUserList.class);
-          if (pidpUserList != null) {
-            userAuthList.getAuth_user_list().addAll(pidpUserList.getAuth_user_list());
-          }
-          if (oldExchange != null ) {
-            AuthUserList justinUserList =  oldExchange.getIn().getBody(AuthUserList.class);
-            if (justinUserList != null) {
-             userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
-            }
-          }
-         
-          newExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
-         }
-         if (oldExchange != null) {
-         oldExchange.getMessage().setBody(userAuthList,AuthUserList.class);
-         oldExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
-         oldExchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+
+        // set up header
+        Map<String,Object> headers = new HashMap<String,Object>();
+        headers.put("number", exchange.getIn().getHeader("number"));
+
+        ProducerTemplate prodTemplate = getContext().createProducerTemplate();
+        String responseString = prodTemplate.requestBodyAndHeaders( 
+                                    "http://ccm-pidp-adapter/getCourtCaseAuthList", 
+                                    null, headers, String.class); 
         
-         return oldExchange;
-         }
-         else{
-          newExchange.getMessage().setBody(userAuthList,AuthUserList.class);
-          newExchange.setProperty(Exchange.AGGREGATION_COMPLETE_ALL_GROUPS_INCLUSIVE, true);
-          newExchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
-          return newExchange;
-         }
+        AuthUserList pdipAuthUserList = null;
+       if (responseString != null) {
+       
+        pdipAuthUserList = new ObjectMapper().readValue(responseString, AuthUserList.class);
+        if (pdipAuthUserList != null) {
+          userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+        }
+       }
+       prodTemplate.stop();
+
+       ProducerTemplate justinTemplate = getContext().createProducerTemplate();
+       String justinResponse = justinTemplate.requestBodyAndHeaders( 
+                                   "http://ccm-justin-adapter/getCourtCaseAuthList", 
+                                   null, headers, String.class); 
+       
+      
+       AuthUserList justinUserList = null;
+      if (justinResponse != null) {
+       
+       justinUserList = new ObjectMapper().readValue(justinResponse, AuthUserList.class);
+       if (justinUserList != null) {
+         userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+       }
       }
-    })
-    
-   
-    .log(LoggingLevel.DEBUG, " data: '${body}'.")
-    .marshal().json(JsonLibrary.Jackson, AuthUserList.class);
-    
+      justinTemplate.stop();
+      exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    } ).to("mock:result").marshal().json(JsonLibrary.Jackson, AuthUserList.class).end();
   }
-
-  private void getJustinAuthUserList() {
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    AuthUserList outUserList = new AuthUserList();
-
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-     .to("http://ccm-justin-adapter/getCourtCaseAuthList")
-    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
-    .choice()
-    .when().simple("${header.CamelHttpResponseCode} == 200")
-     .unmarshal().json(JsonLibrary.Jackson,AuthUserList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        AuthUserList jal = exchange.getIn().getBody(AuthUserList.class);
-        outUserList.getAuth_user_list().addAll(jal.getAuth_user_list());
-        exchange.getMessage().setBody(outUserList , AuthUserList.class);
-
-      }})
-      .end();
-    
-  }
-
-  private void getPidpAuthUserList() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    AuthUserList outUserList = new AuthUserList();
-
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-   
-    .log(LoggingLevel.DEBUG,"Processing getCourtCaseAuthList request... number = ${header[number]}")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
   
-       .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
-      .log(LoggingLevel.DEBUG,"response from PIDP: ${body}")
-      .choice()
-      .when().simple("${header.CamelHttpResponseCode} == 200")
-      .unmarshal().json(JsonLibrary.Jackson,PIDPAuthUserList.class)
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          PIDPAuthUserList jal = exchange.getIn().getBody(PIDPAuthUserList.class);
-          outUserList.AddPdipAuthUserList(jal);
-          exchange.getMessage().setBody(outUserList , AuthUserList.class);
-        }}).endChoice()
-        .otherwise()
-      .log("No PIDP auth users retrieved")
-      .end();
-  }
   private void getCourtCaseMetadata() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -480,3 +417,4 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 }
+
