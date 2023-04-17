@@ -53,7 +53,8 @@ kamel -n $ns run \
   --trait dependencies.enabled=true \
   --trait route.enabled=false \
   --trait service.enabled=true \
-  --trait service.node-port=false
+  --trait service.node-port=false \
+ 
 
   # --dev
   # --dependency file://./models.jar \
