@@ -303,13 +303,15 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("event_status")
       .jsonpath("$.event_status")
     .setHeader("rcc_id")
-      .jsonpath("$.justin_rcc_id")
+      .jsonpath("$.justin_rcc_id") // image data get does not return this value, so save in headers
     .setHeader("mdoc_justin_no")
-      .jsonpath("$.mdoc_justin_no")
+      .jsonpath("$.mdoc_justin_no") // image data get does not return this value, so save in headers
     .setHeader("rcc_ids")
-      .jsonpath("$.rcc_ids")
+      .jsonpath("$.rcc_ids") // image data get does not return this value, so save in headers
     .setHeader("image_id")
-      .jsonpath("$.image_id")
+      .jsonpath("$.image_id") // image data get does not return this value, so save in headers
+    .setHeader("filtered_yn")
+      .jsonpath("$.filtered_yn") // image data get does not return this value, so save in headers
     .setHeader("event_message_id")
       .jsonpath("$.justin_event_message_id")
     .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
@@ -323,6 +325,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
     .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
     .log(LoggingLevel.INFO, "image_id = ${header[image_id]}")
+    .log(LoggingLevel.INFO, "filtered_yn = ${header[filtered_yn]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
       .when(header("event_status").isNotNull())
@@ -428,6 +431,8 @@ public class CcmDemsAdapter extends RouteBuilder {
             //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
             log.info("processing into court case document record");
             CourtCaseDocumentData courtCaseDocument = new CourtCaseDocumentData(event_message_id, create_date, rd);
+            String filtered_yn = ex.getProperty("filtered_yn", String.class);
+            courtCaseDocument.setFiltered_yn(filtered_yn);
             DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
             ex.setProperty("reportType", demsRecord.getDescriptions());
 
