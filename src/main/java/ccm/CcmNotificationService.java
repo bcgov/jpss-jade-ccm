@@ -560,7 +560,9 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Update court case auth list in DEMS.  Court case auth list = ${body}")
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     //.log(LoggingLevel.INFO, "headers: ${headers}")
-    .setHeader("temp-body", simple("${body}"))
+    //.setProperty("authlist_data", simple("${bodyAs(String)}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
   }
