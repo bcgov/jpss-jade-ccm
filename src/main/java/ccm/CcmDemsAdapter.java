@@ -4,7 +4,7 @@ import org.apache.camel.CamelException;
 
 // To run this integration use:
 // kamel run CcmDemsEdgeAdapter.java --property file:application.properties --profile openshift
-// 
+//
 // recover the service location. If you're running on minikube, minikube service platform-http-server --url=true
 // curl -H "name:World" http://<service-location>/hello
 //
@@ -77,14 +77,14 @@ import java.util.List;
 public class CcmDemsAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    
+
     attachExceptionHandlers();
     version();
     dems_version();
     getDemsFieldMappings();
     getDemsCaseFlagId();
     getCourtCaseExists();
-    getCourtCaseIdByKey(); 
+    getCourtCaseIdByKey();
     getCourtCaseDataById();
     getCourtCaseDataByKey();
     getCourtCaseNameByKey();
@@ -124,11 +124,11 @@ public class CcmDemsAdapter extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
-   
+
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
       .backOffMultiplier(2)
-     
+
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
@@ -185,7 +185,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           public void process(Exchange exchange) throws Exception {
             BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
             log.error("toString event: " + event.toString());
-            
+
             String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
             exchange.setProperty("kafka_topic_name", kafkaTopic);
           }
@@ -198,7 +198,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .end()*/
 
     .end();
- 
+
     // Handle Camel Exception
     onException(CamelException.class)
     .process(new Processor() {
@@ -211,16 +211,16 @@ public class CcmDemsAdapter extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("CamelException");
         error.setError_summary("Unable to process event, CamelException raised.");
-      
-      
+
+
         log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("CamelException Exception event info : " + event.getEvent_source());
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         // KPI
-       
+
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-        
+
         kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -247,7 +247,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+
         ccm.models.common.event.Error error = new ccm.models.common.event.Error();
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
@@ -258,11 +258,11 @@ public class CcmDemsAdapter extends RouteBuilder {
         if(ex != null) {
           ex.printStackTrace();
         }
-      
+
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-        
+
         kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -293,7 +293,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -340,7 +340,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           public void process(Exchange ex) {
             ReportEvent re = ex.getIn().getBody(ReportEvent.class);
             JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-            
+
             ex.getMessage().setBody(keyList);
           }
         })
@@ -615,7 +615,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .to("direct:createDocumentRecord")
       .endChoice()
     .end()
-  
+
 
     .log(LoggingLevel.INFO, "end of changeDocumentRecord")
     ;
@@ -645,7 +645,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.caseId} != ''"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
-        
+
         .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
         .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
 
@@ -683,7 +683,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             ex.getMessage().setBody(demsRecordDoc);
 
           }
-    
+
         })
         .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
         .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
@@ -722,7 +722,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.caseId} != ''"))
         .log(LoggingLevel.INFO, "Updating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
-        
+
         .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
         .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
 
@@ -761,7 +761,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             ex.getMessage().setBody(demsRecordDoc);
 
           }
-    
+
         })
         .marshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
         .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
@@ -891,7 +891,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           exchange.setProperty("caseFlagId", value);
           System.out.println("caseFlagId:" + value);
         }
-  
+
       })
       .setBody(simple("${exchangeProperty.caseFlagId}"))
       ;
@@ -1185,7 +1185,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
     //JADE-2293
     .doTry()
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") 
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"DEMS case updated.")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
@@ -1403,8 +1403,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("key", simple("${header.event_key}"))
     //.setBody(simple("{\"rcc_id\":\"50433.0734\",\"auth_users_list\":[{\"part_id\":\"11429.0026\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85056.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85062.0734\",\"crown_agency\":null,\"user_name\":null},{\"part_id\":\"85170.0734\",\"crown_agency\":null,\"user_name\":null}]}"))
-    .setBody(simple("${header.temp-body}"))
-    .removeHeader("temp-body")
+    //.setBody(simple("${header.temp-body}"))
+    //.removeHeader("temp-body")
     .log(LoggingLevel.DEBUG,"Processing request (event_key = ${exchangeProperty.key}): ${body}")
     .to("direct:syncCaseUserList");
   }
@@ -1469,7 +1469,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         AuthUserList userList = (AuthUserList)exchange.getProperty("auth_user_list_object");
         DemsCaseGroupMap demsCaseGroupMapForCase = (DemsCaseGroupMap)exchange.getProperty("dems_case_group_map");
-        
+
         List<DemsCaseGroupMembersSyncHelper> demsGroupMembersSyncHelperList = new ArrayList<DemsCaseGroupMembersSyncHelper>();
 
         // create an empty DEMS case group members map with all case groups.
@@ -1771,7 +1771,7 @@ public class CcmDemsAdapter extends RouteBuilder {
   private void getGroupMapByCaseId() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-  
+
     // IN: exchangeProperty.dems_case_id
     // OUT: exchangeProperty.dems_case_group_map object
     from("direct:" + routeId)
@@ -1803,7 +1803,7 @@ public class CcmDemsAdapter extends RouteBuilder {
   private void getCaseListByUserKey() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-  
+
     // IN: header.key
     // OUT: body as ChargeAssessmentCaseDataRefList
     from("platform-http:/" + routeId)
@@ -1839,7 +1839,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .end()
     ;
   }
-  
+
   private void createCaseRecord() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -2032,7 +2032,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) throws Exception {        
+      public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
         String kpi_status = (String) exchange.getProperty("kpi_status");
 
@@ -2044,7 +2044,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
-       
+
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
@@ -2052,5 +2052,5 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
-  
+
 }

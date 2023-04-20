@@ -15,7 +15,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 
 // To run this integration use:
 // kamel run CcmNotificationService.java --property file:ccmNotificationService.properties --profile openshift
-// 
+//
 
 // camel-k: language=java
 // camel-k: dependency=mvn:org.apache.camel.quarkus
@@ -132,7 +132,7 @@ public class CcmNotificationService extends RouteBuilder {
           public void process(Exchange exchange) throws Exception {
             BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
             log.error("toString event: " + event.toString());
-            
+
             String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
             exchange.setProperty("kafka_topic_name", kafkaTopic);
           }
@@ -145,7 +145,7 @@ public class CcmNotificationService extends RouteBuilder {
       .end()*/
 
     .end();
- 
+
     // Camel Exception
     onException(CamelException.class)
     .process(new Processor() {
@@ -157,14 +157,14 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("CamelException");
         error.setError_summary("Unable to process event, CamelException raised.");
-       
+
         log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("CamelException Exception event info : " + event.getEvent_source());
-       
+
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-      
+
         kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -197,7 +197,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_code("General Exception");
         error.setError_details(event);
         log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
-  
+
         log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("General Exception event info : " + event.getEvent_source());
         for(StackTraceElement trace : cause.getStackTrace())
@@ -207,7 +207,7 @@ public class CcmNotificationService extends RouteBuilder {
          // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-       
+
         kpi.setEvent_topic_name(kafkaTopic);
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
@@ -228,7 +228,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
 
   }
- 
+
   private String getKafkaTopicByEventType(String eventType ) {
     String kafkaTopic = "ccm-general-errors";
     if (eventType != null) {
@@ -256,7 +256,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -355,7 +355,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -451,10 +451,10 @@ public class CcmNotificationService extends RouteBuilder {
 
             ChargeAssessmentEvent original_event = (ChargeAssessmentEvent)ex.getProperty("kpi_event_object");
             ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM, original_event);
-           
-            
+
+
             boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
-            
+
             if (court_case_exists) {
               derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.UPDATED.toString());
             } else {
@@ -555,7 +555,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_key}")
-    .log(LoggingLevel.DEBUG,"Retrieve court case auth list")
+    .log(LoggingLevel.INFO,"Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
     .log(LoggingLevel.DEBUG,"Update court case auth list in DEMS.  Court case auth list = ${body}")
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
@@ -566,7 +566,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/syncCaseUserList")
     ;
   }
-  
+
   private void processCaseUserEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -574,7 +574,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -613,7 +613,7 @@ public class CcmNotificationService extends RouteBuilder {
       .end();
     ;
   }
-  
+
   private void processBulkCaseUserEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -621,7 +621,7 @@ public class CcmNotificationService extends RouteBuilder {
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -707,7 +707,7 @@ public class CcmNotificationService extends RouteBuilder {
             .stopOnException()
             .setHeader("rcc_id", jsonpath("$.rcc_id"))
             .choice()
-            //only cases containing actual RCC_ID values (not null) should be processed. 
+            //only cases containing actual RCC_ID values (not null) should be processed.
               .when(simple("${header[rcc_id]} != null"))
                 .setProperty("rcc_id",jsonpath("$.rcc_id"))
                 .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
@@ -719,7 +719,7 @@ public class CcmNotificationService extends RouteBuilder {
               .otherwise()
               //nothing to do here
               .endChoice()
-            .end() 
+            .end()
           .endChoice()
           .when(simple("${header.CamelHttpResponseCode} == 404"))
             .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")
@@ -784,11 +784,11 @@ public class CcmNotificationService extends RouteBuilder {
                 // extract the offset from response header.  Example format: "[some-topic-0@301]"
                 String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
                   exchange.getProperty("derived_event_recordmetadata"));
-                  
+
                 String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
 
                 EventKPI derived_event_kpi = new EventKPI(
-                  derived_event, 
+                  derived_event,
                   EventKPI.STATUS.EVENT_CREATED);
 
                 derived_event_kpi.setComponent_route_name(routeId);
@@ -826,7 +826,7 @@ public class CcmNotificationService extends RouteBuilder {
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .split()
@@ -941,7 +941,7 @@ public class CcmNotificationService extends RouteBuilder {
             CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
             CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
             be.setEvent_status(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
-        
+
             exchange.getMessage().setBody(be, CourtCaseEvent.class);
             exchange.setProperty("derived_event_object", be);
             exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
@@ -962,11 +962,11 @@ public class CcmNotificationService extends RouteBuilder {
             // extract the offset from response header.  Example format: "[some-topic-0@301]"
             String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
               exchange.getProperty("derived_event_recordmetadata"));
-              
+
             String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
 
             EventKPI derived_event_kpi = new EventKPI(
-              derived_event, 
+              derived_event,
               EventKPI.STATUS.EVENT_CREATED);
 
             derived_event_kpi.setComponent_route_name(routeId);
@@ -989,7 +989,7 @@ public class CcmNotificationService extends RouteBuilder {
             CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
             CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
             be.setEvent_status(CourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
-        
+
             exchange.getMessage().setBody(be, CourtCaseEvent.class);
             exchange.setProperty("derived_event_object", be);
             exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
@@ -1010,11 +1010,11 @@ public class CcmNotificationService extends RouteBuilder {
             // extract the offset from response header.  Example format: "[some-topic-0@301]"
             String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
               exchange.getProperty("derived_event_recordmetadata"));
-              
+
             String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
 
             EventKPI derived_event_kpi = new EventKPI(
-              derived_event, 
+              derived_event,
               EventKPI.STATUS.EVENT_CREATED);
 
             derived_event_kpi.setComponent_route_name(routeId);
@@ -1038,7 +1038,7 @@ public class CcmNotificationService extends RouteBuilder {
           .to("direct:publishJustinEventKPIError")
           .process(new Processor() {
             public void process(Exchange exchange) throws Exception {
-    
+
               throw exchange.getException();
             }
           })
@@ -1097,7 +1097,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case appearance summary list from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("business_data", simple("${bodyAs(String)}"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
@@ -1141,7 +1141,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case crown assignment list from JUSTIN: ${body}")
-    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't 
+    // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("business_data", simple("${bodyAs(String)}"))
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
@@ -1242,7 +1242,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) throws Exception {        
+      public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
         String kpi_status = (String) exchange.getProperty("kpi_status");
 
@@ -1254,7 +1254,7 @@ public class CcmNotificationService extends RouteBuilder {
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
-       
+
       }
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
@@ -1262,7 +1262,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
-  
+
   private void publishBodyAsEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1278,7 +1278,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  
+
   private void publishChargeAssessmentCaseKPIError() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
