@@ -561,9 +561,11 @@ public class CcmNotificationService extends RouteBuilder {
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     //.setProperty("authlist_data", simple("${bodyAs(String)}"))
+    .log(LoggingLevel.INFO,"start syncCaseUserList call")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
+    .log(LoggingLevel.INFO,"Completed processCourtCaseAuthListUpdated call")
     ;
   }
 
@@ -898,6 +900,8 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("caseFound").simple("${body[id]}")
       .choice()
         .when(simple("${exchangeProperty.caseFound} != ''"))
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           // grab the case mappings from justin, for overriding case flags.
           .to("http://ccm-lookup-service/getCourtCaseDetails")
           //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
