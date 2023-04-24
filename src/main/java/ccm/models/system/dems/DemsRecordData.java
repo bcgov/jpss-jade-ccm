@@ -32,6 +32,8 @@ public class DemsRecordData {
     public DemsRecordData(ChargeAssessmentDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getReport_type());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
                 //"If $MAPID21 = Y then ""STATEMENT - VICTIM"";
@@ -39,16 +41,18 @@ public class DemsRecordData {
                 //ELSE If $MAPID20 = Y then ""STATEMENT - POLICE"";
                 //ELSE If $MAPID18 = Y then ""STATEMENT - CIVILIAN"""
                 if(nrd.getVictim_yn() != null && nrd.getVictim_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - VICTIM");
+                    descriptionShortForm = report.getLabel()+"-VIC";
                 } else if(nrd.getExpert_yn() != null && nrd.getExpert_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - EXPERT");
+                    descriptionShortForm = report.getLabel()+"-EXP";
                 } else if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - POLICE");
+                    descriptionShortForm = report.getLabel()+"-POL";
+                } else if(nrd.getWitness_yn() != null && nrd.getWitness_yn().equalsIgnoreCase("Y")) {
+                    descriptionShortForm = report.getLabel()+"-WIT";
                 } else {
-                    setDescriptions("STATEMENT - CIVILIAN");
+                    descriptionShortForm = report.getLabel()+"-CIV";
                 }
             } else {
-                setDescriptions(report.getLabel());
+                descriptionShortForm = report.getLabel();
             }
 
             if(report.equals(REPORT_TYPES.CPIC)) {
@@ -82,7 +86,7 @@ public class DemsRecordData {
             } else if(report.equals(REPORT_TYPES.DV_ATTACHMENT)) {
                 setType("OPERATIONAL");
             } else if(report.equals(REPORT_TYPES.DM_ATTACHMENT)) {
-                setType("ADMIN");
+                setType("ADMINISTRATIVE");
             } else if(report.equals(REPORT_TYPES.VEHICLE)) {
                 setType("PARTNER AGENCY");
             } else if(report.equals(REPORT_TYPES.SUPPLEMENTAL)) {
@@ -95,11 +99,12 @@ public class DemsRecordData {
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        setLocation(nrd.getLocation());
+        //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(nrd.getSubmit_date());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -131,11 +136,11 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        /*if(getLocation() != null) {
-            DemsFieldData location = new DemsFieldData("Location", getLocation());
+        if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
             fieldData.add(location);
         }
-        if(getFolder() != null) {
+        /*if(getFolder() != null) {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
@@ -146,13 +151,15 @@ public class DemsRecordData {
     public DemsRecordData(CourtCaseDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getReport_type());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
-                setDescriptions("CONVICTION LIST-FILTERED");
+                descriptionShortForm = report.getLabel()+"-F";
             } else if(report.equals(REPORT_TYPES.CONVICTION_LIST)) {
-                setDescriptions("CONVICTION LIST-DEFAULT");
+                descriptionShortForm = report.getLabel()+"-D";
             } else {
-                setDescriptions(report.getLabel());
+                descriptionShortForm = report.getLabel();
             }
 
             if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
@@ -177,11 +184,12 @@ public class DemsRecordData {
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        setLocation(nrd.getLocation());
+        //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(nrd.getGeneration_date());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -213,11 +221,11 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        /*if(getLocation() != null) {
-            DemsFieldData location = new DemsFieldData("Location", getLocation());
+        if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
             fieldData.add(location);
         }
-        if(getFolder() != null) {
+        /*if(getFolder() != null) {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
@@ -228,9 +236,11 @@ public class DemsRecordData {
     public DemsRecordData(ImageDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getReport_type());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(nrd.getForm_type_description() != null) {
-                setDescriptions(nrd.getForm_type_description().toUpperCase());
+                descriptionShortForm = nrd.getForm_type_description().toUpperCase();
 
                 if(report.equals(REPORT_TYPES.INFORMATION)) {
                     setType("COURT RECORD");
@@ -260,11 +270,12 @@ public class DemsRecordData {
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
-        setLocation(nrd.getLocation());
+        //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
         setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -296,11 +307,11 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        /*if(getLocation() != null) {
-            DemsFieldData location = new DemsFieldData("Location", getLocation());
+        if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
             fieldData.add(location);
         }
-        if(getFolder() != null) {
+        /*if(getFolder() != null) {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
