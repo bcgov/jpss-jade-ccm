@@ -34,6 +34,9 @@ else
     logging_level="INFO"
 fi
 
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
+
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
@@ -45,6 +48,8 @@ kamel -n $ns run \
   CcmLookupService.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
+  --label deployer="$deployer" \
+  --label version="$version" \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
@@ -54,5 +59,7 @@ kamel -n $ns run \
   --trait route.enabled=false
 fi
 popd
+
+#--property camel.k.label="ccm (deployed on `date` by `oc whoami`)" \
 
 # kamel -n cef5dd-test log ccm-lookup-service

@@ -36,6 +36,9 @@ fi
 
 echo "`basename $0` to $ns ..."
 
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
+
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
     camel run  --properties=ccmPidpAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmPidpAdapter.java --port 4417 local/local.properties 
@@ -45,6 +48,8 @@ kamel -n $ns run \
   CcmPidpAdapter.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmPidpAdapter.properties \
+  --label deployer="$deployer" \
+  --label version="$version" \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
