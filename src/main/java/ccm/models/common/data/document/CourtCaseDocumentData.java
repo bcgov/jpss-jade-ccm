@@ -2,8 +2,6 @@ package ccm.models.common.data.document;
 
 import java.util.Arrays;
 import java.util.List;
-import ccm.models.system.justin.JustinDocumentList;
-import ccm.models.system.justin.JustinDocument;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class CourtCaseDocumentData extends BaseDocumentData {
@@ -20,21 +18,21 @@ public class CourtCaseDocumentData extends BaseDocumentData {
   public CourtCaseDocumentData() {
   }
 
-  public CourtCaseDocumentData(String event_id, String create_date, JustinDocument jd) {
-    super(event_id, create_date, jd);
-    setPart_id(jd.getPart_id());
-    setParticipant_name(jd.getParticipant_name());
-    setGeneration_date(jd.getGeneration_date());
-    setMdoc_justin_no(jd.getMdoc_justin_no());
-    setCourt_file_no(jd.getCourt_file_no());
-    setCourt_location(jd.getCourt_location());
-    setFiltered_yn(jd.getFiltered_yn());
+  public CourtCaseDocumentData(String event_id, String create_date, ReportDocument rd) {
+    super(event_id, create_date, rd);
+    setPart_id(rd.getPart_id());
+    setParticipant_name(rd.getParticipant_name());
+    setGeneration_date(rd.getGeneration_date());
+    setMdoc_justin_no(rd.getMdoc_justin_no());
+    setCourt_file_no(rd.getCourt_file_no());
+    setCourt_location(rd.getCourt_location());
+    setFiltered_yn(rd.getFiltered_yn());
 
-    if(jd.getRcc_ids() != null) {
+    if(rd.getRcc_ids() != null) {
       ObjectMapper objectMapper = new ObjectMapper();
       try {
-        System.out.println(jd.getRcc_ids());
-        String[] rcc_id_list = objectMapper.readValue(jd.getRcc_ids(), String[].class);
+        System.out.println(rd.getRcc_ids());
+        String[] rcc_id_list = objectMapper.readValue(rd.getRcc_ids(), String[].class);
         this.setRcc_ids(Arrays.asList(rcc_id_list));
       } catch(Exception e) {
         e.printStackTrace();

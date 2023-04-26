@@ -39,6 +39,7 @@ gateway/.env
 
 # Ignore MacOS-specific system folders
 **/.DS_Store
+
 .camel-jbang/camel-jbang-run.properties
 src/main/java/ccm/.camel-jbang/camel-jbang-run.properties
 src/main/java/mock/.camel-jbang/camel-jbang-run.properties
@@ -101,3 +102,4 @@ local.properties
 .cache-main
 .scala_dependencies
 .worksheet
+

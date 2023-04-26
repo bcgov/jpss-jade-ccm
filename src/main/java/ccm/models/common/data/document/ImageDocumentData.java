@@ -1,7 +1,5 @@
 package ccm.models.common.data.document;
 
-import ccm.models.system.justin.JustinDocument;
-
 public class ImageDocumentData extends BaseDocumentData {
   private String mdoc_justin_no;
   private String part_id;
@@ -19,19 +17,19 @@ public class ImageDocumentData extends BaseDocumentData {
   public ImageDocumentData() {
   }
 
-  public ImageDocumentData(String event_id, String create_date, JustinDocument jd) {
-    super(event_id, create_date, jd);
-    setMdoc_justin_no(jd.getMdoc_justin_no());
-    setPart_id(jd.getPart_id());
-    setSworn_date(jd.getSworn_date());
-    setForm_type_description(jd.getForm_type_description());
-    setForm_type_code(jd.getForm_type_code());
-    setCourt_file_number(jd.getCourt_file_number());
-    setPrimary_rcc_id(jd.getPrimary_rcc_id());
-    setImage_id(jd.getImage_id());
-    setParticipant_name(jd.getParticipant_name());
-    setCourt_services_form_no(jd.getCourt_services_form_no());
-    setIssue_date(jd.getIssue_date());
+  public ImageDocumentData(String event_id, String create_date, ReportDocument rd) {
+    super(event_id, create_date, rd);
+    setMdoc_justin_no(rd.getMdoc_justin_no());
+    setPart_id(rd.getPart_id());
+    setSworn_date(rd.getSworn_date());
+    setForm_type_description(rd.getForm_type_description());
+    setForm_type_code(rd.getForm_type_code());
+    setCourt_file_number(rd.getCourt_file_number());
+    setPrimary_rcc_id(rd.getPrimary_rcc_id());
+    setImage_id(rd.getImage_id());
+    setParticipant_name(rd.getParticipant_name());
+    setCourt_services_form_no(rd.getCourt_services_form_no());
+    setIssue_date(rd.getIssue_date());
 
   }
 
