@@ -34,6 +34,9 @@ LICENSE                    - License
 * [Openshift Readme](openshift/README.md)
 * [OCIO Private OpenShift Platform Architecture Diagram (first login with IDIR via button on page, and then re-access the link)](https://cloud.gov.bc.ca/private-cloud/platform-architecture-diagram/)
 
+## Running Locally
+* Run mvn compile quarkus:test in the  /jpss-jade-ccm/ directory
+
 
 ## License
 

@@ -806,8 +806,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     return kafkaTopic;
   }
 
-  private void version() {
-    // use method name as route id
+  //private void version() {
+  protected void version() {  
+  	// use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     from("platform-http:/v1/version?httpMethodRestrict=GET")
@@ -2047,9 +2048,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) throws Exception {
-        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-        String kpi_status = (String) exchange.getProperty("kpi_status");
+
+      public void process(Exchange exchange) throws Exception {        
+        //BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object", BaseEvent.class);
+        BaseEvent event = (BaseEvent)exchange.getIn().getHeader("kpi_event_object", BaseEvent.class);
+        //String kpi_status = (String) exchange.getProperty("kpi_status");
+        String kpi_status = (String)exchange.getIn().getHeader("kpi_status");
+
 
         // KPI
         EventKPI kpi = new EventKPI(event, kpi_status);
@@ -2065,6 +2070,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
+    .id("kafka-send-to-event-kpi") //give this endpoint an id 
+    
     ;
   }
 
