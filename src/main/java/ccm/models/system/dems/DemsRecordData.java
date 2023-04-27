@@ -32,6 +32,8 @@ public class DemsRecordData {
     public DemsRecordData(ChargeAssessmentDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getReport_type());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
                 //"If $MAPID21 = Y then ""STATEMENT - VICTIM"";
@@ -39,30 +41,32 @@ public class DemsRecordData {
                 //ELSE If $MAPID20 = Y then ""STATEMENT - POLICE"";
                 //ELSE If $MAPID18 = Y then ""STATEMENT - CIVILIAN"""
                 if(nrd.getVictim_yn() != null && nrd.getVictim_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - VICTIM");
+                    descriptionShortForm = report.getLabel()+"-VIC";
                 } else if(nrd.getExpert_yn() != null && nrd.getExpert_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - EXPERT");
+                    descriptionShortForm = report.getLabel()+"-EXP";
                 } else if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")) {
-                    setDescriptions("STATEMENT - POLICE");
+                    descriptionShortForm = report.getLabel()+"-POL";
+                } else if(nrd.getWitness_yn() != null && nrd.getWitness_yn().equalsIgnoreCase("Y")) {
+                    descriptionShortForm = report.getLabel()+"-WIT";
                 } else {
-                    setDescriptions("STATEMENT - CIVILIAN");
+                    descriptionShortForm = report.getLabel()+"-CIV";
                 }
             } else {
-                setDescriptions(report.getLabel());
+                descriptionShortForm = report.getLabel();
             }
 
             if(report.equals(REPORT_TYPES.CPIC)) {
                 if(nrd.getParticipant_name() != null) {
                     setTitle(nrd.getParticipant_name().toUpperCase());
                 } else {
-                setTitle("CRIMINAL RECORD");
+                    setTitle("CRIMINAL RECORD");
                 }
             } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
                 //"""If ($MAPID20 = Y AND $MAPID17 is not empty) then """"$MAPID16 (PIN$MAPID17)""""
                 //Else $MAPID16"""
                 if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")
                 && nrd.getOfficer_pin_number() != null) {
-                    setTitle(nrd.getWitness_name() + "(" + nrd.getOfficer_pin_number() + ")");
+                    setTitle(nrd.getWitness_name() + "(PIN" + nrd.getOfficer_pin_number() + ")");
                 } else {
                     setTitle(nrd.getWitness_name());
                 }
@@ -91,16 +95,16 @@ public class DemsRecordData {
 
         }
 
-
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getSubmit_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
         //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
-        setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -132,22 +136,40 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
-        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
-        //fieldData.add(location);
-        //fieldData.add(folder);
-        
+        if(getFileExtension() != null) {
+            DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
+            fieldData.add(extension);
+        }
+        if(nrd.getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
+            fieldData.add(location);
+        }
+        if(getLastApiRecordUpdate() != null) {
+            DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
+            fieldData.add(lastUpdate);
+        }
+        /*if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+        DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
+        fieldData.add(ledger);
+
         setFields(fieldData);
     }
 
     public DemsRecordData(CourtCaseDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getReport_type());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
-                setDescriptions("CONVICTION LIST-FILTERED");
+                descriptionShortForm = report.getLabel()+"-F";
+            } else if(report.equals(REPORT_TYPES.CONVICTION_LIST)) {
+                descriptionShortForm = report.getLabel()+"-D";
             } else {
-                setDescriptions(report.getLabel());
+                descriptionShortForm = report.getLabel();
             }
 
             if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
@@ -158,9 +180,6 @@ public class DemsRecordData {
             } else {
                 setTitle(nrd.getParticipant_name().toUpperCase());
             }
-            // TODO: Lookup the destination DEMS Case ID that this record is being added to, and use that value for this mapping
-            //setOriginalFileNumber(nrd.getAgency_file_no());
-
 
             if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS)) {
                 setType("COURT RECORD");
@@ -177,9 +196,10 @@ public class DemsRecordData {
         setFolder("JUSTIN");
         //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
-        setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -210,26 +230,45 @@ public class DemsRecordData {
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
-        }        
+        }
+        if(getFileExtension() != null) {
+            DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
+            fieldData.add(extension);
+        }
+        if(nrd.getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
+            fieldData.add(location);
+        }
+        if(getLastApiRecordUpdate() != null) {
+            DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
+            fieldData.add(lastUpdate);
+        }
+        /*if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+        DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
+        fieldData.add(ledger);
+
+
         setFields(fieldData);
     }
 
     public DemsRecordData(ImageDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
+        setDescriptions(nrd.getForm_type_description().toUpperCase());
+        String descriptionShortForm = getDescriptions();
         if(report != null) {
-            if(nrd.getForm_type_description() != null) {
-                setDescriptions(nrd.getForm_type_description().toUpperCase());
-
-                if(report.equals(REPORT_TYPES.INFORMATION)) {
-                    setType("COURT RECORD");
-                } else if(report.equals(REPORT_TYPES.DOCUMENT)) {
-                    if(nrd.getForm_type_description().contains("Release")) {
-                        setType("STATEMENT");
-                    } else {
-                        setType("COURT RECORD");
-                    }
-                }
+            descriptionShortForm = report.getLabel();
+            if(report.equals(REPORT_TYPES.INFORMATION)) {
+                setType("COURT RECORD");
+            } else if(report.equals(REPORT_TYPES.RELEASE_DOCUMENT)) {
+                setType("PROCESS RECORD");
+            } else if(report.equals(REPORT_TYPES.SENTENCE_DOCUMENT)) {
+                setType("COURT RECORD");
+            } else {
+                setType("COURT RECORD");
             }
 
             if(report.equals(REPORT_TYPES.INFORMATION)) {
@@ -251,9 +290,10 @@ public class DemsRecordData {
         setFolder("JUSTIN");
         //setLocation(nrd.getLocation());
         setFileExtension(".pdf");
-        setPrimaryDateUtc(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setDocumentId(getDescriptions()+getTitle()+getPrimaryDateUtc());
+        setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
@@ -285,11 +325,26 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
-        //DemsFieldData location = new DemsFieldData("Location", nrd.getLocation());
-        //DemsFieldData folder = new DemsFieldData("Folder", getFolder());
-        //fieldData.add(location);
-        //fieldData.add(folder);
-        
+        if(getFileExtension() != null) {
+            DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
+            fieldData.add(extension);
+        }
+        if(nrd.getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
+            fieldData.add(location);
+        }
+        if(getLastApiRecordUpdate() != null) {
+            DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
+            fieldData.add(lastUpdate);
+        }
+        /*if(getFolder() != null) {
+            DemsFieldData folder = new DemsFieldData("Folder", getFolder());
+            fieldData.add(folder);
+        }*/
+        DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
+        fieldData.add(ledger);
+
+
         setFields(fieldData);
     }
 

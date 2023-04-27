@@ -34,6 +34,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 //import org.apache.camel.model.;
 
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
@@ -61,7 +62,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     //readRCCFileSystem();
     requeueJustinEvent();
     requeueJustinEventRange();
-    
     processJustinEventsMainTimer();
     processJustinEventsBulkTimer();
     processJustinMainEvents();
@@ -390,17 +390,17 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("http://{{justin.host}}/newEventsBatch?system={{justin.queue.main.name}}") // mark all new events as "in progress"
+    .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.main.name}}") // mark all new events as "in progress"
        //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("http://{{justin.host}}/inProgressEvents?system={{justin.queue.main.name}}") // retrieve all "in progress" events
+    .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.main.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
 
     // process events
@@ -424,17 +424,17 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}")
+  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("http://{{justin.host}}/newEventsBatch?system={{justin.queue.bulk.name}}") // mark all new events as "in progress"
+    .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.bulk.name}}") // mark all new events as "in progress"
        //.log(LoggingLevel.DEBUG,"Marking all new events in JUSTIN as 'in progress': ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("http://{{justin.host}}/inProgressEvents?system={{justin.queue.bulk.name}}") // retrieve all "in progress" events
+    .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.bulk.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
 
     // process events
@@ -579,12 +579,12 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
           .endChoice()
-        /*.when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
           .to("direct:processReportEvents")
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DOCM))
           .to("direct:processReportEvents")
-          .endChoice()*/
+          .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -659,12 +659,12 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
           .endChoice()
-        /*.when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.REPORT))
           .to("direct:processReportEvents")
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DOCM))
           .to("direct:processReportEvents")
-          .endChoice()*/
+          .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -1402,7 +1402,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.INFO,"Request to justin: '${body}'")
+    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1416,10 +1416,11 @@ public class CcmJustinAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
-        exchange.getMessage().setBody(j, JustinDocumentList.class);
+        ReportDocumentList rd = new ReportDocumentList(j);
+        exchange.getMessage().setBody(rd, ReportDocumentList.class);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }

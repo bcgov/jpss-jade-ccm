@@ -1,6 +1,8 @@
-package ccm.models.system.justin;
+package ccm.models.common.data.document;
 
-public class JustinDocument {
+import ccm.models.system.justin.JustinDocument;
+
+public class ReportDocument {
   private String report_type;
   private String report_format;
   private String document_type;
@@ -49,6 +51,59 @@ public class JustinDocument {
 
   private String active_yn;
 
+  public ReportDocument() {
+  }
+
+  public ReportDocument(JustinDocument jd) {
+    setReport_type(jd.getReport_type());
+
+    setReport_format(jd.getReport_format());
+    setDocument_type(jd.getDocument_type());
+    setRcc_id(jd.getRcc_id());
+    setPart_id(jd.getPart_id());
+    setParticipant_name(jd.getParticipant_name());
+    setMdoc_justin_no(jd.getMdoc_justin_no());
+    setPrimary_rcc_id(jd.getPrimary_rcc_id());
+    setImage_id(jd.getImage_id());
+    setSubmit_date(jd.getSubmit_date());
+    setAgency_file_no(jd.getAgency_file_no());
+    setRcc_ids(jd.getRcc_ids());
+    setGeneration_date(jd.getGeneration_date());
+    setIndex(jd.getIndex());
+    setData(jd.getData());
+    setReport_title(jd.getReport_title());
+
+    setWitness_name(jd.getWitness_name());
+    setPin_number(jd.getPin_number());
+    setOfficer_pin_number(jd.getOfficer_pin_number());
+    setWitness_yn(jd.getWitness_yn());
+    setExpert_yn(jd.getExpert_yn());
+    setPolice_officer_yn(jd.getPolice_officer_yn());
+    setVictim_yn(jd.getVictim_yn());
+    setFiled_by(jd.getFiled_by());
+    setSworn_date(jd.getSworn_date());
+    setForm_type_cd(jd.getForm_type_cd());
+    setForm_type_code(jd.getForm_type_code());
+    setForm_type_description(jd.getForm_type_description());
+    setCourt_file_no(jd.getCourt_file_no());
+    setCourt_file_number(jd.getCourt_file_number());
+    setDocument_id(jd.getDocument_id());
+    setCourt_services_form_no(jd.getCourt_services_form_no());
+    setIssue_date(jd.getIssue_date());
+    setCourt_location(jd.getCourt_location());
+    setExclude_youth(jd.getExclude_youth());
+    setInclude_525_512_3(jd.getInclude_525_512_3());
+    setInclude_810(jd.getInclude_810());
+    setInclude_mva(jd.getInclude_mva());
+    setInclude_ncr(jd.getInclude_ncr());
+    setInclude_non_disclosure(jd.getInclude_non_disclosure());
+    setInclude_unknown_statutes(jd.getInclude_unknown_statutes());
+
+    setFiltered_yn(jd.getFiltered_yn());
+    setReport_object_url(jd.getReport_object_url());
+
+    setActive_yn(jd.getActive_yn());
+  }
 
   public String getReport_type() {
     return report_type;

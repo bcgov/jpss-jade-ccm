@@ -23,3 +23,4 @@ echo "`basename $0` to $env ..."
 . ./redeploy-ccm-lookup-service $env
 . ./redeploy-ccm-notification-service $env
 . ./redeploy-ccm-justin-adapter $env
+. ./redeploy-ccm-justin-in-adapter $env

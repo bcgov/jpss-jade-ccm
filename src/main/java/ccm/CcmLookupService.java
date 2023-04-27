@@ -19,15 +19,21 @@ import java.net.SocketTimeoutException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ccm.models.common.data.AuthUserList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.utils.DateTimeUtils;
@@ -47,6 +53,7 @@ public class CcmLookupService extends RouteBuilder {
     getImageData();
     getPersonExists();
     getCaseListByUserKey();
+    getCaseHyperlink();
   }
 
   private void attachExceptionHandlers() {
@@ -242,21 +249,56 @@ public class CcmLookupService extends RouteBuilder {
   }
 
   private void getCourtCaseAuthList() {
+    AuthUserList userAuthList = new AuthUserList();
+
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log(LoggingLevel.DEBUG,"Processing getCourtCaseAuthList request... number = ${header[number]}")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAuthList")
-    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
-    ;
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+
+        // set up header
+        Map<String,Object> headers = new HashMap<String,Object>();
+        headers.put("number", exchange.getIn().getHeader("number"));
+
+        ProducerTemplate prodTemplate = getContext().createProducerTemplate();
+        String responseString = prodTemplate.requestBodyAndHeaders( 
+                                    "http://ccm-pidp-adapter/getCourtCaseAuthList", 
+                                    null, headers, String.class); 
+
+        AuthUserList pdipAuthUserList = null;
+       if (responseString != null) {
+
+        pdipAuthUserList = new ObjectMapper().readValue(responseString, AuthUserList.class);
+        if (pdipAuthUserList != null) {
+          userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+        }
+       }
+       prodTemplate.stop();
+
+       ProducerTemplate justinTemplate = getContext().createProducerTemplate();
+       String justinResponse = justinTemplate.requestBodyAndHeaders( 
+                                   "http://ccm-justin-adapter/getCourtCaseAuthList", 
+                                   null, headers, String.class); 
+
+
+       AuthUserList justinUserList = null;
+      if (justinResponse != null) {
+
+       justinUserList = new ObjectMapper().readValue(justinResponse, AuthUserList.class);
+       if (justinUserList != null) {
+         userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+       }
+      }
+      justinTemplate.stop();
+      exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    } ).to("mock:result").marshal().json(JsonLibrary.Jackson, AuthUserList.class).end();
   }
 
   private void getCourtCaseMetadata() {
@@ -371,6 +413,43 @@ public class CcmLookupService extends RouteBuilder {
       .when().simple("${header.CamelHttpResponseCode} == 404")
         .log(LoggingLevel.DEBUG,"User not found.  Error message from DEMS: ${body}")
         .endChoice()
+    .end()
+    ;
+  }
+
+  private void getCaseHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  
+    // IN: header.key
+    // OUT: body as CaseHyperlinkData
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    //.setProperty("name",simple("${header[number]}"))
+    .log(LoggingLevel.DEBUG,"Processing getCourtCaseExists request... key = ${header[key]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+
+    // attempt to retrieve case id using getCaseHyperlink DEMS adapter endpoint.
+    .doTry()
+      .to("http://ccm-dems-adapter/getCaseHyperlink")
+      .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exception.getStatusCode());
+          exchange.getMessage().setBody(exception.getResponseBody());
+        }
+      })
+      .stop()
     .end()
     ;
   }
