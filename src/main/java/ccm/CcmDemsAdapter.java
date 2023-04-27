@@ -424,6 +424,8 @@ public class CcmDemsAdapter extends RouteBuilder {
             }
 
             ex.setProperty("image_document", imageDocument);
+            ex.setProperty("reportType", demsRecord.getDescriptions());
+            ex.setProperty("reportTitle", demsRecord.getTitle());
 
             ex.getMessage().setBody(demsRecord);
           } else {
@@ -435,6 +437,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             courtCaseDocument.setFiltered_yn(filtered_yn);
             DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
             ex.setProperty("reportType", demsRecord.getDescriptions());
+            ex.setProperty("reportTitle", demsRecord.getTitle());
 
             Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
             String rcc_list = ex.getProperty("rcc_ids", String.class);
@@ -498,6 +501,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             .setProperty("rcc_id",jsonpath("$"))
             .setHeader("number", simple("${exchangeProperty.rcc_id}"))
             .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+            .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
             .setBody(simple("${exchangeProperty.dems_record}"))
             .to("direct:changeDocumentRecord")
           .end()
@@ -529,7 +533,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log(LoggingLevel.INFO,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .setProperty("CourtCaseMetadata").body()
@@ -550,6 +554,8 @@ public class CcmDemsAdapter extends RouteBuilder {
           // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
           demsRecord = new DemsRecordData(id);
         }
+        ex.setProperty("reportType", demsRecord.getDescriptions());
+        ex.setProperty("reportTitle", demsRecord.getTitle());
         ex.getMessage().setBody(demsRecord);
       }
 
@@ -577,6 +583,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id}")
           .setHeader("number", simple("${exchangeProperty.rcc_id}"))
           .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+          .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
           .setBody(simple("${exchangeProperty.dems_record}"))
           .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
           .to("direct:changeDocumentRecord")
@@ -593,8 +600,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN
-    // property: event_object
-    // property: caseFound
+    // header: number
+    // header: reportType
+    // header: reportTitle
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1954,6 +1963,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //IN: header.number
+    //IN: header.reportType
+    //IN: header.reportTitle
 
     from("direct:" + routeId)
       .routeId(routeId)
@@ -1974,19 +1985,23 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: exchangeProperty.key
+    // IN: header.reportType
+    // IN: header.reportTitle
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
-    .log(LoggingLevel.INFO,"reportType = ${exchangeProperty.reportType}...")
+    .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
+    .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${exchangeProperty.reportType}%\"")
+    // filter on descriptions and title
+    // filter-out save version of Yes, and sort any No value first.
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
