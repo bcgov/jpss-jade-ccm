@@ -249,7 +249,6 @@ public class CcmLookupService extends RouteBuilder {
   }
 
   private void getCourtCaseAuthList() {
-    AuthUserList userAuthList = new AuthUserList();
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -261,6 +260,7 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .process(new Processor(){
       public void process(Exchange exchange) throws Exception {
+        AuthUserList userAuthList = new AuthUserList();
 
         // set up header
         Map<String,Object> headers = new HashMap<String,Object>();
@@ -272,33 +272,39 @@ public class CcmLookupService extends RouteBuilder {
                                     null, headers, String.class); 
 
         AuthUserList pdipAuthUserList = null;
-       if (responseString != null) {
-
-        pdipAuthUserList = new ObjectMapper().readValue(responseString, AuthUserList.class);
-        if (pdipAuthUserList != null) {
-          userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+        if (responseString != null) {
+          log.debug("PIDP List:"+responseString);
+          pdipAuthUserList = new ObjectMapper().readValue(responseString, AuthUserList.class);
+          if (pdipAuthUserList != null) {
+            log.debug("Adding pidpAuthList"+pdipAuthUserList.getAuth_user_list().size());
+            userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+          }
         }
-       }
-       prodTemplate.stop();
+        prodTemplate.stop();
 
-       ProducerTemplate justinTemplate = getContext().createProducerTemplate();
-       String justinResponse = justinTemplate.requestBodyAndHeaders( 
+        ProducerTemplate justinTemplate = getContext().createProducerTemplate();
+        String justinResponse = justinTemplate.requestBodyAndHeaders( 
                                    "http://ccm-justin-adapter/getCourtCaseAuthList", 
                                    null, headers, String.class); 
 
+        AuthUserList justinUserList = null;
+        if (justinResponse != null) {
 
-       AuthUserList justinUserList = null;
-      if (justinResponse != null) {
-
-       justinUserList = new ObjectMapper().readValue(justinResponse, AuthUserList.class);
-       if (justinUserList != null) {
-         userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
-       }
+          log.debug("JUSTIN List:"+justinResponse);
+          justinUserList = new ObjectMapper().readValue(justinResponse, AuthUserList.class);
+          if (justinUserList != null) {
+            log.debug("Adding justinAuthList"+justinUserList.getAuth_user_list().size());
+            userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+          }
+        }
+        justinTemplate.stop();
+        exchange.getIn().setBody(userAuthList, AuthUserList.class);
       }
-      justinTemplate.stop();
-      exchange.getIn().setBody(userAuthList, AuthUserList.class);
-      }
-    } ).to("mock:result").marshal().json(JsonLibrary.Jackson, AuthUserList.class).end();
+    }).to("mock:result")
+    .marshal()
+    .json(JsonLibrary.Jackson, AuthUserList.class)
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    .end();
   }
 
   private void getCourtCaseMetadata() {
