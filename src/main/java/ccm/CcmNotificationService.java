@@ -348,7 +348,40 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/createCourtCase")
     .log(LoggingLevel.DEBUG,"Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
+    .log(LoggingLevel.INFO, "Create ReportEvent for Information report")
+    // create Report Event for an INFORMATION type report.
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+        StringBuilder reportTypesSb = new StringBuilder("");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+
+        ReportEvent re = new ReportEvent();
+        re.setRcc_ids("${header.event_key}");
+        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+        //re.setEvent_key(bcm.getCourt_file_id());
+        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+        //re.setMdoc_justin_no(bcm.getCourt_file_id());
+        re.setReport_type(reportTypesSb.toString());
+        exchange.getMessage().setBody(re, ReportEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .to("kafka:{{kafka.topic.reports.name}}")
     ;
+    
   }
 
   private void processCourtCaseEvents() {
