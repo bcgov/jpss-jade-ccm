@@ -32,9 +32,9 @@ public class DemsRecordData {
     public DemsRecordData(ChargeAssessmentDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
-        setDescriptions(nrd.getReport_type());
         String descriptionShortForm = getDescriptions();
         if(report != null) {
+            setDescriptions(report.getDescription());
             if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
                 //"If $MAPID21 = Y then ""STATEMENT - VICTIM"";
                 //ELSE If $MAPID19 = Y then ""STATEMENT - EXPERT"";
@@ -42,12 +42,16 @@ public class DemsRecordData {
                 //ELSE If $MAPID18 = Y then ""STATEMENT - CIVILIAN"""
                 if(nrd.getVictim_yn() != null && nrd.getVictim_yn().equalsIgnoreCase("Y")) {
                     descriptionShortForm = report.getLabel()+"-VIC";
+                    setDescriptions(report.getDescription()+"-VICTIM");
                 } else if(nrd.getExpert_yn() != null && nrd.getExpert_yn().equalsIgnoreCase("Y")) {
                     descriptionShortForm = report.getLabel()+"-EXP";
+                    setDescriptions(report.getDescription()+"-EXPERT");
                 } else if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")) {
                     descriptionShortForm = report.getLabel()+"-POL";
+                    setDescriptions(report.getDescription()+"-POLICE");
                 } else if(nrd.getWitness_yn() != null && nrd.getWitness_yn().equalsIgnoreCase("Y")) {
                     descriptionShortForm = report.getLabel()+"-WIT";
+                    setDescriptions(report.getDescription()+"-WITNESS");
                 } else {
                     descriptionShortForm = report.getLabel()+"-CIV";
                 }
@@ -161,13 +165,15 @@ public class DemsRecordData {
     public DemsRecordData(CourtCaseDocumentData nrd) {
         // find the report type
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
-        setDescriptions(nrd.getReport_type());
+        setDescriptions(nrd.getDocument_type().toUpperCase());
         String descriptionShortForm = getDescriptions();
         if(report != null) {
             if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
                 descriptionShortForm = report.getLabel()+"-F";
+                setDescriptions(nrd.getDocument_type().toUpperCase()+"-FILTERED");
             } else if(report.equals(REPORT_TYPES.CONVICTION_LIST)) {
                 descriptionShortForm = report.getLabel()+"-D";
+                setDescriptions(nrd.getDocument_type().toUpperCase()+"-DEFAULT");
             } else {
                 descriptionShortForm = report.getLabel();
             }
