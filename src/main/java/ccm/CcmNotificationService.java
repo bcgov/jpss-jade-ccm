@@ -884,8 +884,9 @@ public class CcmNotificationService extends RouteBuilder {
             String caseFound = ex.getProperty("caseFound",String.class);
             Boolean autoCreateBoolean = Boolean.valueOf(autocreateFlag);
             Boolean createOverrideBoolean = Boolean.valueOf(createOverrideFlag);
-            Boolean caseFoundBoolean = Boolean.valueOf(caseFound);
-            if((autoCreateBoolean || createOverrideBoolean ) && caseFoundBoolean){
+            Boolean caseFoundBoolean = Boolean.valueOf(caseFound!="");
+            log.info("caseFound:"+caseFoundBoolean);
+            if((autoCreateBoolean || createOverrideBoolean ) && !caseFoundBoolean){
               ex.setProperty("createCase", "true");
             }else{
               ex.setProperty("createCase", "false");
