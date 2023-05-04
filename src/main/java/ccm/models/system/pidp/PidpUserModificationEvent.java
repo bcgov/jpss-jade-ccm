@@ -6,6 +6,7 @@ public class PidpUserModificationEvent {
   private String eventType;
   private Boolean successful;
   private Long accessRequestId;
+  private Boolean submittingAgencyUser;
   
   public String getEventTime() {
     return eventTime;
@@ -36,6 +37,12 @@ public class PidpUserModificationEvent {
   }
   public void setSuccessful(Boolean success) {
     this.successful = success;
+  }
+  public Boolean getSubmittingAgencyUser() {
+    return submittingAgencyUser;
+  }
+  public void setSubmittingAgencyUser(Boolean submittingAgencyUser) {
+    this.submittingAgencyUser = submittingAgencyUser;
   }
 
 }
