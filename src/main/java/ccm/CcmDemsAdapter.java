@@ -645,8 +645,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
+    .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .to("direct:getCourtCaseIdByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
@@ -722,8 +723,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
+    .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .to("direct:getCourtCaseIdByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
@@ -936,14 +938,20 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     //.toD("http://httpstat.us:443/500") // --> testing code, remove later
     //.toD("rest:get:org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
     //.toD("netty-http:https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    .setProperty("length",jsonpath("$.length()"))
+    .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
+    .doTry()
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .setProperty("length",jsonpath("$.length()"))
       .choice()
         .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
           .setProperty("id", jsonpath("$[0].id"))
@@ -956,6 +964,19 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setHeader("CamelHttpResponseCode", simple("200"))
           .log(LoggingLevel.INFO,"Case not found.")
         .endChoice()
+      .end()
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.INFO,"General Exception thrown.")
+        .log(LoggingLevel.INFO,"${exception}")
+        .process(new Processor() {
+          public void process(Exchange exchange) throws Exception {
+
+            exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+            exchange.getMessage().setBody(exchange.getException().getMessage());
+            throw exchange.getException();
+          }
+        })
       .end()
     ;
   }
