@@ -42,8 +42,8 @@ public class CcmLookupService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    attachExceptionHandlers();
-    getCourtCaseDetails_old();
+    //attachExceptionHandlers();
+    getProperties();
     getCourtCaseExists();
     getCourtCaseDetails();
     getCourtCaseAuthList();
@@ -55,6 +55,28 @@ public class CcmLookupService extends RouteBuilder {
     getCaseListByUserKey();
     getCaseHyperlink();
   }
+
+
+
+ private void getProperties() {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  //IN: header.number
+
+  from("platform-http:/" + routeId)
+  .routeId(routeId)
+  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  .removeHeader("CamelHttpUri")
+  .removeHeader("CamelHttpBaseUri")
+  .removeHeaders("CamelHttp*")
+  //.setProperty("name",simple("${header[number]}"))
+  .log("camel.component.kafka.brokers = {{camel.component.kafka.brokers}}")
+  .log("custom.property = {{custom.property}}")
+  .log("custom.property2 = {{custom.property2}}")
+  //.log("custom.property3 = {{custom.property3}}")
+  ;
+}
 
   private void attachExceptionHandlers() {
 
@@ -184,30 +206,6 @@ public class CcmLookupService extends RouteBuilder {
    .end();
 
  }
- 
-  private void getCourtCaseDetails_old() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/getCourtCaseDetails_old?httpMethodRestrict=GET")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .process(new Processor() {
-      public void process(Exchange ex) {
-        // https://stackoverflow.com/questions/12008472/get-and-format-yesterdays-date-in-camels-expression-language
-        Calendar createdCal = Calendar.getInstance();
-        createdCal.add(Calendar.DATE, 0);
-        ex.getIn().setHeader("audit_datetime", createdCal.getTime());
-      }
-    })
-    .transform(simple("{\"audit_type\": \"get_court_case_details\", \"user_id\": \"${header.user_id}\", \"court_case_number\": \"${header.court_case_number}\", \"audit_datetime\": \"${header.audit_datetime}\"}"))
-    .log(LoggingLevel.DEBUG,"body (after transform): '${body}'")
-    .to("kafka:{{kafka.topic.name}}")
-    ;
-  }
 
   private void getCourtCaseExists() {
     // use method name as route id

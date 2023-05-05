@@ -1,4 +1,4 @@
-ns_set="cef5dd"
+ns_set="ac13ae"
 
 if [ "$1" = "dev" ]; then
     env="dev"
@@ -48,6 +48,7 @@ kamel -n $ns run \
   CcmLookupService.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
+  --property custom.property2=configmap:ccm-configs:kafka-broker-url \
   --label deployer="$deployer" \
   --label version="$version" \
   --config configmap:ccm-configs \
@@ -59,6 +60,13 @@ kamel -n $ns run \
   --trait route.enabled=false
 fi
 popd
+
+#  --config configmap:ccm-configs \
+#  --config secret:ccm-secrets \
+
+
+#--mount configmap/ccm-configs:/etc/camel/config.d/_configmaps/ccm-configs \
+#--mount secret/ccm-secrets:/etc/camel/config.d/_secrets/ccm-secrets \
 
 #--property camel.k.label="ccm (deployed on `date` by `oc whoami`)" \
 
