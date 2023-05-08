@@ -5,7 +5,7 @@ import java.net.SocketTimeoutException;
 
 // To run this integration use:
 // kamel run CcmLookupService.java --property file:application.properties --profile openshift
-// 
+//
 // curl -H "user_id: 2" -H "court_case_number: 6" http://ccm-lookup-service/getCourtCaseDetails
 //
 
@@ -42,8 +42,7 @@ public class CcmLookupService extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    //attachExceptionHandlers();
-    getProperties();
+    attachExceptionHandlers();
     getCourtCaseExists();
     getCourtCaseDetails();
     getCourtCaseAuthList();
@@ -57,30 +56,9 @@ public class CcmLookupService extends RouteBuilder {
   }
 
 
-
- private void getProperties() {
-  // use method name as route id
-  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-  //IN: header.number
-
-  from("platform-http:/" + routeId)
-  .routeId(routeId)
-  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-  .removeHeader("CamelHttpUri")
-  .removeHeader("CamelHttpBaseUri")
-  .removeHeaders("CamelHttp*")
-  //.setProperty("name",simple("${header[number]}"))
-  .log("camel.component.kafka.brokers = {{camel.component.kafka.brokers}}")
-  .log("custom.property = {{custom.property}}")
-  .log("custom.property2 = {{custom.property2}}")
-  //.log("custom.property3 = {{custom.property3}}")
-  ;
-}
-
   private void attachExceptionHandlers() {
 
-   
+
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
      .backOffMultiplier(2)
@@ -134,16 +112,16 @@ public class CcmLookupService extends RouteBuilder {
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-       
+
        ccm.models.common.event.Error error = new ccm.models.common.event.Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
        error.setError_code("CamelException");
        error.setError_summary("Unable to process event, CamelException raised.");
-      
+
        log.debug("Camel caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("Camel Exception event info : " + event.getEvent_source());
-      
+
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
@@ -179,7 +157,7 @@ public class CcmLookupService extends RouteBuilder {
        error.setError_summary("Unable to process event., general Exception raised.");
        error.setError_code("General Exception");
        error.setError_details(event);
-      
+
        log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
        log.error("General Exception event info : " + event.getEvent_source());
        // KPI
@@ -265,9 +243,9 @@ public class CcmLookupService extends RouteBuilder {
         headers.put("number", exchange.getIn().getHeader("number"));
 
         ProducerTemplate prodTemplate = getContext().createProducerTemplate();
-        String responseString = prodTemplate.requestBodyAndHeaders( 
-                                    "http://ccm-pidp-adapter/getCourtCaseAuthList", 
-                                    null, headers, String.class); 
+        String responseString = prodTemplate.requestBodyAndHeaders(
+                                    "http://ccm-pidp-adapter/getCourtCaseAuthList",
+                                    null, headers, String.class);
 
         AuthUserList pdipAuthUserList = null;
         if (responseString != null) {
@@ -281,9 +259,9 @@ public class CcmLookupService extends RouteBuilder {
         prodTemplate.stop();
 
         ProducerTemplate justinTemplate = getContext().createProducerTemplate();
-        String justinResponse = justinTemplate.requestBodyAndHeaders( 
-                                   "http://ccm-justin-adapter/getCourtCaseAuthList", 
-                                   null, headers, String.class); 
+        String justinResponse = justinTemplate.requestBodyAndHeaders(
+                                   "http://ccm-justin-adapter/getCourtCaseAuthList",
+                                   null, headers, String.class);
 
         AuthUserList justinUserList = null;
         if (justinResponse != null) {
@@ -394,12 +372,12 @@ public class CcmLookupService extends RouteBuilder {
     .to("http://ccm-dems-adapter/getPersonExists")
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
-  }  
+  }
 
   private void getCaseListByUserKey() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-  
+
     // IN: header.key
     // OUT: body as ChargeAssessmentCaseDataRefList
     from("platform-http:/" + routeId)
@@ -424,7 +402,7 @@ public class CcmLookupService extends RouteBuilder {
   private void getCaseHyperlink() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-  
+
     // IN: header.key
     // OUT: body as CaseHyperlinkData
 
