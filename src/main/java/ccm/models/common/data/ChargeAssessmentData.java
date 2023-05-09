@@ -12,6 +12,7 @@ public class ChargeAssessmentData {
     private String security_clearance_level;
     private String synopsis;
     private String initiating_agency;
+    private String initiating_agency_name;
     private String investigating_officer;
     private String proposed_crown_office;
     private String rcc_submit_date;
@@ -43,6 +44,7 @@ public class ChargeAssessmentData {
         if(jaf.getInitiating_agency_identifier() != null) {
             setInitiating_agency(jaf.getInitiating_agency_identifier() + ": " + jaf.getInitiating_agency_name());
         }
+        setInitiating_agency_name(jaf.getInitiating_agency_name());
         if(jaf.getInvestigating_officer_name() != null) {
             setInvestigating_officer(jaf.getInvestigating_officer_name() + " " + jaf.getInvestigating_officer_pin());
         }
@@ -244,6 +246,14 @@ public class ChargeAssessmentData {
 
     public void setInitiating_agency(String initiating_agency) {
         this.initiating_agency = initiating_agency;
+    }
+
+    public String getInitiating_agency_name() {
+        return initiating_agency_name;
+    }
+
+    public void setInitiating_agency_name(String initiating_agency_name) {
+        this.initiating_agency_name = initiating_agency_name;
     }
 
     public String getInvestigating_officer() {
