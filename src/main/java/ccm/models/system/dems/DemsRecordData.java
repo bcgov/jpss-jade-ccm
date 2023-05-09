@@ -107,7 +107,7 @@ public class DemsRecordData {
         setFileExtension(".pdf");
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -204,7 +204,7 @@ public class DemsRecordData {
         setFileExtension(".pdf");
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -298,7 +298,7 @@ public class DemsRecordData {
         setFileExtension(".pdf");
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        String shortendStartDate = DateTimeUtils.shortDateTimeString(DateTimeUtils.generateCurrentDtm());
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
