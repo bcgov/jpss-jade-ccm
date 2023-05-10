@@ -68,8 +68,8 @@ public class DemsListItemFieldData {
         LAWYER("JRS_BASE_LAWYER","Lawyer"),
         LEGAL_ASSISTANT("JRS_BASE_LEGAL_ASST","Legal Assistant"),
         PARALEGAL("JRS_BASE_PARALEGAL","Paralegal"),
-        DEMS_SYSTEM_SUPPORT("JRS_DEMS_SYSTEM_SUPPORT","DEMS System Support"),
-        SUBMITTING_AGENCY("PIDP_SUBMITTED_AGENCY","Submitting Agency");
+        DEMS_SYSTEM_SUPPORT("JRS_DEMS_SYSTEM_SUPPORT","System Support"),
+        SUBMITTING_AGENCY("PIDP_SUBMITTING_AGENCY","Submitting Agency");
 
         private String common_name;
         private String dems_name;

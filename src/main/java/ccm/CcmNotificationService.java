@@ -265,6 +265,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
@@ -348,6 +350,34 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/createCourtCase")
     .log(LoggingLevel.DEBUG,"Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
+    .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
+    // create Report Event for static type reports.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+        String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
+        StringBuilder reportTypesSb = new StringBuilder("");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+
+        ReportEvent re = new ReportEvent();
+        re.setJustin_rcc_id(rcc_id);
+        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+        re.setReport_type(reportTypesSb.toString());
+        exchange.getMessage().setBody(re, ReportEvent.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .to("kafka:{{kafka.topic.reports.name}}")
     ;
   }
 
@@ -854,8 +884,9 @@ public class CcmNotificationService extends RouteBuilder {
             String caseFound = ex.getProperty("caseFound",String.class);
             Boolean autoCreateBoolean = Boolean.valueOf(autocreateFlag);
             Boolean createOverrideBoolean = Boolean.valueOf(createOverrideFlag);
-            Boolean caseFoundBoolean = Boolean.valueOf(caseFound);
-            if((autoCreateBoolean || createOverrideBoolean ) && caseFoundBoolean){
+            Boolean caseFoundBoolean = Boolean.valueOf(caseFound!="");
+            log.info("caseFound:"+caseFoundBoolean);
+            if((autoCreateBoolean || createOverrideBoolean ) && !caseFoundBoolean){
               ex.setProperty("createCase", "true");
             }else{
               ex.setProperty("createCase", "false");
