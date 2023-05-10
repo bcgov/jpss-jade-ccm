@@ -26,6 +26,9 @@
     "name" : "Initiating Agency",
     "value" : "105: Kelowna Municipal RCMP"
   }, {
+    "name" : "Initiating Agency Name",
+    "value" : "Kelowna Municipal RCMP"
+  }, {
     "name" : "Investigating Officer",
     "value" : "Rhodes, Christopher 1001"
   }, {
