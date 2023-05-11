@@ -1,0 +1,104 @@
+{
+	"info": {
+		"_postman_id": "cb5adfea-0002-4e6d-8bec-0a9474afca00",
+		"name": "JADE-CCM-JUSTIN-In",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "getCaseHyperlink-OCP",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://jade-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca/justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
+					"protocol": "https",
+					"host": [
+						"jade-ccm-justin-adapter-dev",
+						"apps",
+						"silver",
+						"devops",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"justin",
+						"api",
+						"v1",
+						"getCaseHyperlink"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50468.0734"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getCaseHyperlink-ZBProxy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://zb-rp.dev.ag.gov.bc.ca/jade-ccm-justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
+					"protocol": "https",
+					"host": [
+						"zb-rp",
+						"dev",
+						"ag",
+						"gov",
+						"bc",
+						"ca"
+					],
+					"path": [
+						"jade-ccm-justin",
+						"api",
+						"v1",
+						"getCaseHyperlink"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50468.0734"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{JUSTIN-IN-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
