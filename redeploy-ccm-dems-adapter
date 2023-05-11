@@ -49,6 +49,7 @@ kamel -n $ns run \
   --trait container.request-memory=500mi \
   --trait container.limit-cpu=200m \
   --trait container.limit-memory=1000mi \
+  --trait route.enabled=false \
   --trait service.node-port=false
 
   ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
@@ -58,7 +59,6 @@ kamel -n $ns run \
   #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \  
   #--trait logging.level=DEBUG \
   #--trait dependencies.enabled=true \
-  #--trait route.enabled=false \
   #--trait service.node-port=false
 
   #--trait container.request-cpu=25m
