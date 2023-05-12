@@ -263,6 +263,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     //.log("(DEBUG) PIDP payload: ${body}")
     //.log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
+    .doTry()
     .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
     .process(new Processor() {
       @Override
@@ -306,6 +307,33 @@ public class CcmPidpAdapter extends RouteBuilder {
     .log("Publishing event KPI ...")
     .to("direct:publishBodyAsEventKPI")
     .log("Event KPI published.")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"Ignoring unknown event: ${body}")
+      .setProperty("justin_event", body())
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+
+          Error error = new Error();
+          error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+          error.setError_summary("Unable to process unknown PIDP event.");
+          error.setError_details(event);
+          // KPI
+          EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
+          kpi.setError(error);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name(routeId);
+          exchange.getMessage().setBody(kpi, EventKPI.class);
+        }
+      })
+      .setProperty("kpi_object", body())
+      .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+      .to("direct:publishBodyAsEventKPI")
+    .end()
     ;
   }
 
