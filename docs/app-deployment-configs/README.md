@@ -1,4 +1,4 @@
-ConfigMap object: ccm-configs
+# JADE-CCM ConfigMap Object Definition (ccm-configs)
 
 | Key | Description | Type | 
 | - | - | - |
@@ -18,18 +18,19 @@ ConfigMap object: ccm-configs
 | pidp-kafka-oauth-client-id | PIDP Oauth Client Id | string |
 | pidp-api-oauth-token-endpoint-url | PIDP API Oauth Token URI | Host URI (with HTTP prefix) |
 | pidp-api-oauth-client-id | PIDP API OAuth client id | string |
-Secret object: ccm-secrets
 
-| Key | Description | Type | 
-| - | - | - |
-| dems-adapter-secret-token | DEMS Adapter security token (deprecated) | masked string |
-| dems-security-token | DEMS API security token | masked string |
-| justin-security-token | JUSTIN API security token | masked string |
-| justin-in-security-token | JUSTIN Inbound API security token | masked string |
-| splunk-security-token | Splunk API security token | masked string |
-| pidp-kafka-oauth-client-secret | PIDP Oauth client secret | masked string |
-| pidp-kafka-client.p12-password | PIDP Kafka client PKCS (Java keystore) file password | masked string |
-| pidp-kafka-server.p12-password | PIDP Kafka server PKCS (Java truststore) file password | masked string |
-| pidp-kafka-client.p12 | PIDP Kafka client PKCS (Java keystore) file | masked string |
-| pidp-kafka-server.p12 | PIDP Kafka server PKCS (Java truststore) file | masked string |
-| pidp-api-oauth-client-secret | PIDP API OAuth client secret | masked string |
+# JADE-CCM Secret Object Definition (ccm-secrets)
+
+| Key | Description | Type | Source |
+| - | - | - | - |
+| dems-adapter-secret-token | DEMS Adapter security token (deprecated) | masked string | generated |
+| dems-security-token | DEMS API security token | masked string | ISB API Gateway |
+| justin-security-token | JUSTIN API security token | masked string | ISB API Gateway |
+| justin-in-security-token | JUSTIN Inbound API security token | masked string | generated |
+| splunk-security-token | Splunk API security token | masked string | ISB Splunk App |
+| pidp-kafka-oauth-client-secret | PIDP Oauth client secret | masked string | DIAM OAuth Server (Keycloak) |
+| pidp-kafka-client.p12-password | PIDP Kafka client PKCS (Java keystore) file password | masked string | DIAM PIDP Kafka Secret/Key (pidp-kafka-cluster-clients-ca-cert/ca.password) |
+| pidp-kafka-server.p12-password | PIDP Kafka server PKCS (Java truststore) file password | masked string | DIAM PIDP Kafka Secret/Key (pidp-kafka-cluster-cluster-ca-cert/ca.password) |
+| pidp-kafka-client.p12 | PIDP Kafka client PKCS (Java keystore) file | masked string | DIAM PIDP Kafka Secret/Key (pidp-kafka-cluster-clients-ca-cert/ca.p12) |
+| pidp-kafka-server.p12 | PIDP Kafka server PKCS (Java truststore) file | masked string | DIAM PIDP Kafka Secret/Key (pidp-kafka-cluster-cluster-ca-cert/ca.p12) |
+| pidp-api-oauth-client-secret | PIDP API OAuth client secret | masked string | DIAM OAuth Server (keycloak)
