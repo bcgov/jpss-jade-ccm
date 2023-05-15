@@ -107,6 +107,7 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), commonData.getCharge());
         DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), commonData.getInitiating_agency());
+        DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), commonData.getInitiating_agency_name());
         DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), commonData.getInvestigating_officer());
         
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
@@ -140,6 +141,7 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(caseDecision);
         fieldData.add(proposedCharges);
         fieldData.add(initiatingAgency);
+        fieldData.add(initiatingAgencyName);
         fieldData.add(investigatingOfficer);
         fieldData.add(caseFlags);
         fieldData.add(offenceDate);

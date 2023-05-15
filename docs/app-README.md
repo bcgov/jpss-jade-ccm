@@ -10,15 +10,21 @@ For the ISB Integration Delivery Services Team to successfully deliver a working
 
 To learn more about JADE and the Justice and Public Sector Integration Delivery Service, please visit: https://integrations.justice.gov.bc.ca/
 
+---
 ## Technical Architecture Diagram
 
 JADE-CCM is an integration solution within the newly created Justice sector digital ecosystem platform JADE.  Within JADE is a Red Hat supported Kafka event notification cluster called JADE-Events.  Deployed alongside JADE-CCM, JADE-Events functions as a communications backplane and an event store for all notification topics.
 
 JADE-CCM integrates between a court case managmeent system (JUSTIN), a digital edvidence management system (DEMS), and a corrections managemnt system (CORNET.)
 
-![JADE-CCM architecture diagram](../diagrams/img/ccm_architecture_diagram.png)
 
-The technical architecture diagram is created using the Draw.io diagramming tool.
+<img src="../diagrams/img/ccm_architecture_diagram.png" alt="JADE-CCM Architecture Diagram" style="border: 1px solid grey;">
+
+This technical architecture diagram is created using the Draw.io diagramming tool (source here located <a href="../diagrams/ccm_architecture_diagram.drawio">here</a>).
+
+In addition, this powerpoint summarizes the [JADE Scaling Approach (updated March 2023)](../docs/JADE%20scaling%20approach%202023-03.pptx).
+
+---
 
 ## Event Processing Sequence Diagrams
 
@@ -39,10 +45,25 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Case User | ACCESS_ADDED |[Diagram](../diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_REMOVED |[Diagram](../diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
 
-### Example
 
-![JADE-CCM JUSTIN Event Processing Diagram](../diagrams/img/ccm_justin_event_processing_sequence_diagram.png)
+### Example Event Processing Diagram 
 
+<img src="../diagrams/img/ccm_justin_event_processing_sequence_diagram.png" alt="Example JADE-CCM JUSTIN Event Processing Diagram" style="border: 1px solid grey;">
+
+---
+
+## Command (API) Processing Sequence Diagrams
+
+JADE-CCM command processing sequence diagrams are created using the PlantUML sequence diagramming tool.
+
+| Business Object | API | Processing Diagram (and source) |
+| --- | --- | --- |
+| Charge Assessment | GetCaseHyperlink |[Diagram](../diagrams/img/ccm_charge_assessment_get_case_hyperlink_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_get_case_hyperlink_processing_sequence_diagram.plantuml))|
+
+### Example Commnand Processing Diagram
+<img src="../diagrams/img/ccm_charge_assessment_get_case_hyperlink_processing_sequence_diagram.png" alt="Example JADE-CCM JUSTIN Command Processing Diagram" style="border: 1px solid grey;">
+
+---
 ## State Diagrams
 
 JADE-CCM state diagrams are created using the PlantUML state diagramming tool.  PlantUML state diagrams are redenered using the GrpahViz dot rendering program.
@@ -51,11 +72,13 @@ JADE-CCM state diagrams are created using the PlantUML state diagramming tool.  
 | --- |
 |[DEMS Case Business State Diagram](../diagrams/img/ccm_dems_case_state_diagram.png) ([source](../diagrams/ccm_dems_case_state_diagram.drawio))|
 
-### Example
+### Example State Diagram
 
-![JADE-CCM DEMS Case Business State Diagram](../diagrams/img/ccm_dems_case_state_diagram.png)
+<img src="../diagrams/img/ccm_dems_case_state_diagram.png" alt="JADE-CCM DEMS Case Business State Diagram" style="border: 1px solid grey;">
 
 Installation instructions for GraphViz dot is available [here](https://plantuml.com/graphviz-dot).
+
+---
 
 ## Integrated Development Environment (IDE) and Extensions
 
@@ -74,10 +97,13 @@ Note:
 
 PlantUML requires a separate installation of GraphViz dot in order to render network graphs, such as state diagrams.  See installation instructions mentioend in the "State Diagrams" section above.
 
+---
+
 ## Java
 
 JADE-CCM is built on Camel K, and requires compilation of the Plain-Old Java Object (POJO) data models using OpenJDK 11.
 
+---
 ## Deploy JADE-Events Cluster to Dev Environment in OCP Silver Cluster (cef5dd-dev)
 
 Requires installation of the oc command line interface tool (visit download page from OCP Silver Cluster [here](https://console.apps.silver.devops.gov.bc.ca/command-line-tools).)
@@ -90,6 +116,7 @@ Steps
 * Execute: oc -n cef5dd-dev apply -f tmp-argocd/events/np-workarounds/workaround-np-zookeeper.yaml
 * Execute oc -n cef5dd-dev apply -f tmp-argocd/events/create-events-cluster-in-silver-cef5dd-dev.yaml
 
+---
 ## Deploy JADE-CCM Components to Dev Environment in OCP Silver Cluster (cef5dd-dev)
 
 Requires installation of the kamel command line interface tool (visit download page from OCP Silver Cluster [here](https://console.apps.silver.devops.gov.bc.ca/command-line-tools).)
@@ -101,6 +128,7 @@ Steps
 * Change directory to: src
 * Execute: . ./redeploy-ccm-all
 
+---
 ## Test APIs Using Postman
 
 Working directory: tools/postman
@@ -111,7 +139,12 @@ Working directory: tools/postman
 | Postman Environment Settings | Dev.postman_environment.json | An IDS team-managed environment settings file for Dev |
 | Postman Collection | JUSTIN-DEMS.postman_collection.json | An NTTData team-managed collection of JUSTIN APIs, downloaded from NTTData story ticket [BCPSDEMS-218](https://justice.gov.bc.ca/jira/browse/BCPSDEMS-218) (Develop AgencyFile.GET) | 
 
+---
+## Additional Documentation
+* [JADE Scaling Approach (updated March 2023)](../docs/JADE%20scaling%20approach%202023-03.pptx)
+* [EDT Core API Endpoints Summary (updated April 13, 2023)](../mapping/docs/EDT%20Core%20API%20Endpoints%202023-04-13.md)
 
+---
 ## Guides
 
 * Camel Quarkus: https://camel.apache.org/camel-quarkus/2.9.x/user-guide/first-steps.html
@@ -120,5 +153,6 @@ Working directory: tools/postman
 * Unmarshalling a JSON Array Using camel-jackson: https://www.baeldung.com/java-camel-jackson-json-array
 * Youtube video (30 min): [Getting started with Apache Camel on Quarkus](https://www.youtube.com/watch?v=POWsZnGhVHM)
 
+---
 ## Other Links
-* [OCIO Private OpenShift Platform Architecture Diagram (first login with IDIR via button on page, and then re-access the link)[https://cloud.gov.bc.ca/private-cloud/platform-architecture-diagram/]
+* [OCIO Private OpenShift Platform Architecture Diagram](https://cloud.gov.bc.ca/private-cloud/platform-architecture-diagram/) (first login with IDIR via button on page, and then re-access the link)
