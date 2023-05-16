@@ -316,11 +316,12 @@ public class CcmPidpAdapter extends RouteBuilder {
         @Override
         public void process(Exchange exchange) {
           BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-
+          //Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+          Object je = (Object)exchange.getIn().getBody();
           Error error = new Error();
           error.setError_dtm(DateTimeUtils.generateCurrentDtm());
           error.setError_summary("Unable to process unknown PIDP event.");
-          error.setError_details(event);
+          error.setError_details(je);
           // KPI
           EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
           kpi.setError(error);
