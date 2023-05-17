@@ -49,6 +49,7 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.models.system.pidp.PidpUserModificationEvent;
+import ccm.models.system.pidp.PidpUserProcessStatusEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 //import io.confluent.kafka.serializers.KafkaAvroDeserializer;
@@ -60,6 +61,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     
     //attachExceptionHandlers();
     processCaseUserAccountCreated();
+    processBulkCaseUserEvents();
+    processCaseUserBulkLoadCompleted();
     publishBodyAsEventKPI();
     getCourtCaseAuthList();
     getKafkaToken();
@@ -264,49 +267,49 @@ public class CcmPidpAdapter extends RouteBuilder {
     //.log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .doTry()
-    .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        PidpUserModificationEvent pidpUserEvent = exchange.getIn().getBody(PidpUserModificationEvent.class);
-        CaseUserEvent event = new CaseUserEvent(pidpUserEvent);
+      .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          PidpUserModificationEvent pidpUserEvent = exchange.getIn().getBody(PidpUserModificationEvent.class);
+          CaseUserEvent event = new CaseUserEvent(pidpUserEvent);
 
-        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
-        exchange.setProperty("event_object", event);
-        exchange.getMessage().setBody(event);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
-    .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
-    .to("kafka:{{kafka.topic.caseusers.name}}?brokers={{ccm.kafka.brokers}}&securityProtocol=PLAINTEXT")
-    // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
-    // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
-    .log("User creation event published.")
+          exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+          exchange.setProperty("event_object", event);
+          exchange.getMessage().setBody(event);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
+      .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
+      .to("kafka:{{kafka.topic.caseusers.name}}?brokers={{ccm.kafka.brokers}}&securityProtocol=PLAINTEXT")
+      // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+      // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
+      .log("User creation event published.")
 
-    // generate event KPI
-    .setProperty("event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_CREATED);
-        String event_topic = exchange.getProperty("event_topic", String.class);
-        String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-          exchange.getProperty("event_recordmetadata")
-        );
+      // generate event KPI
+      .setProperty("event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
+          EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_CREATED);
+          String event_topic = exchange.getProperty("event_topic", String.class);
+          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
+            exchange.getProperty("event_recordmetadata")
+          );
 
-        kpi.setComponent_route_name(routeId);
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setEvent_topic_name(event_topic);
-        kpi.setEvent_topic_offset(event_offset);
-        exchange.getMessage().setBody(kpi);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log("Publishing event KPI ...")
-    .to("direct:publishBodyAsEventKPI")
-    .log("Event KPI published.")
+          kpi.setComponent_route_name(routeId);
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setEvent_topic_name(event_topic);
+          kpi.setEvent_topic_offset(event_offset);
+          exchange.getMessage().setBody(kpi);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+      .log("Publishing event KPI ...")
+      .to("direct:publishBodyAsEventKPI")
+      .log("Event KPI published.")
     .doCatch(Exception.class)
       .log(LoggingLevel.DEBUG,"Ignoring unknown event: ${body}")
       .setProperty("justin_event", body())
@@ -315,8 +318,6 @@ public class CcmPidpAdapter extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
-          BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-          //Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
           Object je = (Object)exchange.getIn().getBody();
           Error error = new Error();
           error.setError_dtm(DateTimeUtils.generateCurrentDtm());
@@ -335,6 +336,70 @@ public class CcmPidpAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, EventKPI.class)
       .to("direct:publishBodyAsEventKPI")
     .end()
+    ;
+  }
+
+  private void processBulkCaseUserEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-notification-service")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("justin_rcc_id")
+      .jsonpath("$.justin_rcc_id")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("event_object", body())
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .choice()
+      .when(header("justin_rcc_id").isEqualTo("0"))
+        .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCaseUserBulkLoadCompleted")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processCaseUserBulkLoadCompleted() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    // in the following, should create PIDP object to be pushed onto PIDP topic.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CaseUserEvent event = (CaseUserEvent)exchange.getProperty("event_object");
+        PidpUserProcessStatusEvent pume = new PidpUserModificationEvent(event);
+        exchange.getMessage().setBody(pume);
+      }
+    })
+    .log(LoggingLevel.INFO,"Publishing part id to PIDP topic.")
+    .to("kafka:{{pidp.kafka.topic.processresponse.name}}?securityProtocol=PLAINTEXT")
+    .log(LoggingLevel.INFO,"Returned from processCaseUserBulkLoadCompleted.")
     ;
   }
 

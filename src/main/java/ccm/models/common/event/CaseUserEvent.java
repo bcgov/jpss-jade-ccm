@@ -13,6 +13,8 @@ public class CaseUserEvent extends BaseEvent {
   private String justin_guid;
   private String justin_part_id;
   private String justin_rcc_id;
+  private String justin_record_cnt;
+  private String justin_record_num;
 
   private String pidp_event_time;
   private Long pidp_access_request_id;
@@ -20,7 +22,9 @@ public class CaseUserEvent extends BaseEvent {
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_PART_ID = "PART_ID";
-  public static final String JUSTIN_RCC_ID = "RCC_ID";  
+  public static final String JUSTIN_RCC_ID = "RCC_ID";
+  public static final String JUSTIN_RECORD_CNT = "RECORD_CNT";
+  public static final String JUSTIN_RECORD_NUM = "RECORD_NUM";
 
   public enum SOURCE {
     JUSTIN,
@@ -76,6 +80,12 @@ public class CaseUserEvent extends BaseEvent {
           break;
         case JUSTIN_RCC_ID:
           setJustin_rcc_id(jed.getData_value_txt());
+          break;
+        case JUSTIN_RECORD_CNT:
+          setJustin_record_cnt(jed.getData_value_txt());
+          break;
+        case JUSTIN_RECORD_NUM:
+          setJustin_record_num(jed.getData_value_txt());
           break;
       }
     }
@@ -174,4 +184,22 @@ public class CaseUserEvent extends BaseEvent {
   public void setPidp_access_request_id(Long pidp_access_request_id) {
     this.pidp_access_request_id = pidp_access_request_id;
   }
+
+  public String getJustin_record_cnt() {
+    return justin_record_cnt;
+  }
+
+  public void setJustin_record_cnt(String justin_record_cnt) {
+    this.justin_record_cnt = justin_record_cnt;
+  }
+
+  public String getJustin_record_num() {
+    return justin_record_num;
+  }
+
+  public void setJustin_record_num(String justin_record_num) {
+    this.justin_record_num = justin_record_num;
+  }
+
+
 }
