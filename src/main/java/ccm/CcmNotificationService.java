@@ -364,6 +364,7 @@ public class CcmNotificationService extends RouteBuilder {
         reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
         ReportEvent re = new ReportEvent();

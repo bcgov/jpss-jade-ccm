@@ -110,6 +110,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     processReportEvents();
     processDocumentRecord();
     processNonStaticDocuments();
+    checkIncrementRecordDocId();
     changeDocumentRecord();
     updateDocumentRecord();
     createDocumentRecord();
@@ -118,6 +119,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     streamCaseRecord();
     getCaseRecordExistsByKey();
     getCaseRecordIdByDescription();
+    getCaseDocIdExistsByKey();
+    getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
   }
@@ -379,13 +382,11 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("report_document_list", simple("${bodyAs(String)}"))
+    .setProperty("create_date") .jsonpath("$.create_date")
+    .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
 
     // For cases like witness statement, there can be multiple docs returned.
     // This will split through each of the documents and process them individually.
-
-
-    .setProperty("create_date") .jsonpath("$.create_date")
-    .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
     .log(LoggingLevel.INFO,"Parsing through report documents")
     .split()
       .jsonpathWriteAsString("$.documents")
@@ -410,7 +411,11 @@ public class CcmDemsAdapter extends RouteBuilder {
             ChargeAssessmentDocumentData chargeAssessmentDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, rd);
             DemsRecordData demsRecord = new DemsRecordData(chargeAssessmentDocument);
 
+            
+            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
             ex.setProperty("charge_assessment_document", chargeAssessmentDocument);
+            ex.setProperty("drd", demsRecord);
+
             ex.getMessage().setBody(demsRecord);
           } else if(rd.getPrimary_rcc_id() != null) {
             log.info("processing into charge assessment document record");
@@ -424,8 +429,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             }
 
             ex.setProperty("image_document", imageDocument);
+            ex.setProperty("drd", demsRecord);
             ex.setProperty("reportType", demsRecord.getDescriptions());
             ex.setProperty("reportTitle", demsRecord.getTitle());
+            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
 
             ex.getMessage().setBody(demsRecord);
           } else {
@@ -462,10 +469,12 @@ public class CcmDemsAdapter extends RouteBuilder {
             }
 
             ex.setProperty("court_case_document", courtCaseDocument);
+            ex.setProperty("drd", demsRecord);
 
             // make sure the header has most up to date values.
             ex.getMessage().setHeader("rcc_ids", courtCaseDocument.getRcc_ids());
             ex.getMessage().setHeader("mdoc_justin_no", courtCaseDocument.getMdoc_justin_no());
+            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
 
             ex.getMessage().setBody(demsRecord);
           }
@@ -511,8 +520,8 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.INFO,"No identifying values, so skipped.")
           .endChoice()
 
-      .end()
-    .end()
+      .end() // end choice
+    .end() // end split
     .log(LoggingLevel.INFO, "end of processDocumentRecord")
     ;
   }
@@ -556,6 +565,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         }
         ex.setProperty("reportType", demsRecord.getDescriptions());
         ex.setProperty("reportTitle", demsRecord.getTitle());
+        if(demsRecord != null) {
+          ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+          ex.setProperty("drd", demsRecord);
+        }
         ex.getMessage().setBody(demsRecord);
       }
 
@@ -571,6 +584,11 @@ public class CcmDemsAdapter extends RouteBuilder {
 
         .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
         .setHeader("number", simple("${header[rcc_id]}"))
+        // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
+        .to("direct:checkIncrementRecordDocId")
+        // set back body to dems record
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
         .to("direct:createDocumentRecord")
         .endChoice()
       .otherwise()
@@ -593,6 +611,67 @@ public class CcmDemsAdapter extends RouteBuilder {
 
    .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
    ;
+  }
+
+  private void checkIncrementRecordDocId() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // header: number
+    // header: documentId
+    // property: dems_record
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"documentId = ${header[documentId]}")
+    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // do a loop and keep looping until the recordId is null or blank.
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("direct:getCaseDocIdExistsByKey")
+    .log(LoggingLevel.INFO, "returned key: ${body}")
+    .unmarshal().json()
+    .setProperty("recordId").simple("${body[id]}")
+    .setProperty("incrementCount").simple("0")
+    .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+    // limit the number of times incremented to 10.
+    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} < 10")) // if the recordId value is not empty
+
+      .log(LoggingLevel.INFO, "Incrementing document id, due to collision.")
+      // increment the documentId.
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          // check to see if the record with the doc id exists, if so, increment the document id
+          DemsRecordData demsRecord = (DemsRecordData)ex.getProperty("drd", DemsRecordData.class);
+          log.info("Processing increment count of: "+demsRecord.getIncrementalDocCount());
+          demsRecord.incrementDocumentId();
+
+          ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+          Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+          incrementCount++;
+          ex.setProperty("incrementCount", incrementCount);
+          ex.setProperty("drd", demsRecord);
+          ex.getMessage().setBody(demsRecord);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+      .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+      
+      .log(LoggingLevel.INFO, "New document id: '${header[documentId]}'")
+      // now check this next value to see if there is a collision of this document
+      .to("direct:getCaseDocIdExistsByKey")
+      .unmarshal().json()
+      .setProperty("recordId").simple("${body[id]}")
+      .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+    .end() // end loop
+
+
+    .log(LoggingLevel.INFO, "end of incrementRecordDuplicateDocId")
+    ;
   }
 
   private void changeDocumentRecord() throws HttpOperationFailedException {
@@ -2006,6 +2085,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    // IN: property.courtCaseId
     // IN: header.reportType
     // IN: header.reportTitle
     from("direct:" + routeId)
@@ -2036,6 +2116,69 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
         .setBody(simple("{\"id\": \"\"}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .log(LoggingLevel.INFO,"Case record not found.")
+      .endChoice()
+    .end()
+    ;
+  }
+
+  private void getCaseDocIdExistsByKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    //IN: header.documentId
+
+    from("direct:" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .setProperty("key", simple("${header.number}"))
+      .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+      .to("direct:getCourtCaseIdByKey")
+      .setProperty("courtCaseId", jsonpath("$.id"))
+      .choice()
+        .when(simple("${exchangeProperty.courtCaseId} != ''"))
+          .to("direct:getCaseRecordIdByDocId")
+        .endChoice()
+      .end()
+    ;
+  }
+
+  private void getCaseRecordIdByDocId() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: property.courtCaseId
+    // IN: header.documentId
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
+    .log(LoggingLevel.INFO,"documentId = ${header.documentId}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    // filter on descriptions and title
+    // filter-out save version of Yes, and sort any No value first.
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion")
+    .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
+
+    .setProperty("length",jsonpath("$.items.length()"))
+    .log(LoggingLevel.INFO, "length: ${exchangeProperty.length}")
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+        .setProperty("id", jsonpath("$.items[0].edtID"))
+        .setProperty("save_version", jsonpath("$.items[0].cc_SaveVersion"))
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"save_version\": \"${exchangeProperty.save_version}\"}"))
+      .endChoice()
+      .when(simple("${header.CamelHttpResponseCode} == 200"))
+        .log(LoggingLevel.DEBUG,"body = '${body}'.")
+        .setProperty("id", simple(""))
+        .setBody(simple("{\"id\": \"\", \"save_version\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
