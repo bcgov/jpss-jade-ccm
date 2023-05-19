@@ -25,12 +25,15 @@ public class DemsRecordData {
     private String type;
     private String lastApiRecordUpdate;
     private List<DemsFieldData> fields;
+    private String reportType;
+    private int incrementalDocCount = 1;
 
     public DemsRecordData() {
     }
 
     public DemsRecordData(ChargeAssessmentDocumentData nrd) {
         // find the report type
+        setReportType(nrd.getReport_type());
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
         String descriptionShortForm = getDescriptions();
         if(report != null) {
@@ -164,6 +167,7 @@ public class DemsRecordData {
 
     public DemsRecordData(CourtCaseDocumentData nrd) {
         // find the report type
+        setReportType(nrd.getReport_type());
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
         setDescriptions(nrd.getDocument_type().toUpperCase());
         String descriptionShortForm = getDescriptions();
@@ -262,6 +266,7 @@ public class DemsRecordData {
 
     public DemsRecordData(ImageDocumentData nrd) {
         // find the report type
+        setReportType(nrd.getReport_type());
         REPORT_TYPES report = REPORT_TYPES.valueOf(nrd.getReport_type().toUpperCase());
         setDescriptions(nrd.getForm_type_description().toUpperCase());
         String descriptionShortForm = getDescriptions();
@@ -352,6 +357,30 @@ public class DemsRecordData {
 
 
         setFields(fieldData);
+    }
+
+    public void incrementDocumentId() {
+        // update the document id with the next incremental id
+        // in case of INFORMATION report type, 
+        StringBuffer docId = new StringBuffer(getDocumentId());
+        int incrementIndex = docId.lastIndexOf("-");
+        int dateBreakIndex = docId.lastIndexOf("_");
+        if(dateBreakIndex >= incrementIndex) {
+            // need to add a - to the end, as this is the first increment.
+            docId.append("-");
+        } else {
+            String trimmedDocId = docId.substring(0, incrementIndex+1);
+            docId = new StringBuffer(trimmedDocId);
+        }
+        docId.append(incrementalDocCount++);
+        setDocumentId(docId.toString());
+        // Now need to go through the field records, and find the "Document Id"
+        for(DemsFieldData fd : getFields()) {
+          if(fd.getName().equalsIgnoreCase("Document ID")) {
+            fd.setValue(getDocumentId());
+          }
+        }
+
     }
 
     public String getTitle() {
@@ -464,6 +493,22 @@ public class DemsRecordData {
 
     public void setLastApiRecordUpdate(String lastApiRecordUpdate) {
         this.lastApiRecordUpdate = lastApiRecordUpdate;
+    }
+
+    public int getIncrementalDocCount() {
+        return incrementalDocCount;
+    }
+
+    public void setIncrementalDocCount(int incrementalDocCount) {
+        this.incrementalDocCount = incrementalDocCount;
+    }
+
+    public String getReportType() {
+        return reportType;
+    }
+
+    public void setReportType(String reportType) {
+        this.reportType = reportType;
     }
 
     public List<DemsFieldData> getFields() {
