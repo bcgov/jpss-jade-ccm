@@ -638,7 +638,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("incrementCount").simple("0")
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     // limit the number of times incremented to 10.
-    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} <= 10")) // if the recordId value is not empty
+    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} < 10")) // if the recordId value is not empty
 
       .log(LoggingLevel.INFO, "Incrementing document id, due to collision.")
       // increment the documentId.
@@ -651,7 +651,9 @@ public class CcmDemsAdapter extends RouteBuilder {
           demsRecord.incrementDocumentId();
 
           ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-          ex.setProperty("incrementCount", demsRecord.getIncrementalDocCount());
+          Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+          incrementCount++;
+          ex.setProperty("incrementCount", incrementCount);
           ex.setProperty("drd", demsRecord);
           ex.getMessage().setBody(demsRecord);
         }

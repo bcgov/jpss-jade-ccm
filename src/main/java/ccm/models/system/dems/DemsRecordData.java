@@ -362,25 +362,26 @@ public class DemsRecordData {
     public void incrementDocumentId() {
         // update the document id with the next incremental id
         // in case of INFORMATION report type, 
-        StringBuffer docId = new StringBuffer(getDocumentId());
-        int incrementIndex = docId.lastIndexOf("-");
-        int dateBreakIndex = docId.lastIndexOf("_");
-        if(dateBreakIndex >= incrementIndex) {
-            // need to add a - to the end, as this is the first increment.
-            docId.append("-");
-        } else {
-            String trimmedDocId = docId.substring(0, incrementIndex+1);
-            docId = new StringBuffer(trimmedDocId);
-        }
+        int shortDescIndex = getDocumentId().indexOf("_");
+        String trimmedDocId = getDocumentId().substring(0, shortDescIndex);
+
+        String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
+
+        StringBuffer docId = new StringBuffer(trimmedDocId);
+        docId.append("_");
+        docId.append(getTitle());
+        docId.append("-");
         docId.append(incrementalDocCount++);
+        docId.append("_");
+        docId.append(shortendStartDate);
         setDocumentId(docId.toString());
+
         // Now need to go through the field records, and find the "Document Id"
         for(DemsFieldData fd : getFields()) {
           if(fd.getName().equalsIgnoreCase("Document ID")) {
             fd.setValue(getDocumentId());
           }
         }
-
     }
 
     public String getTitle() {
