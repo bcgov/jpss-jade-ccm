@@ -29,7 +29,6 @@ import org.apache.camel.Processor;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.kafka.common.security.oauthbearer.OAuthBearerToken;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
@@ -47,7 +46,6 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
-import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.models.system.pidp.PidpUserProcessStatusEvent;
 import ccm.utils.DateTimeUtils;
@@ -343,7 +341,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&securityProtocol=PLAINTEXT")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -398,7 +396,8 @@ public class CcmPidpAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO,"Publishing part id to PIDP topic. ${body}")
-    .to("kafka:{{pidp.kafka.topic.processresponse.name}}?securityProtocol=PLAINTEXT")
+
+    .to("kafka:{{pidp.kafka.topic.processresponse.name}}")
     .log(LoggingLevel.INFO,"Returned from processCaseUserBulkLoadCompleted.")
     ;
   }
@@ -483,97 +482,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .end()
     ;
   }
-  
-/*   
-private void processEvent() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // https://access.redhat.com/documentation/en-us/red_hat_integration/2021.q3/html/developing_and_managing_integrations_using_camel_k/authenticate-camel-k-against-kafka#creating-secret-oauthbearer-camel-k-kafka
-  
-    from("kafka:{{consumer.topic}}" + routeId)
-    .routeId(routeId)
-    .log(LoggingLevel.DEBUG,"body = ${body}")
-    .process(exchange -> {
-      exchange.getIn().setBody("Hello World");
-    });
-  } 
-*/
-
-/* 
-  private void processCaseUserAccountCreated_old() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // Configure SSL context parameters for the P12 client certificate
-    KeyStoreParameters keystore = new KeyStoreParameters();
-    keystore.setResource("file:path/to/client.p12");
-    keystore.setPassword("clientpassword");
-    keystore.setType("PKCS12");
-
-    KeyManagersParameters keyManagers = new KeyManagersParameters();
-    keyManagers.setKeyStore(keystore);
-
-    SSLContextParameters sslContext = new SSLContextParameters();
-    sslContext.setKeyManagers(keyManagers);
-
-    // Configure Kafka component and set the SSL context parameters
-    KafkaComponent kafka = new KafkaComponent();
-    //// kafka.setSslContextParameters(sslContext);
-    getContext().addComponent("kafka", kafka);
-
-    // Configure OIDC authentication parameters
-    KafkaConfiguration kafkaConfig = new KafkaConfiguration();
-    kafkaConfig.setSaslMechanism("OAUTHBEARER");
-    kafkaConfig.setSecurityProtocol("SASL_SSL");
-    kafkaConfig.setSaslJaasConfig("org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required "
-        + "oidc.provider.url='https://oidc-provider.com' "
-        + "oidc.client.id='client-id' "
-        + "oidc.client.secret='client-secret' "
-        + "oidc.token.endpoint='https://token-endpoint.com' "
-        + "oidc.username.claim='sub' "
-        + "oidc.groups.claim='groups';");
-
-    //from("kafka:{{pidp.kafka.topic.usercreation.name}}?brokers={{pidp.kafka.bootstrapservers.url}}&groupId=jade-ccm&configuration=#kafkaConfig")
-    from("direct:hey")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"body = ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        PidpUserModificationEvent pidpEvent = (PidpUserModificationEvent)exchange.getIn().getBody();
-        CaseUserEvent event = new CaseUserEvent(pidpEvent);
-        
-        exchange.getMessage().setBody(event);
-        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
-      }
-    })
-    .setProperty("event_object", simple("${body}"))
-    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .to("kafka:{{kafka.topic.caseusers.name}}")
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setProperty("event_topic_name",simple("{{kafka.topic.caseusers.name}}"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        CaseUserEvent event = (CaseUserEvent)exchange.getProperty("event_object");
-        String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(exchange.getProperty("kpi_event_topic_recordmetadata"));
-
-        EventKPI kpi = new EventKPI(event);
-        kpi.setEvent_topic_offset(event_offset);
-        kpi.setComponent_route_name(routeId);
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setEvent_topic_name((String)exchange.getProperty("event_topic_name"));
-
-        exchange.getMessage().setBody(kpi);
-      }
-    })
-    .to("direct:publishBodyAsEventKPI")
-    ;
-  } */
-  
   private void publishBodyAsEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
