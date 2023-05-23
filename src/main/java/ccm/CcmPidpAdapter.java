@@ -393,11 +393,11 @@ public class CcmPidpAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         CaseUserEvent event = (CaseUserEvent)exchange.getProperty("event_object");
-        PidpUserProcessStatusEvent pume = new PidpUserModificationEvent(event);
+        PidpUserProcessStatusEvent pume = new PidpUserProcessStatusEvent(event);
         exchange.getMessage().setBody(pume);
       }
     })
-    .log(LoggingLevel.INFO,"Publishing part id to PIDP topic.")
+    .log(LoggingLevel.INFO,"Publishing part id to PIDP topic. ${body}")
     .to("kafka:{{pidp.kafka.topic.processresponse.name}}?securityProtocol=PLAINTEXT")
     .log(LoggingLevel.INFO,"Returned from processCaseUserBulkLoadCompleted.")
     ;
