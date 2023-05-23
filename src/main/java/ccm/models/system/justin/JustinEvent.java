@@ -24,7 +24,8 @@ public class JustinEvent {
     USER_PROV,
     USER_DPROV,
     REPORT,
-    DOCM;
+    DOCM,
+    INFO_DOCM;
 
   }
 

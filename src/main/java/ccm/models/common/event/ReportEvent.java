@@ -50,7 +50,8 @@ public class ReportEvent extends BaseEvent{
     
     public enum STATUS {
       REPORT,
-      DOCM;
+      DOCM,
+      INFO_DOCM;
     }
 
     public enum REPORT_TYPES {
@@ -119,7 +120,8 @@ public class ReportEvent extends BaseEvent{
       setJustin_event_dtm(je.getEvent_dtm());
 
       if(je.getMessage_event_type_cd().equals(STATUS.REPORT.name()) ||
-         je.getMessage_event_type_cd().equals(STATUS.DOCM.name())) {
+         je.getMessage_event_type_cd().equals(STATUS.DOCM.name()) ||
+         je.getMessage_event_type_cd().equals(STATUS.INFO_DOCM.name())) {
 
         setEvent_status(je.getMessage_event_type_cd());
         if (je.getEvent_data() != null) {
@@ -173,8 +175,10 @@ public class ReportEvent extends BaseEvent{
       }
       if(je.getMessage_event_type_cd().equals(STATUS.DOCM.name())) {
         this.setReport_type("DOCUMENT");
+      } else if(je.getMessage_event_type_cd().equals(STATUS.INFO_DOCM.name())) {
+        this.setReport_type("INFORMATION");
       }
-      
+
       Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
       while(i.hasNext()) {
         JustinEventDataElement jed = i.next();
