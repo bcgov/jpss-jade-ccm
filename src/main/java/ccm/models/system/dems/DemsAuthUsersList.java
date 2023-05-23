@@ -19,7 +19,7 @@ public class DemsAuthUsersList {
       List<String> demsList = new ArrayList<String>();
       
       while (i != null && i.hasNext()) {
-        demsList.add(i.next().getPart_id());
+        demsList.add(i.next().getKey());
       }
 
       setUserKeys(demsList);

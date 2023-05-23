@@ -22,7 +22,11 @@ public class JustinEvent {
     MANU_FILE,
     MANU_CFILE,
     USER_PROV,
-    USER_DPROV;
+    USER_DPROV,
+    REPORT,
+    DOCM,
+    INFO_DOCM;
+
   }
 
   public boolean isAgenFileEvent() {

@@ -1,11 +1,14 @@
 ns_set="cef5dd"
 
+
 if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -24,22 +27,31 @@ if [ "$env" = "prod" ]; then
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
+        ns=""
         return 1
     fi
 else
-    #logging_level="DEBUG"
+    #logging_level="DEBUG" 
     logging_level="INFO"
 fi
 
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
+
 echo "`basename $0` to $ns ..."
-
+ 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmDemsAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmDemsAdapter.java --port 4414 local/local.properties
+    
+else
 kamel -n $ns delete ccm-dems-adapter
 kamel -n $ns run \
   CcmDemsAdapter.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmDemsAdapter.properties \
+  --label deployer="$deployer" \
+  --label version="$version" \
   --config configmap:ccm-configs \
   --config secret:ccm-secrets \
   --profile openshift \
@@ -49,8 +61,9 @@ kamel -n $ns run \
   --trait container.request-memory=500mi \
   --trait container.limit-cpu=200m \
   --trait container.limit-memory=1000mi \
+  --trait route.enabled=false \
   --trait service.node-port=false
-
+fi
   ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
 
   #--trait route.tls-termination=edge \

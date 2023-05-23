@@ -160,7 +160,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .unmarshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .setProperty("namespace",simple("{{env:NAMESPACE}}"))
+    .setProperty("namespace",simple("{{env:NAMESPACE:ccm-configs:NAMESPACE}}"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {

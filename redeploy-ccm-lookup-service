@@ -6,6 +6,8 @@ elif [ "$1" = "test" ]; then
     env="test"
 elif [ "$1" = "prod" ]; then
     env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
 else
     env=""
 fi
@@ -24,28 +26,47 @@ if [ "$env" = "prod" ]; then
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
+        ns=""
         return 1
     fi
 else
-    #logging_level="DEBUG"
-    logging_level="INFO"
+    logging_level="DEBUG"
 fi
+
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
 
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmLookupService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmLookupService.java --port 4419 local/local.properties 
+else
 kamel -n $ns delete ccm-lookup-service
 kamel -n $ns run \
   CcmLookupService.java \
   --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
+  --property custom.property2=configmap:ccm-configs:kafka-broker-url \
+  --label deployer="$deployer" \
+  --label version="$version" \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
   --profile openshift \
   --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait service.node-port=false \
   --trait route.enabled=false
-
+fi
 popd
+
+#  --config configmap:ccm-configs \
+#  --config secret:ccm-secrets \
+
+
+#--mount configmap/ccm-configs:/etc/camel/config.d/_configmaps/ccm-configs \
+#--mount secret/ccm-secrets:/etc/camel/config.d/_secrets/ccm-secrets \
+
+#--property camel.k.label="ccm (deployed on `date` by `oc whoami`)" \
 
 # kamel -n cef5dd-test log ccm-lookup-service

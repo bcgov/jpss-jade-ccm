@@ -1,7 +1,9 @@
 package ccm;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.apache.camel.CamelException;
 
@@ -27,6 +29,10 @@ import org.apache.camel.Processor;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.kafka.common.security.oauthbearer.OAuthBearerToken;
+
+import ccm.models.common.data.AuthUser;
+import ccm.models.common.data.AuthUserList;
 
 /*
 import org.apache.camel.component.kafka.KafkaComponent;
@@ -41,6 +47,7 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.system.pidp.PIDPAuthUserList;
 import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
@@ -54,6 +61,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     //attachExceptionHandlers();
     processCaseUserAccountCreated();
     publishBodyAsEventKPI();
+    getCourtCaseAuthList();
+    getKafkaToken();
   }
 
   private void attachExceptionHandlers() {
@@ -201,7 +210,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
     .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
-    .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    .to("kafka:{{kafka.topic.caseusers.name}}?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
     // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log("User creation event published.")
@@ -269,7 +278,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .log(LoggingLevel.DEBUG,"Converted to CaseUserEvent: ${body}")
     .log("Publishing user creation event (key = ${header[kafka.KEY]}) ...")
-    .to("kafka:ccm-caseusers?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    .to("kafka:{{kafka.topic.caseusers.name}}?brokers={{ccm.kafka.brokers}}&securityProtocol=PLAINTEXT")
     // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log("User creation event published.")
@@ -300,6 +309,87 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
+  private void getCourtCaseAuthList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"getCaseAuthList request received. key = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .to("direct:getKafkaToken")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .log(LoggingLevel.DEBUG, "bearer set : ${header.pidp_access.token}")
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
+    //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+    .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+
+    .log(LoggingLevel.DEBUG,"Received response from Case Mgt API: '${body}'")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+      //.log(LoggingLevel.INFO, "Success! processing results")
+      .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
+        
+          AuthUserList authList = new AuthUserList();
+          authList.setRcc_id((String)exchange.getIn().getHeader("number"));
+          for(String userName : j) {
+            authList.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
+          }
+          log.info("Returned PIDP Auth List size of:"+authList.getAuth_user_list().size());
+          exchange.getMessage().setBody(authList, AuthUserList.class);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+      .log(LoggingLevel.DEBUG,"Converted response (from PIDP to Business model): '${body}'")
+      .endChoice()
+    .otherwise()
+      .log(LoggingLevel.INFO, "Failed to retrieve PIDP auth users")
+    .endChoice()
+  .end()
+  ;
+  }
+  
+  private void getKafkaToken() {
+    // use method name as route id
+    // use method name as route id
+    String routeId = new Object() {
+    }.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching()
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader("CamelHttpMethod").simple("POST") 
+    .setHeader("Content-Type").simple("application/x-www-form-urlencoded")
+    .setHeader("Accept").simple("application/json")
+    .setBody(simple("grant_type=client_credentials&client_id={{pidp-api-oauth-client-id}}&client_secret={{pidp-api-oauth-client-secret}}"))
+     //.to("{{pidp-api-oauth-token-endpoint-url}}")
+    .to("https://{{pidp-api-oauth-token-endpoint-url}}")
+    .convertBodyTo(String.class)
+    .log(LoggingLevel.DEBUG,"response from API: " + body())
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        //.unmarshal().json(JsonLibrary.Jackson, OAuthBearerToken.class)
+        .log(LoggingLevel.DEBUG,"token : $.access_token")
+        .setHeader("pidp_access.token").jsonpath("$.access_token")
+        .endChoice()
+        //.to("direct:<some direct route>")
+      .otherwise()
+        .log("Not Authenticated!!!")
+        .endChoice()
+    .end()
+    ;
+  }
+  
 /*   
 private void processEvent() {
     // use method name as route id
@@ -400,7 +490,7 @@ private void processEvent() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Publishing Event KPI to Kafka ...")
     .log(LoggingLevel.DEBUG,"body: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}?brokers=events-kafka-bootstrap:9092&securityProtocol=PLAINTEXT")
+    .to("kafka:{{kafka.topic.kpis.name}}?brokers={{ccm.kafka.brokers}}&securityProtocol=PLAINTEXT")
     // + "&keyDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     // + "&valueDeserializer=org.apache.kafka.common.serialization.StringDeserializer"
     .log(LoggingLevel.DEBUG,"Event KPI published.")

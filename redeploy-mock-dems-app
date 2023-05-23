@@ -1,0 +1,46 @@
+echo "starting Mock Dems App on port 4412"
+
+ns_set="cef5dd"
+
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+else
+    #logging_level="DEBUG" 
+    logging_level="INFO"
+fi
+
+echo "`basename $0` to $ns ..."
+
+pushd src/main/java/mock
+if [ "$env" = "local" ]; then 
+
+camel run  --properties=MockDemsApp.properties  --deps=ccm:ccm-models:0.0.1-SNAPSHOT  --fresh --health --console MockDemsApp.java  --port 4412 "$OLDPWD"/src/main/java/ccm/local/local.properties
+fi
+popd

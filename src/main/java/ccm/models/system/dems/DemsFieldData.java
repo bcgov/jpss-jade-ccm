@@ -51,6 +51,7 @@ public class DemsFieldData {
         CASE_DECISION("Case Decision"),
         PROPOSED_CHARGES("Proposed Charges"),
         INITIATING_AGENCY("Initiating Agency"),
+        INITIATING_AGENCY_NAME("Initiating Agency Name"),
         INVESTIGATING_OFFICER("Investigating Officer"),
         PROPOSED_CROWN_OFFICE("Proposed Crown Office"),
         CASE_FLAGS("Case Flags"),

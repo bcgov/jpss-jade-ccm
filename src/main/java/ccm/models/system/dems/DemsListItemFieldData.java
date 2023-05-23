@@ -67,22 +67,25 @@ public class DemsListItemFieldData {
         ADMINISTRATOR("JRS_ADMINISTRATOR","Administrator"),
         LAWYER("JRS_BASE_LAWYER","Lawyer"),
         LEGAL_ASSISTANT("JRS_BASE_LEGAL_ASST","Legal Assistant"),
-        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal");
+        PARALEGAL("JRS_BASE_PARALEGAL","Paralegal"),
+        DEMS_SYSTEM_SUPPORT("JRS_DEMS_SYSTEM_SUPPORT","System Support"),
+        SUBMITTING_AGENCY("PIDP_SUBMITTING_AGENCY","Submitting Agency");
 
-        private String justin_name;
+        private String common_name;
         private String dems_name;
+        
 
-        private CASE_GROUP_FIELD_MAPPINGS(String justin_name, String dems_name) {
-            this.justin_name = justin_name;
+        private CASE_GROUP_FIELD_MAPPINGS(String common_name, String dems_name) {
+            this.common_name = common_name;
             this.dems_name = dems_name;
         }
 
-        public String getJustin_name() {
-            return justin_name;
+        public String getCommon_name() {
+            return common_name;
         }
 
-        public void setJustin_name(String justin_name) {
-            this.justin_name = justin_name;
+        public void setCommon_name(String common_name) {
+            this.common_name = common_name;
         }
 
         public String getDems_name() {
@@ -96,16 +99,20 @@ public class DemsListItemFieldData {
         public static CASE_GROUP_FIELD_MAPPINGS findCaseGroupByJustinName(String justin_name) {
             CASE_GROUP_FIELD_MAPPINGS caseGroup = null;
 
-            if (SYSTEM_SUPPORT.getJustin_name().equals(justin_name)) {
+            if (SYSTEM_SUPPORT.getCommon_name().equals(justin_name)) {
                 caseGroup = SYSTEM_SUPPORT;
-            } else if (ADMINISTRATOR.getJustin_name().equals(justin_name)) {
+            } else if (ADMINISTRATOR.getCommon_name().equals(justin_name)) {
                 caseGroup = ADMINISTRATOR;
-            } else if (LAWYER.getJustin_name().equals(justin_name)) {
+            } else if (LAWYER.getCommon_name().equals(justin_name)) {
                 caseGroup = LAWYER;
-            } else if (LEGAL_ASSISTANT.getJustin_name().equals(justin_name)) {
+            } else if (LEGAL_ASSISTANT.getCommon_name().equals(justin_name)) {
                 caseGroup = LEGAL_ASSISTANT;
-            } else if (PARALEGAL.getJustin_name().equals(justin_name)) {
+            } else if (PARALEGAL.getCommon_name().equals(justin_name)) {
                 caseGroup = PARALEGAL;
+            } else if (DEMS_SYSTEM_SUPPORT.getCommon_name().equals(justin_name)) {
+                caseGroup = DEMS_SYSTEM_SUPPORT;
+            } else if (SUBMITTING_AGENCY.getCommon_name().equals(justin_name)) {
+                caseGroup = SUBMITTING_AGENCY;
             }
             
             return caseGroup;

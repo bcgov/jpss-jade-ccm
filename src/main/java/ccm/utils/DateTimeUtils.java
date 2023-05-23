@@ -73,6 +73,23 @@ public class DateTimeUtils {
         return epochMilli;
     }
 
+    public static String shortDateTimeString(String bcDateTimeString) throws DateTimeParseException {
+        // Java 8 - Convert Date Time From One Timezone To Another
+        // https://www.javaprogramto.com/2020/12/java-convert-date-between-timezones.html
+
+        String shortDateTimeString = null;
+        ZonedDateTime zonedDateTime = null;
+
+        zonedDateTime = convertToZonedDateTimeFromBCDateTimeString(bcDateTimeString);
+
+        if (zonedDateTime != null) {
+            shortDateTimeString = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(
+                DateTimeFormatter.ofPattern("yyMMdd"));
+        }
+
+        return shortDateTimeString;
+    }
+
     public static void main(String[] args) {
         String bcDateTimeString1 = "2000-10-01 10:01:02.003";
         String utcDateTimeString1 = DateTimeUtils.convertToUtcFromBCDateTimeString(bcDateTimeString1);
