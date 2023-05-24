@@ -73,7 +73,7 @@ public class DemsRecordData {
                 //Else $MAPID16"""
                 if(nrd.getPolice_officer_yn() != null && nrd.getPolice_officer_yn().equalsIgnoreCase("Y")
                 && nrd.getOfficer_pin_number() != null) {
-                    setTitle(nrd.getWitness_name() + "(PIN" + nrd.getOfficer_pin_number() + ")");
+                    setTitle(nrd.getWitness_name().toUpperCase() + " (PIN" + nrd.getOfficer_pin_number() + ")");
                 } else {
                     setTitle(nrd.getWitness_name());
                 }
@@ -297,7 +297,7 @@ public class DemsRecordData {
             //$MAPID67 $MAPID69
             setTitle(nrd.getCourt_file_number());
         } else {
-            setTitle(nrd.getParticipant_name() + " " + nrd.getCourt_file_number());
+            setTitle(nrd.getParticipant_name().toUpperCase() + " " + nrd.getCourt_file_number());
         }
 
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
