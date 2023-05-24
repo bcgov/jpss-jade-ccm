@@ -84,7 +84,11 @@ public class DemsRecordData {
             setOriginalFileNumber(nrd.getAgency_file_no());
 
 
-            if(report.equals(REPORT_TYPES.CPIC)) {
+            if(report.equals(REPORT_TYPES.NARRATIVE)) {
+                setType("OPERATIONAL");
+            } else if(report.equals(REPORT_TYPES.SYNOPSIS)) {
+                setType("OPERATIONAL");
+            } else if(report.equals(REPORT_TYPES.CPIC)) {
                 setType("BIOGRAPHICAL");
             } else if(report.equals(REPORT_TYPES.WITNESS_STATEMENT)) {
                 setType("STATEMENT");
@@ -114,7 +118,7 @@ public class DemsRecordData {
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        
+
         if(getDocumentId() != null) {
             DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
             fieldData.add(documentId);
@@ -212,7 +216,7 @@ public class DemsRecordData {
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        
+
         if(getDocumentId() != null) {
             DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
             fieldData.add(documentId);
@@ -307,7 +311,7 @@ public class DemsRecordData {
         setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        
+
         if(getDocumentId() != null) {
             DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
             fieldData.add(documentId);
@@ -361,7 +365,7 @@ public class DemsRecordData {
 
     public void incrementDocumentId() {
         // update the document id with the next incremental id
-        // in case of INFORMATION report type, 
+        // in case of INFORMATION report type,
         int shortDescIndex = getDocumentId().indexOf("_");
         String trimmedDocId = getDocumentId().substring(0, shortDescIndex);
 
@@ -370,7 +374,7 @@ public class DemsRecordData {
         StringBuffer docId = new StringBuffer(trimmedDocId);
         docId.append("_");
         docId.append(getTitle());
-        docId.append("-");
+        docId.append("_");
         docId.append(incrementalDocCount++);
         docId.append("_");
         docId.append(shortendStartDate);
