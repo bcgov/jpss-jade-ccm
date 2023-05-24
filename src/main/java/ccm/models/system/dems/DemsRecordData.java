@@ -75,7 +75,7 @@ public class DemsRecordData {
                 && nrd.getOfficer_pin_number() != null) {
                     setTitle(nrd.getWitness_name().toUpperCase() + " (PIN" + nrd.getOfficer_pin_number() + ")");
                 } else {
-                    setTitle(nrd.getWitness_name());
+                    setTitle(nrd.getWitness_name().toUpperCase());
                 }
 
             } else {
