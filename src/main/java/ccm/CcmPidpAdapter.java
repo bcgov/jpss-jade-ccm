@@ -257,12 +257,12 @@ public class CcmPidpAdapter extends RouteBuilder {
     )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG, "Received user creation event from PIDP ...  Headers = '${headers}'")
-    .log("Received user creation event from PIDP 1...")
+    //.log(LoggingLevel.DEBUG, "Received user creation event from PIDP ...  Headers = '${headers}'")
+    //.log("Received user creation event from PIDP 1...")
     //.log("Received user creation event from PIDP 2...")
     //.log("Received user creation event from PIDP 3... body = '${body}'.")
     //.log("(DEBUG) PIDP payload: ${body}")
-    //.log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
+    .log(LoggingLevel.DEBUG,"PIDP payload: ${body}")
     .setProperty("event_topic", simple("{{kafka.topic.caseusers.name}}"))
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, PidpUserModificationEvent.class)
@@ -357,6 +357,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .log(LoggingLevel.INFO, "${body}")
     .setProperty("event_object", body())
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
@@ -366,11 +367,11 @@ public class CcmPidpAdapter extends RouteBuilder {
       .when(header("justin_rcc_id").isEqualTo("0"))
         .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
+        //.to("direct:publishEventKPI")
         .setBody(header("event"))
         .to("direct:processCaseUserBulkLoadCompleted")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
+        //.to("direct:publishEventKPI")
         .endChoice()
       .end();
     ;
@@ -395,6 +396,7 @@ public class CcmPidpAdapter extends RouteBuilder {
         exchange.getMessage().setBody(pume);
       }
     })
+    .marshal().json(JsonLibrary.Jackson, PidpUserProcessStatusEvent.class)
     .log(LoggingLevel.INFO,"Publishing part id to PIDP topic. ${body}")
 
     .to("kafka:{{pidp.kafka.topic.processresponse.name}}")
