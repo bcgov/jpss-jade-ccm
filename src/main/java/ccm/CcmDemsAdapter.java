@@ -697,7 +697,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     .choice()
       .when(simple("${exchangeProperty.recordId} != ''"))
-        .to("direct:updateDocumentRecord")
+        .log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
+        //.to("direct:updateDocumentRecord")
       .endChoice()
       .otherwise()
         .to("direct:createDocumentRecord")
@@ -823,6 +824,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+
         .endChoice()
     .end()
 
