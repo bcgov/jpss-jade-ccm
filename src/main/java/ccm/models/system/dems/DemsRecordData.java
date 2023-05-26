@@ -115,7 +115,8 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
+        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll(":", ""));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -213,7 +214,8 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
+        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll(":", ""));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -308,7 +310,8 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        setDocumentId(descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate);
+        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll(":", ""));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -378,7 +381,7 @@ public class DemsRecordData {
         docId.append(incrementalDocCount++);
         docId.append("_");
         docId.append(shortendStartDate);
-        setDocumentId(docId.toString());
+        setDocumentId(docId.toString().replaceAll(":", ""));
 
         // Now need to go through the field records, and find the "Document Id"
         for(DemsFieldData fd : getFields()) {
