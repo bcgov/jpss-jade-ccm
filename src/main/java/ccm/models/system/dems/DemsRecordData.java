@@ -176,7 +176,7 @@ public class DemsRecordData {
         setDescriptions(nrd.getDocument_type().toUpperCase());
         String descriptionShortForm = getDescriptions();
         if(report != null) {
-            if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && nrd.getFiltered_yn() == "Y") {
+            if(report.equals(REPORT_TYPES.CONVICTION_LIST) && nrd.getFiltered_yn() != null && "Y".equals(nrd.getFiltered_yn())) {
                 descriptionShortForm = report.getLabel()+"-F";
                 setDescriptions(nrd.getDocument_type().toUpperCase()+"-FILTERED");
             } else if(report.equals(REPORT_TYPES.CONVICTION_LIST)) {
@@ -188,7 +188,7 @@ public class DemsRecordData {
 
             if(report.equals(REPORT_TYPES.RECORD_OF_PROCEEDINGS) && nrd.getCourt_file_no() != null) {
                 //$MAPID67 $MAPID69
-                setTitle(nrd.getParticipant_name().toUpperCase() + nrd.getCourt_file_no());
+                setTitle(nrd.getParticipant_name().toUpperCase() + " " + nrd.getCourt_file_no());
             } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
                 setTitle(nrd.getCourt_file_no());
             } else {
