@@ -440,8 +440,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
             log.info("processing into court case document record");
             CourtCaseDocumentData courtCaseDocument = new CourtCaseDocumentData(event_message_id, create_date, rd);
-            String filtered_yn = ex.getProperty("filtered_yn", String.class);
-            courtCaseDocument.setFiltered_yn(filtered_yn);
+            Object filtered_yn = ex.getMessage().getHeader("filtered_yn");
+            if(filtered_yn != null) {
+              courtCaseDocument.setFiltered_yn((String)filtered_yn);
+            }
             DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
             ex.setProperty("reportType", demsRecord.getDescriptions());
             ex.setProperty("reportTitle", demsRecord.getTitle());
