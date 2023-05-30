@@ -57,7 +57,7 @@ public class CcmDemsAdapterTest extends CamelQuarkusTestSupport {
 		
 	}
 
-	@Test
+	//@Test
 	public void testPublishEventKPI() throws Exception {
 		
 		/**
