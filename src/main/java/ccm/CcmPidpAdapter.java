@@ -56,7 +56,7 @@ import ccm.utils.KafkaComponentUtils;
 public class CcmPidpAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-    
+
     //attachExceptionHandlers();
     processCaseUserAccountCreated();
     processBulkCaseUserEvents();
@@ -113,10 +113,10 @@ public class CcmPidpAdapter extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("CamelException");
         error.setError_summary("Unable to process event, CamelException raised.");
-       
+
         log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("CamelException Exception event info : " + event.getEvent_source());
-       
+
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
@@ -149,7 +149,7 @@ public class CcmPidpAdapter extends RouteBuilder {
         error.setError_summary("Unable to process event., general Exception raised.");
         error.setError_code("General Exception");
         error.setError_details(event);
-       
+
         log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("General Exception event info : " + event.getEvent_source());
         // KPI
@@ -183,7 +183,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}" + 
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}" +
       "?groupId={{pidp.kafka.consumergroup.name}}" +
       "&autoOffsetReset=earliest"
     )
@@ -251,7 +251,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}" + 
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}" +
       "?groupId={{pidp.kafka.consumergroup.name}}" // +
       //"&autoOffsetReset=earliest"
     )
@@ -412,46 +412,75 @@ public class CcmPidpAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"getCaseAuthList request received. key = ${header.number}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .to("direct:getKafkaToken")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .log(LoggingLevel.DEBUG, "bearer set : ${header.pidp_access.token}")
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
-    //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
-    .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .to("direct:getKafkaToken")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .log(LoggingLevel.DEBUG, "bearer set : ${header.pidp_access.token}")
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
+      //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+      .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
 
-    .log(LoggingLevel.DEBUG,"Received response from Case Mgt API: '${body}'")
-    .choice()
-      .when().simple("${header.CamelHttpResponseCode} == 200")
-      //.log(LoggingLevel.INFO, "Success! processing results")
-      .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+      .log(LoggingLevel.DEBUG,"Received response from Case Mgt API: '${body}'")
+      .choice()
+        .when().simple("${header.CamelHttpResponseCode} == 200")
+          //.log(LoggingLevel.INFO, "Success! processing results")
+          .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
+
+              AuthUserList authList = new AuthUserList();
+              authList.setRcc_id((String)exchange.getIn().getHeader("number"));
+              for(String userName : j) {
+                authList.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
+              }
+              log.info("Returned PIDP Auth List size of:"+authList.getAuth_user_list().size());
+              exchange.getMessage().setBody(authList, AuthUserList.class);
+            }
+          })
+          //.marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.INFO, "Failed to retrieve PIDP auth users")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            AuthUserList authList = new AuthUserList();
+            authList.setRcc_id((String)exchange.getIn().getHeader("number"));
+            exchange.getMessage().setBody(authList, AuthUserList.class);
+          }
+        })
+        .endChoice()
+      .end()
+      .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.INFO,"Unable to retrieve token: ${body}")
+
       .process(new Processor() {
         @Override
-        public void process(Exchange exchange) {
-          ArrayList<String> j = exchange.getIn().getBody(ArrayList.class);
-        
+        public void process(Exchange exchange) throws Exception {
+          Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+
+          log.error("General Exception caught, exception message : " + cause.getMessage());
+          cause.printStackTrace();
+
           AuthUserList authList = new AuthUserList();
           authList.setRcc_id((String)exchange.getIn().getHeader("number"));
-          for(String userName : j) {
-            authList.getAuth_user_list().add(new AuthUser(userName, AuthUser.RoleTypes.PIDP_SUBMITTING_AGENCY.toString()));
-          }
-          log.info("Returned PIDP Auth List size of:"+authList.getAuth_user_list().size());
           exchange.getMessage().setBody(authList, AuthUserList.class);
+
         }
       })
-      .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
-      .log(LoggingLevel.DEBUG,"Converted response (from PIDP to Business model): '${body}'")
-      .endChoice()
-    .otherwise()
-      .log(LoggingLevel.INFO, "Failed to retrieve PIDP auth users")
-    .endChoice()
-  .end()
+    .end()
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from PIDP to Business model): '${body}'")
   ;
   }
-  
+
   private void getKafkaToken() {
     // use method name as route id
     // use method name as route id
@@ -463,7 +492,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setHeader("CamelHttpMethod").simple("POST") 
+    .setHeader("CamelHttpMethod").simple("POST")
     .setHeader("Content-Type").simple("application/x-www-form-urlencoded")
     .setHeader("Accept").simple("application/json")
     .setBody(simple("grant_type=client_credentials&client_id={{pidp-api-oauth-client-id}}&client_secret={{pidp-api-oauth-client-secret}}"))
