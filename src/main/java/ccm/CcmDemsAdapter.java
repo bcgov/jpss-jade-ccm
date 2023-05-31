@@ -160,6 +160,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             // log.error(trace.toString());
             //}
             log.error("Returned status code : " + cause.getStatusCode());
+            log.error("Response body : " + cause.getResponseBody());
             exchange.setProperty("error_status_code", cause.getStatusCode());
 
             log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
