@@ -440,8 +440,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
             log.info("processing into court case document record");
             CourtCaseDocumentData courtCaseDocument = new CourtCaseDocumentData(event_message_id, create_date, rd);
-            String filtered_yn = ex.getProperty("filtered_yn", String.class);
-            courtCaseDocument.setFiltered_yn(filtered_yn);
+            Object filtered_yn = ex.getMessage().getHeader("filtered_yn");
+            if(filtered_yn != null) {
+              courtCaseDocument.setFiltered_yn((String)filtered_yn);
+            }
             DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
             ex.setProperty("reportType", demsRecord.getDescriptions());
             ex.setProperty("reportTitle", demsRecord.getTitle());
@@ -697,7 +699,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     .choice()
       .when(simple("${exchangeProperty.recordId} != ''"))
-        .to("direct:updateDocumentRecord")
+        .log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
+        //.to("direct:updateDocumentRecord")
       .endChoice()
       .otherwise()
         .to("direct:createDocumentRecord")
@@ -823,6 +826,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+
         .endChoice()
     .end()
 
