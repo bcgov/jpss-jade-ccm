@@ -157,6 +157,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("CamelException");
         error.setError_summary("Unable to process event, CamelException raised.");
+        error.setError_details(cause);
 
         log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("CamelException Exception event info : " + event.getEvent_source());
@@ -193,9 +194,10 @@ public class CcmNotificationService extends RouteBuilder {
         Error error = new Error();
         log.error("General Exception body: " + exchange.getMessage().getBody());
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_summary("Unable to process event., general Exception raised.");
+        error.setError_summary("Unable to process event. General exception raised.");
         error.setError_code("General Exception");
-        error.setError_details(event);
+        error.setError_details(cause);
+
         log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
 
         log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
@@ -365,6 +367,7 @@ public class CcmNotificationService extends RouteBuilder {
         reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
         reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
         ReportEvent re = new ReportEvent();
