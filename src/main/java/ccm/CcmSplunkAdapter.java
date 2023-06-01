@@ -2,7 +2,6 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
 
@@ -37,11 +36,32 @@ import ccm.utils.DateTimeUtils;
 public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
-
-    attachExceptionHandlers();
+    retryExceptionHandler();
+    //attachExceptionHandlers();
     processEventKPIs();
     publishEventKPIToSplunk();
     publishSplunkEventKPIError();
+  }
+
+  private void retryExceptionHandler() {
+    // General Exception
+     onException(Exception.class)
+     .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("General Exception caught, exception message : " + cause.getMessage());
+        log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
+        log.error("General Exception body: " + exchange.getMessage().getBody());
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
+      }
+    })
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
+    .maximumRedeliveries(3).redeliveryDelay(3000)
+    .end();
   }
 
   private void deadLetterChannelExample() {

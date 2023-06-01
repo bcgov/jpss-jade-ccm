@@ -240,7 +240,6 @@ public class CcmDemsAdapter extends RouteBuilder {
             error.setError_summary("Unable to process event, CamelException raised.");
             error.setError_details(cause);
 
-
             log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
             log.error("CamelException Exception event info : " + event.getEvent_source());
             // KPI
@@ -297,8 +296,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
             ccm.models.common.event.Error error = new ccm.models.common.event.Error();
             error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-            error.setError_summary("Unable to process event., general Exception raised.");
+            error.setError_summary("Unable to process event.  General exception raised.");
             error.setError_code("General Exception");
             error.setError_details(cause);
             Exception ex = exchange.getException();
