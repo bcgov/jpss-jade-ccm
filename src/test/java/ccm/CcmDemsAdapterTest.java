@@ -88,6 +88,13 @@ public class CcmDemsAdapterTest extends CamelQuarkusTestSupport {
 		headers.put("kpi_event_topic_offset", "0");
 		headers.put("kpi_component_route_name", "test");
 		
+		for (Exchange e:mockKafka.getExchanges()) {
+			e.setProperty("kpi_event_object", stubbedBaseEvent);
+			e.setProperty("kpi_status", "test");
+			e.setProperty("kpi_event_topic_name", "test");
+			e.setProperty("kpi_event_topic_offset", "0");
+			e.setProperty("kpi_component_route_name", "test");
+		}
 		/**
 		 * @author mcostell
 		 * produce a message to the route with the afforementioned headers 

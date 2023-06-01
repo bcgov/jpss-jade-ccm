@@ -195,7 +195,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_summary("Unable to process event., general Exception raised.");
         error.setError_code("General Exception");
-        error.setError_details(event);
+        error.setError_details(cause);
         log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
 
         log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());

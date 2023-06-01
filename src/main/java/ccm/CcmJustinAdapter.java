@@ -119,8 +119,8 @@ public class CcmJustinAdapter extends RouteBuilder {
        error.setError_code("HttpOperationFailed");
        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-        log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
-        log.error("HttpOperation Exception event info : " + event.getEvent_source());
+       log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+       log.error("HttpOperation Exception event info : " + event.getEvent_source());
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
     
@@ -131,8 +131,8 @@ public class CcmJustinAdapter extends RouteBuilder {
        kpi.setError(error);
        exchange.getMessage().setBody(kpi);
 
-         String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-         exchange.setProperty("kpi_component_route_name", failedRouteId);
+       String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+       exchange.setProperty("kpi_component_route_name", failedRouteId);
      }
    })
    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
@@ -188,12 +188,13 @@ public class CcmJustinAdapter extends RouteBuilder {
      @Override
      public void process(Exchange exchange) throws Exception {
        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-      
+       Throwable caused = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
+
        Error error = new Error();
        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-       error.setError_summary("Unable to process event., general Exception raised.");
+       error.setError_summary("Unable to process event, general exception raised.");
        error.setError_code("General Exception");
-       error.setError_details(event);
+       error.setError_details(caused);
       
        // KPI
        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -206,8 +207,8 @@ public class CcmJustinAdapter extends RouteBuilder {
        kpi.setError(error);
        exchange.getMessage().setBody(kpi);
 
-         String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-         exchange.setProperty("kpi_component_route_name", failedRouteId);
+       String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+       exchange.setProperty("kpi_component_route_name", failedRouteId);
      }
    })
    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
