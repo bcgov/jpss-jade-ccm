@@ -469,7 +469,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             ChargeAssessmentDocumentData chargeAssessmentDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, rd);
             DemsRecordData demsRecord = new DemsRecordData(chargeAssessmentDocument);
 
-            
+
             ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
             ex.setProperty("charge_assessment_document", chargeAssessmentDocument);
             ex.setProperty("drd", demsRecord);
@@ -720,7 +720,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       })
       .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
       .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
-      
+
       .log(LoggingLevel.INFO, "New document id: '${header[documentId]}'")
       // now check this next value to see if there is a collision of this document
       .to("direct:getCaseDocIdExistsByKey")
@@ -1104,6 +1104,10 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setBody(simple("{\"id\": \"\"}"))
           .setHeader("CamelHttpResponseCode", simple("200"))
           .log(LoggingLevel.INFO,"Case not found.")
+        .endChoice()
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+          .log(LoggingLevel.ERROR,"body = '${body}'.")
         .endChoice()
       .end()
       .endDoTry()
