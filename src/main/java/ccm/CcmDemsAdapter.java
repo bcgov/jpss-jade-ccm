@@ -268,19 +268,6 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "${exception.message}")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            try {
-              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-
-              exchange.getMessage().setBody(cause.getResponseBody());
-              log.error("Returned body : " + cause.getResponseBody());
-            } catch(Exception ex) {
-              ex.printStackTrace();
-            }
-          }
-        })
       .end()
     .end();
 
@@ -305,6 +292,8 @@ public class CcmDemsAdapter extends RouteBuilder {
               ex.printStackTrace();
             }
 
+            log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+            log.error("General Exception event info : " + event.getEvent_source());
             // KPI
             EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
             String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
@@ -316,8 +305,8 @@ public class CcmDemsAdapter extends RouteBuilder {
             kpi.setError(error);
             exchange.getMessage().setBody(kpi);
 
-            String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-            exchange.setProperty("kpi_component_route_name", failedRouteId);
+        String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+        exchange.setProperty("kpi_component_route_name", failedRouteId);
           }
         })
         .marshal().json(JsonLibrary.Jackson, EventKPI.class)
@@ -330,21 +319,9 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "${exception.message}")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            try {
-              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-
-              exchange.getMessage().setBody(cause.getResponseBody());
-              log.error("Returned body : " + cause.getResponseBody());
-            } catch(Exception ex) {
-              ex.printStackTrace();
-            }
-          }
-        })
       .end()
-    .end();
+   .end();
+
   }
 
 

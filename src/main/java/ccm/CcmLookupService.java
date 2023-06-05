@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.Error;
 import ccm.utils.DateTimeUtils;
 
 public class CcmLookupService extends RouteBuilder {
@@ -162,8 +163,8 @@ public class CcmLookupService extends RouteBuilder {
             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
             kpi.setError(error);
             exchange.getMessage().setBody(kpi);
-              String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-              exchange.setProperty("kpi_component_route_name", failedRouteId);
+            String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+            exchange.setProperty("kpi_component_route_name", failedRouteId);
           }
         })
         .marshal().json(JsonLibrary.Jackson, EventKPI.class)
@@ -172,24 +173,10 @@ public class CcmLookupService extends RouteBuilder {
         .log("Caught CamelException exception")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
         .setProperty("error_event_object", body())
-        .to("kafka:{{kafka.topic.general-errors.name}}")
+        .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "${exception.message}")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            try {
-              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-
-              exchange.getMessage().setBody(cause.getResponseBody());
-              log.error("Returned body : " + cause.getResponseBody());
-            } catch(Exception ex) {
-              ex.printStackTrace();
-            }
-          }
-        })
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
       .end()
     .end();
 
@@ -234,20 +221,6 @@ public class CcmLookupService extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "${exception.message}")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            try {
-              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-
-              exchange.getMessage().setBody(cause.getResponseBody());
-              log.error("Returned body : " + cause.getResponseBody());
-            } catch(Exception ex) {
-              ex.printStackTrace();
-            }
-          }
-        })
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
       .end()
    .end();
 

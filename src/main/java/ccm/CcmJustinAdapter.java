@@ -1,7 +1,7 @@
 package ccm;
 // To run this integration use:
 // kamel run CcmJustinAdapter.java --property file:application.properties --profile openshift
-// 
+//
 // recover the service location. If you're running on minikube, minikube service platform-http-server --url=true
 // curl -d '{}' http://ccm-justin-adapter/courtFileCreated
 //
@@ -97,7 +97,6 @@ public class CcmJustinAdapter extends RouteBuilder {
 
   private void attachExceptionHandlers() {
 
-   
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
       .backOffMultiplier(2)
@@ -106,157 +105,194 @@ public class CcmJustinAdapter extends RouteBuilder {
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(false)
       .end();
- 
-    // HttpOperation Failed
+
+     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-        String kafkaTopic =  getKafkaTopicByEventType(event.getEvent_type());
-        Error error = new Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_code("HttpOperationFailed");
-        error.setError_summary("Unable to process event.HttpOperationFailed exception raised");
-        HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-        error.setError_details(cause.getResponseBody());
-        log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
-        log.error("HttpOperation Exception event info : " + event.getEvent_source());
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-     
-        kpi.setEvent_topic_name(kafkaTopic);
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
- 
-        String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-        exchange.setProperty("kpi_component_route_name", failedRouteId);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught HttpOperationFailed exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
-    .to("kafka:{{kafka.topic.kpis.name}}")
-    .handled(true)
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+           @Override
+           public void process(Exchange exchange) throws Exception {
+             BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+             HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+             Error error = new Error();
+             error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+             error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
+             error.setError_summary(cause.getMessage());
+             error.setError_details(cause.getResponseBody());
+
+             log.error("HttpOperationFailed caught, exception message : " + cause.getMessage());
+             //for(StackTraceElement trace : cause.getStackTrace())
+             //{
+             // log.error(trace.toString());
+             //}
+             log.error("Returned status code : " + cause.getStatusCode());
+             log.error("Response body : " + cause.getResponseBody());
+             exchange.setProperty("error_status_code", cause.getStatusCode());
+
+             log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+             // KPI
+             EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+             String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+             kpi.setEvent_topic_name(kafkaTopic);
+             kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+             kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+             kpi.setError(error);
+             exchange.getMessage().setBody(kpi);
+           }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+        .log(LoggingLevel.INFO,"Caught HttpOperationFailed exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        //.handled(true)
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "${exception.message}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            try {
+              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+              exchange.getMessage().setBody(cause.getResponseBody());
+              log.error("Returned body : " + cause.getResponseBody());
+            } catch(Exception ex) {
+              ex.printStackTrace();
+            }
+          }
+        })
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+      .end()
+
     .end();
- 
+
     onException(CamelException.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-        Error error = new Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-       
-        error.setError_summary("Unable to process event, CamelException raised.");
-        error.setError_details(cause);
-        log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
-        log.error("HttpOperation Exception event info : " + event.getEvent_source());
-       
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-        
-        kpi.setEvent_topic_name(kafkaTopic);
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+          BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+          Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+          Error error = new Error();
+          error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+
+          error.setError_summary("Unable to process event, CamelException raised.");
+          error.setError_details(cause);
+          log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+          log.error("HttpOperation Exception event info : " + event.getEvent_source());
+
+          // KPI
+          EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+
+          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+          kpi.setError(error);
+          exchange.getMessage().setBody(kpi);
+            String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+            exchange.setProperty("kpi_component_route_name", failedRouteId);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+        .log("Caught CamelException exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "${exception.message}")
+        .end()
+    .end();
+
+    // General Exception
+    onException(Exception.class)
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+          Throwable caused = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
+
+          Error error = new Error();
+          error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+          error.setError_summary("Unable to process event, general exception raised.");
+          error.setError_code("General Exception");
+          error.setError_details(caused);
+
+          // KPI
+          EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+
+          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+          kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+          kpi.setError(error);
+          exchange.getMessage().setBody(kpi);
+
           String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
           exchange.setProperty("kpi_component_route_name", failedRouteId);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught CamelException exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
-    .to("kafka:{{kafka.topic.kpis.name}}")
-    .handled(true)
+        }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+        .log("Caught General exception exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "${exception.message}")
+        .end()
     .end();
- 
-    // General Exception
-     onException(Exception.class)
-     .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
-        Throwable caused = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
- 
-        Error error = new Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_summary("Unable to process event, general exception raised.");
-        error.setError_code("General Exception");
-        error.setError_details(caused);
-       
-        // KPI
-        EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-      
-        kpi.setEvent_topic_name(kafkaTopic);
-        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        kpi.setError(error);
-        exchange.getMessage().setBody(kpi);
- 
-        String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
-        exchange.setProperty("kpi_component_route_name", failedRouteId);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
-    .log(LoggingLevel.DEBUG,"Derived event KPI published.")
-    .log("Caught General exception exception")
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .setProperty("error_event_object", body())
-    .to("kafka:{{kafka.topic.kpis.name}}")
-    .handled(true)
-    .end();
- 
+
   }
 
- private void version() {
-  // use method name as route id
-  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  private void version() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  // IN: header = id
-  from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
-  .routeId(routeId)
-  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-  .process(new Processor() {
-    @Override
-    public void process(Exchange exchange) throws Exception {
-      exchange.getMessage().setBody(Version.V1_0.toString());
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.getMessage().setBody(Version.V1_0.toString());
+      }
+    })
+    ;
+  }
+
+  private String getKafkaTopicByEventType(String eventType ) {
+    String kafkaTopic = "ccm-general-errors";
+    if (eventType != null) {
+      switch(eventType){
+        case "CourtCaseEvent" :
+          kafkaTopic = "ccm-courtcase-errors";
+          break;
+        case "CaseUserEvent" :{
+          kafkaTopic = "ccm-caseuser-errors";
+          break;
+      }
     }
-  })
-  ;
-}
-
- private String getKafkaTopicByEventType(String eventType ) {
-  String kafkaTopic = "ccm-general-errors";
-       if (eventType != null) {
-        switch(eventType){
-          case "CourtCaseEvent" :
-            kafkaTopic = "ccm-courtcase-errors";
-            break;
-            case "CaseUserEvent" :{
-              kafkaTopic = "ccm-caseuser-errors";
-              break;
-            }
-        }
-       }
+  }
   return kafkaTopic;
-}
+  }
   private void courtFileCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -272,7 +308,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"body (after unmarshalling): '${body}'")
     .to("kafka:{{kafka.topic.chargeassessments.name}}");
 
-    
+
   }
 
   private void healthCheck() {
@@ -280,13 +316,13 @@ public class CcmJustinAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     from("platform-http:/v1/health?httpMethodRestrict=GET")
-      .routeId(routeId)
-      .removeHeaders("CamelHttp*")
-      .log(LoggingLevel.DEBUG,"/v1/health request received")
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-      .to("https://{{justin.host}}/health");
+    .routeId(routeId)
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"/v1/health request received")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .to("https://{{justin.host}}/health");
 
   }
 
@@ -393,7 +429,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
+    from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -427,7 +463,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-  from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
+    from("timer://simpleTimer?period={{justin.queue.notification.check.frequency}}&synchronous=true")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -477,7 +513,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           // to the next processor in the chain.
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
           ReportEvent be = new ReportEvent(je);
-      
+
           exchange.getMessage().setBody(be, ReportEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -488,7 +524,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
-     
+
       .to("kafka:{{kafka.topic.reports.name}}")    // ---- > Error produced here -TWuolle
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -520,7 +556,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    /* 
+    /*
      * To kick off processing, execute the following on the 'service/ccm-justin-adapter' pod:
      *    cp /etc/camel/resources/eventBatch-oneRCC.json /tmp
      */
@@ -603,7 +639,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    /* 
+    /*
      * To kick off processing, execute the following on the 'service/ccm-justin-adapter' pod:
      *    cp /etc/camel/resources/eventBatch-oneRCC.json /tmp
      */
@@ -763,11 +799,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
-      
+
           exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -820,11 +856,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
-      
+
           exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -877,11 +913,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           CaseUserEvent event = new CaseUserEvent(je);
-      
+
           exchange.getMessage().setBody(event, CaseUserEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
         }})
@@ -934,14 +970,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           CaseUserEvent event = new CaseUserEvent(je);
 
           // JADE-1795 bug: JUSTIN returning null part_id; hard code user key for initial testing
           //be.setEvent_key("122201.0734");
-      
+
           exchange.getMessage().setBody(event, CaseUserEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
         }})
@@ -994,11 +1030,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           CourtCaseEvent be = new CourtCaseEvent(je);
-      
+
           exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -1050,11 +1086,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           CourtCaseEvent be = new CourtCaseEvent(je);
-      
+
           exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -1106,11 +1142,11 @@ public class CcmJustinAdapter extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           // Insert code that gets executed *before* delegating
           // to the next processor in the chain.
-      
+
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
-      
+
           CourtCaseEvent be = new CourtCaseEvent(je);
-      
+
           exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
         }})
@@ -1438,7 +1474,7 @@ public class CcmJustinAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" + 
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
     "    on the topic ${headers[kafka.TOPIC]}\n" +
     "    on the partition ${headers[kafka.PARTITION]}\n" +
     "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -1483,7 +1519,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         String event_topic_offset = exchange.getProperty("event_topic_offset", String.class);
 
         EventKPI event_kpi = new EventKPI(
-          event, 
+          event,
           EventKPI.STATUS.EVENT_PROCESSING_STARTED
         );
 
@@ -1587,7 +1623,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) throws Exception {        
+      public void process(Exchange exchange) throws Exception {
         BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
         String kpi_status = (String) exchange.getProperty("kpi_status");
 
@@ -1605,7 +1641,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
-  
+
   private void publishBodyAsEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
