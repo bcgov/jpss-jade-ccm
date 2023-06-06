@@ -71,7 +71,6 @@ public class CcmLookupService extends RouteBuilder {
 
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
-    .log(LoggingLevel.INFO, "Headers: ${headers}")
     .choice()
       .when(simple("${exchangeProperty.kpi_event_object} != null"))
         .process(new Processor() {

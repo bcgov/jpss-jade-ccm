@@ -429,8 +429,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
     .to("http://ccm-lookup-service/getImageData")
-    .log(LoggingLevel.INFO, "headers: ${headers}")
-    .log(LoggingLevel.INFO,"Received image data: '${body}'")
+
+    .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("report_document_list", simple("${bodyAs(String)}"))
     .setProperty("create_date") .jsonpath("$.create_date")
     .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
