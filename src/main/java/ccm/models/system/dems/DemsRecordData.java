@@ -83,6 +83,12 @@ public class DemsRecordData {
                 } else {
                     setTitle(report.getDescription());
                 }
+            } else if(report.equals(REPORT_TYPES.ACCUSED_INFO)) {
+                if(nrd.getParticipants() != null) {
+                    setTitle(nrd.getParticipants().toUpperCase());
+                } else {
+                    setTitle(report.getDescription());
+                }
             } else {
                 setTitle(nrd.getAgency_file_no());
             }

@@ -50,6 +50,7 @@ public class ReportDocument {
   private String report_object_url;
 
   private String active_yn;
+  private String participants;
 
   public ReportDocument() {
   }
@@ -103,6 +104,7 @@ public class ReportDocument {
     setReport_object_url(jd.getReport_object_url());
 
     setActive_yn(jd.getActive_yn());
+    setParticipants(jd.getParticipants());
   }
 
   public String getReport_type() {
@@ -455,6 +457,14 @@ public class ReportDocument {
 
   public void setOfficer_pin_number(String officer_pin_number) {
     this.officer_pin_number = officer_pin_number;
+  }
+
+  public String getParticipants() {
+    return participants;
+  }
+
+  public void setParticipants(String participants) {
+    this.participants = participants;
   }
 
 }

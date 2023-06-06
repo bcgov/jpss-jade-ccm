@@ -48,6 +48,7 @@ public class JustinDocument {
   private String report_object_url;
 
   private String active_yn;
+  private String participants;
 
 
   public String getReport_type() {
@@ -400,6 +401,14 @@ public class JustinDocument {
 
   public void setOfficer_pin_number(String officer_pin_number) {
     this.officer_pin_number = officer_pin_number;
+  }
+
+  public String getParticipants() {
+    return participants;
+  }
+
+  public void setParticipants(String participants) {
+    this.participants = participants;
   }
 
 }
