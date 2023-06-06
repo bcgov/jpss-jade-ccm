@@ -134,8 +134,7 @@ public class CcmJustinAdapter extends RouteBuilder {
              log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
              // KPI
              EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-             String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-             kpi.setEvent_topic_name(kafkaTopic);
+             kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
              kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
              kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
              kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -153,7 +152,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "HttpOperationFailedException thrown: ${exception.message}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
@@ -168,6 +167,8 @@ public class CcmJustinAdapter extends RouteBuilder {
           }
         })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .transform().simple("${body}")
+        .setHeader("CCMException", simple("${body}"))
       .end()
 
     .end();
@@ -184,15 +185,14 @@ public class CcmJustinAdapter extends RouteBuilder {
           error.setError_dtm(DateTimeUtils.generateCurrentDtm());
 
           error.setError_summary("Unable to process event, CamelException raised.");
-          error.setError_details(cause);
+          error.setError_details(cause.getMessage());
           log.debug("HttpOperationException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
           log.error("HttpOperation Exception event info : " + event.getEvent_source());
 
           // KPI
           EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
 
-          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -211,7 +211,12 @@ public class CcmJustinAdapter extends RouteBuilder {
         .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "Camel Exception thrown: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
         .end()
     .end();
 
@@ -229,13 +234,12 @@ public class CcmJustinAdapter extends RouteBuilder {
           error.setError_dtm(DateTimeUtils.generateCurrentDtm());
           error.setError_summary("Unable to process event, general exception raised.");
           error.setError_code("General Exception");
-          error.setError_details(caused);
+          error.setError_details(caused.getMessage());
 
           // KPI
           EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-          String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
 
-          kpi.setEvent_topic_name(kafkaTopic);
+          kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -255,7 +259,12 @@ public class CcmJustinAdapter extends RouteBuilder {
         .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
         .end()
     .end();
 
@@ -278,21 +287,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
   }
 
-  private String getKafkaTopicByEventType(String eventType ) {
-    String kafkaTopic = "ccm-general-errors";
-    if (eventType != null) {
-      switch(eventType){
-        case "CourtCaseEvent" :
-          kafkaTopic = "ccm-courtcase-errors";
-          break;
-        case "CaseUserEvent" :{
-          kafkaTopic = "ccm-caseuser-errors";
-          break;
-      }
-    }
-  }
-  return kafkaTopic;
-  }
   private void courtFileCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

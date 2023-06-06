@@ -94,7 +94,12 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
         error.setError_summary(cause.getMessage());
-        error.setError_details(cause.getResponseBody());
+        
+        if(cause != null && !cause.getResponseBody().isEmpty()) {
+          error.setError_details(cause.getResponseBody());
+        } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
+          error.setError_details(cause.getResponseHeaders().get("CCMException"));
+        }
 
         log.error("HttpOperationFailed caught, exception message : " + cause.getMessage());
         //for(StackTraceElement trace : cause.getStackTrace())
@@ -107,8 +112,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-        kpi.setEvent_topic_name(kafkaTopic);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -157,16 +161,15 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("CamelException");
         error.setError_summary("Unable to process event, CamelException raised.");
-        error.setError_details(cause);
+        error.setError_details(cause.getMessage());
 
         log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
         log.error("CamelException Exception event info : " + event.getEvent_source());
 
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
 
-        kpi.setEvent_topic_name(kafkaTopic);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -196,7 +199,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_summary("Unable to process event. General exception raised.");
         error.setError_code("General Exception");
-        error.setError_details(cause);
+        error.setError_details(cause.getMessage());
 
         log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
 
@@ -208,9 +211,8 @@ public class CcmNotificationService extends RouteBuilder {
         }
          // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-        String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
 
-        kpi.setEvent_topic_name(kafkaTopic);
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -229,26 +231,6 @@ public class CcmNotificationService extends RouteBuilder {
     .handled(true)
     .end();
 
-  }
-
-  private String getKafkaTopicByEventType(String eventType ) {
-    String kafkaTopic = "ccm-general-errors";
-    if (eventType != null) {
-     switch(eventType){
-       case "ChargeAssessmentEvent" :
-         kafkaTopic = "ccm-chargeassessment-errors";
-         break;
-         case "CaseUserEvent" :{
-           kafkaTopic = "ccm-caseuser-errors";
-           break;
-         }
-         case "CourtCaseEvent" :{
-           kafkaTopic = "ccm-courtcase-errors";
-           break;
-         }
-     }
-    }
-    return kafkaTopic;
   }
 
   private void processChargeAssessmentEvents() {

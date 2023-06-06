@@ -71,6 +71,7 @@ public class CcmLookupService extends RouteBuilder {
 
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
     .choice()
       .when(simple("${exchangeProperty.kpi_event_object} != null"))
         .process(new Processor() {
@@ -97,8 +98,7 @@ public class CcmLookupService extends RouteBuilder {
             log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
             // KPI
             EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
-            String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
-            kpi.setEvent_topic_name(kafkaTopic);
+            kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
             kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
             kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
@@ -116,7 +116,7 @@ public class CcmLookupService extends RouteBuilder {
         .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "HttpOperationFailedException: ${exception.message}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
@@ -125,6 +125,9 @@ public class CcmLookupService extends RouteBuilder {
 
               exchange.getMessage().setBody(cause.getResponseBody());
               log.error("Returned body : " + cause.getResponseBody());
+              log.error("Returned headers : " + cause.getResponseHeaders());
+              log.error("CCMException headers : " + cause.getResponseHeaders().get("CCMException"));
+              exchange.getMessage().setHeader("CCMException", cause.getResponseHeaders().get("CCMException"));
             } catch(Exception ex) {
               ex.printStackTrace();
             }
@@ -150,7 +153,7 @@ public class CcmLookupService extends RouteBuilder {
             error.setError_dtm(DateTimeUtils.generateCurrentDtm());
             error.setError_code("CamelException");
             error.setError_summary("Unable to process event, CamelException raised.");
-            error.setError_details(cause);
+            error.setError_details(cause.getMessage());
 
             log.debug("Camel caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
             log.error("Camel Exception event info : " + event.getEvent_source());
@@ -176,7 +179,12 @@ public class CcmLookupService extends RouteBuilder {
         .to("kafka:{{kafka.topic.kpis.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "CamelException: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
       .end()
     .end();
 
@@ -194,7 +202,7 @@ public class CcmLookupService extends RouteBuilder {
             error.setError_dtm(DateTimeUtils.generateCurrentDtm());
             error.setError_summary("Unable to process event., general Exception raised.");
             error.setError_code("General Exception");
-            error.setError_details(cause);
+            error.setError_details(cause.getMessage());
 
             log.debug("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
             log.error("General Exception event info : " + event.getEvent_source());
@@ -220,7 +228,12 @@ public class CcmLookupService extends RouteBuilder {
         .to("kafka:{{kafka.topic.general-errors.name}}")
         .endChoice()
       .otherwise()
-        .log(LoggingLevel.ERROR, "${exception.message}")
+        .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
       .end()
    .end();
 
@@ -477,23 +490,4 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 
-  private String getKafkaTopicByEventType(String eventType ) {
-    String kafkaTopic = "ccm-general-errors";
-    if (eventType != null) {
-     switch(eventType){
-       case "ChargeAssessmentEvent" :
-         kafkaTopic = "ccm-chargeassessment-errors";
-         break;
-         case "CaseUserEvent" :{
-           kafkaTopic = "ccm-caseuser-errors";
-           break;
-         }
-         case "CourtCaseEvent" :{
-           kafkaTopic = "ccm-courtcase-errors";
-           break;
-         }
-     }
-    }
-    return kafkaTopic;
-  }
 }
