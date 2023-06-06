@@ -1055,7 +1055,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("x-amz*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "123{{dems.token}}")
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     //.toD("http://httpstat.us:443/500") // --> testing code, remove later
