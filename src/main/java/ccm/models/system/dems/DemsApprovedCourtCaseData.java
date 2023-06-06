@@ -68,9 +68,11 @@ public class DemsApprovedCourtCaseData {
         courtHomeRegList.add(commonData.getCourt_home_registry());
         List<String> courtHomeRegNameList = new ArrayList<String>();
         courtHomeRegNameList.add(commonData.getCourt_home_registry_name());
+        List<String> crownElectionList = new ArrayList<String>();
+        crownElectionList.add(commonData.getAnticipated_crown_election());
 
         DemsFieldData courtFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), commonData.getCourt_file_id());
-        DemsFieldData crownElection = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), commonData.getAnticipated_crown_election());
+        DemsFieldData crownElection = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), crownElectionList);
         DemsFieldData courtFileLevel = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), courtFileLevelList);
         DemsFieldData fileClass = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CLASS.getLabel(), fileClassList);
         DemsFieldData designation = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DESIGNATION.getLabel(), designationList);
