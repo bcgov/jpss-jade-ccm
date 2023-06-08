@@ -500,8 +500,8 @@ public class CcmDemsAdapter extends RouteBuilder {
 
             Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
             String rcc_list = ex.getProperty("rcc_ids", String.class);
-            log.info("obj mdoc_justin_no:" + mdoc_justin_no);
-            log.info("string rcc_ids:" + rcc_list);
+            //log.info("obj mdoc_justin_no:" + mdoc_justin_no);
+            //log.info("string rcc_ids:" + rcc_list);
             if((courtCaseDocument.getRcc_ids() == null || courtCaseDocument.getRcc_ids().isEmpty()) && rcc_list != null) {
               log.info("setting list from header.");
               // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
@@ -637,6 +637,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
         .setHeader("number", simple("${header[rcc_id]}"))
         // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
+        .setProperty("maxRecordIncrements").simple("10")
         .to("direct:checkIncrementRecordDocId")
         // set back body to dems record
         .setBody(simple("${exchangeProperty.dems_record}"))
@@ -673,6 +674,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // header: number
     // header: documentId
     // property: dems_record
+    // property: maxRecordIncrements
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -680,6 +682,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.INFO,"documentId = ${header[documentId]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // Just in case, if ${exchangeProperty.maxRecordIncrements} is not provided, default to 10
+    .choice()
+      .when(simple("${exchangeProperty.maxRecordIncrements} == null"))
+        .setProperty("maxRecordIncrements").simple("10")
+    .end()
+    .log(LoggingLevel.INFO,"maxRecordIncrements = ${exchangeProperty.maxRecordIncrements}")
 
     // do a loop and keep looping until the recordId is null or blank.
     // check to see if the court case exists, before trying to insert record to dems.
@@ -690,7 +699,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("incrementCount").simple("0")
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     // limit the number of times incremented to 10.
-    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} < 10")) // if the recordId value is not empty
+    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}")) // if the recordId value is not empty
 
       .log(LoggingLevel.INFO, "Incrementing document id, due to collision.")
       // increment the documentId.
@@ -753,6 +762,12 @@ public class CcmDemsAdapter extends RouteBuilder {
         //.to("direct:updateDocumentRecord")
       .endChoice()
       .otherwise()
+        // BCPSDEMS-1190 - If there is a doc id collision, increment.
+        .setProperty("maxRecordIncrements").simple("500")
+        .to("direct:checkIncrementRecordDocId")
+        // set back body to dems record
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
         .to("direct:createDocumentRecord")
       .endChoice()
     .end()
@@ -2132,7 +2147,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
-    .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    //.log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
