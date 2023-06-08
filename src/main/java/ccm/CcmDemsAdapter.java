@@ -772,7 +772,6 @@ public class CcmDemsAdapter extends RouteBuilder {
       .endChoice()
     .end()
 
-
     .log(LoggingLevel.INFO, "end of changeDocumentRecord")
     ;
   }
