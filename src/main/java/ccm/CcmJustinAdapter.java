@@ -153,13 +153,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "HttpOperationFailedException thrown: ${exception.message}")
+        .log(LoggingLevel.INFO, "Request body: ${body}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
             try {
               HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-              exchange.getMessage().setBody(cause.getResponseBody());
+              //exchange.getMessage().setBody(cause.getResponseBody());
               log.error("Returned body : " + cause.getResponseBody());
             } catch(Exception ex) {
               ex.printStackTrace();
@@ -168,7 +169,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
         .transform().simple("${body}")
-        .setHeader("CCMException", simple("${body}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
       .end()
 
     .end();

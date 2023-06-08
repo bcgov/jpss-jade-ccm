@@ -1,11 +1,12 @@
 package ccm.utils;
 
-import java.util.Date;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Date;
 
 public class DateTimeUtils {
 
@@ -53,6 +54,31 @@ public class DateTimeUtils {
         return zonedDateTime;
     }
 
+    public static ZonedDateTime convertToZonedDateTimeFromUTCDateTimeString(String utcDateTimeString) throws DateTimeParseException {
+        ZonedDateTime zonedDateTime = null;
+
+        // preprocess input date/time string.
+        if (utcDateTimeString != null && !utcDateTimeString.isEmpty()) {
+            String butcDateTimeWithTimeZoneString = null;
+            if (utcDateTimeString.length() > 10) {
+                // this is a date+time.  Add BC timezone to string.
+                if (utcDateTimeString.contains(".")) {
+                    butcDateTimeWithTimeZoneString = utcDateTimeString + " UTC";
+                } else {
+                    butcDateTimeWithTimeZoneString = utcDateTimeString + ".000 UTC";
+                }
+            } else {
+                // this is a date.  add default time and BC timezone to string.
+                butcDateTimeWithTimeZoneString = utcDateTimeString + " 00:00:00.000 UTC";
+            }
+
+            zonedDateTime = ZonedDateTime.parse(butcDateTimeWithTimeZoneString, 
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z"));
+        }
+
+        return zonedDateTime;
+    }
+
     public static String generateCurrentDtm() {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         Date date = new Date();
@@ -73,18 +99,15 @@ public class DateTimeUtils {
         return epochMilli;
     }
 
-    public static String shortDateTimeString(String bcDateTimeString) throws DateTimeParseException {
-        // Java 8 - Convert Date Time From One Timezone To Another
-        // https://www.javaprogramto.com/2020/12/java-convert-date-between-timezones.html
+    public static String shortDateTimeString(String dateTimeString) throws DateTimeParseException {
 
         String shortDateTimeString = null;
         ZonedDateTime zonedDateTime = null;
 
-        zonedDateTime = convertToZonedDateTimeFromBCDateTimeString(bcDateTimeString);
+        zonedDateTime = convertToZonedDateTimeFromUTCDateTimeString(dateTimeString);
 
         if (zonedDateTime != null) {
-            shortDateTimeString = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(
-                DateTimeFormatter.ofPattern("yyMMdd"));
+            shortDateTimeString = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("yyMMdd"));
         }
 
         return shortDateTimeString;

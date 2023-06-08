@@ -25,6 +25,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.http.NoHttpResponseException;
 
 import ccm.models.common.event.Error;
 import ccm.models.common.event.BaseEvent;
@@ -44,9 +45,27 @@ public class CcmSplunkAdapter extends RouteBuilder {
   }
 
   private void retryExceptionHandler() {
+    onException(ConnectException.class, SocketTimeoutException.class, NoHttpResponseException.class, HttpOperationFailedException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        log.error("NoHttpResponseException Exception caught, exception message : " + cause.getMessage());
+        log.error("NoHttpResponseException Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
+        log.error("NoHttpResponseException Exception body: " + exchange.getMessage().getBody());
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
+      }
+    })
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
+    .maximumRedeliveries(5).redeliveryDelay(3000)
+    .end();
+
     // General Exception
-     onException(Exception.class)
-     .process(new Processor() {
+    onException(Exception.class)
+    .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
