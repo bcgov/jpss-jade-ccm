@@ -64,6 +64,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     publishBodyAsEventKPI();
     getCourtCaseAuthList();
     getKafkaToken();
+    publishEventKPI();
   }
 
   private void attachExceptionHandlers() {
@@ -367,11 +368,11 @@ public class CcmPidpAdapter extends RouteBuilder {
       .when(header("justin_rcc_id").isEqualTo("0"))
         .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        //.to("direct:publishEventKPI")
+        .to("direct:publishEventKPI")
         .setBody(header("event"))
         .to("direct:processCaseUserBulkLoadCompleted")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        //.to("direct:publishEventKPI")
+        .to("direct:publishEventKPI")
         .endChoice()
       .end();
     ;
@@ -530,4 +531,42 @@ public class CcmPidpAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
+
+  
+  private void publishEventKPI() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_event_object
+    //IN: property = kpi_event_topic_name
+    //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_status
+    //IN: property = kpi_component_route_name
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        String kpi_status = (String) exchange.getProperty("kpi_status");
+
+        // KPI
+        EventKPI kpi = new EventKPI(event, kpi_status);
+
+        kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+        kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+        exchange.getMessage().setBody(kpi);
+
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+    .log(LoggingLevel.INFO,"Event kpi: ${body}")
+    .to("kafka:{{kafka.topic.kpis.name}}?brokers={{ccm.kafka.brokers}}&securityProtocol=PLAINTEXT")
+    ;
+  }
+
+
 }

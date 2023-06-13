@@ -507,7 +507,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
               ObjectMapper objectMapper = new ObjectMapper();
               try {
-                System.out.println(rcc_list);
+                //System.out.println(rcc_list);
                 String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
                 courtCaseDocument.setRcc_ids(Arrays.asList(rcc_id_list));
               } catch(Exception e) {
