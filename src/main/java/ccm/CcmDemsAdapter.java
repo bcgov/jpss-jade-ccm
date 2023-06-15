@@ -758,8 +758,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     .choice()
       .when(simple("${exchangeProperty.recordId} != ''"))
-        .log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
-        //.to("direct:updateDocumentRecord")
+        //.log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
+        .to("direct:updateDocumentRecord")
       .endChoice()
       .otherwise()
         // BCPSDEMS-1190 - If there is a doc id collision, increment.

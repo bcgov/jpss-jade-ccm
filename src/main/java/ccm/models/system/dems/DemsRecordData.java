@@ -302,9 +302,9 @@ public class DemsRecordData {
             }
 
             if(report.equals(REPORT_TYPES.INFORMATION)) {
-                setStartDate(nrd.getSworn_date());
+                setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getSworn_date()));
             } else {
-                setStartDate(nrd.getIssue_date());
+                setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getIssue_date()));
             }
         }
 
