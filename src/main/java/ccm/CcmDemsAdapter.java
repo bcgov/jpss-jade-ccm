@@ -155,7 +155,13 @@ public class CcmDemsAdapter extends RouteBuilder {
 
             if(cause != null && !cause.getResponseBody().isEmpty()) {
               error.setError_details(cause.getResponseBody());
+            } else if(cause != null && cause.getResponseHeaders().get("CCMExceptionEncoded") != null) {
+              byte[] decodedException = Base64.getDecoder().decode(cause.getResponseHeaders().get("CCMExceptionEncoded"));
+              String decodedString = new String(decodedException);
+              log.error(decodedString);
+              error.setError_details(decodedString);
             } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
+              log.error(cause.getResponseHeaders().get("CCMException"));
               error.setError_details(cause.getResponseHeaders().get("CCMException"));
             }
 
@@ -196,7 +202,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             try {
               HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-              exchange.getMessage().setBody(cause.getResponseBody());
+              if(cause != null && cause.getResponseBody() != null) {
+                String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                exchange.getMessage().setBody(body);
+              }
               log.error("Returned body : " + cause.getResponseBody());
             } catch(Exception ex) {
               ex.printStackTrace();
@@ -205,7 +214,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
         .transform().simple("${body}")
-        .setHeader("CCMException", simple("${body}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMExceptionEncoded", simple("${body}"))
       .end()
 
     //re-queue based on the event type
@@ -1093,7 +1103,25 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
         .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
-          .setHeader("CCMException", simple("${body}"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                  log.error("Returned body : " + exchange.getMessage().getBody(String.class));
+                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                  exchange.getMessage().setBody(body);
+                }
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .transform().simple("${body}")
+          .setHeader("CCMException", simple("{\"error\": \"${header.CamelHttpResponseCode}\"}"))
+          .setHeader("CCMExceptionEncoded", simple("${body}"))
+
           .log(LoggingLevel.ERROR,"body = '${body}'.")
         .endChoice()
       .end()

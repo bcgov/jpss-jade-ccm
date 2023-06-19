@@ -127,6 +127,7 @@ public class CcmLookupService extends RouteBuilder {
               log.error("Returned headers : " + cause.getResponseHeaders());
               log.error("CCMException headers : " + cause.getResponseHeaders().get("CCMException"));
               exchange.getMessage().setHeader("CCMException", cause.getResponseHeaders().get("CCMException"));
+              exchange.getMessage().setHeader("CCMExceptionEncoded", cause.getResponseHeaders().get("CCMExceptionEncoded"));
             } catch(Exception ex) {
               ex.printStackTrace();
             }
