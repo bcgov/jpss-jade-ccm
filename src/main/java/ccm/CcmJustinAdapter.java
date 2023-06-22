@@ -8,6 +8,7 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.util.Base64;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -160,7 +161,10 @@ public class CcmJustinAdapter extends RouteBuilder {
             try {
               HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-              //exchange.getMessage().setBody(cause.getResponseBody());
+              if(cause != null && cause.getResponseBody() != null) {
+                String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                exchange.getMessage().setBody(body);
+              }
               log.error("Returned body : " + cause.getResponseBody());
             } catch(Exception ex) {
               ex.printStackTrace();
@@ -170,6 +174,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
         .transform().simple("${body}")
         .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMExceptionEncoded", simple("${body}"))
       .end()
 
     .end();

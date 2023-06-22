@@ -2,6 +2,7 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.util.Base64;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -97,7 +98,13 @@ public class CcmNotificationService extends RouteBuilder {
         
         if(cause != null && !cause.getResponseBody().isEmpty()) {
           error.setError_details(cause.getResponseBody());
+        } else if(cause != null && cause.getResponseHeaders().get("CCMExceptionEncoded") != null) {
+          byte[] decodedException = Base64.getDecoder().decode(cause.getResponseHeaders().get("CCMExceptionEncoded"));
+          String decodedString = new String(decodedException);
+          log.error(decodedString);
+          error.setError_details(decodedString);
         } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
+          log.error(cause.getResponseHeaders().get("CCMException"));
           error.setError_details(cause.getResponseHeaders().get("CCMException"));
         }
 
@@ -203,13 +210,13 @@ public class CcmNotificationService extends RouteBuilder {
 
         log.error("General Exception class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
 
-        log.error("General Exception caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("General Exception caught, exception message : " + cause.getMessage());
         log.error("General Exception event info : " + event.getEvent_source());
-        for(StackTraceElement trace : cause.getStackTrace())
-        {
-         log.error(trace.toString());
-        }
-         // KPI
+        //for(StackTraceElement trace : cause.getStackTrace())
+        //{
+        // log.error(trace.toString());
+        //}
+        // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
 
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
