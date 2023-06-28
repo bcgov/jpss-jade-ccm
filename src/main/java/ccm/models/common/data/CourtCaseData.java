@@ -3,6 +3,7 @@ package ccm.models.common.data;
 import ccm.models.system.justin.JustinAccused;
 import ccm.models.system.justin.JustinAgencyFileRef;
 import ccm.models.system.justin.JustinCourtFile;
+import ccm.models.system.justin.JustinCourtFileRef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,8 @@ public class CourtCaseData {
 
   private List<CaseAccused> accused_persons;
   private List<ChargeAssessmentDataRef> related_agency_file;
+  //added as part of jade-2483
+  private List<CourtFileDataRef> related_court_file;
 
   private String approving_crown_agency_name;
   private String approving_crown_agency_ident;
@@ -118,6 +121,7 @@ public class CourtCaseData {
       setAccused_names(accused_names.toString());
 
       List<ChargeAssessmentDataRef> agencyList = new ArrayList<ChargeAssessmentDataRef>();
+      List<CourtFileDataRef> courtList = new ArrayList<CourtFileDataRef>();
 
       if(jcf.getRelated_rcc() != null) {
         for (JustinAgencyFileRef jafr : jcf.getRelated_rcc()) {
@@ -127,6 +131,13 @@ public class CourtCaseData {
         }
       }
       setRelated_agency_file(agencyList);
+      if(jcf.getRelated_court_file() != null){
+        for(JustinCourtFileRef jcfr : jcf.getRelated_court_file()){
+          CourtFileDataRef courtRef = new CourtFileDataRef(jcfr);
+          courtList.add(courtRef);
+        }
+      }
+      setRelated_court_file(courtList);
 
       if(jcf.getApproving_crown_agency_name() != null) {
         String approving_crown_name = jcf.getApproving_crown_agency_name();
@@ -302,5 +313,11 @@ public class CourtCaseData {
     this.approving_crown_agency_ident = approving_crown_agency_ident;
   }
 
+  public List<CourtFileDataRef> getRelated_court_file() {
+    return related_court_file;
+  }
+  public void setRelated_court_file(List<CourtFileDataRef> related_court_file) {
+    this.related_court_file = related_court_file;
+  }
 }
   
