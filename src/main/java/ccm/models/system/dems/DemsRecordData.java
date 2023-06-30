@@ -177,6 +177,10 @@ public class DemsRecordData {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
+        if(getOriginalFileNumber() != null){
+            DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
+            fieldData.add(originalFileNumber);
+        }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
@@ -218,7 +222,7 @@ public class DemsRecordData {
                 setType("BIOGRAPHICAL");
             }
         }
-
+        setOriginalFileNumber(nrd.getCourt_file_no());
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getGeneration_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
@@ -277,6 +281,10 @@ public class DemsRecordData {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
+        if(getOriginalFileNumber() != null){
+            DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
+            fieldData.add(originalFileNumber);
+        }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
@@ -315,7 +323,7 @@ public class DemsRecordData {
         } else {
             setTitle(nrd.getParticipant_name().toUpperCase() + " " + nrd.getCourt_file_number());
         }
-
+        setOriginalFileNumber(nrd.getCourt_file_number());
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         setSource("JUSTIN");
         setFolder("JUSTIN");
@@ -373,6 +381,10 @@ public class DemsRecordData {
             DemsFieldData folder = new DemsFieldData("Folder", getFolder());
             fieldData.add(folder);
         }*/
+        if(getOriginalFileNumber() != null){
+            DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
+            fieldData.add(originalFileNumber);
+        }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
