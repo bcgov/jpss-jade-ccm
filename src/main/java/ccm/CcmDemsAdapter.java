@@ -891,8 +891,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     return kafkaTopic;
   }
 
-  private void version() {
-    // use method name as route id
+  //private void version() {
+  protected void version() {  
+  	// use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     from("platform-http:/v1/version?httpMethodRestrict=GET")
@@ -2233,6 +2234,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
     .to("kafka:{{kafka.topic.kpis.name}}")
+    .id("kafka-send-to-event-kpi") //give this endpoint an id 
     ;
   }
 

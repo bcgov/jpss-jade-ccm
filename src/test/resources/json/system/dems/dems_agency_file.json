@@ -15,7 +15,7 @@
     "value" : "2022-09-27 07:00:00.000"
   }, {
     "name" : "Assessment Crown",
-    "value" : "OHarris, Debbie Nn"
+    "value" :["OHarris, Debbie Nn"]
   }, {
     "name" : "Case Decision",
     "value" : "ACT - Approved to Court"
@@ -27,7 +27,7 @@
     "value" : "105: Kelowna Municipal RCMP"
   }, {
     "name" : "Initiating Agency Name",
-    "value" : "Kelowna Municipal RCMP"
+    "value" : ["Kelowna Municipal RCMP"]
   }, {
     "name" : "Investigating Officer",
     "value" : "Rhodes, Christopher 1001"
@@ -45,7 +45,7 @@
     "value" : "AN - Thomasffffffffffffffffffffffff, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh; AN - Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike"
   }, {
     "name" : "Proposed Crown Office",
-    "value" : "C402: Kelowna"
+    "value" : ["C402: Kelowna"]
   }, {
     "name" : "Limitation Date",
     "value" : null

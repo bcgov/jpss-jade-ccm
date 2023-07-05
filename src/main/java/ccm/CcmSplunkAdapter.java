@@ -38,7 +38,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    //attachExceptionHandlers();
+    attachExceptionHandlers();
     processEventKPIs();
     publishEventKPIToSplunk();
     publishSplunkEventKPIError();
@@ -131,7 +131,8 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(2).redeliveryDelay(3000)
+    .maximumRedeliveries(2)
+    .redeliveryDelay(3000)
     .end();
   }
 
