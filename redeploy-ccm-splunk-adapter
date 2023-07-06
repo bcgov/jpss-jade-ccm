@@ -56,6 +56,7 @@ kamel -n $ns run \
   --profile openshift \
   --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
+  --trait container.request-cpu=5m \
   --trait dependencies.enabled=true \
   --trait route.enabled=false \
   --trait service.node-port=false
