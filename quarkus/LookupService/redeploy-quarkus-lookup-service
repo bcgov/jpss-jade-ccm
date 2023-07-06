@@ -1,0 +1,67 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+else
+    #logging_level="DEBUG"
+    logging_level="INFO"
+fi
+
+echo "`basename $0` to $ns ..."
+
+#kamel -n $ns delete ccm-dems-useraccess-adapter
+
+#mvn clean package -Dquarkus.kubernetes.deploy=true 
+quarkus build -Dquarkus.kubernetes.deploy=true
+
+#pushd src/main/java/ccm
+
+
+
+
+  ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
+
+  #--trait route.tls-termination=edge \
+  #--trait route.tls-insecure-edge-termination-policy=Redirect \
+  #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \
+  #--trait logging.level=DEBUG \
+  #--trait dependencies.enabled=true \
+  #--trait route.enabled=false \
+  #--trait service.node-port=false
+
+  #--trait container.request-cpu=25m
+  #--trait container.request-memory=500mi
+  #--trait container.limit-cpu=200m
+  #--trait container.limit-memory=1000mi
+
+  ## https://justice.gov.bc.ca/jira/browse/JADE-2024
+  ## https://www.youtube.com/watch?v=Wmg7-PZgQJI
+  #--trait quarkus.package-type=native
+
+#popd
+
+# kamel -n cef5dd-test log ccm-dems-adapter

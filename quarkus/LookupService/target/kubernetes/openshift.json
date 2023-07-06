@@ -1,0 +1,214 @@
+[{
+  "apiVersion" : "apps.openshift.io/v1",
+  "kind" : "DeploymentConfig",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+      "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-lookup-service"
+  },
+  "spec" : {
+    "replicas" : 1,
+    "selector" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "template" : {
+      "metadata" : {
+        "annotations" : {
+          "app.openshift.io/vcs-url" : "<<unknown>>",
+          "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+          "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+        },
+        "labels" : {
+          "app.openshift.io/runtime" : "quarkus",
+          "app.kubernetes.io/name" : "quarkus-lookup-service",
+          "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+        }
+      },
+      "spec" : {
+        "containers" : [ {
+          "env" : [ {
+            "name" : "KUBERNETES_NAMESPACE",
+            "valueFrom" : {
+              "fieldRef" : {
+                "fieldPath" : "metadata.namespace"
+              }
+            }
+          }, {
+            "name" : "JAVA_OPTIONS",
+            "value" : ""
+          }, {
+            "name" : "SMALLRYE_CONFIG_LOCATIONS",
+            "value" : "/mnt/app-secret"
+          }, {
+            "name" : "JAVA_APP_JAR",
+            "value" : "/deployments/quarkus-run.jar"
+          } ],
+          "envFrom" : [ {
+            "configMapRef" : {
+              "name" : "ccm-configs"
+            }
+          } ],
+          "image" : "vicgu/quarkus-lookup-service:1.0-SNAPSHOT",
+          "imagePullPolicy" : "Always",
+          "name" : "quarkus-lookup-service",
+          "ports" : [ {
+            "containerPort" : 9982,
+            "name" : "http",
+            "protocol" : "TCP"
+          } ],
+          "volumeMounts" : [ {
+            "mountPath" : "/mnt/app-secret",
+            "name" : "app-secret",
+            "readOnly" : false
+          } ]
+        } ],
+        "volumes" : [ {
+          "name" : "app-secret",
+          "secret" : {
+            "optional" : false,
+            "secretName" : "ccm-secrets"
+          }
+        } ]
+      }
+    },
+    "triggers" : [ {
+      "imageChangeParams" : {
+        "automatic" : true,
+        "containerNames" : [ "quarkus-lookup-service" ],
+        "from" : {
+          "kind" : "ImageStreamTag",
+          "name" : "quarkus-lookup-service:1.0-SNAPSHOT"
+        }
+      },
+      "type" : "ImageChange"
+    } ]
+  }
+},{
+  "apiVersion" : "image.openshift.io/v1",
+  "kind" : "ImageStream",
+  "metadata" : {
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "name" : "openjdk-11-rhel7"
+  },
+  "spec" : {
+    "dockerImageRepository" : "registry.access.redhat.com/openjdk/openjdk-11-rhel7"
+  }
+},{
+  "apiVersion" : "v1",
+  "kind" : "Service",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+      "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-lookup-service"
+  },
+  "spec" : {
+    "ports" : [ {
+      "name" : "http",
+      "port" : 80,
+      "protocol" : "TCP",
+      "targetPort" : 9982
+    } ],
+    "selector" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "type" : "ClusterIP"
+  }
+},{
+  "apiVersion" : "route.openshift.io/v1",
+  "kind" : "Route",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+      "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-lookup-service"
+  },
+  "spec" : {
+    "port" : {
+      "targetPort" : "http"
+    },
+    "to" : {
+      "kind" : "Service",
+      "name" : "quarkus-lookup-service"
+    }
+  }
+},{
+  "apiVersion" : "image.openshift.io/v1",
+  "kind" : "ImageStream",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+      "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-lookup-service"
+  },
+  "spec" : { }
+},{
+  "apiVersion" : "build.openshift.io/v1",
+  "kind" : "BuildConfig",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "fcb69ad6e01c86133c9dfc22550cfa42d5d1a2ea",
+      "app.quarkus.io/build-timestamp" : "2023-06-28 - 18:05:07 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-lookup-service",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-lookup-service"
+  },
+  "spec" : {
+    "output" : {
+      "to" : {
+        "kind" : "ImageStreamTag",
+        "name" : "quarkus-lookup-service:1.0-SNAPSHOT"
+      }
+    },
+    "source" : {
+      "binary" : { }
+    },
+    "strategy" : {
+      "sourceStrategy" : {
+        "from" : {
+          "kind" : "ImageStreamTag",
+          "name" : "openjdk-11-rhel7:latest"
+        }
+      }
+    }
+  }
+}]

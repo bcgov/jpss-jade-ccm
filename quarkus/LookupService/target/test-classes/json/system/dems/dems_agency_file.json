@@ -1,0 +1,61 @@
+{
+  "name" : "THOMASFFFFFFFFFFFFFFFFFFFFFFFF, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh; JONESEEEEEEEEEEEEEEEEEEEEEEEEE, Willeeeeeeeeeeeeeeeeeeeeeeeeee Raragdfagadf Asdfasdfasdfsad; JONESRRRRRRRRRRRRRRRRRRRRRRRRR, Williebbbbbbbbbbbbbbbbbbbbbb ...",
+  "key" : "50453.0734",
+  "description" : "",
+  "timeZoneId" : "Pacific Standard Time",
+  "templateCase" : "28",
+  "fields" : [ {
+    "name" : "Agency File ID",
+    "value" : "50453.0734"
+  }, {
+    "name" : "Agency File No.",
+    "value" : "105: 22-472028"
+  }, {
+    "name" : "Submit Date",
+    "value" : "2022-09-27 07:00:00.000"
+  }, {
+    "name" : "Assessment Crown",
+    "value" : "OHarris, Debbie Nn"
+  }, {
+    "name" : "Case Decision",
+    "value" : "ACT - Approved to Court"
+  }, {
+    "name" : "Proposed Charges",
+    "value" : "CCC 344(1)(b) Robbery,CCC 231 1 St Murder"
+  }, {
+    "name" : "Initiating Agency",
+    "value" : "105: Kelowna Municipal RCMP"
+  }, {
+    "name" : "Initiating Agency Name",
+    "value" : "Kelowna Municipal RCMP"
+  }, {
+    "name" : "Investigating Officer",
+    "value" : "Rhodes, Christopher 1001"
+  }, {
+    "name" : "Case Flags",
+    "value" : [ "VUL1", "Indigenous", "HROIP" ]
+  }, {
+    "name" : "Offence Date (earliest)",
+    "value" : "2022-01-01 08:00:00.000"
+  }, {
+    "name" : "Proposed Appr. Date (earliest)",
+    "value" : "2022-10-27"
+  }, {
+    "name" : "Proposed Process Type",
+    "value" : "AN - Thomasffffffffffffffffffffffff, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh; AN - Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike"
+  }, {
+    "name" : "Proposed Crown Office",
+    "value" : "C402: Kelowna"
+  }, {
+    "name" : "Limitation Date",
+    "value" : null
+  }, {
+    "name" : "Accused Full Name",
+    "value" : "Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh Thomasffffffffffffffffffffffff, Willeeeeeeeeeeeeeeeeeeeeeeeeee Raragdfagadf Asdfasdfasdfsad Joneseeeeeeeeeeeeeeeeeeeeeeeee, Williebbbbbbbbbbbbbbbbbbbbbbbb Mike Jonesrrrrrrrrrrrrrrrrrrrrrrrrr, Michaeltttttttttttttttttttttt Asdfasdfasdfasdfas Asdfsadfasdfasdfasd Jonestttttttttttttttttttttttt"  }, {
+    "name" : "RCC Status",
+    "value" : "Received"
+  }, {
+    "name" : "Last JUSTIN Update",
+    "value" : null
+  } ]
+}
