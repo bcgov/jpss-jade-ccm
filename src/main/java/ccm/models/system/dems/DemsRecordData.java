@@ -1,7 +1,10 @@
 package ccm.models.system.dems;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import ccm.models.common.event.ReportEvent.REPORT_TYPES;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
@@ -27,6 +30,106 @@ public class DemsRecordData {
     private List<DemsFieldData> fields;
     private String reportType;
     private int incrementalDocCount = 1;
+
+    public String DescriptipnShortFormValue(String formTypeDescription) {
+        Map<String, String> map = new HashMap<>();
+        
+        map.put("11.1 UTA - POLICE", "UTA P");
+        map.put("ACCUSED HISTORY REPORT","AHR");
+        map.put("ACCUSED INFORMATION","AI");
+        map.put("RECOGNIZANCE AFTER ALLEGATION","RECOG ALL");
+        map.put("RECOGNIZANCE AFTER ALLEGATION-YTH","RECOG ALL YTH");
+        map.put("APPEARANCE NOTICE","AN");
+        map.put("APPEARANCE NOTICE/11.1 UTA","AN UTA");
+        map.put("WARRANT FOR ARREST REVIEW OF SENTENCE","ARREST ROS");
+        map.put("WARRANT FOR ARREST REVIEW YOUTH SENTENCE","ARREST ROS YTH");
+        map.put("BC DV / IPV RISK SUMMARY","BCDV IPV RISK");
+        map.put("WARRANT OF COMMITTAL (BREACH OF CSO)","COM BR CSO");
+        map.put("WARRANT OF COMMITTAL (JAIL)","COM JAIL");
+        map.put("WARRANT OF COMMITTAL TO CUSTODY-YTH","COM YTH");
+        map.put("RECOGNIZANCE COMMON LAW PEACE BOND","PEACE BOND");
+        map.put("RECOGNIZANCE COMMON LAW PEACE BOND - YTH","PEACE BOND YTH");
+        map.put("RESTITUTION COMPENSATION SENTENCING ORDER - YTH","RCSO YTH");
+        map.put("ORDER TO COMPLY WITH SOIRA","SOIRA");
+        map.put("CONDITIONAL SENTENCE ORDER","CSO");
+        map.put("CERTIFICATE OF CONVICTION","CONVICT");
+        map.put("CONVICTION LIST-DEFAULT","CL-D");
+        map.put("CONVICTION LIST-FILTERED","CL-F");
+        map.put("CLIENT HISTORY REPORT - DISPOSITION AND REPORTS","CORNET-DISPO");
+        map.put("CLIENT HISTORY REPORT - FULL","CORNET-FULL");
+        map.put("CPIC-CR", "CPIC-CR");
+        map.put("CUSTODY AND SUPERVISION ORDER","DEF CUS SO YTH");
+        map.put("DIGITAL MEDIA RETENTION","MR");
+        map.put("DISCHARGE-SENTENCING ORDER","CD SO YTH");
+        map.put("FILE SUMMARY REPORT","FSR");
+        map.put("IMPOSITION OF-CONVICTION (FED VT)","FINE IOC FED VT");
+        map.put("IMPOSITION OF-CONVICTION (OA)","FINE IOC OA");
+        map.put("SWORN INFORMATION","INFO");
+        map.put("INTENSIVE SUPPORT & SUPERVISION","DISS YTH");
+        map.put("NARRATIVE","NAR");
+        map.put("OA SUSP SNT PROBATION","RECOG OA SUSP SNT");
+        map.put("RESTITUTION ORDER","RES OR");
+        map.put("FINE ORDER AND NOTICE OF VICTIM SURCHARGE","FONVS");
+        map.put("FIREARMS ORDER NOTICE - PREVENTIVE","FIREARMS OR NOT PRE");
+        map.put("PROBATION ORDER-YTH","PO YTH");
+        map.put("SUMMONS PERSON REVIEW OF SENTENCE","SUM PR OS");
+        map.put("PROBATION ORDER (CONDITIONAL DISCHARGE)","PO CD");
+        map.put("PROBATION ORDER (CONDITIONAL SENTENCE)","PO CS");
+        map.put("PROBATION ORDER (FINE)","PO FINE");
+        map.put("PROBATION ORDER (INTERMITTENT)","PO INT");
+        map.put("PROBATION ORDER (OA)(FINE)","PO OA FINE");
+        map.put("PROBATION ORDER (OA)(INTERMITTENT)","PO OA INT");
+        map.put("PROBATION ORDER (OA)(PRISON)","PO OA PRI");
+        map.put("PROBATION ORDER (OA)(SUSPENDED SENTENCE)","PO OA SUS SEN");
+        map.put("PROBATION ORDER (PRISON)","PO PRI");
+        map.put("PROBATION ORDER (SUSPENDED SENTENCE)","PO SUS SEN");
+        map.put("DIVIDED PROBATION ORDER-YTH","DPO YTH");
+        map.put("ORDER OF PROHIBITION - SEXUAL OFFENCE","OR PRO SO");
+        map.put("ORDER OF PROHIBITION DRIVING - CC","OR PRO DRI CC");
+        map.put("ORDER OF PROHIBITION DRIVING - CC-YTH","OR PRO DRI CC YTH");
+        map.put("ORDER OF PROHIBITION DRIVING (MVA)-OA","OR PRO DRI MVA OA");
+        map.put("ORDER OF PROHIBITION DRIVING MVA(OA)-YTH","OR PRO DRI MVA OA YTH");
+        map.put("PROMISE TO APPEAR","PTA");
+        map.put("PROMISE TO APPEAR/11.1 UTA","PTA UTA");
+        map.put("RECOGNIZANCE - APPEAL","RECOG APPEAL");
+        map.put("RECOGNIZANCE - BAIL (OA)","RECOG BAIL OA");
+        map.put("RECOGNIZANCE - BAIL (YTH)","RECOG BAIL YTH");
+        map.put("RECOGNIZANCE (OA PEACE BOND)","RECOG OA PEACE BOND");
+        map.put("RECOGNIZANCE OF BAIL","RECOG BAIL");
+        map.put("RECOGNIZANCE OF BAIL (OA) YTH","RECOG BAIL OA YTH");
+        map.put("RECOGNIZANCE- OFFICER IN CHARGE","RECOG OIC");
+        map.put("RECOGNIZANCE- OFFICER IN CHARGE/11.1 UTA","RECOG OIC UTA");
+        map.put("RECORD OF PROCEEDINGS","ROP");
+        map.put("INTENSIVE REHABILITATIVE SUPERVISION","IRS YTH");
+        map.put("RELEASE ORDER", "RO");
+        map.put("RELEASE ORDER - YOUTH","RO YTH");
+        map.put("REQUEST FOR PAYMENT","REQ PAY");
+        map.put("REQUEST FOR PAYMENT (FINAL)","REQ PAY FIN");
+        map.put("NOTICE OF REVIEW OF YOUTH SENTENCE","NRS YTH");
+        map.put("SUMMONS REVIEW OF YOUTH SENTENCE (OA-CC)","SUM RS YTH");
+        map.put("FINE SENTENCING ORDER -YTH","FINE SO YTH");
+        map.put("COMMUNITY SERVICE SENTENCING ORDER -YTH","COM SER SO YTH");
+        map.put("STATEMENT-EXPERT","STMT-EXP");
+        map.put("STATEMENT-POLICE","STMT-POL");
+        map.put("STATEMENT-VICTIM","STMT-VIC");
+        map.put("STATEMENT-WITNESS","STMT-WIT");
+        map.put("CONDITIONAL SUPERVISION FOLLOW CUSTODY","CON SUP CUS YTH");
+        map.put("COMMUNITY SUPERVISION FOLLOWING CUSTODY","COMM SUP CUS YTH");
+        map.put("CONDITIONAL SUPERVISION FOLLOWING REVIEW","CON SUP REV YTH");
+        map.put("SUPPLEMENTAL","SUPP");
+        map.put("INTENSIVE SUPPORT AND SUPERVISION ORDER","ISSO YTH");
+        map.put("SYNOPSIS","SYN");
+        map.put("UNDERTAKING - FORM 10 - POLICE","UTA POLICE");
+        map.put("UNDERTAKING (RESP. PERSON/YTH)","UTA YTH");
+        map.put("UNDERTAKING BY APPELLANT (DEFENDANT)","UTA APPEELLANT");
+        map.put("UNDERTAKING TO A PEACE OFFICER/OIC - YTH","UTA OIC YTH");
+        map.put("UNDERTAKING TO JUDGE/JP","UTA JUDGE JP");
+        map.put("UNDERTAKING TO JUDGE/JP (YTH)","UTA JUDGE JP YTH");
+        map.put("VEHICLES","VEH");
+        map.put("WARRANT OF REMAND (ENFORCEMENT HR) (YTH)","WR YTH");
+
+        return map.get(formTypeDescription);
+    }
 
     public DemsRecordData() {
     }
@@ -299,7 +402,11 @@ public class DemsRecordData {
         setDescriptions(nrd.getForm_type_description().toUpperCase());
         String descriptionShortForm = getDescriptions();
         if(report != null) {
-            descriptionShortForm = report.getLabel();
+            //descriptionShortForm = report.getLabel();
+            descriptionShortForm =  DescriptipnShortFormValue(nrd.getForm_type_description().toUpperCase());
+            if(descriptionShortForm == null){
+                descriptionShortForm = nrd.getForm_type_description().toUpperCase().replaceAll("[\\\\/:*?\",<>|]", "");
+            }
             if(report.equals(REPORT_TYPES.INFORMATION)) {
                 setType("COURT RECORD");
             } else if(report.equals(REPORT_TYPES.RELEASE_DOCUMENT)) {
