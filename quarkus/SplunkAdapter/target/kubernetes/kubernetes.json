@@ -1,0 +1,89 @@
+[{
+  "apiVersion" : "apps/v1",
+  "kind" : "Deployment",
+  "metadata" : {
+    "annotations" : {
+      "app.quarkus.io/commit-id" : "9599b1542897a1a11122799b67610b86a46e6dd8",
+      "app.quarkus.io/build-timestamp" : "2023-06-07 - 23:52:01 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-splunk-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "name" : "quarkus-splunk-adapter"
+  },
+  "spec" : {
+    "replicas" : 1,
+    "selector" : {
+      "matchLabels" : {
+        "app.kubernetes.io/name" : "quarkus-splunk-adapter",
+        "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+      }
+    },
+    "template" : {
+      "metadata" : {
+        "annotations" : {
+          "app.quarkus.io/commit-id" : "9599b1542897a1a11122799b67610b86a46e6dd8",
+          "app.quarkus.io/build-timestamp" : "2023-06-07 - 23:52:01 +0000"
+        },
+        "labels" : {
+          "app.kubernetes.io/name" : "quarkus-splunk-adapter",
+          "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+        }
+      },
+      "spec" : {
+        "containers" : [ {
+          "env" : [ {
+            "name" : "KUBERNETES_NAMESPACE",
+            "valueFrom" : {
+              "fieldRef" : {
+                "fieldPath" : "metadata.namespace"
+              }
+            }
+          }, {
+            "name" : "JAVA_APP_JAR",
+            "value" : "/deployments/quarkus-run.jar"
+          }, {
+            "name" : "JAVA_OPTIONS",
+            "value" : ""
+          } ],
+          "image" : "vicgu/quarkus-splunk-adapter:1.0-SNAPSHOT",
+          "imagePullPolicy" : "Always",
+          "name" : "quarkus-splunk-adapter",
+          "ports" : [ {
+            "containerPort" : 8080,
+            "name" : "http",
+            "protocol" : "TCP"
+          } ]
+        } ]
+      }
+    }
+  }
+},{
+  "apiVersion" : "v1",
+  "kind" : "Service",
+  "metadata" : {
+    "annotations" : {
+      "app.quarkus.io/commit-id" : "9599b1542897a1a11122799b67610b86a46e6dd8",
+      "app.quarkus.io/build-timestamp" : "2023-06-07 - 23:52:01 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-splunk-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "name" : "quarkus-splunk-adapter"
+  },
+  "spec" : {
+    "ports" : [ {
+      "name" : "http",
+      "port" : 80,
+      "protocol" : "TCP",
+      "targetPort" : 8080
+    } ],
+    "selector" : {
+      "app.kubernetes.io/name" : "quarkus-splunk-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "type" : "ClusterIP"
+  }
+}]
