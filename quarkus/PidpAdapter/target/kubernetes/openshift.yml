@@ -1,0 +1,180 @@
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+    app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-pidp-adapter
+spec:
+  replicas: 1
+  selector:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  template:
+    metadata:
+      annotations:
+        app.openshift.io/vcs-url: <<unknown>>
+        app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+        app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+      labels:
+        app.openshift.io/runtime: quarkus
+        app.kubernetes.io/name: quarkus-pidp-adapter
+        app.kubernetes.io/version: 1.0-SNAPSHOT
+    spec:
+      containers:
+        - env:
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JAVA_OPTIONS
+              value: ""
+            - name: SMALLRYE_CONFIG_LOCATIONS
+              value: /mnt/app-secret
+            - name: SSLKEYSTOREPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: pidp-kafka-client.p12-password
+                  name: ccm-secrets
+            - name: SSLTRUSTSTOREPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: pidp-kafka-server.p12-password
+                  name: ccm-secrets
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: pidp-kafka-oauth-client-secret
+                  name: ccm-secrets
+            - name: PIDP_API_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: pidp-api-oauth-client-secret
+                  name: ccm-secrets
+            - name: JAVA_APP_JAR
+              value: /deployments/quarkus-run.jar
+          envFrom:
+            - configMapRef:
+                name: ccm-configs
+          image: vicgu/quarkus-pidp-adapter:1.0-SNAPSHOT
+          imagePullPolicy: Always
+          name: quarkus-pidp-adapter
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /mnt/app-secret
+              name: app-secret
+              readOnly: false
+      volumes:
+        - name: app-secret
+          secret:
+            optional: false
+            secretName: ccm-secrets
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - quarkus-pidp-adapter
+        from:
+          kind: ImageStreamTag
+          name: quarkus-pidp-adapter:1.0-SNAPSHOT
+      type: ImageChange
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+    app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-pidp-adapter
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+    app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-pidp-adapter
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: quarkus-pidp-adapter
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+    app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-pidp-adapter
+spec: {}
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  name: openjdk-11-rhel7
+spec:
+  dockerImageRepository: registry.access.redhat.com/openjdk/openjdk-11-rhel7
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: a17f1928472c7b7a72c27a76c3292b94abec8529
+    app.quarkus.io/build-timestamp: 2023-06-15 - 22:42:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-pidp-adapter
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-pidp-adapter
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: quarkus-pidp-adapter:1.0-SNAPSHOT
+  source:
+    binary: {}
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: openjdk-11-rhel7:latest
