@@ -1094,19 +1094,23 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
         .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
-          .setHeader("CCMException", simple("${body}"))
           .log(LoggingLevel.ERROR,"body = '${body}'.")
+          .setHeader("CCMException", simple("${body}"))
         .endChoice()
       .end()
       .endDoTry()
       .doCatch(Exception.class)
         .log(LoggingLevel.INFO,"General Exception thrown.")
         .log(LoggingLevel.INFO,"${exception}")
+        .log(LoggingLevel.ERROR,"body = '${body}'.")
+        .log(LoggingLevel.ERROR,"response code = '${header.CamelHttpResponseCode}'.")
         .process(new Processor() {
           public void process(Exchange exchange) throws Exception {
 
             exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-            exchange.getMessage().setBody(exchange.getException().getMessage());
+            if(exchange != null && exchange.getException() != null) {
+              exchange.getMessage().setBody(exchange.getException().getMessage());
+            }
             throw exchange.getException();
           }
         })
@@ -2147,7 +2151,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
-    //.log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -2226,8 +2230,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
-        .setProperty("save_version", jsonpath("$.items[0].cc_SaveVersion"))
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"save_version\": \"${exchangeProperty.save_version}\"}"))
+        //.setProperty("save_version", jsonpath("$.items[0].cc_SaveVersion"))
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"save_version\": \"\"}"))
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
