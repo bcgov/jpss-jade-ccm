@@ -70,6 +70,8 @@ public class DemsApprovedCourtCaseData {
         courtHomeRegNameList.add(commonData.getCourt_home_registry_name());
         List<String> crownElectionList = new ArrayList<String>();
         crownElectionList.add(commonData.getAnticipated_crown_election());
+        List<String> crownOfficeList = new ArrayList<String>();
+        crownOfficeList.add(commonData.getApproving_crown_agency_name());
 
         DemsFieldData courtFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), commonData.getCourt_file_id());
         DemsFieldData crownElection = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_ELECTION.getLabel(), crownElectionList);
@@ -87,7 +89,7 @@ public class DemsApprovedCourtCaseData {
         //DemsFieldData rmsProcStatus = new FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
         DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), commonData.getAccused_names());
-        DemsFieldData crownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_OFFICE.getLabel(), commonData.getApproving_crown_agency_name());
+        DemsFieldData crownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_OFFICE.getLabel(), crownOfficeList);
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
