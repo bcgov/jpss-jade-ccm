@@ -1,0 +1,158 @@
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+    app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-notification-service
+spec:
+  replicas: 1
+  selector:
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.kubernetes.io/name: quarkus-notification-service
+  template:
+    metadata:
+      annotations:
+        app.openshift.io/vcs-url: <<unknown>>
+        app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+        app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+      labels:
+        app.kubernetes.io/version: 1.0-SNAPSHOT
+        app.kubernetes.io/name: quarkus-notification-service
+        app.openshift.io/runtime: quarkus
+    spec:
+      containers:
+        - env:
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JAVA_APP_JAR
+              value: /deployments/quarkus-run.jar
+            - name: SMALLRYE_CONFIG_LOCATIONS
+              value: /mnt/app-secret
+          envFrom:
+            - configMapRef:
+                name: ccm-configs
+          image: vicgu/quarkus-notification-service:1.0-SNAPSHOT
+          imagePullPolicy: Always
+          name: quarkus-notification-service
+          ports:
+            - containerPort: 9982
+              name: http
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /mnt/app-secret
+              name: app-secret
+              readOnly: false
+      volumes:
+        - name: app-secret
+          secret:
+            optional: false
+            secretName: ccm-secrets
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - quarkus-notification-service
+        from:
+          kind: ImageStreamTag
+          name: quarkus-notification-service:1.0-SNAPSHOT
+      type: ImageChange
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  name: s2i-java
+spec:
+  dockerImageRepository: fabric8/s2i-java
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+    app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-notification-service
+spec: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+    app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-notification-service
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 9982
+  selector:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+    app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-notification-service
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: quarkus-notification-service
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  annotations:
+    app.openshift.io/vcs-url: <<unknown>>
+    app.quarkus.io/commit-id: be48911f96ee985cdf9861434d5ce2d9f58dd7d1
+    app.quarkus.io/build-timestamp: 2023-06-19 - 23:54:32 +0000
+  labels:
+    app.kubernetes.io/name: quarkus-notification-service
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.openshift.io/runtime: quarkus
+  name: quarkus-notification-service
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: quarkus-notification-service:1.0-SNAPSHOT
+  source:
+    binary: {}
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: s2i-java:2.3
