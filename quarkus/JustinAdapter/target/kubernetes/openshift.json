@@ -1,0 +1,223 @@
+[{
+  "apiVersion" : "apps.openshift.io/v1",
+  "kind" : "DeploymentConfig",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+      "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-justin-adapter"
+  },
+  "spec" : {
+    "replicas" : 1,
+    "selector" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "template" : {
+      "metadata" : {
+        "annotations" : {
+          "app.openshift.io/vcs-url" : "<<unknown>>",
+          "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+          "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+        },
+        "labels" : {
+          "app.kubernetes.io/name" : "quarkus-justin-adapter",
+          "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+          "app.openshift.io/runtime" : "quarkus"
+        }
+      },
+      "spec" : {
+        "containers" : [ {
+          "env" : [ {
+            "name" : "KUBERNETES_NAMESPACE",
+            "valueFrom" : {
+              "fieldRef" : {
+                "fieldPath" : "metadata.namespace"
+              }
+            }
+          }, {
+            "name" : "DEMS_TOKEN",
+            "valueFrom" : {
+              "secretKeyRef" : {
+                "key" : "dems-security-token",
+                "name" : "ccm-secrets"
+              }
+            }
+          }, {
+            "name" : "JUSTIN_TOKEN",
+            "valueFrom" : {
+              "secretKeyRef" : {
+                "key" : "justin-security-token",
+                "name" : "ccm-secrets"
+              }
+            }
+          }, {
+            "name" : "DEMS_ADAPTER_TOKEN",
+            "valueFrom" : {
+              "secretKeyRef" : {
+                "key" : "dems-security-token",
+                "name" : "ccm-secrets"
+              }
+            }
+          }, {
+            "name" : "JAVA_OPTIONS",
+            "value" : ""
+          }, {
+            "name" : "JAVA_APP_JAR",
+            "value" : "/deployments/quarkus-run.jar"
+          } ],
+          "envFrom" : [ {
+            "configMapRef" : {
+              "name" : "ccm-configs"
+            }
+          } ],
+          "image" : "vicgu/quarkus-justin-adapter:1.0-SNAPSHOT",
+          "imagePullPolicy" : "Always",
+          "name" : "quarkus-justin-adapter",
+          "ports" : [ {
+            "containerPort" : 8080,
+            "name" : "http",
+            "protocol" : "TCP"
+          } ]
+        } ]
+      }
+    },
+    "triggers" : [ {
+      "imageChangeParams" : {
+        "automatic" : true,
+        "containerNames" : [ "quarkus-justin-adapter" ],
+        "from" : {
+          "kind" : "ImageStreamTag",
+          "name" : "quarkus-justin-adapter:1.0-SNAPSHOT"
+        }
+      },
+      "type" : "ImageChange"
+    } ]
+  }
+},{
+  "apiVersion" : "v1",
+  "kind" : "Service",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+      "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-justin-adapter"
+  },
+  "spec" : {
+    "ports" : [ {
+      "name" : "http",
+      "port" : 80,
+      "protocol" : "TCP",
+      "targetPort" : 8080
+    } ],
+    "selector" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "type" : "ClusterIP"
+  }
+},{
+  "apiVersion" : "route.openshift.io/v1",
+  "kind" : "Route",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+      "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-justin-adapter"
+  },
+  "spec" : {
+    "port" : {
+      "targetPort" : "http"
+    },
+    "to" : {
+      "kind" : "Service",
+      "name" : "quarkus-justin-adapter"
+    }
+  }
+},{
+  "apiVersion" : "image.openshift.io/v1",
+  "kind" : "ImageStream",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+      "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-justin-adapter"
+  },
+  "spec" : { }
+},{
+  "apiVersion" : "image.openshift.io/v1",
+  "kind" : "ImageStream",
+  "metadata" : {
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT"
+    },
+    "name" : "openjdk-11-rhel7"
+  },
+  "spec" : {
+    "dockerImageRepository" : "registry.access.redhat.com/openjdk/openjdk-11-rhel7"
+  }
+},{
+  "apiVersion" : "build.openshift.io/v1",
+  "kind" : "BuildConfig",
+  "metadata" : {
+    "annotations" : {
+      "app.openshift.io/vcs-url" : "<<unknown>>",
+      "app.quarkus.io/commit-id" : "72d87f2c7c4412758bde08996f6a4f72188d4de3",
+      "app.quarkus.io/build-timestamp" : "2023-06-12 - 20:21:53 +0000"
+    },
+    "labels" : {
+      "app.kubernetes.io/name" : "quarkus-justin-adapter",
+      "app.kubernetes.io/version" : "1.0-SNAPSHOT",
+      "app.openshift.io/runtime" : "quarkus"
+    },
+    "name" : "quarkus-justin-adapter"
+  },
+  "spec" : {
+    "output" : {
+      "to" : {
+        "kind" : "ImageStreamTag",
+        "name" : "quarkus-justin-adapter:1.0-SNAPSHOT"
+      }
+    },
+    "source" : {
+      "binary" : { }
+    },
+    "strategy" : {
+      "sourceStrategy" : {
+        "from" : {
+          "kind" : "ImageStreamTag",
+          "name" : "openjdk-11-rhel7:latest"
+        }
+      }
+    }
+  }
+}]
