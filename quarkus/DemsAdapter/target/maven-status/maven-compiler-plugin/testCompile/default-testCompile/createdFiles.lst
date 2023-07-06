@@ -1,0 +1,7 @@
+ccm\models\system\justin\JustinAuthUsersTest.class
+ccm\CcmDemsAdapterTest.class
+ccm\models\system\justin\JustinCourtAppearanceSummaryTest.class
+ccm\models\system\justin\JustinCourtFileTest.class
+ccm\models\system\justin\JustinCrownAssignmentTest.class
+ccm\models\system\justin\JustinAgencyFileTest.class
+ccm\KafkaTestResource.class
