@@ -88,6 +88,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseDataById();
     getCourtCaseDataByKey();
     getCourtCaseNameByKey();
+    getCourtCaseStatusExists();
+    getCourtCaseStatusByKey ();
     getCourtCaseCourtFileUniqueIdByKey();
     getCaseHyperlink();
     createCourtCase();
@@ -123,6 +125,64 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
+  }
+
+  private void getCourtCaseStatusByKey() {
+      // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    //IN: header.number
+    from("platform-http:/" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      
+      .setProperty("key", simple("${header.number}"))
+      .log(LoggingLevel.DEBUG,"Key = ${exchangeProperty.id}")
+      .to("direct:getCourtCaseStatusExists")
+      .unmarshal().json()
+      
+      .choice()
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseState} != '' && ${exchangeProperty.primaryAgencyFileId} != '' && ${exchangeProperty.agencyFileId} != '' && ${exchangeProperty.courtFileId} != '' "))
+      .log(LoggingLevel.DEBUG,"Court case exists")
+      .endChoice()
+      .end()
+    ;
+  }
+ 
+  private void getCourtCaseStatusExists() {
+     // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: exchangeProeprty.key
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .to("direct:getCourtCaseDataById")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String courtCaseData = exchange.getIn(String.class);
+        String caseId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "id", "/value");
+        String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "caseState","/value");
+        String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "primaryAgencyFileId","/value");
+        String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "agencyFileId","/value");
+        String courtFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "courtFileId","/value");
+      
+       exchange.setProperty("caseId", caseId); 
+       exchange.setProperty("caseState", caseState);
+       exchange.setProperty("primaryAgencyFileId", primaryAgencyFileId);
+       exchange.setProperty("agencyFileId", agencyFileId);
+       exchange.setProperty("courtFileId", courtFileId);
+      }
+
+    })
+    .end()
+    ;
   }
 
   private void attachExceptionHandlers() {
