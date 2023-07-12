@@ -71,6 +71,10 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
@@ -137,14 +141,61 @@ public class CcmDemsAdapter extends RouteBuilder {
       
       .setProperty("key", simple("${header.number}"))
       .log(LoggingLevel.DEBUG,"Key = ${exchangeProperty.id}")
-      .to("direct:getCourtCaseStatusExists")
-      .unmarshal().json()
-      
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+   // call to get the case id
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+   
+    .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
+    .doTry()
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .setProperty("length",jsonpath("$.length()"))
       .choice()
-      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseState} != '' && ${exchangeProperty.primaryAgencyFileId} != '' && ${exchangeProperty.agencyFileId} != '' && ${exchangeProperty.courtFileId} != '' "))
-      .log(LoggingLevel.DEBUG,"Court case exists")
-      .endChoice()
-      .end()
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+          .setProperty("dems_case_id", jsonpath("$[0].id"))
+          .setBody(simple("{\"id\": \"${exchangeProperty.dems_case_id}\"}"))
+        .endChoice()
+        .when(simple("${header.CamelHttpResponseCode} == 200"))
+          .log(LoggingLevel.DEBUG,"body = '${body}'.")
+          .setProperty("id", simple(""))
+          .setBody(simple("{\"id\": \"\"}"))
+          .setHeader("CamelHttpResponseCode", simple("200"))
+          .log(LoggingLevel.INFO,"Case not found.")
+        .endChoice()
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        .log(LoggingLevel.DEBUG,"Getting DEMS case info (key = ${exchangeProperty.key}) ...")
+    
+      .doTry()
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") // call to get the case attributes
+      .unmarshal(routeId)
+      .doTry()
+      .setProperty("length", jsonpath("$.length()"))
+      .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String courtCaseData = exchange.getIn(String.class);
+        String caseId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "id", "/value");
+        String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "caseState","/value");
+        String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "primaryAgencyFileId","/value");
+        String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "agencyFileId","/value");
+        String courtFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "courtFileId","/value");
+        
+        JsonObjectBuilder caseObject = Json.createObjectBuilder().add("case id", caseId);
+        caseObject.add("Case State", caseState);
+        caseObject.add("Primary Agency File Id", primaryAgencyFileId);
+        caseObject.add("Agency File Id", agencyFileId);
+        caseObject.add("Court File Unique Id", courtFileId);
+
+        exchange.getMessage().setBody(caseObject.build());
+       
+      }
+
+    }).endChoice()
+    .endDoTry()
     ;
   }
  
@@ -162,25 +213,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
-    .to("direct:getCourtCaseDataById")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        String courtCaseData = exchange.getIn(String.class);
-        String caseId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "id", "/value");
-        String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "caseState","/value");
-        String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "primaryAgencyFileId","/value");
-        String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "agencyFileId","/value");
-        String courtFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "courtFileId","/value");
-      
-       exchange.setProperty("caseId", caseId); 
-       exchange.setProperty("caseState", caseState);
-       exchange.setProperty("primaryAgencyFileId", primaryAgencyFileId);
-       exchange.setProperty("agencyFileId", agencyFileId);
-       exchange.setProperty("courtFileId", courtFileId);
-      }
-
-    })
+    .to("direct:getCourtCaseStatusByKey")
     .end()
     ;
   }
