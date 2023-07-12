@@ -15,6 +15,8 @@ public class DemsListItemFieldData {
         K("K"),
         Indigenous("Indigenous"),
         HROIP("HROIP"),
+        //fix for JADE-2559
+        RVO("RVO"),
         DO_LTO("DO/LTO");
 
         private String label;

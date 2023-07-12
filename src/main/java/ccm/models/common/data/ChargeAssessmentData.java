@@ -95,6 +95,8 @@ public class ChargeAssessmentData {
             boolean hasIndigenous = false;
             boolean hasHroip = false;
             boolean hasDoLto = false;
+            //fix for JADE-2559
+            boolean hasRvo = false;
 
             for (JustinAccused ja : jaf.getAccused()) {
 
@@ -129,6 +131,11 @@ public class ChargeAssessmentData {
                 if (!hasDoLto && accused.getDo_lto_yn()) {
                     case_flags.add("DO/LTO");
                     hasDoLto = true;
+                }
+                //fix for JADE-2559
+                if (!hasRvo && accused.getRvo_yn()) {
+                    case_flags.add("RVO");
+                    hasRvo = true;
                 }
             }
         }
