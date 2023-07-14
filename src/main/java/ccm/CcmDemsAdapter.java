@@ -573,7 +573,35 @@ public class CcmDemsAdapter extends RouteBuilder {
             .setHeader("number", simple("${exchangeProperty.rcc_id}"))
             .setHeader("reportType", simple("${exchangeProperty.reportType}"))
             .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-            .setBody(simple("${exchangeProperty.dems_record}"))
+            //JADE 2603 for scenario #3
+            .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+            .to("http://ccm-lookup-service/getCourtCaseDetails")
+            .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
+            .log(LoggingLevel.DEBUG,"courtcase_data : ${body}")
+            .setProperty("courtcase_data", simple("${body}"))
+            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                ChargeAssessmentData ccdd = exchange.getIn().getBody(ChargeAssessmentData.class);
+                CourtCaseDocumentData cadd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
+                DemsRecordData demsRecord = (DemsRecordData)exchange.getProperty("dems_record", DemsRecordData.class);
+                if(ccdd!=null){
+                  cadd.setCourt_file_no(ccdd.getAgency_file());
+                  demsRecord = new DemsRecordData(cadd);
+                }
+                if(demsRecord != null) {
+                  exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+                  exchange.setProperty("drd", demsRecord);
+                }
+                exchange.getMessage().setBody(demsRecord);
+              }
+            })
+            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+            .log(LoggingLevel.DEBUG,"demsrecord = ${bodyAs(String)}.")
+            .setBody(simple("${body}"))
             .to("direct:changeDocumentRecord")
           .end()
           .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
