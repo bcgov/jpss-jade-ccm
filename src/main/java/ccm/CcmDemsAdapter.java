@@ -30,6 +30,7 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel:camel-core-languages
 // camel-k: dependency=mvn:org.apache.camel:camel-mail
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
+// camel-k: dependency=mvn:jakarta.json:jakarta-json-api
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -71,9 +72,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.json.Json;
-import javax.json.JsonObjectBuilder;
-import javax.ws.rs.NotFoundException;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -172,14 +170,23 @@ public class CcmDemsAdapter extends RouteBuilder {
             String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "agencyFileId","/value");
             String courtFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "courtFileId","/value");
             String status = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name","status" , "/value");
+            
+            StringBuilder caseObjectJson = new StringBuilder("");
+            caseObjectJson.append("{");
+            caseObjectJson.append("\"Case State\": ");
+            caseObjectJson.append("\"" + caseState + "\",");
+            caseObjectJson.append("\"Primary Agency File Id\": ");
+            caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
+            caseObjectJson.append("\"Agency File Id\": ");
+            caseObjectJson.append("\"" + agencyFileId + "\",");
+            caseObjectJson.append("\"Court File Unique Id\": ");
+            caseObjectJson.append("\"" + courtFileId + "\",");
+            caseObjectJson.append("\"Status\": ");
+            caseObjectJson.append("\"" + status + "\"");
+            caseObjectJson.append("}");
 
-            JsonObjectBuilder caseObject = Json.createObjectBuilder().add("case id", caseId);
-            caseObject.add("Case State", caseState);
-            caseObject.add("Primary Agency File Id", primaryAgencyFileId);
-            caseObject.add("Agency File Id", agencyFileId);
-            caseObject.add("Court File Unique Id", courtFileId);
-            caseObject.add("Status", status);
-            exchange.getMessage().setBody(caseObject.build());
+           
+            exchange.getMessage().setBody(caseObjectJson.toString());
           }
 
       })
@@ -192,17 +199,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       
     .endDoTry()
-    .doCatch(HttpOperationFailedException.class, NotFoundException.class)
-    .process(new Processor(){
-      @Override
-      public void process(Exchange exchange) {
-           
-          exchange.setProperty("id", simple(""));
-          exchange.getMessage().setBody(simple("{\"id\": \"\"}"));
-          exchange.getMessage().setHeader("CamelHttpResponseCode", simple("500"));
-      }
-    })
-    .endDoCatch()
+    
     .end();
   }
  
