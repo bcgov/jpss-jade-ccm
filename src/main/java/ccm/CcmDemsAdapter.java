@@ -571,9 +571,56 @@ public class CcmDemsAdapter extends RouteBuilder {
             .jsonpathWriteAsString("$.rcc_ids")
             .setProperty("rcc_id",jsonpath("$"))
             .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+
+
+
+
+            .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            //.log(LoggingLevel.INFO, "headers: ${headers}")
+            .to("http://ccm-lookup-service/getCourtCaseDetails")
+            .log(LoggingLevel.DEBUG,"Retrieved Court Case from JUSTIN: ${body}")
+            .setProperty("agen_file_data", simple("${bodyAs(String)}"))
+            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+            .setProperty("ChargeAssessmentData").body()
+            .process(new Processor() {
+              @Override
+              public void process(Exchange ex) {
+                CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+                ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
+                ChargeAssessmentData cad = ex.getIn().getBody(ChargeAssessmentData.class);
+                DemsRecordData demsRecord = null;
+                if(ccdd != null) { // This is an mdoc based report
+                  ccdd.setCourt_file_no(cad.getAgency_file());
+                  // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                  demsRecord = new DemsRecordData(ccdd);
+                } else if(id != null) { // This is a primary_rcc_id based report
+                  id.setCourt_file_number(cad.getAgency_file());
+                  log.info("CourtFileNumber:"+id.getCourt_file_number());
+                  // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+                  demsRecord = new DemsRecordData(id);
+                }
+                ex.setProperty("reportType", demsRecord.getDescriptions());
+                ex.setProperty("reportTitle", demsRecord.getTitle());
+                if(demsRecord != null) {
+                  ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+                  ex.setProperty("drd", demsRecord);
+                }
+                ex.getMessage().setBody(demsRecord);
+              }
+
+            })
+            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+            .log(LoggingLevel.INFO, "Body: '${body}'")
+            .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+
+
+
+
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
             .setHeader("reportType", simple("${exchangeProperty.reportType}"))
             .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-            .setBody(simple("${exchangeProperty.dems_record}"))
+            //.setBody(simple("${exchangeProperty.dems_record}"))
             .to("direct:changeDocumentRecord")
           .end()
           .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")

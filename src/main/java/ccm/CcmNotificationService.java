@@ -756,7 +756,7 @@ public class CcmNotificationService extends RouteBuilder {
             .end()
           .endChoice()
           .when(simple("${header.CamelHttpResponseCode} == 404"))
-            .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")
+            .log(LoggingLevel.INFO,"User (key = ${header.event_key}) not found; Do nothing.")
           .endChoice()
       .end()
     ;
