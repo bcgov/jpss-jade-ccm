@@ -21,11 +21,11 @@ public class DemsCaseCrownAssignmentData {
         setName(name);
 
         List<String> assignedCrownList = new ArrayList<String>();
-        assignedCrownList.add(commonList.getCrownAssignmentList());
+        assignedCrownList.addAll(commonList.getCrownAssignmentList());
         List<String> assignedCrownNameList = new ArrayList<String>();
-        assignedCrownNameList.add(commonList.getCrownAssignmentName());
+        assignedCrownNameList.addAll(commonList.getCrownAssignmentName());
         List<String> assignedLegalStaffList = new ArrayList<String>();
-        assignedLegalStaffList.add(commonList.getLegalStaffAssignmentList());
+        assignedLegalStaffList.addAll(commonList.getLegalStaffAssignmentList());
 
         DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN.getLabel(), assignedCrownList);
         DemsFieldData assignedCrownName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), assignedCrownNameList);
