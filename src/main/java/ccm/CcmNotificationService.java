@@ -545,7 +545,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
       .unmarshal().json()
       .choice()
-      .when(simple("${body[Status]} == Active"))
+      .when(simple("${body[Status]} == 'Active'"))
     .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
     //.to("http://ccm-dems-adapter/updateCourtCase?httpClient.connectTimeout=1&httpClient.connectionRequestTimeout=1&httpClient.socketTimeout=1")
