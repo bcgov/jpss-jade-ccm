@@ -4,6 +4,8 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
 import java.util.StringTokenizer;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -863,6 +865,32 @@ public class CcmNotificationService extends RouteBuilder {
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
+
+    .setProperty("event_key_orig", simple("${header[event_key]}"))
+    .split()
+      .jsonpathWriteAsString("$.related_court_file")
+      .setHeader("number", jsonpath("$.mdoc_justin_no"))
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .to("http://ccm-lookup-service/getCourtCaseMetadata")
+
+      .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+          List<CourtCaseData> relatedCf = (List<CourtCaseData>)exchange.getProperty("related_court_files");
+          if(relatedCf == null) {
+            relatedCf = new ArrayList<CourtCaseData>();
+          }
+          relatedCf.add(bcm);
+        }
+      })
+    .end()
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+
+
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))

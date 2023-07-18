@@ -43,6 +43,26 @@ deactivate j_adapter
 
 lookup_service --> notification_service: Court case details
 deactivate lookup_service
+
+notification_service -> lookup_service:  Check case status exists
+activate lookup_service
+
+lookup_service -> d_adapter:  Check case status existence in DEMS
+activate d_adapter
+d_adapter -> d_adapter:  Convert data from Business to System (DEMS) model
+
+d_adapter -> d_interface:  Call getCourtCaseStatusExists()
+activate d_interface
+
+d_interface --> d_adapter: Response
+deactivate d_interface
+d_adapter --> lookup_service: Response
+deactivate d_adapter
+lookup_service --> notification_service: Response
+deactivate lookup_service
+alt Inactive status DEMS case
+    notification_service -> notification_service: No operation end processing.
+else Existing court case
 notification_service -> d_adapter: Update court case
 
 activate d_adapter
@@ -129,8 +149,9 @@ d_adapter --> notification_service: Acknowledged
 deactivate d_adapter
 
 deactivate notification_service
+end
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated July 16, 2023
 end caption
 @enduml
