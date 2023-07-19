@@ -4,6 +4,8 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
 import java.util.StringTokenizer;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -59,6 +61,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAuthListChanged();
     processCourtCaseAuthListUpdated();
     processCourtCaseChanged();
+    processPrimaryCourtCaseChanged();
     processManualCourtCaseChanged();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
@@ -756,7 +759,7 @@ public class CcmNotificationService extends RouteBuilder {
             .end()
           .endChoice()
           .when(simple("${header.CamelHttpResponseCode} == 404"))
-            .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")
+            .log(LoggingLevel.INFO,"User (key = ${header.event_key}) not found; Do nothing.")
           .endChoice()
       .end()
     ;
@@ -853,7 +856,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -863,109 +866,61 @@ public class CcmNotificationService extends RouteBuilder {
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .setProperty("metadata_object", body())
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+
+    .setProperty("event_key_orig", simple("${header[event_key]}"))
+    .split()
+      .jsonpathWriteAsString("$.related_court_file")
+      .setHeader("number", jsonpath("$.mdoc_justin_no"))
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseMetadata")
+
+      .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+      .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+          CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
+          List<CourtCaseData> relatedCf = metadata.getRelated_court_cases();
+          if(relatedCf == null) {
+            relatedCf = new ArrayList<CourtCaseData>();
+          }
+          relatedCf.add(bcm);
+          metadata.setRelated_court_cases(relatedCf);
+          exchange.setProperty("metadata_object", metadata);
+        }
+      })
+    .end()
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
+
+        exchange.getMessage().setBody(metadata, CourtCaseData.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
-      .setProperty("event_key_orig", simple("${header[event_key]}"))
-      .setHeader("number", jsonpath("$.rcc_id"))
-      .setHeader("event_key", jsonpath("$.rcc_id"))
-      .to("http://ccm-lookup-service/getCourtCaseExists")
-      .unmarshal().json()
-      .setProperty("caseFound").simple("${body[id]}")
-      .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-      .log(LoggingLevel.DEBUG,"createOverrideFlag = ${exchangeProperty.createOverrideFlag}")
-      .process(new Processor() {
-        @Override
-          public void process(Exchange ex) {
-            String autocreateFlag = ex.getProperty("autoCreateFlag",String.class);
-            String createOverrideFlag = ex.getProperty("createOverrideFlag",String.class);
-            String caseFound = ex.getProperty("caseFound",String.class);
-            Boolean autoCreateBoolean = Boolean.valueOf(autocreateFlag);
-            Boolean createOverrideBoolean = Boolean.valueOf(createOverrideFlag);
-            Boolean caseFoundBoolean = Boolean.valueOf(caseFound!="");
-            log.info("caseFound:"+caseFoundBoolean);
-            if((autoCreateBoolean || createOverrideBoolean ) && !caseFoundBoolean){
-              ex.setProperty("createCase", "true");
-            }else{
-              ex.setProperty("createCase", "false");
-            }
-          }
-      })
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
       .choice()
-        .when(simple(" ${exchangeProperty.createCase} == 'true'"))
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            // KPI: Preserve original event properties
-            ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-            ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
-            ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
-            ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
-            ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
-
-            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
-            derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
-            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
-
-            ex.getMessage().setBody(derived_event);
-
-            // KPI: Set new event object
-            ex.setProperty("kpi_event_object", derived_event);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
-        .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-        .to("direct:processChargeAssessmentCreated")
-        // KPI: restore previous values
-        .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
-        .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
-        .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
-        .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
-        .endChoice()
-        .otherwise()
-          .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-          .to("direct:processCourtCaseAuthListChanged")
+        .when(simple(" ${exchangeProperty.primary_yn} == 'Y'"))
+          // TODO: retrieve the list of court file ids from DEMS, and retrieve the court file objects for those as well, if they
+          // are not already listed in the related_court_cases
+          .to("direct:processPrimaryCourtCaseChanged")
         .endChoice()
       .end()
-      .to("http://ccm-lookup-service/getCourtCaseExists")// requery if court case exists in DEMS, in case prev logic created the record.
-      .unmarshal().json()
-      .setProperty("caseFound").simple("${body[id]}")
-      .choice()
-        .when(simple("${exchangeProperty.caseFound} != ''"))
-          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          // grab the case mappings from justin, for overriding case flags.
-          .to("http://ccm-lookup-service/getCourtCaseDetails")
-          //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
-          .setProperty("courtcase_data", simple("${bodyAs(String)}"))
 
-          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-              //log.debug(b.getCase_flags().toString());
-              exchange.getMessage().setBody(b.getCase_flags());
-            }
-          })
-          .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
-          .setHeader("caseFlags", simple("${body}"))
-          // reset the original values
-          .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
-          .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-          .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-          .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
-          .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
-          .setBody(simple("${exchangeProperty.metadata_data}"))
-          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-          .endChoice()
-        .otherwise()
-          .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
-          .endChoice()
-      .end()
     .end()
 
     .choice()
@@ -1105,6 +1060,116 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .to("kafka:{{kafka.topic.reports.name}}")
+    ;
+  }
+
+  private void processPrimaryCourtCaseChanged() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("event_key_orig", simple("${header[event_key]}"))
+    .setHeader("number", jsonpath("$.rcc_id"))
+    .setHeader("event_key", jsonpath("$.rcc_id"))
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
+    .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
+    .log(LoggingLevel.DEBUG,"createOverrideFlag = ${exchangeProperty.createOverrideFlag}")
+    .process(new Processor() {
+      @Override
+        public void process(Exchange ex) {
+          String autocreateFlag = ex.getProperty("autoCreateFlag",String.class);
+          String createOverrideFlag = ex.getProperty("createOverrideFlag",String.class);
+          String caseFound = ex.getProperty("caseFound",String.class);
+          Boolean autoCreateBoolean = Boolean.valueOf(autocreateFlag);
+          Boolean createOverrideBoolean = Boolean.valueOf(createOverrideFlag);
+          Boolean caseFoundBoolean = Boolean.valueOf(caseFound!="");
+          log.info("caseFound:"+caseFoundBoolean);
+          if((autoCreateBoolean || createOverrideBoolean ) && !caseFoundBoolean){
+            ex.setProperty("createCase", "true");
+          }else{
+            ex.setProperty("createCase", "false");
+          }
+        }
+    })
+    .choice()
+      .when(simple(" ${exchangeProperty.createCase} == 'true'"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          // KPI: Preserve original event properties
+          ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+          ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+          ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+          ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+          ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
+
+          ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
+          derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
+          derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
+
+          ex.getMessage().setBody(derived_event);
+
+          // KPI: Set new event object
+          ex.setProperty("kpi_event_object", derived_event);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+      .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
+      .to("direct:processChargeAssessmentCreated")
+      // KPI: restore previous values
+      .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+      .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+      .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+      .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
+        .to("direct:processCourtCaseAuthListChanged")
+      .endChoice()
+    .end()
+    .to("http://ccm-lookup-service/getCourtCaseExists")// requery if court case exists in DEMS, in case prev logic created the record.
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
+    .choice()
+      .when(simple("${exchangeProperty.caseFound} != ''"))
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        // grab the case mappings from justin, for overriding case flags.
+        .to("http://ccm-lookup-service/getCourtCaseDetails")
+        //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
+        .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+            //log.debug(b.getCase_flags().toString());
+            exchange.getMessage().setBody(b.getCase_flags());
+          }
+        })
+        .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
+        .setHeader("caseFlags", simple("${body}"))
+        // reset the original values
+        .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
+        .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
+        .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+        .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
+        .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+        .setBody(simple("${exchangeProperty.metadata_data}"))
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
+        .endChoice()
+    .end()
     ;
   }
 
