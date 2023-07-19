@@ -922,7 +922,6 @@ public class CcmNotificationService extends RouteBuilder {
       .end()
 
     .end()
-    .log(LoggingLevel.INFO, "post primary court case changed")
 
     .choice()
       .when(simple(" ${exchangeProperty.createCase} == 'true'"))
@@ -1170,7 +1169,8 @@ public class CcmNotificationService extends RouteBuilder {
       .otherwise()
         .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
         .endChoice()
-    .end()    ;
+    .end()
+    ;
   }
 
   private void processManualCourtCaseChanged() {
