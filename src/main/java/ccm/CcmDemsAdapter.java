@@ -601,7 +601,6 @@ public class CcmDemsAdapter extends RouteBuilder {
             .setHeader("number", simple("${exchangeProperty.rcc_id}"))
             .setHeader("reportType", simple("${exchangeProperty.reportType}"))
             .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-            //.setBody(simple("${exchangeProperty.dems_record}"))
             .setProperty("dems_record").simple("${bodyAs(String)}")
             .to("direct:changeDocumentRecord")
           .end()

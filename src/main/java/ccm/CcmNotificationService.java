@@ -915,7 +915,6 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("primary_yn", jsonpath("$.primary_yn"))
       .choice()
         .when(simple(" ${exchangeProperty.primary_yn} == 'Y'"))
-        .log(LoggingLevel.INFO, "call primary changed.")
           // TODO: retrieve the list of court file ids from DEMS, and retrieve the court file objects for those as well, if they
           // are not already listed in the related_court_cases
           .to("direct:processPrimaryCourtCaseChanged")
