@@ -179,7 +179,13 @@ public class JustinAgencyFileTest {
                 stringBuilder.append(line);
                 stringBuilder.append(ls);
             }
-            //System.out.println("\nJSON is\n"+stringBuilder.toString());
+            System.out.println("\nJSON is\n"+stringBuilder.toString());
+            String id = JsonParseUtils.getJsonElementValue(stringBuilder.toString(), "id");
+            String key = JsonParseUtils.getJsonElementValue(stringBuilder.toString(), "key");
+            String status = JsonParseUtils.getJsonElementValue(stringBuilder.toString(), "status");
+            System.out.println("ID: " + id);
+            System.out.println("KEY: " + key);
+            System.out.println("STATUS: " + status);
             String extractedValue = JsonParseUtils.getJsonArrayElementValue(stringBuilder.toString(), "/fields", "/name", "Court File Unique ID", "/value");
             String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(stringBuilder.toString(), "/fields", "/name", "Case Flags", "/value")
                                                                      , "", "", "11", "");
