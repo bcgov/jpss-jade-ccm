@@ -1509,7 +1509,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags);
+        List<CourtCaseData> courtCaseDataList = new ArrayList<CourtCaseData>();
+        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags,courtCaseDataList);
         exchange.getMessage().setBody(d);
       }
     })
