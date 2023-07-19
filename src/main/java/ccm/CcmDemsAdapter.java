@@ -392,48 +392,46 @@ public class CcmDemsAdapter extends RouteBuilder {
         .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") // call to get the case attributes
         
         
-        .unmarshal().json()
+        //.unmarshal().json()
         .doTry()
           .setProperty("length", jsonpath("$.length()"))
-          .convertBodyTo(String.class)
+          .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
+          //.convertBodyTo(String.class)
           .choice()
           .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
           .log(LoggingLevel.INFO, "case found, processing json values")
           .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
-            String courtCaseData = exchange.getIn().getBody(String.class);
-            log.info("received court data : " + courtCaseData);
-            String[] jsonNodes = courtCaseData.split(",");
-
-
-            //String extractedValue = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "Court File Unique ID", "/value");
-            
-            String caseId = jsonNodes[0].split("=")[1];
-            String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "fields", "name", "Case State","value");
-            String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "/Primary Agency File ID","/value");
-            String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "/Agency File ID","/value");
-            String courtFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseData, "/fields", "/name", "/Court File Unique ID","/value");
-            String status = jsonNodes[7].split("=")[1];
            
+              String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+            //log.info("received court data : " + courtCaseJson);
+            String[] jsonNodes = courtCaseJson.split(",");
+
+            
+            String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
+            String caseId = jsonNodes[0].split(":")[1];
+            String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Case State","/value");
+            String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Primary Agency File ID","/value");
+            String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Agency File ID","/value");
+           
+            String status = jsonNodes[7].split(":")[1];
             StringBuilder caseObjectJson = new StringBuilder("");
             caseObjectJson.append("{");
-            caseObjectJson.append("\"id\": ");
+            caseObjectJson.append("\"id\":");
             caseObjectJson.append("\"" + caseId + "\",");
             caseObjectJson.append("\"Case State\": ");
-            caseObjectJson.append("\"" + caseState + "\",");
+            caseObjectJson.append( "\"" + caseState + "\",");
             caseObjectJson.append("\"Primary Agency File Id\": ");
             caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
             caseObjectJson.append("\"Agency File Id\": ");
             caseObjectJson.append("\"" + agencyFileId + "\",");
             caseObjectJson.append("\"Court File Unique Id\": ");
-            caseObjectJson.append("\"" + courtFileId + "\",");
+            caseObjectJson.append("\"" + courtFileUniqueId + "\",");
             caseObjectJson.append("\"Status\": ");
-            caseObjectJson.append("\"" + status + "\"");
+            caseObjectJson.append( status);
             caseObjectJson.append("}");
-
-            log.info("case id from json  : "  + caseId);
-            
+                      
             log.info("built json : " + caseObjectJson.toString());
            
             exchange.getMessage().setBody(caseObjectJson.toString());
@@ -1348,6 +1346,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
         String caseFlagId = exchange.getProperty("caseFlagId", String.class);
+       
         String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
         exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
         String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
