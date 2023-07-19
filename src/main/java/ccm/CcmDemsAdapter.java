@@ -377,7 +377,7 @@ public class CcmDemsAdapter extends RouteBuilder {
    // call to get the case id
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
     
-    .log(LoggingLevel.INFO, "Returned case id: '${body}'")
+   // .log(LoggingLevel.INFO, "Returned case id: '${body}'")
     
     .doTry()
       .log(LoggingLevel.INFO, "headers: ${headers}")
@@ -390,32 +390,32 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setBody(simple("{\"id\": \"${exchangeProperty.dems_case_id}\"}"))
         
         .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") // call to get the case attributes
-        
-        
-        //.unmarshal().json()
         .doTry()
+        //.setProperty("recordId").simple("${body[id]}")
+        //.setProperty("caseId", jsonpath("$.id"))
+          //.setProperty("caseStatus", jsonpath("$.status"))
           .setProperty("length", jsonpath("$.length()"))
+          //.setProperty("caseId", simple("${body[id]}"))
           .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
-          //.convertBodyTo(String.class)
           .choice()
           .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
-          .log(LoggingLevel.INFO, "case found, processing json values")
+          //.log(LoggingLevel.INFO, "case found, processing json values")
           .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
            
               String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
             //log.info("received court data : " + courtCaseJson);
-            String[] jsonNodes = courtCaseJson.split(",");
-
-            
+           String[] jsonNodes = courtCaseJson.split(",");
             String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
             String caseId = jsonNodes[0].split(":")[1];
+            //String caseId = (String)exchange.getProperty("caseId");
             String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Case State","/value");
             String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Primary Agency File ID","/value");
             String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Agency File ID","/value");
            
             String status = jsonNodes[7].split(":")[1];
+            //String status = exchange.getProperty("caseStatus", String.class);
             StringBuilder caseObjectJson = new StringBuilder("");
             caseObjectJson.append("{");
             caseObjectJson.append("\"id\":");
@@ -431,9 +431,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             caseObjectJson.append("\"Status\": ");
             caseObjectJson.append( status);
             caseObjectJson.append("}");
-                      
-            log.info("built json : " + caseObjectJson.toString());
-           
+            //log.info("built json : " + caseObjectJson.toString());
             exchange.getMessage().setBody(caseObjectJson.toString());
           }
 
