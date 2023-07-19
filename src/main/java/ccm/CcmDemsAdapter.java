@@ -1239,7 +1239,6 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
-        String caseFlagId = exchange.getProperty("caseFlagId", String.class);
         String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
         exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
         String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
@@ -1419,8 +1418,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .doTry()
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"DEMS case updated.")
-      .setProperty("courtCaseId", jsonpath("$.id"))
-      .log(LoggingLevel.INFO,"Court case id : ${exchangeProperty.courtCaseId} courtCaseId ")
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
       .setProperty("ParticipantTypeFilter", simple("Accused"))
@@ -1433,7 +1430,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
       .log(LoggingLevel.DEBUG,"${body}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
       .split()
         .jsonpathWriteAsString("$.accused_persons")
@@ -1547,7 +1544,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
     .log(LoggingLevel.DEBUG,"${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()
       .jsonpathWriteAsString("$.accused_persons")
@@ -1882,10 +1879,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request (key=${header[key]})...")
+    .log(LoggingLevel.INFO,"Processing request (key=${header[key]})...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
