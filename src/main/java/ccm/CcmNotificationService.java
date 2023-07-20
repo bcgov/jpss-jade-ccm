@@ -540,7 +540,17 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO,"Retrieve latest court case details from JUSTIN.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_key}")
+    .setHeader("key").simple("${header.event_key}")
+    .setHeader("event_key",simple("${header.event_key}"))
+    .log(LoggingLevel.INFO,"Retrieve court case status first")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      
+    .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
+      .unmarshal().json()
+      .choice()
+      .when(simple("${body[Status]} == 'Active'"))
+      .setHeader("number").simple("${header.event_key}")
     .to("http://ccm-lookup-service/getCourtCaseDetails")
     .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -551,6 +561,10 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/updateCourtCase")
     .log(LoggingLevel.DEBUG,"Update court case auth list.")
     .to("direct:processCourtCaseAuthListChanged")
+    .endChoice()
+    .otherwise()
+    .log(LoggingLevel.INFO, "Other path here possibly")
+    .end()
     ;
   }
 
