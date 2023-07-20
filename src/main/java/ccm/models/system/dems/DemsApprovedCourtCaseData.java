@@ -89,7 +89,7 @@ public class DemsApprovedCourtCaseData {
         DemsFieldData courtFileLevel = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_LEVEL.getLabel(), courtFileLevelList);
         DemsFieldData fileClass = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CLASS.getLabel(), fileClassList);
         DemsFieldData designation = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DESIGNATION.getLabel(), designationList);
-        DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(primaryCourtCaseData.getCourt_file_sworn_date()));
+        //DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(primaryCourtCaseData.getCourt_file_sworn_date()));
         DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), primaryCourtCaseData.getOffence_description_list());
         DemsFieldData courtFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), primaryCourtCaseData.getCourt_file_number_seq_type());
         DemsFieldData courtFileDetails = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE_DETAILS.getLabel(), primaryCourtCaseData.getCourt_home_registry_identifier() + ": " + primaryCourtCaseData.getCourt_file_number_seq_type());
@@ -104,8 +104,9 @@ public class DemsApprovedCourtCaseData {
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         //added as part of jade-2621
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date earliestDate = new Date();
         try{
-            Date earliestDate = dateFormat.parse(primaryCourtCaseData.getCourt_file_sworn_date());
+            earliestDate = dateFormat.parse(primaryCourtCaseData.getCourt_file_sworn_date());
             for (CourtCaseData d : courtCaseDataList){
                 Date dd = dateFormat.parse(d.getCourt_file_sworn_date());
                 if(dd.before(earliestDate)){
@@ -115,6 +116,7 @@ public class DemsApprovedCourtCaseData {
         }catch(ParseException e){
             e.printStackTrace();
         }
+        DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(earliestDate)));
         List<CourtCaseData> ccdList = new ArrayList<CourtCaseData>();
         Set<String> dataList = new HashSet<>();
         dataList.add(primaryCourtCaseData.getCourt_home_registry_name());
@@ -130,7 +132,7 @@ public class DemsApprovedCourtCaseData {
         //ccdList.add(primaryCourtCaseData);
         for (CourtCaseData courtcase : courtCaseDataList) {
             //ccdList.add(courtcase);
-            dataList.add(courtcase.getCourt_home_registry());
+            dataList.add(courtcase.getCourt_home_registry_name());
             dataList.add(courtcase.getCourt_home_registry());
             dataList.add(courtcase.getCourt_file_level());
             dataList.add(courtcase.getCourt_file_class());
@@ -159,12 +161,12 @@ public class DemsApprovedCourtCaseData {
             if(courtFileNobuilder.length() > 0) {
                 courtFileNobuilder.append("; ");
             }
-            courtFileNobuilder.append(primaryCourtCaseData.getCourt_file_no()).append("-").append(primaryCourtCaseData.getCourt_file_number_seq_type());
+            courtFileNobuilder.append(primaryCourtCaseData.getCourt_file_number_seq_type());
             for (CourtCaseData courtcase : courtCaseDataList) {
                 if(courtFileNobuilder.length() > 0) {
                     courtFileNobuilder.append("; ");
                 }
-                courtFileNobuilder.append(courtcase.getCourt_file_no()).append("-").append(courtcase.getCourt_file_number_seq_type());
+                courtFileNobuilder.append(courtcase.getCourt_file_number_seq_type());
             }
         }dataList.add(courtFileNobuilder.toString());
         StringBuilder courtFileDetailbuilder = new StringBuilder();//primaryCourtCaseData.getCourt_home_registry_identifier() + ": " + primaryCourtCaseData.getCourt_file_number_seq_type()
@@ -172,12 +174,12 @@ public class DemsApprovedCourtCaseData {
             if(courtFileDetailbuilder.length() > 0) {
                 courtFileDetailbuilder.append("; ");
             }
-            courtFileDetailbuilder.append(primaryCourtCaseData.getCourt_home_registry_identifier()).append(":").append(primaryCourtCaseData.getCourt_file_no()).append("-").append(primaryCourtCaseData.getCourt_file_number_seq_type());
+            courtFileDetailbuilder.append(primaryCourtCaseData.getCourt_home_registry_identifier()).append(":").append(primaryCourtCaseData.getCourt_file_number_seq_type());
             for (CourtCaseData courtcase : courtCaseDataList) {
                 if(courtFileDetailbuilder.length() > 0) {
                     courtFileDetailbuilder.append("; ");
                 }
-                courtFileDetailbuilder.append(courtcase.getCourt_home_registry_identifier()).append(":").append(primaryCourtCaseData.getCourt_file_no()).append("-").append(primaryCourtCaseData.getCourt_file_number_seq_type());
+                courtFileDetailbuilder.append(courtcase.getCourt_home_registry_identifier()).append(":").append(primaryCourtCaseData.getCourt_file_number_seq_type());
             }
         }dataList.add(courtFileDetailbuilder.toString());
         StringBuilder chargebuilder = new StringBuilder();
@@ -228,7 +230,8 @@ public class DemsApprovedCourtCaseData {
                 fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(), raf.getAgency_file_no()));
             }
         }
-
+        //just for testing purpose
+//fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CROWN_OFFICE.getLabel(), dataList));
         setFields(fieldData);
     }
 
