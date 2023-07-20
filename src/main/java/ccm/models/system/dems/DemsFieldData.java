@@ -93,7 +93,7 @@ public class DemsFieldData {
         CASE_STATE("Case State"),
         //added as part of jade-2621
         PRIMARY_AGENCY_FILE_ID("Primary Agency File ID"),
-        PRIMARY_AGENCY_FILE_NO("Primary Agency File No");
+        PRIMARY_AGENCY_FILE_NO("Primary Agency File No.");
 
         private String label;
 
