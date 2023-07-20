@@ -117,7 +117,7 @@ public class DemsApprovedCourtCaseData {
             e.printStackTrace();
         }
         DemsFieldData swornDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SWORN_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(earliestDate)));
-        List<CourtCaseData> ccdList = new ArrayList<CourtCaseData>();
+        //List<String> dataList = new ArrayList<String>();
         Set<String> dataList = new HashSet<>();
         dataList.add(primaryCourtCaseData.getCourt_home_registry_name());
         dataList.add(primaryCourtCaseData.getCourt_home_registry());
@@ -126,10 +126,10 @@ public class DemsApprovedCourtCaseData {
         dataList.add(primaryCourtCaseData.getCourt_file_designation());
         dataList.add(primaryCourtCaseData.getAnticipated_crown_election());
         dataList.add(primaryCourtCaseData.getApproving_crown_agency_name());
-        //for (String caseFlag : primaryCourtCaseData.getCase_flags()) {
-            dataList.addAll(caseFlagList);
-        //}
+        dataList.addAll(caseFlagList);
         //ccdList.add(primaryCourtCaseData);
+        
+       // System.out.println("dataList:"+ dataList);
         List<String> courtCaseDataCaseFlagList = new ArrayList<String>();
         for (CourtCaseData courtcase : courtCaseDataList) {
             //ccdList.add(courtcase);
@@ -169,7 +169,7 @@ public class DemsApprovedCourtCaseData {
                 }
             }
             dataList.addAll(courtCaseDataCaseFlagList);
-        }
+        }//System.out.println("dataList:"+ dataList);
         StringBuilder courtFileIDbuilder = new StringBuilder();
         if(primaryCourtCaseData.getCourt_file_id() != null) {
             if(courtFileIDbuilder.length() > 0) {
@@ -222,7 +222,7 @@ public class DemsApprovedCourtCaseData {
                 chargebuilder.append(courtcase.getOffence_description_list());
             }
         }dataList.add(chargebuilder.toString());
-
+        //System.out.println("dataList:"+ dataList);
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(courtFileId);
         fieldData.add(crownElection);
