@@ -68,20 +68,6 @@ public class DemsApprovedCourtCaseData {
                 }
             }
         }
-        List<String> courtFileLevelList = new ArrayList<String>();
-        courtFileLevelList.add(primaryCourtCaseData.getCourt_file_level());
-        List<String> fileClassList = new ArrayList<String>();
-        fileClassList.add(primaryCourtCaseData.getCourt_file_class());
-        List<String> designationList = new ArrayList<String>();
-        designationList.add(primaryCourtCaseData.getCourt_file_designation());
-        List<String> courtHomeRegList = new ArrayList<String>();
-        courtHomeRegList.add(primaryCourtCaseData.getCourt_home_registry());
-        List<String> courtHomeRegNameList = new ArrayList<String>();
-        courtHomeRegNameList.add(primaryCourtCaseData.getCourt_home_registry_name());
-        List<String> crownElectionList = new ArrayList<String>();
-        crownElectionList.add(primaryCourtCaseData.getAnticipated_crown_election());
-        List<String> crownOfficeList = new ArrayList<String>();
-        crownOfficeList.add(primaryCourtCaseData.getApproving_crown_agency_name());
         
         //DemsFieldData rmsProcStatus = new FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
