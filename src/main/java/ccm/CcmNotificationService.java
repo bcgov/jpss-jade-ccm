@@ -460,7 +460,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
@@ -546,10 +546,10 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       
-    .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
     .choice()
-      .when(simple("${body[Status]} == 'Active'"))
+      .when(simple("${body[status]} == 'Active'"))
         .setHeader("number").simple("${header.event_key}")
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
@@ -1111,35 +1111,35 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .choice()
       .when(simple(" ${exchangeProperty.createCase} == 'true'"))
-      .process(new Processor() {
-        @Override
-        public void process(Exchange ex) {
-          // KPI: Preserve original event properties
-          ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-          ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
-          ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
-          ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
-          ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            // KPI: Preserve original event properties
+            ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+            ex.setProperty("kpi_event_topic_offset_orig", ex.getProperty("kpi_event_topic_offset"));
+            ex.setProperty("kpi_event_topic_name_orig", ex.getProperty("kpi_event_topic_name"));
+            ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
+            ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
-          ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
-          derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
-          derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
+            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
+            derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
+            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
 
-          ex.getMessage().setBody(derived_event);
+            ex.getMessage().setBody(derived_event);
 
-          // KPI: Set new event object
-          ex.setProperty("kpi_event_object", derived_event);
-        }
-      })
-      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
-      .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-      .to("direct:processChargeAssessmentCreated")
-      // KPI: restore previous values
-      .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
-      .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
-      .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
-      .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
-      .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
+            // KPI: Set new event object
+            ex.setProperty("kpi_event_object", derived_event);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+        .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
+        .to("direct:processChargeAssessmentCreated")
+        // KPI: restore previous values
+        .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+        .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+        .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+        .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
       .endChoice()
       .otherwise()
         .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")

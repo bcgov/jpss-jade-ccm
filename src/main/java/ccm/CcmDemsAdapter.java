@@ -355,104 +355,97 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
         .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
       .end()
-   .end();
-
+   .end()
+   ;
   }
 
-   private void getCourtCaseStatusByKey() {
-      // use method name as route id
+  private void getCourtCaseStatusByKey() {
+    // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     //IN: header.number
     from("direct:" + routeId)
-      .routeId(routeId)
-      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-      
-      .setProperty("key", simple("${header.event_key}"))
-      .log(LoggingLevel.INFO,"court status exists key = ${exchangeProperty.key}")
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-   // call to get the case id
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    .doTry()
-      //.log(LoggingLevel.INFO, "headers: ${headers}")
-      .setProperty("length",jsonpath("$.length()"))
-      .endDoTry()
-      .choice()
-        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
-          .setProperty("dems_case_id", jsonpath("$[0].id"))
-          .setBody(simple("{\"id\": \"${exchangeProperty.dems_case_id}\"}"))
-        
-        .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}") // call to get the case attributes
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"agencyFileId\": \"\", \"courtFileId\": \"\", \"status\": \"\"}"))
+
+    .setProperty("key", simple("${header.event_key}"))
+    .log(LoggingLevel.INFO,"court status exists key = ${exchangeProperty.key}")
+    
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("id", jsonpath("$.id"))
+
+    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
+    .choice()
+      .when(simple("${exchangeProperty.id} != ''"))
         .doTry()
-          .setProperty("length", jsonpath("$.length()"))
-          .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
+          .to("direct:getCourtCaseDataById")
           .choice()
-          .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
-          .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-           
-            String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
-            String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
-            String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
-            String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Case State","/value");
-            String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Primary Agency File ID","/value");
-            String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Agency File ID","/value");
-            String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
+            .when(simple("${header.CamelHttpResponseCode} == 200"))
+              .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                
+                  String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+                  String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
+                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
+                  String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Case State","/value");
+                  String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Primary Agency File ID","/value");
+                  String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Agency File ID","/value");
+                  String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
 
-            StringBuilder caseObjectJson = new StringBuilder("");
-            caseObjectJson.append("{");
-            caseObjectJson.append("\"id\":");
-            caseObjectJson.append("\"" + caseId + "\",");
-            caseObjectJson.append("\"Case State\": ");
-            caseObjectJson.append( "\"" + caseState + "\",");
-            caseObjectJson.append("\"Primary Agency File Id\": ");
-            caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
-            caseObjectJson.append("\"Agency File Id\": ");
-            caseObjectJson.append("\"" + agencyFileId + "\",");
-            caseObjectJson.append("\"Court File Unique Id\": ");
-            caseObjectJson.append("\"" + courtFileUniqueId + "\",");
-            caseObjectJson.append("\"Status\": ");
-              caseObjectJson.append( "\"" + status + "\"");
-            caseObjectJson.append("}");
-            
-            exchange.getMessage().setBody(caseObjectJson.toString());
-          }
-
-      })
-      .when(simple("${header.CamelHttpResponseCode} == 200"))
-          .log(LoggingLevel.DEBUG,"body = '${body}'.")
-          .setProperty("id", simple(""))
-          .setBody(simple("{\"id\": \"\"}"))
-          .setHeader("CamelHttpResponseCode", simple("200"))
-          .log(LoggingLevel.INFO,"Case not found.")
-        .endChoice()
-      .endDoTry()
+                  StringBuilder caseObjectJson = new StringBuilder("");
+                  caseObjectJson.append("{");
+                  caseObjectJson.append("\"id\":");
+                  caseObjectJson.append("\"" + caseId + "\",");
+                  caseObjectJson.append("\"caseState\": ");
+                  caseObjectJson.append( "\"" + caseState + "\",");
+                  caseObjectJson.append("\"primaryAgencyFileId\": ");
+                  caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
+                  caseObjectJson.append("\"agencyFileId\": ");
+                  caseObjectJson.append("\"" + agencyFileId + "\",");
+                  caseObjectJson.append("\"courtFileId\": ");
+                  caseObjectJson.append("\"" + courtFileUniqueId + "\",");
+                  caseObjectJson.append("\"status\": ");
+                  caseObjectJson.append( "\"" + status + "\"");
+                  caseObjectJson.append("}");
+                  
+                  exchange.getMessage().setBody(caseObjectJson.toString());
+                }
+              })
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.caseNotFound}"))
+              .setHeader("CamelHttpResponseCode", simple("200"))
+              .log(LoggingLevel.INFO,"Case not found.")
+            .endChoice()
+          .end() // choice end
+        .endDoTry()
         .doCatch(Exception.class)
-        .log(LoggingLevel.DEBUG,"Exception: ${exception}")
-        .log(LoggingLevel.DEBUG,"Exchange Context: ${exchange.context}")
-        .choice()
-          //.when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("404"))
-          .when().simple("${exception.statusCode} == 400")
-            .log(LoggingLevel.INFO,"Bad request.  HTTP response code = ${exception.statusCode}")
-            .log(LoggingLevel.DEBUG,"Exception: '${exception}'")
-            .log(LoggingLevel.DEBUG,"Headers: '${headers}'")
-          .endChoice()
-          .otherwise()
-            .log(LoggingLevel.ERROR,"Unknown error.  HTTP response code = ${exception.statusCode}")
-            .log(LoggingLevel.DEBUG,"Headers: '${headers}'")
-          .endChoice()
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+          .setBody(simple("${exchangeProperty.caseNotFound}"))
+          .setHeader("CamelHttpResponseCode", simple("200"))
         .end()
-      
-    .end();
+
+
+      .endChoice()
+      .otherwise()
+        .setBody(simple("${exchangeProperty.caseNotFound}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .log(LoggingLevel.INFO,"Case not found.")
+      .endChoice()
+    .end()
+    .log(LoggingLevel.DEBUG, "${body}")
+  ;
   }
  
   private void getCourtCaseStatusExists() {
      // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: exchangeProeprty.key
+    //IN: header.number
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
