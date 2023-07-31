@@ -222,12 +222,12 @@ public class DemsApprovedCourtCaseData {
             if(chargebuilder.length() > 0) {
                 chargebuilder.append("; ");
             }
-            chargebuilder.append(primaryCourtCaseData.getOffence_description_list());
+            chargebuilder.append(primaryCourtCaseData.getOffence_description_list().replaceAll(",", ";"));
             for (CourtCaseData courtcase : courtCaseDataList) {
                 if(chargebuilder.length() > 0) {
                     chargebuilder.append("; ");
                 }
-                chargebuilder.append(courtcase.getOffence_description_list());
+                chargebuilder.append(courtcase.getOffence_description_list().replaceAll(",", ";"));
             }
         }
         DemsFieldData approvedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CHARGES.getLabel(), chargebuilder.toString());
