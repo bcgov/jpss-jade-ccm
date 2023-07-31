@@ -1428,7 +1428,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+        List<ChargeAssessmentData> chargeAssessmentData = new ArrayList<ChargeAssessmentData>();
+        chargeAssessmentData.add(b);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b, chargeAssessmentData);
         exchange.getMessage().setBody(d);
       }
     })
@@ -1504,9 +1506,11 @@ public class CcmDemsAdapter extends RouteBuilder {
             // but the justin copy has k set, so remove it.
             b.getCase_flags().remove("K");
           }
-
+         
         }
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+         List<ChargeAssessmentData> chargeAssessmentData = new ArrayList<ChargeAssessmentData>();
+          chargeAssessmentData.add(b);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b, chargeAssessmentData);
         exchange.getMessage().setBody(d);
       }
     })

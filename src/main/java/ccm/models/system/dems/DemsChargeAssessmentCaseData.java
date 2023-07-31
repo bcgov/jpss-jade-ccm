@@ -1,6 +1,11 @@
 package ccm.models.system.dems;
 
 import java.util.List;
+import java.util.ListIterator;
+import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
@@ -23,10 +28,11 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData commonData) {
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList) 
+    {
 
         StringBuilder case_name = new StringBuilder();
-        for (CaseAccused ba : commonData.getAccused_persons()) {
+        for (CaseAccused ba : primaryChargeAssessmentData.getAccused_persons()) {
             // Map 87
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
@@ -54,14 +60,14 @@ public class DemsChargeAssessmentCaseData {
         }
         setName(case_name.toString());
         setTimeZoneId(PACIFIC_TIMEZONE);
-        setKey(commonData.getRcc_id());
+        setKey(primaryChargeAssessmentData.getRcc_id());
         setDescription("");
         setTemplateCase(caseTemplateId);
 
 
         // Map any case flags that exist
         List<String> caseFlagList = new ArrayList<String>();
-        for (String caseFlag : commonData.getCase_flags()) {
+        for (String caseFlag : primaryChargeAssessmentData.getCase_flags()) {
             if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
                 caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel());
             } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel().equals(caseFlag)) {
@@ -85,17 +91,17 @@ public class DemsChargeAssessmentCaseData {
             }
         }
         String caseDesionLabel = null;
-        if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.name().equals(commonData.getCase_decision_cd())) {
+        if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.name().equals(primaryChargeAssessmentData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.getName();
         }
 
@@ -103,36 +109,120 @@ public class DemsChargeAssessmentCaseData {
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
         List<String> assessmentCrownList = new ArrayList<String>();
-        assessmentCrownList.add(commonData.getAssessment_crown_name());
+        assessmentCrownList.add(primaryChargeAssessmentData.getAssessment_crown_name());
         List<String> initiatingAgencyNameList = new ArrayList<String>();
-        initiatingAgencyNameList.add(commonData.getInitiating_agency_name());
+        initiatingAgencyNameList.add(primaryChargeAssessmentData.getInitiating_agency_name());
         List<String> proposedCrownOfficeList = new ArrayList<String>();
-        proposedCrownOfficeList.add(commonData.getProposed_crown_office());
+        proposedCrownOfficeList.add(primaryChargeAssessmentData.getProposed_crown_office());
+        // added as part of JADE-2594
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
-        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), commonData.getRcc_id());
-        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), commonData.getAgency_file());
-        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getRcc_submit_date()));
+        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), primaryChargeAssessmentData.getRcc_id());
+        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), primaryChargeAssessmentData.getAgency_file());
+        String earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
+        String earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
+        String propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
+        String limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getLimitation_date());
+        java.util.Date earliestOffenceDateObj = null;
+        java.util.Date propAppDateObj = null;
+        java.util.Date limitationDateObj = null;
+        java.util.Date earliestSubmitDateObj = null;
+
+        try {
+            earliestSubmitDateObj = dateFormat.parse(earliestSubmitDate);
+            earliestOffenceDateObj = dateFormat.parse(earliestOffenceDate);
+            propAppDateObj = dateFormat.parse(propAppearanceDate);
+            limitationDateObj = dateFormat.parse(limitationDateStr);
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+       
+        if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()){
+            ListIterator<ChargeAssessmentData> chargeAssessmentDateIter = (ListIterator<ChargeAssessmentData>) chargeAssessmentDataList.iterator();
+            while(chargeAssessmentDateIter.hasNext()) {
+                ChargeAssessmentData data = chargeAssessmentDateIter.next();
+                if (!data.getRcc_submit_date().isEmpty()) {
+                    
+                    java.util.Date currentSubmitDateObj = null;
+                    try {
+                        currentSubmitDateObj = dateFormat.parse(data.getRcc_submit_date());
+                    } catch (ParseException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    if (currentSubmitDateObj != null && earliestSubmitDateObj != null) {
+                        if (currentSubmitDateObj.before(earliestSubmitDateObj)){
+                            earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentSubmitDateObj));
+                        }
+                    }
+                }
+                if (!data.getEarliest_offence_date().isEmpty()){
+                    java.util.Date currentOffenceDate = null;
+                    try {
+                        currentOffenceDate = dateFormat.parse(data.getEarliest_offence_date());
+                    } catch (ParseException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    if (currentOffenceDate.before(earliestOffenceDateObj)){
+                        earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentOffenceDate));
+                    }
+                }
+                if (!data.getEarliest_proposed_appearance_date().isEmpty()){
+                     java.util.Date currentPropAppDate = null;
+                    try {
+                        currentPropAppDate = dateFormat.parse(data.getEarliest_proposed_appearance_date());
+                    } catch (ParseException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    if (currentPropAppDate.before(propAppDateObj)){
+                        propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentPropAppDate));
+                    }
+                }
+                 if (!data.getLimitation_date().isEmpty()){
+                     java.util.Date currentLimDate = null;
+                    try {
+                        currentLimDate = dateFormat.parse(data.getLimitation_date());
+                    } catch (ParseException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    if (currentLimDate.before(limitationDateObj)){
+                        limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(currentLimDate.toString());
+                    }
+                }
+                
+            }
+        }
+        
+        
+        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestSubmitDate));
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
         
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
-        DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), commonData.getCharge());
-        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), commonData.getInitiating_agency());
+        DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryChargeAssessmentData.getCharge());
+        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), primaryChargeAssessmentData.getInitiating_agency());
         DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), initiatingAgencyNameList);
-        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), commonData.getInvestigating_officer());
+        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), primaryChargeAssessmentData.getInvestigating_officer());
         
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
-        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getEarliest_offence_date()));
-        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), commonData.getEarliest_proposed_appearance_date());
-        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), commonData.getProposed_process_type_list());
-        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getLimitation_date()));
-        DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), commonData.getRcc_status_code());
+      
+
+        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestOffenceDate));
+        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(propAppearanceDate));
+        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), primaryChargeAssessmentData.getProposed_process_type_list());
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(limitationDateStr));
+        DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryChargeAssessmentData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
 
         StringBuilder accused_name_list = new StringBuilder();
 
-        if(commonData.getAccused_persons() != null) {
-            for (CaseAccused accused : commonData.getAccused_persons()) {
+        if(primaryChargeAssessmentData.getAccused_persons() != null) {
+            for (CaseAccused accused : primaryChargeAssessmentData.getAccused_persons()) {
                 // Map 101
                 if(accused_name_list.length() > 0) {
                     accused_name_list.append(", ");
