@@ -2,11 +2,12 @@ package ccm.models.system.dems;
 
 import java.util.List;
 import java.util.ListIterator;
-import java.sql.Date;
+import java.util.Set;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.ZonedDateTime;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.ChargeAssessmentData;
@@ -108,12 +109,7 @@ public class DemsChargeAssessmentCaseData {
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
-        List<String> assessmentCrownList = new ArrayList<String>();
-        assessmentCrownList.add(primaryChargeAssessmentData.getAssessment_crown_name());
-        List<String> initiatingAgencyNameList = new ArrayList<String>();
-        initiatingAgencyNameList.add(primaryChargeAssessmentData.getInitiating_agency_name());
-        List<String> proposedCrownOfficeList = new ArrayList<String>();
-        proposedCrownOfficeList.add(primaryChargeAssessmentData.getProposed_crown_office());
+      
         // added as part of JADE-2594
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -138,7 +134,24 @@ public class DemsChargeAssessmentCaseData {
             e.printStackTrace();
         }
 
-       
+        List<String> assessmentCrownList = new ArrayList<String>();
+        Set<String> assessmentCrownSet = new HashSet<>();
+        assessmentCrownSet.add(primaryChargeAssessmentData.getAssessment_crown_name());
+        
+        List<String> initiatingAgencyNameList = new ArrayList<String>();
+        Set<String> initiatingAgencyNameSet = new HashSet<>();
+        initiatingAgencyNameSet.add(primaryChargeAssessmentData.getInitiating_agency_name());
+
+        //initiatingAgencyNameList.add(primaryChargeAssessmentData.getInitiating_agency_name());
+        List<String> proposedCrownOfficeList = new ArrayList<String>();
+        Set<String> proposedCrownOfficeSet = new HashSet<>();
+        proposedCrownOfficeSet.add(primaryChargeAssessmentData.getProposed_crown_office());
+        //proposedCrownOfficeList.add(primaryChargeAssessmentData.getProposed_crown_office());
+        List<String> initiatingAgencyList = new ArrayList<String>();
+        Set<String> initiatingAgencySet = new HashSet<>();
+        initiatingAgencySet.add(primaryChargeAssessmentData.getInitiating_agency());
+        //initiatingAgencyList.add(primaryChargeAssessmentData.getInitiating_agency());
+
         if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()){
             ListIterator<ChargeAssessmentData> chargeAssessmentDateIter = (ListIterator<ChargeAssessmentData>) chargeAssessmentDataList.iterator();
             while(chargeAssessmentDateIter.hasNext()) {
@@ -194,17 +207,36 @@ public class DemsChargeAssessmentCaseData {
                         limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(currentLimDate.toString());
                     }
                 }
-                
+                /*merge
+                Assessment Crown (agency file)
+                Initiating Agency Name (agency file)
+                Proposed Crown Office (agency file)
+                Initiating Agency (BCPSDEMS-1086) */
+                if (!assessmentCrownSet.contains(data.getAssessment_crown_name())){
+                    assessmentCrownSet.add(data.getAssessment_crown_name());
+                }
+               if (!initiatingAgencyNameSet.contains(data.getInitiating_agency_name())){
+                initiatingAgencyNameSet.add(data.getInitiating_agency_name());
+               }
+               if (!proposedCrownOfficeSet.contains(data.getProposed_crown_office())) {
+                    proposedCrownOfficeSet.add(data.getProposed_crown_office());
+               }
+               if (!initiatingAgencySet.contains(data.getInitiating_agency())) {
+                initiatingAgencySet.add(data.getInitiating_agency());
+               }
             }
         }
-        
+        assessmentCrownList.addAll(assessmentCrownSet);
+        initiatingAgencyNameList.addAll(initiatingAgencyNameSet);
+        proposedCrownOfficeList.addAll(proposedCrownOfficeSet);
+        initiatingAgencyList.addAll(initiatingAgencySet);
         
         DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestSubmitDate));
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
         
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryChargeAssessmentData.getCharge());
-        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), primaryChargeAssessmentData.getInitiating_agency());
+        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(),initiatingAgencyList);
         DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), initiatingAgencyNameList);
         DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), primaryChargeAssessmentData.getInvestigating_officer());
         
@@ -218,7 +250,9 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryChargeAssessmentData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-
+        // added as part of JADE-2954
+        DemsFieldData primaryAgencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(), primaryChargeAssessmentData.getRcc_id());
+        DemsFieldData primaryAgencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(), primaryChargeAssessmentData.getAgency_file());
         StringBuilder accused_name_list = new StringBuilder();
 
         if(primaryChargeAssessmentData.getAccused_persons() != null) {
@@ -252,6 +286,8 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(accusedFullName);
         fieldData.add(rccStatus);
         fieldData.add(lastJustinUpdate);
+        fieldData.add(primaryAgencyFileId);
+        fieldData.add(primaryAgencyFileNo);
 
         setFields(fieldData);
 
