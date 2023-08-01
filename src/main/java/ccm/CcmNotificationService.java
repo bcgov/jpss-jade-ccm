@@ -63,6 +63,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseChanged();
     processPrimaryCourtCaseChanged();
     processManualCourtCaseChanged();
+    processCaseMerge();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
@@ -460,7 +461,7 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
-    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
@@ -509,6 +510,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
         .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
         .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
+      .endChoice()
     .end()
     ;
     //throw new HttpOperationFailedException("testingCCMNotificationService",404,"Exception raised","CCMNotificationService",null, routeId);
@@ -538,15 +540,13 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .log(LoggingLevel.INFO,"Retrieve latest court case details from JUSTIN.")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.event_key}")
     .setHeader("event_key",simple("${header.event_key}"))
     .log(LoggingLevel.INFO,"Retrieve court case status first")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+
     .unmarshal().json()
     .choice()
       .when(simple("${body[status]} == 'Active'"))
@@ -920,18 +920,62 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
 
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
-
     .setBody(simple("${exchangeProperty.metadata_data}"))
-
+    // go through list of rcc_ids and check on the state of the rcc in dems
+    // and copy into an array.
+    .setProperty("length",jsonpath("$.related_agency_file.length()"))
+    .choice()
+      .when(simple("${exchangeProperty.length} > 1"))
+        // potential merge, since there is > 1 related agencies
+        // call merge method which will go through list of agencies,
+        // merge the records and inactivate non-primary ones.
+        .to("direct:processCaseMerge")
+      .endChoice()
+    .end()
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
       .setProperty("primary_yn", jsonpath("$.primary_yn"))
+
+      .setHeader("key").simple("${exchangeProperty.rcc_id}")
+      .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+      .log(LoggingLevel.INFO,"Retrieve court case status first")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      .log(LoggingLevel.INFO, "Dems case status: ${body}")
+
+    .end()
+
+
+
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
+
+      .setHeader("key").simple("${exchangeProperty.rcc_id}")
+      .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+      .log(LoggingLevel.INFO,"Retrieve court case status first")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      .log(LoggingLevel.INFO, "Dems case status: ${body}")
+
       .choice()
         .when(simple(" ${exchangeProperty.primary_yn} == 'Y'"))
           // TODO: retrieve the list of court file ids from DEMS, and retrieve the court file objects for those as well, if they
           // are not already listed in the related_court_cases
+          
+          .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
+          .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
           .to("direct:processPrimaryCourtCaseChanged")
+        .endChoice()
+        .otherwise()
+          // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
+
         .endChoice()
       .end()
 
@@ -1085,8 +1129,8 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("event_key_orig", simple("${header[event_key]}"))
-    .setHeader("number", jsonpath("$.rcc_id"))
-    .setHeader("event_key", jsonpath("$.rcc_id"))
+    .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+    .setHeader("event_key", simple("${exchangeProperty.rcc_id}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
@@ -1184,6 +1228,129 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
         .endChoice()
     .end()
+    ;
+  }
+
+  private void processCaseMerge() {
+    // use method name as route id
+    //IN: property = metadata_data
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO, "Inside processCaseMerge")
+
+    .removeProperties("primary_courtcase_data")
+    .removeProperties("primary_courtcase_object")
+    
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    // first, find the primary rcc and set it as the main agency file.
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
+
+
+      .choice()
+        .when(simple(" ${exchangeProperty.primary_yn} == 'Y'"))
+
+          .setHeader("number").simple("${exchangeProperty.rcc_id}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-lookup-service/getCourtCaseDetails")
+          .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
+          .setProperty("primary_courtcase_data", simple("${bodyAs(String)}"))
+
+          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+          .setProperty("primary_courtcase_object", body())
+          .setProperty("primary_rcc_id", simple("${exchangeProperty.rcc_id}"))
+
+        .endChoice()
+      .end()
+    .end()
+
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    // go through list of non-primary records and add to array list 
+    .split()
+      .jsonpathWriteAsString("$.related_agency_file")
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
+
+      .choice()
+        .when(simple(" ${exchangeProperty.primary_yn} != 'Y'"))
+          .setHeader("number").simple("${exchangeProperty.rcc_id}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-lookup-service/getCourtCaseDetails")
+          .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
+          .setProperty("primary_courtcase_data", simple("${bodyAs(String)}"))
+
+          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+          .setProperty("primary_courtcase_object", body())
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ChargeAssessmentData cad = exchange.getIn().getBody(ChargeAssessmentData.class);
+              ChargeAssessmentData assessmentData = (ChargeAssessmentData)exchange.getProperty("primary_courtcase_object", ChargeAssessmentData.class);
+              if(assessmentData != null) {
+                List<ChargeAssessmentData> relatedCa = assessmentData.getRelated_charge_assessments();
+                if(relatedCa == null) {
+                  relatedCa = new ArrayList<ChargeAssessmentData>();
+                }
+                relatedCa.add(cad);
+                assessmentData.setRelated_charge_assessments(relatedCa);
+
+              }
+              else {
+                // just set the first one in the list as primary, if none found in first iteration.
+                assessmentData = cad;
+                exchange.setProperty("primary_rcc_id", (String)exchange.getProperty("rcc_id", String.class));
+              }
+              exchange.setProperty("primary_courtcase_data", assessmentData);
+            }
+          })
+
+          .setHeader("key").simple("${exchangeProperty.rcc_id}")
+          .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+          .log(LoggingLevel.INFO,"Retrieve court case status first")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          // make sure that this primary record is not inactivated.
+          .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+          // if the non-primary case is active, then merge it into the primary.
+        .endChoice()
+      .end()
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ChargeAssessmentData metadata = (ChargeAssessmentData)exchange.getProperty("primary_courtcase_data", ChargeAssessmentData.class);
+
+        exchange.getMessage().setBody(metadata, ChargeAssessmentData.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+
+    .setProperty("primary_courtcase", simple("${bodyAs(String)}"))
+    .setBody(simple("${exchangeProperty.primary_courtcase}"))
+
+      //.setHeader("key").simple("${exchangeProperty.rcc_id}")
+      //.setHeader("event_key").simple("${exchangeProperty.rcc_id}")
+      //.log(LoggingLevel.INFO,"Retrieve court case status first")
+      //.setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      //.setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      //.to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      //.log(LoggingLevel.INFO, "Dems case status: ${body}")
+
+
+
+
+
+
+    .end()
+
+
     ;
   }
 

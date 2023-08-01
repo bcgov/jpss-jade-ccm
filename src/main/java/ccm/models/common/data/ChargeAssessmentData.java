@@ -33,10 +33,13 @@ public class ChargeAssessmentData {
 
     private List<CaseAccused> accused_persons;
 
+    private List<ChargeAssessmentData> related_charge_assessments;
+
     public ChargeAssessmentData() {
     }
 
     public ChargeAssessmentData(JustinAgencyFile jaf) {
+        related_charge_assessments = new ArrayList<ChargeAssessmentData>();
         setRcc_id(jaf.getRcc_id());
         setAgency_file(jaf.getInitiating_agency_identifier() + ": " + jaf.getAgency_file_no());
         setSecurity_clearance_level(jaf.getSecurity_clearance_level());
@@ -309,6 +312,14 @@ public class ChargeAssessmentData {
 
     public void setRcc_status_code(String rcc_status_code) {
         this.rcc_status_code = rcc_status_code;
+    }
+
+    public List<ChargeAssessmentData> getRelated_charge_assessments() {
+        return related_charge_assessments;
+    }
+
+    public void setRelated_charge_assessments(List<ChargeAssessmentData> related_charge_assessments) {
+        this.related_charge_assessments = related_charge_assessments;
     }
 
 

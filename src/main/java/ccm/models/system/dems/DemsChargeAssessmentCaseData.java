@@ -23,10 +23,10 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData commonData) {
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryCommonData, ChargeAssessmentData commonDataList) {
 
         StringBuilder case_name = new StringBuilder();
-        for (CaseAccused ba : commonData.getAccused_persons()) {
+        for (CaseAccused ba : primaryCommonData.getAccused_persons()) {
             // Map 87
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
@@ -54,14 +54,14 @@ public class DemsChargeAssessmentCaseData {
         }
         setName(case_name.toString());
         setTimeZoneId(PACIFIC_TIMEZONE);
-        setKey(commonData.getRcc_id());
+        setKey(primaryCommonData.getRcc_id());
         setDescription("");
         setTemplateCase(caseTemplateId);
 
 
         // Map any case flags that exist
         List<String> caseFlagList = new ArrayList<String>();
-        for (String caseFlag : commonData.getCase_flags()) {
+        for (String caseFlag : primaryCommonData.getCase_flags()) {
             if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
                 caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel());
             } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel().equals(caseFlag)) {
@@ -85,17 +85,17 @@ public class DemsChargeAssessmentCaseData {
             }
         }
         String caseDesionLabel = null;
-        if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.name().equals(commonData.getCase_decision_cd())) {
+        if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ADV.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACT.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.RET.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.ACL.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.NAC.getName();
-        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.name().equals(commonData.getCase_decision_cd())) {
+        } else if(DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.name().equals(primaryCommonData.getCase_decision_cd())) {
             caseDesionLabel = DemsListItemFieldData.CASE_DECISION_FIELD_MAPPINGS.REF.getName();
         }
 
@@ -103,36 +103,36 @@ public class DemsChargeAssessmentCaseData {
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
         List<String> assessmentCrownList = new ArrayList<String>();
-        assessmentCrownList.add(commonData.getAssessment_crown_name());
+        assessmentCrownList.add(primaryCommonData.getAssessment_crown_name());
         List<String> initiatingAgencyNameList = new ArrayList<String>();
-        initiatingAgencyNameList.add(commonData.getInitiating_agency_name());
+        initiatingAgencyNameList.add(primaryCommonData.getInitiating_agency_name());
         List<String> proposedCrownOfficeList = new ArrayList<String>();
-        proposedCrownOfficeList.add(commonData.getProposed_crown_office());
+        proposedCrownOfficeList.add(primaryCommonData.getProposed_crown_office());
 
-        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), commonData.getRcc_id());
-        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), commonData.getAgency_file());
-        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getRcc_submit_date()));
+        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), primaryCommonData.getRcc_id());
+        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), primaryCommonData.getAgency_file());
+        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(primaryCommonData.getRcc_submit_date()));
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
         
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
-        DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), commonData.getCharge());
-        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), commonData.getInitiating_agency());
+        DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryCommonData.getCharge());
+        DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(), primaryCommonData.getInitiating_agency());
         DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), initiatingAgencyNameList);
-        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), commonData.getInvestigating_officer());
+        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), primaryCommonData.getInvestigating_officer());
         
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
-        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getEarliest_offence_date()));
-        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), commonData.getEarliest_proposed_appearance_date());
-        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), commonData.getProposed_process_type_list());
-        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(commonData.getLimitation_date()));
-        DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), commonData.getRcc_status_code());
+        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(primaryCommonData.getEarliest_offence_date()));
+        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), primaryCommonData.getEarliest_proposed_appearance_date());
+        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), primaryCommonData.getProposed_process_type_list());
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(primaryCommonData.getLimitation_date()));
+        DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryCommonData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
 
         StringBuilder accused_name_list = new StringBuilder();
 
-        if(commonData.getAccused_persons() != null) {
-            for (CaseAccused accused : commonData.getAccused_persons()) {
+        if(primaryCommonData.getAccused_persons() != null) {
+            for (CaseAccused accused : primaryCommonData.getAccused_persons()) {
                 // Map 101
                 if(accused_name_list.length() > 0) {
                     accused_name_list.append(", ");

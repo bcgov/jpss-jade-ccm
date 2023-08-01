@@ -125,6 +125,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     createCaseRecord();
     updateCaseRecord();
     streamCaseRecord();
+    mergeCaseRecordsAndInactivateCase();
     getCaseRecordExistsByKey();
     getCaseRecordIdByDescription();
     getCaseDocIdExistsByKey();
@@ -1428,12 +1429,12 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,null);
         exchange.getMessage().setBody(d);
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1506,7 +1507,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
 
         }
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,null);
         exchange.getMessage().setBody(d);
       }
     })
@@ -2318,6 +2319,45 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void mergeCaseRecordsAndInactivateCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header.sourceCaseId
+    // IN: header.destinationCaseId
+    // IN: header.prefixName
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"sourceCaseId = ${header[sourceCaseId]}")
+    .log(LoggingLevel.INFO,"destinationCaseId = ${header[destinationCaseId]}")
+
+    // copy the records over to the new destination case.
+    .setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
+
+    // inactivate the source case.
+    .setProperty("id", simple("${header.sourceCaseId}"))
+    .to("direct:getCourtCaseDataById")
+    .setProperty("sourceCaseName",jsonpath("$.name"))
+    .setProperty("sourceRccId",jsonpath("$.key"))
+
+    // get dest key for setting primary agency file
+    .setProperty("id", simple("${header.destinationCaseId}"))
+    .to("direct:getCourtCaseDataById")
+    .setProperty("destRccId",jsonpath("$.key"))
+    .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}]}"))
+    
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
+    ;
+  }
+
   private void getCaseRecordExistsByKey() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -2362,7 +2402,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion&sort=cc_SaveVersion desc")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
@@ -2370,12 +2410,20 @@ public class CcmDemsAdapter extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\"}"))
+        .doTry()
+          .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("originalFileNumber", simple(""))
+          .setProperty("saveVersion", simple(""))
+        .endDoCatch()
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\"}"))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
@@ -2424,7 +2472,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
@@ -2432,13 +2480,22 @@ public class CcmDemsAdapter extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
-        //.setProperty("save_version", jsonpath("$.items[0].cc_SaveVersion"))
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"save_version\": \"\"}"))
+
+        .doTry()
+          .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("originalFileNumber", simple(""))
+          .setProperty("saveVersion", simple(""))
+        .endDoCatch()
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
+
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\", \"save_version\": \"\"}"))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
