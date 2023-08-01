@@ -112,9 +112,10 @@ public class DemsChargeAssessmentCaseData {
       
         // added as part of JADE-2594
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-
-        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), primaryChargeAssessmentData.getRcc_id());
-        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), primaryChargeAssessmentData.getAgency_file());
+        SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        
+        
+        
         String earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
         String earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
         String propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
@@ -125,12 +126,12 @@ public class DemsChargeAssessmentCaseData {
         java.util.Date earliestSubmitDateObj = null;
 
         try {
-            earliestSubmitDateObj = dateFormat.parse(earliestSubmitDate);
-            earliestOffenceDateObj = dateFormat.parse(earliestOffenceDate);
-            propAppDateObj = dateFormat.parse(propAppearanceDate);
-            limitationDateObj = dateFormat.parse(limitationDateStr);
+            earliestSubmitDateObj = earliestSubmitDate != null ? dateFormat.parse(earliestSubmitDate) : null;
+            earliestOffenceDateObj = earliestOffenceDate != null ? dateFormat.parse(earliestOffenceDate) : null;
+            propAppDateObj = propAppearanceDate != null ? dateFormat.parse(propAppearanceDate) : null;
+            limitationDateObj = limitationDateStr != null ? dateFormat.parse(limitationDateStr) : null;
         } catch (ParseException e) {
-            // TODO Auto-generated catch block
+            
             e.printStackTrace();
         }
 
@@ -150,8 +151,18 @@ public class DemsChargeAssessmentCaseData {
         List<String> initiatingAgencyList = new ArrayList<String>();
         Set<String> initiatingAgencySet = new HashSet<>();
         initiatingAgencySet.add(primaryChargeAssessmentData.getInitiating_agency());
-        //initiatingAgencyList.add(primaryChargeAssessmentData.getInitiating_agency());
+        
 
+        Set<String>agencyFileIdSet = new HashSet<>();
+        agencyFileIdSet.add(primaryChargeAssessmentData.getRcc_id());
+        Set<String>agencyFileNumberSet = new HashSet<>();
+        agencyFileNumberSet.add(primaryChargeAssessmentData.getAgency_file());
+
+        Set<String>investigatingOfficerSet = new HashSet<>();
+        investigatingOfficerSet.add(primaryChargeAssessmentData.getInvestigating_officer());
+
+        Set<String>proposedProcessTypeSet = new HashSet<>();
+        proposedProcessTypeSet.add(primaryChargeAssessmentData.getProposed_process_type_list());
         if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()){
             ListIterator<ChargeAssessmentData> chargeAssessmentDateIter = (ListIterator<ChargeAssessmentData>) chargeAssessmentDataList.iterator();
             while(chargeAssessmentDateIter.hasNext()) {
@@ -162,12 +173,12 @@ public class DemsChargeAssessmentCaseData {
                     try {
                         currentSubmitDateObj = dateFormat.parse(data.getRcc_submit_date());
                     } catch (ParseException e) {
-                        // TODO Auto-generated catch block
+                        
                         e.printStackTrace();
                     }
                     if (currentSubmitDateObj != null && earliestSubmitDateObj != null) {
                         if (currentSubmitDateObj.before(earliestSubmitDateObj)){
-                            earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentSubmitDateObj));
+                            earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateTimeFormat.format(currentSubmitDateObj));
                         }
                     }
                 }
@@ -176,11 +187,11 @@ public class DemsChargeAssessmentCaseData {
                     try {
                         currentOffenceDate = dateFormat.parse(data.getEarliest_offence_date());
                     } catch (ParseException e) {
-                        // TODO Auto-generated catch block
+                       
                         e.printStackTrace();
                     }
                     if (currentOffenceDate.before(earliestOffenceDateObj)){
-                        earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentOffenceDate));
+                        earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateTimeFormat.format(currentOffenceDate));
                     }
                 }
                 if (!data.getEarliest_proposed_appearance_date().isEmpty()){
@@ -188,11 +199,11 @@ public class DemsChargeAssessmentCaseData {
                     try {
                         currentPropAppDate = dateFormat.parse(data.getEarliest_proposed_appearance_date());
                     } catch (ParseException e) {
-                        // TODO Auto-generated catch block
+                        
                         e.printStackTrace();
                     }
                     if (currentPropAppDate.before(propAppDateObj)){
-                        propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateFormat.format(currentPropAppDate));
+                        propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(dateTimeFormat.format(currentPropAppDate));
                     }
                 }
                  if (!data.getLimitation_date().isEmpty()){
@@ -200,11 +211,11 @@ public class DemsChargeAssessmentCaseData {
                     try {
                         currentLimDate = dateFormat.parse(data.getLimitation_date());
                     } catch (ParseException e) {
-                        // TODO Auto-generated catch block
+                        
                         e.printStackTrace();
                     }
                     if (currentLimDate.before(limitationDateObj)){
-                        limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(currentLimDate.toString());
+                        limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(dateTimeFormat.format(currentLimDate));
                     }
                 }
                 /*merge
@@ -224,6 +235,18 @@ public class DemsChargeAssessmentCaseData {
                if (!initiatingAgencySet.contains(data.getInitiating_agency())) {
                 initiatingAgencySet.add(data.getInitiating_agency());
                }
+               if (!agencyFileIdSet.contains(data.getRcc_id())) {
+                    agencyFileIdSet.add(data.getRcc_id());
+               }
+               if (!agencyFileNumberSet.contains(data.getAgency_file())){
+                agencyFileNumberSet.add(data.getAgency_file());
+               }
+               if (!investigatingOfficerSet.contains(data.getInvestigating_officer())){
+                investigatingOfficerSet.add(data.getInvestigating_officer());
+               }
+               if (!proposedProcessTypeSet.contains(data.getProposed_process_type_list())){
+                proposedProcessTypeSet.add(data.getProposed_process_type_list());
+               }
             }
         }
         assessmentCrownList.addAll(assessmentCrownSet);
@@ -238,14 +261,14 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryChargeAssessmentData.getCharge());
         DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(),initiatingAgencyList);
         DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), initiatingAgencyNameList);
-        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), primaryChargeAssessmentData.getInvestigating_officer());
+        
         
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
       
 
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestOffenceDate));
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(propAppearanceDate));
-        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), primaryChargeAssessmentData.getProposed_process_type_list());
+        
         DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(limitationDateStr));
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryChargeAssessmentData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
@@ -267,6 +290,57 @@ public class DemsChargeAssessmentCaseData {
             }
         }
         DemsFieldData accusedFullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), accused_name_list.toString());
+
+        // JADE-2954
+        StringBuffer distinctAgencyFileIdBuffer = new StringBuffer("");
+        StringBuilder agencyFileNumberBuilder = new StringBuilder("");
+        StringBuilder investigatingOfficerBuilder = new StringBuilder("");
+        StringBuilder proposedProcessTypeBuilder = new StringBuilder("");
+        
+        if (!agencyFileIdSet.isEmpty()) {
+            int elementCounter =0;
+            for (String element : agencyFileIdSet) {
+                if (elementCounter > 0) {
+                    distinctAgencyFileIdBuffer.append(";");
+                }
+                distinctAgencyFileIdBuffer.append(element);    
+                elementCounter++;
+            }
+        }
+        if (!agencyFileNumberSet.isEmpty()) {
+            int elementCounter =0;
+            for (String element : agencyFileIdSet) {
+                if (elementCounter > 0) {
+                    agencyFileNumberBuilder.append(";");
+                }
+                agencyFileNumberBuilder.append(element);    
+                elementCounter++;
+            }
+        }
+        if (!investigatingOfficerSet.isEmpty()) {
+            int elementCounter =0;
+            for (String element : investigatingOfficerSet) {
+                if (elementCounter > 0) {
+                    investigatingOfficerBuilder.append(";");
+                }
+                investigatingOfficerBuilder.append(element);    
+                elementCounter++;
+            }
+        }
+          if (!proposedProcessTypeSet.isEmpty()) {
+            int elementCounter =0;
+            for (String element : proposedProcessTypeSet) {
+                if (elementCounter > 0) {
+                    proposedProcessTypeBuilder.append(";");
+                }
+                proposedProcessTypeBuilder.append(element);    
+                elementCounter++;
+            }
+        }
+        DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), distinctAgencyFileIdBuffer.toString());
+        DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), agencyFileNumberBuilder.toString());
+        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), investigatingOfficerBuilder.toString());
+        DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), proposedProcessTypeBuilder.toString());
 
         fieldData.add(agencyFileId);
         fieldData.add(agencyFileNo);
