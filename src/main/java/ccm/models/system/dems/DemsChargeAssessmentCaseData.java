@@ -126,10 +126,10 @@ public class DemsChargeAssessmentCaseData {
         java.util.Date earliestSubmitDateObj = null;
 
         try {
-            earliestSubmitDateObj = earliestSubmitDate != null ? dateFormat.parse(earliestSubmitDate) : null;
-            earliestOffenceDateObj = earliestOffenceDate != null ? dateFormat.parse(earliestOffenceDate) : null;
-            propAppDateObj = propAppearanceDate != null ? dateFormat.parse(propAppearanceDate) : null;
-            limitationDateObj = limitationDateStr != null ? dateFormat.parse(limitationDateStr) : null;
+            earliestSubmitDateObj = earliestSubmitDate != null ? dateTimeFormat.parse(earliestSubmitDate) : null;
+            earliestOffenceDateObj = earliestOffenceDate != null ? dateTimeFormat.parse(earliestOffenceDate) : null;
+            propAppDateObj = propAppearanceDate != null ? dateTimeFormat.parse(propAppearanceDate) : null;
+            limitationDateObj = limitationDateStr != null ? dateTimeFormat.parse(limitationDateStr) : null;
         } catch (ParseException e) {
             
             e.printStackTrace();
@@ -171,7 +171,7 @@ public class DemsChargeAssessmentCaseData {
                     
                     java.util.Date currentSubmitDateObj = null;
                     try {
-                        currentSubmitDateObj = dateFormat.parse(data.getRcc_submit_date());
+                        currentSubmitDateObj = dateTimeFormat.parse(data.getRcc_submit_date());
                     } catch (ParseException e) {
                         
                         e.printStackTrace();
@@ -185,7 +185,7 @@ public class DemsChargeAssessmentCaseData {
                 if (!data.getEarliest_offence_date().isEmpty()){
                     java.util.Date currentOffenceDate = null;
                     try {
-                        currentOffenceDate = dateFormat.parse(data.getEarliest_offence_date());
+                        currentOffenceDate = dateTimeFormat.parse(data.getEarliest_offence_date());
                     } catch (ParseException e) {
                        
                         e.printStackTrace();
@@ -197,7 +197,7 @@ public class DemsChargeAssessmentCaseData {
                 if (!data.getEarliest_proposed_appearance_date().isEmpty()){
                      java.util.Date currentPropAppDate = null;
                     try {
-                        currentPropAppDate = dateFormat.parse(data.getEarliest_proposed_appearance_date());
+                        currentPropAppDate = dateTimeFormat.parse(data.getEarliest_proposed_appearance_date());
                     } catch (ParseException e) {
                         
                         e.printStackTrace();
@@ -209,7 +209,7 @@ public class DemsChargeAssessmentCaseData {
                  if (!data.getLimitation_date().isEmpty()){
                      java.util.Date currentLimDate = null;
                     try {
-                        currentLimDate = dateFormat.parse(data.getLimitation_date());
+                        currentLimDate = dateTimeFormat.parse(data.getLimitation_date());
                     } catch (ParseException e) {
                         
                         e.printStackTrace();
@@ -254,7 +254,7 @@ public class DemsChargeAssessmentCaseData {
         proposedCrownOfficeList.addAll(proposedCrownOfficeSet);
         initiatingAgencyList.addAll(initiatingAgencySet);
         
-        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestSubmitDate));
+        DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), earliestSubmitDate);
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
         
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
@@ -266,10 +266,10 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
       
 
-        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(earliestOffenceDate));
-        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(propAppearanceDate));
+        DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), earliestOffenceDate);
+        DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), propAppearanceDate);
         
-        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(limitationDateStr));
+        DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), limitationDateStr);
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryChargeAssessmentData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
@@ -309,7 +309,7 @@ public class DemsChargeAssessmentCaseData {
         }
         if (!agencyFileNumberSet.isEmpty()) {
             int elementCounter =0;
-            for (String element : agencyFileIdSet) {
+            for (String element : agencyFileNumberSet) {
                 if (elementCounter > 0) {
                     agencyFileNumberBuilder.append(";");
                 }
@@ -359,9 +359,10 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(limitationDate);
         fieldData.add(accusedFullName);
         fieldData.add(rccStatus);
-        fieldData.add(lastJustinUpdate);
+       
         fieldData.add(primaryAgencyFileId);
         fieldData.add(primaryAgencyFileNo);
+         fieldData.add(lastJustinUpdate);
 
         setFields(fieldData);
 
