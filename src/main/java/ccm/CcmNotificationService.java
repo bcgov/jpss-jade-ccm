@@ -934,24 +934,8 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCaseMerge")
       .endChoice()
     .end()
-    /*.split()
-      .jsonpathWriteAsString("$.related_agency_file")
-      .setProperty("rcc_id", jsonpath("$.rcc_id"))
-      .setProperty("primary_yn", jsonpath("$.primary_yn"))
 
-      .setHeader("key").simple("${exchangeProperty.rcc_id}")
-      .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
-      .log(LoggingLevel.INFO,"Retrieve court case status first")
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-      .log(LoggingLevel.INFO, "Dems case status: ${body}")
-
-    .end()*/
-
-
-
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")

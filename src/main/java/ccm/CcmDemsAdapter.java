@@ -1594,7 +1594,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.rcc_id}"))
     .setProperty("caseFlags", simple("${header.caseFlags}"))
@@ -1629,7 +1629,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsApprovedCourtCaseData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
