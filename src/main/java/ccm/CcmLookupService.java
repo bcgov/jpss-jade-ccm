@@ -63,7 +63,7 @@ public class CcmLookupService extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(5).redeliveryDelay(3000)
+      .maximumRedeliveries(5).redeliveryDelay(10000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))

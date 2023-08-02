@@ -2421,10 +2421,14 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("id", jsonpath("$.items[0].edtID"))
         .doTry()
           .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
-          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
         .endDoTry()
         .doCatch(Exception.class)
           .setProperty("originalFileNumber", simple(""))
+        .end()
+        .doTry()
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
           .setProperty("saveVersion", simple(""))
         .end()
         .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
@@ -2437,6 +2441,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "${body}")
     ;
   }
 
@@ -2485,17 +2490,21 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
-    .log(LoggingLevel.INFO, "length: ${exchangeProperty.length}")
+    .log(LoggingLevel.DEBUG, "length: ${exchangeProperty.length}")
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
 
         .doTry()
           .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
-          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
         .endDoTry()
         .doCatch(Exception.class)
           .setProperty("originalFileNumber", simple(""))
+        .end()
+        .doTry()
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
           .setProperty("saveVersion", simple(""))
         .end()
         .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
@@ -2509,6 +2518,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "${body}")
     ;
   }
 
