@@ -1429,7 +1429,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,null);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1507,7 +1507,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
 
         }
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,null);
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1553,7 +1553,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
         .to("direct:processAccusedPerson")
         .log(LoggingLevel.INFO,"Accused participant updated.")
-        .endDoTry()
+      .end()
+    .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.INFO,"Exception: ${exception}")
       .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
@@ -2331,9 +2332,17 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"sourceCaseId = ${header[sourceCaseId]}")
     .log(LoggingLevel.INFO,"destinationCaseId = ${header[destinationCaseId]}")
+    .log(LoggingLevel.INFO,"prefixName = ${header[prefixName]}")
 
     // copy the records over to the new destination case.
     .setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+    .log(LoggingLevel.INFO, "prefixing: ${body}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
 
     // inactivate the source case.
@@ -2417,7 +2426,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .doCatch(Exception.class)
           .setProperty("originalFileNumber", simple(""))
           .setProperty("saveVersion", simple(""))
-        .endDoCatch()
+        .end()
         .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
@@ -2488,7 +2497,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .doCatch(Exception.class)
           .setProperty("originalFileNumber", simple(""))
           .setProperty("saveVersion", simple(""))
-        .endDoCatch()
+        .end()
         .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
 
       .endChoice()

@@ -131,7 +131,7 @@ public class JustinAgencyFileTest {
             objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
             ChargeAssessmentData businessFile = new ChargeAssessmentData(agencyFile);
-            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("28", businessFile);
+            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("28", businessFile, null);
 
             // since Last JUSTIN Update is current date, set it to blank, so test doesn't fail
             for(DemsFieldData fieldData : demsCaseFile.getFields()) {

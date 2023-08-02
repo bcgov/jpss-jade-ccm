@@ -23,7 +23,7 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryCommonData, ChargeAssessmentData commonDataList) {
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryCommonData, List<ChargeAssessmentData> commonDataList) {
 
         StringBuilder case_name = new StringBuilder();
         for (CaseAccused ba : primaryCommonData.getAccused_persons()) {
