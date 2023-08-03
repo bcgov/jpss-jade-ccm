@@ -134,7 +134,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     publishEventKPI();
   }
 
- 
+
 
   private void attachExceptionHandlers() {
 
@@ -369,10 +369,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
     .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"agencyFileId\": \"\", \"courtFileId\": \"\", \"status\": \"\"}"))
-
     .setProperty("key", simple("${header.event_key}"))
     .log(LoggingLevel.INFO,"court status exists key = ${exchangeProperty.key}")
-    
+
     .to("direct:getCourtCaseIdByKey")
     .setProperty("id", jsonpath("$.id"))
 
@@ -387,7 +386,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               .process(new Processor() {
                 @Override
                 public void process(Exchange exchange) {
-                
+
                   String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
                   String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
                   String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
@@ -411,7 +410,7 @@ public class CcmDemsAdapter extends RouteBuilder {
                   caseObjectJson.append("\"status\": ");
                   caseObjectJson.append( "\"" + status + "\"");
                   caseObjectJson.append("}");
-                  
+
                   exchange.getMessage().setBody(caseObjectJson.toString());
                 }
               })
@@ -441,7 +440,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "${body}")
   ;
   }
- 
+
   private void getCourtCaseStatusExists() {
      // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -456,7 +455,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
-    
+
     .to("direct:getCourtCaseStatusByKey")
     .end()
     ;
@@ -1515,7 +1514,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             // but the justin copy has k set, so remove it.
             b.getCase_flags().remove("K");
           }
-         
+
         }
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
@@ -2346,7 +2345,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"prefixName = ${header[prefixName]}")
 
     // first need to check if there are any records from source case which needs to be migrated.
-    
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -2386,7 +2385,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("direct:getCourtCaseDataById")
     .setProperty("destRccId",jsonpath("$.key"))
     .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}]}"))
-    
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
