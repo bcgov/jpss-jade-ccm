@@ -1304,6 +1304,7 @@ public class CcmNotificationService extends RouteBuilder {
               String agencyFileName = cad.getAgency_file();
               // remove all special chars from the agency file name
               agencyFileName = agencyFileName.replaceAll(":", "");
+              agencyFileName = agencyFileName.replaceAll(" ", "_");
               exchange.setProperty("merge_prefix", agencyFileName);
 
               if(assessmentData != null) {

@@ -550,6 +550,15 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("justin_request").body()
     .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .removeHeader(Exchange.CONTENT_ENCODING)
+
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getImageData")
 
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
@@ -1429,6 +1438,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
@@ -1505,8 +1515,9 @@ public class CcmDemsAdapter extends RouteBuilder {
             // but the justin copy has k set, so remove it.
             b.getCase_flags().remove("K");
           }
-
+         
         }
+
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
@@ -2334,16 +2345,35 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"destinationCaseId = ${header[destinationCaseId]}")
     .log(LoggingLevel.INFO,"prefixName = ${header[prefixName]}")
 
-    // copy the records over to the new destination case.
-    .setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
-    .log(LoggingLevel.INFO, "prefixing: ${body}")
+    // first need to check if there are any records from source case which needs to be migrated.
+    
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
+    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/records?throwExceptionOnFailure=false")
+    .doTry()
+      .setProperty("length",jsonpath("$.totalRows"))
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+          .log(LoggingLevel.INFO, "Migrate source case document records over to destination case")
+          // copy the records over to the new destination case.
+          .setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+          .log(LoggingLevel.INFO, "prefixing: ${body}")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
+        .endChoice()
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.INFO, "Source case does not have any records.")
+    .end()
 
     // inactivate the source case.
     .setProperty("id", simple("${header.sourceCaseId}"))
