@@ -46,6 +46,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
 
   private void retryExceptionHandler() {
     onException(ConnectException.class, SocketTimeoutException.class, NoHttpResponseException.class, HttpOperationFailedException.class)
+    .maximumRedeliveries(5).redeliveryDelay(10000)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -60,7 +61,8 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(5).redeliveryDelay(3000)
+    .retryAttemptedLogLevel(LoggingLevel.ERROR)
+    .handled(true)
     .end();
 
     // General Exception
@@ -79,7 +81,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(3).redeliveryDelay(3000)
+    .maximumRedeliveries(5).redeliveryDelay(10000)
     .end();
   }
 

@@ -1,10 +1,7 @@
 package ccm.models.system.dems;
 
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Set;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -113,11 +110,6 @@ public class DemsChargeAssessmentCaseData {
 
       
         // added as part of JADE-2594
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        
-        
-        
         String earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
         String earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
         String propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
