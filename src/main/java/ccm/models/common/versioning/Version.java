@@ -1,7 +1,7 @@
 package ccm.models.common.versioning;
 
 public enum Version {
-    V1_0("0.37.1");
+    V1_0("0.37.2");
 
     private String value;
 
