@@ -33,6 +33,8 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+
+import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
@@ -1417,18 +1419,60 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Retrieved Court Case appearance summary list from JUSTIN: ${body}")
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
-    .setProperty("business_data", simple("${bodyAs(String)}"))
+
+    .unmarshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
+    .setProperty("appearance_list_object", body())
+
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    // grab appearances from other related court files and add to appearance_list_object
+    .split()
+      .jsonpathWriteAsString("$.related_court_file")
+      .setHeader("number", jsonpath("$.mdoc_justin_no"))
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
+
+      .unmarshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          CaseAppearanceSummaryList casl = exchange.getIn().getBody(CaseAppearanceSummaryList.class);
+          CaseAppearanceSummaryList casList = (CaseAppearanceSummaryList)exchange.getProperty("appearance_list_object", CaseAppearanceSummaryList.class);
+          casList.getApprsummary().addAll(casl.getApprsummary());
+
+          exchange.setProperty("appearance_list_object", casList);
+        }
+      })
+    .end()
+    
+    // set the updated CaseAppearanceSummaryList object to be the body to use it to retrieve the earliest date.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CaseAppearanceSummaryList appearancedata = (CaseAppearanceSummaryList)exchange.getProperty("appearance_list_object", CaseAppearanceSummaryList.class);
+
+        exchange.getMessage().setBody(appearancedata, CaseAppearanceSummaryList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
+
+    .setProperty("business_data", simple("${bodyAs(String)}"))
+    .log(LoggingLevel.INFO, "business_data: ${exchangeProperty.business_data}")
+
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
       .log(LoggingLevel.DEBUG,"Check case (rcc_id ${exchangeProperty.rcc_id}) existence ...")
       .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-      .to("http://ccm-lookup-service/getCourtCaseExists")
+      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
       .unmarshal().json()
       .setProperty("caseId").simple("${body[id]}")
+      .setProperty("caseStatus").simple("${body[status]}")
       .choice()
         .when(simple("${exchangeProperty.caseId} != ''"))
           .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))

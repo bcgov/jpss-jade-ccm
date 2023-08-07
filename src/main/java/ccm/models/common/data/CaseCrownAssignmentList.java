@@ -51,7 +51,7 @@ public class CaseCrownAssignmentList {
           legalStaffAssignments.add(legalStaffAssignment.toString());
         }
         else {
-          StringBuilder crownAssignment = new StringBuilder(jas.getCrown_staff_name());
+          StringBuilder crownAssignment = new StringBuilder();
           StringBuilder crownAssignmentNm = new StringBuilder();
 
           crownAssignment.append(jas.getCrown_staff_name());
