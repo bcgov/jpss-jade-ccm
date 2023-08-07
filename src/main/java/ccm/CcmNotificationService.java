@@ -1474,7 +1474,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("caseId").simple("${body[id]}")
       .setProperty("caseStatus").simple("${body[status]}")
       .choice()
-        .when(simple("${exchangeProperty.caseId} != ''"))
+        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${exchangeProperty.caseStatus} == 'Active'"))
           .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
           .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
           .setBody(simple("${exchangeProperty.business_data}"))
