@@ -96,6 +96,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseNameByKey();
     getCourtCaseStatusExists();
     getCourtCaseStatusByKey ();
+    getCourtCaseStatusById();
     getCourtCaseCourtFileUniqueIdByKey();
     getCaseHyperlink();
     createCourtCase();
@@ -360,6 +361,26 @@ public class CcmDemsAdapter extends RouteBuilder {
    ;
   }
 
+  private void getCourtCaseStatusExists() {
+     // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"status exists key = ${header[event_key]}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    
+    .to("direct:getCourtCaseStatusByKey")
+    .end()
+    ;
+  }
+
   private void getCourtCaseStatusByKey() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -368,12 +389,25 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"agencyFileId\": \"\", \"courtFileId\": \"\", \"status\": \"\"}"))
     .setProperty("key", simple("${header.event_key}"))
     .log(LoggingLevel.INFO,"court status exists key = ${exchangeProperty.key}")
     
     .to("direct:getCourtCaseIdByKey")
     .setProperty("id", jsonpath("$.id"))
+
+    .to("direct:getCourtCaseStatusById")
+  ;
+  }
+ 
+  private void getCourtCaseStatusById() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    //IN: header.number
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"agencyFileId\": \"\", \"courtFileId\": \"\", \"status\": \"\"}"))
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -389,10 +423,13 @@ public class CcmDemsAdapter extends RouteBuilder {
                 
                   String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
                   String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
+                  String courtFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), "/value");
                   String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
-                  String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Case State","/value");
-                  String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Primary Agency File ID","/value");
-                  String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", "Agency File ID","/value");
+                  String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(),"/value");
+                  String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(),"/value");
+                  String primaryAgencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(),"/value");
+                  String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(),"/value");
+                  String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
                   String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
 
                   StringBuilder caseObjectJson = new StringBuilder("");
@@ -403,10 +440,16 @@ public class CcmDemsAdapter extends RouteBuilder {
                   caseObjectJson.append( "\"" + caseState + "\",");
                   caseObjectJson.append("\"primaryAgencyFileId\": ");
                   caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
+                  caseObjectJson.append("\"primaryAgencyFileNo\": ");
+                  caseObjectJson.append("\"" + primaryAgencyFileNo + "\",");
                   caseObjectJson.append("\"agencyFileId\": ");
                   caseObjectJson.append("\"" + agencyFileId + "\",");
+                  caseObjectJson.append("\"agencyFileNo\": ");
+                  caseObjectJson.append("\"" + agencyFileNo + "\",");
                   caseObjectJson.append("\"courtFileId\": ");
                   caseObjectJson.append("\"" + courtFileUniqueId + "\",");
+                  caseObjectJson.append("\"courtFileNo\": ");
+                  caseObjectJson.append("\"" + courtFileNo + "\",");
                   caseObjectJson.append("\"status\": ");
                   caseObjectJson.append( "\"" + status + "\"");
                   caseObjectJson.append("}");
@@ -437,30 +480,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.INFO,"Case not found.")
       .endChoice()
     .end()
-    .log(LoggingLevel.DEBUG, "${body}")
+    .log(LoggingLevel.INFO, "${body}")
   ;
   }
  
-  private void getCourtCaseStatusExists() {
-     // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //IN: header.number
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"status exists key = ${header[event_key]}...")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .removeHeader("kafka.HEADERS")
-    .removeHeaders("x-amz*")
-    
-    .to("direct:getCourtCaseStatusByKey")
-    .end()
-    ;
-  }
-
   private void processReportEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -2370,30 +2393,55 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
         .endChoice()
+      .end()
+
+      // inactivate the source case.
+      .setProperty("id", simple("${header.sourceCaseId}"))
+      .to("direct:getCourtCaseDataById")
+      .setProperty("sourceCaseName",jsonpath("$.name"))
+      .setProperty("sourceRccId",jsonpath("$.key"))
+
+      // get dest key for setting primary agency file
+      .setProperty("id", simple("${header.destinationCaseId}"))
+      .to("direct:getCourtCaseStatusById")
+      .setProperty("destRccId",jsonpath("$.primaryAgencyFileId"))
+      .setProperty("destAgencyFile",jsonpath("$.primaryAgencyFileNo"))
+      .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
+      
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
     .endDoTry()
     .doCatch(Exception.class)
-      .log(LoggingLevel.INFO, "Source case does not have any records.")
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
     .end()
 
-    // inactivate the source case.
-    .setProperty("id", simple("${header.sourceCaseId}"))
-    .to("direct:getCourtCaseDataById")
-    .setProperty("sourceCaseName",jsonpath("$.name"))
-    .setProperty("sourceRccId",jsonpath("$.key"))
-
-    // get dest key for setting primary agency file
-    .setProperty("id", simple("${header.destinationCaseId}"))
-    .to("direct:getCourtCaseDataById")
-    .setProperty("destRccId",jsonpath("$.key"))
-    .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}]}"))
-    
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
     ;
   }
 

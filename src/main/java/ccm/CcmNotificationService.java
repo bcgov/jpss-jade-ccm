@@ -1244,6 +1244,7 @@ public class CcmNotificationService extends RouteBuilder {
           for(ChargeAssessmentDataRef cadr : ccd.getRelated_agency_file()) {
             if(cadr.getPrimary_yn().equalsIgnoreCase("Y")) {
               exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
+              exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
               break;
             }
           }
@@ -1284,6 +1285,7 @@ public class CcmNotificationService extends RouteBuilder {
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("agency_file_no", jsonpath("$.agency_file_no"))
       .setProperty("primary_yn", jsonpath("$.primary_yn"))
 
       .choice()
@@ -1322,6 +1324,7 @@ public class CcmNotificationService extends RouteBuilder {
                 // just set the first one in the list as primary, if none found in first iteration.
                 assessmentData = cad;
                 exchange.setProperty("primary_rcc_id", (String)exchange.getProperty("rcc_id", String.class));
+                exchange.setProperty("primary_agency_file", (String)exchange.getProperty("agency_file_no", String.class));
               }
               exchange.setProperty("primary_courtcase_object", assessmentData);
             }
@@ -1330,6 +1333,7 @@ public class CcmNotificationService extends RouteBuilder {
         .endChoice()
         .otherwise()
           .setProperty("primary_rcc_id", simple("${exchangeProperty.rcc_id}"))
+          .setProperty("primary_agency_file", simple("${exchangeProperty.agency_file_no}"))
         .endChoice()
       .end()
 
@@ -1348,6 +1352,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("sourceCaseId").simple("${body[id]}")
       .log(LoggingLevel.INFO, "Source Case Id: ${exchangeProperty.sourceCaseId}")
       .log(LoggingLevel.INFO, "primary vs current: ${exchangeProperty.primary_rcc_id} vs ${exchangeProperty.rcc_id}")
+      .log(LoggingLevel.INFO, "primary vs current: ${exchangeProperty.primary_agency_file} vs ${exchangeProperty.agency_file_no}")
 
       // if the non primary dems case is still active, make call which will export the records over to the primary rcc
       // and then set the non primary case to no longer be active.
