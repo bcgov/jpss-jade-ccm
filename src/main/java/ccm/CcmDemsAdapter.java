@@ -389,8 +389,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("key", simple("${header.event_key}"))
-    .log(LoggingLevel.INFO,"court status exists key = ${exchangeProperty.key}")
+    .setProperty("key", simple("${header.number}"))
+    .log(LoggingLevel.INFO,"Case status exists key = ${exchangeProperty.key}")
     
     .to("direct:getCourtCaseIdByKey")
     .setProperty("id", jsonpath("$.id"))
@@ -824,7 +824,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setBody(simple("${exchangeProperty.dems_record}"))
         .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
         .to("direct:createDocumentRecord")
-        .endChoice()
+      .endChoice()
       .otherwise()
         .log(LoggingLevel.INFO,"Traverse through metadata to retrieve the rcc_ids to process.")
         .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -832,15 +832,23 @@ public class CcmDemsAdapter extends RouteBuilder {
           .jsonpathWriteAsString("$.related_agency_file")
           .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
           .setProperty("rcc_id",jsonpath("$.rcc_id"))
+          .setProperty("primary_yn",jsonpath("$.primary_yn"))
           .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id}")
-          .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-          .setHeader("reportType", simple("${exchangeProperty.reportType}"))
-          .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-          .setBody(simple("${exchangeProperty.dems_record}"))
-          .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-          .to("direct:changeDocumentRecord")
+          .choice()
+            .when(simple("${exchangeProperty.primary_yn} == 'Y'")) // should only push to primary rcc.
+              .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+              .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+              .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
+              .setBody(simple("${exchangeProperty.dems_record}"))
+              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+              .to("direct:changeDocumentRecord")
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.INFO, "Skipped rcc, as it is not primary")
+            .endChoice()
+          .end()
         .end()
-        .endChoice()
+      .endChoice()
     .end()
 
    .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
@@ -929,8 +937,25 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // look for current status of the dems case.
+    .to("direct:getCourtCaseStatusByKey")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
+    .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+    .choice()
+      .when(simple("${exchangeProperty.caseRccId} == ''"))
+        .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+      .endChoice()
+    .end()
+    .choice()
+      .when(simple("${exchangeProperty.caseRccId} != ''"))
+        .setHeader("number", simple("${exchangeProperty.caseRccId}"))
+      .endChoice()
+    .end()
 
     // check to see if the court case exists, before trying to insert record to dems.
     .to("direct:getCaseRecordExistsByKey")

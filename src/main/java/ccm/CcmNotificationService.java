@@ -544,6 +544,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO,"Retrieve latest court case details from JUSTIN.")
     .setHeader("key").simple("${header.event_key}")
     .setHeader("event_key",simple("${header.event_key}"))
+    .setHeader("number",simple("${header.event_key}"))
     .log(LoggingLevel.INFO,"Retrieve court case status first")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -946,6 +947,7 @@ public class CcmNotificationService extends RouteBuilder {
 
       .setHeader("key").simple("${exchangeProperty.rcc_id}")
       .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+      .setHeader("number",simple("${exchangeProperty.rcc_id}"))
       .log(LoggingLevel.INFO,"Retrieve court case status first")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -1268,6 +1270,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
+        .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         // make sure that this primary record is not inactivated.
@@ -1341,6 +1344,7 @@ public class CcmNotificationService extends RouteBuilder {
       // Grab the dems status of the non-primary dems case
       .setHeader("key").simple("${exchangeProperty.rcc_id}")
       .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+      .setHeader("number",simple("${exchangeProperty.rcc_id}"))
       .log(LoggingLevel.INFO,"Retrieve court case status first")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
