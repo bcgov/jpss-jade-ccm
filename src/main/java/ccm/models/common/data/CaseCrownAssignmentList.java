@@ -25,7 +25,7 @@ public class CaseCrownAssignmentList {
     setMdoc_justin_no(jasl.getMdoc_justin_no());
 
 
-    List<CaseCrownAssignmentData> appearanceList = new ArrayList<CaseCrownAssignmentData>();
+    List<CaseCrownAssignmentData> crownAssignmentList = new ArrayList<CaseCrownAssignmentData>();
     List<String> legalStaffAssignments = new ArrayList<String>();
     List<String> crownAssignments = new ArrayList<String>();
     List<String> crownAssignmentName = new ArrayList<String>();
@@ -33,7 +33,7 @@ public class CaseCrownAssignmentList {
     if(jasl.getCrown_assignment() != null) {
       for (JustinCrownAssignmentData jas : jasl.getCrown_assignment()) {
         CaseCrownAssignmentData bcas = new CaseCrownAssignmentData(jas);
-        appearanceList.add(bcas);
+        crownAssignmentList.add(bcas);
 
         if(jas.getAssign_type_code() != null) {
 
@@ -73,12 +73,33 @@ public class CaseCrownAssignmentList {
       }
     }
 
-    setCrown_assignment(appearanceList);
+    setCrown_assignment(crownAssignmentList);
     setCrownAssignmentList(crownAssignments);
     setCrownAssignmentName(crownAssignmentName);
     setLegalStaffAssignmentList(legalStaffAssignments);
   }
 
+  public void addCrownAssignment(CaseCrownAssignmentList newCrownAssignmentList) {
+    if(newCrownAssignmentList != null) {
+      newCrownAssignmentList.getCrown_assignment().addAll(newCrownAssignmentList.getCrown_assignment());
+      for(String assignments : newCrownAssignmentList.getCrownAssignmentList()) {
+        if(!this.getCrownAssignmentList().contains(assignments)) {
+          this.getCrownAssignmentList().add(assignments);
+        }
+      }
+      for(String assignments : newCrownAssignmentList.getCrownAssignmentName()) {
+        if(!this.getCrownAssignmentName().contains(assignments)) {
+          this.getCrownAssignmentName().add(assignments);
+        }
+      }
+      for(String assignments : newCrownAssignmentList.getLegalStaffAssignmentList()) {
+        if(!this.getLegalStaffAssignmentList().contains(assignments)) {
+          this.getLegalStaffAssignmentList().add(assignments);
+        }
+
+      }
+    }
+  }
 
 
   public String getMdoc_justin_no() {

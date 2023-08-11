@@ -250,13 +250,13 @@ public class DemsApprovedCourtCaseData {
         fieldData.add(crownOffice);
         fieldData.add(lastJustinUpdate);
         //added as part of jade-2483
-        if(primaryCourtCaseData.getRelated_agency_file().size() == 1 && primaryCourtCaseData.getRelated_court_file().size() == 0){
+        if(primaryCourtCaseData.getRelated_agency_file().size() == 1 && courtCaseDataList.size() == 0){
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(), "Approved Court Case"));
-        }else if(primaryCourtCaseData.getRelated_agency_file().size() >= 2 && primaryCourtCaseData.getRelated_court_file().size() == 0 ){
+        }else if(primaryCourtCaseData.getRelated_agency_file().size() >= 2 && courtCaseDataList.size() == 0 ){
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(), "Merged Court Case"));
-        }else if(primaryCourtCaseData.getRelated_agency_file().size() == 1 && primaryCourtCaseData.getRelated_court_file().size() >= 1){
+        }else if(primaryCourtCaseData.getRelated_agency_file().size() == 1 && courtCaseDataList.size() >= 1){
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(), "Updated Court Files"));
-        }else if(primaryCourtCaseData.getRelated_agency_file().size() >= 2 && primaryCourtCaseData.getRelated_court_file().size() >= 1){
+        }else if(primaryCourtCaseData.getRelated_agency_file().size() >= 2 && courtCaseDataList.size() >= 1){
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(), "Merged Court Cases"));
         }else{
 

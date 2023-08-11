@@ -56,7 +56,7 @@ public class DemsCaseAppearanceSummaryData {
 
                 }
 
-                if(bcas.getNext_appr_dtm() != null && !bcas.getNext_appr_dtm().isEmpty()) {
+                if(bcas.getTrial_start_appr_dtm() != null && !bcas.getTrial_start_appr_dtm().isEmpty()) {
                     ZonedDateTime currentDtmObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(bcas.getTrial_start_appr_dtm());
                     if (currentDtmObj != null) {
                         if (earliestTrialStartApprDt == null || currentDtmObj.isBefore(earliestTrialStartApprDt)) {
