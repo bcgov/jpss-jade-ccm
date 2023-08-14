@@ -369,7 +369,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"status exists key = ${header[event_key]}...")
+    .log(LoggingLevel.INFO,"status exists key = ${header[number]}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -407,7 +407,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"agencyFileId\": \"\", \"courtFileId\": \"\", \"status\": \"\"}"))
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()

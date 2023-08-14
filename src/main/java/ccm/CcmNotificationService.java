@@ -63,6 +63,7 @@ public class CcmNotificationService extends RouteBuilder {
     processChargeAssessmentUpdated();
     processCourtCaseAuthListChanged();
     processCourtCaseAuthListUpdated();
+    compileRelatedChargeAssessments();
     compileRelatedCourtFiles();
     processCourtCaseChanged();
     processPrimaryCourtCaseChanged();
@@ -558,13 +559,15 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number").simple("${header.event_key}")
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
+        // add-on any additional rccs from the dems side.
+        .to("direct:compileRelatedChargeAssessments")
+        .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        //.to("http://ccm-dems-adapter/updateCourtCase?httpClient.connectTimeout=1&httpClient.connectionRequestTimeout=1&httpClient.socketTimeout=1")
         .setBody(simple("${exchangeProperty.courtcase_data}"))
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-dems-adapter/updateCourtCase")
-        .log(LoggingLevel.DEBUG,"Update court case auth list.")
+        .log(LoggingLevel.INFO,"Update court case auth list.")
         .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .otherwise()
@@ -866,6 +869,130 @@ public class CcmNotificationService extends RouteBuilder {
             .log(LoggingLevel.DEBUG,"User (key = ${header.event_key}) not found; Do nothing.")
           .endChoice()
       .end()
+    ;
+  }
+
+  private void compileRelatedChargeAssessments() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // header: event_key (rcc_id)
+    // property: courtcase_data
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // based off of rcc, look-up the DEMS case record.
+    // If it exists, go through list of rccs in the 
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+    .setProperty("courtcase_object", body())
+    .setBody(simple("${exchangeProperty.courtcase_data}"))
+
+    .setHeader("number", simple("${header[event_key]}"))
+    .log(LoggingLevel.INFO,"Retrieve court case status first")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+    .unmarshal().json()
+
+    .choice()
+      .when(simple("${body[status]} == 'Active'"))
+        .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+            String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
+            log.info("agencyFileIds: "+demsAgencyFiles);
+            String[] demsAgencyFileList = demsAgencyFiles.split(";");
+            ArrayList<String> agencyFileList = new ArrayList<String>();
+            if(demsAgencyFileList != null && demsAgencyFileList.length > 1) {
+              log.info("Primary rcc: "+courtfiledata.getRcc_id());
+              for(String demsAgencyFileId : demsAgencyFileList) {
+                demsAgencyFileId = demsAgencyFileId.trim();
+                log.info("Comparing rcc: "+demsAgencyFileId);
+                if(demsAgencyFileId.equalsIgnoreCase(courtfiledata.getRcc_id())) {
+                  continue;
+                } else {
+                  String agencyFileId = null;
+                  for(ChargeAssessmentData ccd : courtfiledata.getRelated_charge_assessments()) {
+                    agencyFileId = ccd.getRcc_id();
+                    if(demsAgencyFileId.equalsIgnoreCase(agencyFileId)) {
+                      continue;
+                    }
+                  }
+                  if(agencyFileId == null) {
+                    agencyFileList.add(demsAgencyFileId);
+                  }
+                }
+              }
+            }
+            exchange.getMessage().setBody(agencyFileList);
+          }
+        })
+        .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+        .split().jsonpathWriteAsString("$.*")
+          .setProperty("agencyFileId", simple("${body}"))
+          .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              String agencyFileId = exchange.getProperty("agencyFileId", String.class);
+              log.info("agencyFileId:"+agencyFileId);
+              exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
+            }
+          })
+
+          .log(LoggingLevel.INFO, "agency file updated: ${exchangeProperty.agencyFileId}")
+          .setHeader("number").simple("${exchangeProperty.agencyFileId}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
+          .to("http://ccm-lookup-service/getCourtCaseDetails")
+
+          .log(LoggingLevel.DEBUG,"Retrieved related Court Case from JUSTIN: ${body}")
+          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+              ChargeAssessmentData metadata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+              List<ChargeAssessmentData> relatedCf = metadata.getRelated_charge_assessments();
+              if(relatedCf == null) {
+                relatedCf = new ArrayList<ChargeAssessmentData>();
+              }
+              relatedCf.add(bcm);
+              log.info("Added new court file to metadata object.");
+              metadata.setRelated_charge_assessments(relatedCf);
+              exchange.setProperty("courtcase_object", metadata);
+            }
+          })
+        .end()
+      .endChoice()
+      .otherwise()
+        // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
+        .log(LoggingLevel.INFO, "Not an active primary case")
+
+      .endChoice()
+    .end()
+
+    // set the updated metadata object to be the body
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ChargeAssessmentData metadata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+
+        exchange.getMessage().setBody(metadata, ChargeAssessmentData.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+
+    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+    .setBody(simple("${exchangeProperty.courtcase_data}"))
+    .log(LoggingLevel.DEBUG, "${body}")
     ;
   }
 
@@ -1492,6 +1619,8 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+    // add-on any additional rccs which are listed in the dems side.
+    .to("direct:compileRelatedChargeAssessments")
 
     .setProperty("primary_courtcase", simple("${bodyAs(String)}"))
     .setBody(simple("${exchangeProperty.primary_courtcase}"))
