@@ -696,8 +696,26 @@ public class CcmDemsAdapter extends RouteBuilder {
       .choice()
         .when(simple("${header.rcc_id} != null"))
           .log(LoggingLevel.INFO,"RCC based report")
+          // get the primary rcc, based on the dems primary agency file id
 
           .setHeader("number", simple("${header[rcc_id]}"))
+          // look for current status of the dems case.
+          // and set the rcc to the primary rcc
+          .to("direct:getCourtCaseStatusByKey")
+          .unmarshal().json()
+          .setProperty("caseId").simple("${body[id]}")
+          .setProperty("caseStatus").simple("${body[status]}")
+          .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
+              if(caseRccId != null && !caseRccId.isEmpty()) {
+                exchange.getMessage().setHeader("number", caseRccId);
+              }
+            }
+          })
+
           .to("direct:createDocumentRecord")
         .endChoice()
         .when(simple("${header.mdoc_justin_no} != null"))
@@ -946,11 +964,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("caseId").simple("${body[id]}")
     .setProperty("caseStatus").simple("${body[status]}")
     .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-    .choice()
-      .when(simple("${exchangeProperty.caseRccId} == ''"))
-        .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-      .endChoice()
-    .end()
+    .setProperty("agencyRccId").simple("${body[agencyFileId]}")
     .choice()
       .when(simple("${exchangeProperty.caseRccId} != ''"))
         .setHeader("number", simple("${exchangeProperty.caseRccId}"))
@@ -994,17 +1008,20 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+    
+    .removeProperty("recordId")
 
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("direct:getCourtCaseIdByKey")
+    .to("direct:getCourtCaseStatusByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
     .choice()
-      .when(simple("${exchangeProperty.caseId} != ''"))
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
 
@@ -1018,7 +1035,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
-        .endChoice()
+      .endChoice()
     .end()
     .choice()
       .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
@@ -1072,7 +1089,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
     .setProperty("key", simple("${header.number}"))
@@ -2278,7 +2295,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
-    .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
     .setProperty("dems_case_id", jsonpath("$.id"))
     // update case
@@ -2306,7 +2323,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
-    .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
     .setProperty("dems_case_id", jsonpath("$.id"))
     // update case
