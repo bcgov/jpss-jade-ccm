@@ -94,7 +94,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
         error.setError_summary(cause.getMessage());
-        
+
         if(cause != null && !cause.getResponseBody().isEmpty()) {
           error.setError_details(cause.getResponseBody());
         } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
@@ -652,6 +652,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_key")
     .setHeader("event_status")
       .jsonpath("$.event_status")
+    .setHeader("justin_rcc_id")
+      .jsonpath("$.justin_rcc_id")
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
@@ -661,6 +663,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
+      .when(header("justin_rcc_id").isEqualTo("0"))
+        .log(LoggingLevel.INFO, "Ignore message, as this does not contain a valid rcc id")
+        .endChoice()
       .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_ADDED))
         .setProperty("kpi_component_route_name", simple("processCaseUserAccessAdded"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
