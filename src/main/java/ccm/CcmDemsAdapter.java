@@ -133,6 +133,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
+    inactivateCase();
   }
 
 
@@ -2653,6 +2654,52 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void inactivateCase() {
+    // use method name as route id
+   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+   //IN: header.number
+   from("platform-http:/" + routeId)
+   .routeId(routeId)
+   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+   .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+   .removeHeader("CamelHttpUri")
+   .removeHeader("CamelHttpBaseUri")
+   .removeHeaders("CamelHttp*")
+   .removeHeader("kafka.HEADERS")
+   .removeHeaders("x-amz*")
+   .setProperty("dems_case_id", simple("${header.case_id}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+   .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+   .log(LoggingLevel.INFO,"Deleting DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+   .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/")
+   .log(LoggingLevel.INFO,"DEMS case record deleted.")
+   .toD("https://{{dems.host}}/cases/${header.dems_case_id}/records?throwExceptionOnFailure=false")
+   .doTry()
+     .setProperty("length",jsonpath("$.totalRows"))
+     .log(LoggingLevel.INFO, "${exchangeProperty.length}")
+     .choice()
+       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+         .log(LoggingLevel.INFO, "Inactivate case")
+           // inactivate the case.
+         .setProperty("id", simple("${header.case_id}"))
+         .to("direct:getCourtCaseDataById")
+         .setProperty("sourceCaseName",jsonpath("$.name"))
+         .setProperty("sourceRccId",jsonpath("$.key"))
+     .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\"}"))
+     .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpBaseUri")
+     .removeHeaders("CamelHttp*")
+     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+     .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
+     .endChoice()
+     .end()
+   .endDoTry()
+   .end();
+ }
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
