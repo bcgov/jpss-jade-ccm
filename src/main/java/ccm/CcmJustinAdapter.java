@@ -1251,6 +1251,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name(routeId);
+          kpi.setEvent_details(je);
           exchange.getMessage().setBody(kpi, EventKPI.class);
         }
       })
