@@ -570,12 +570,12 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO,"Update court case auth list.")
         .to("direct:processCourtCaseAuthListChanged")
         .when(simple("${body[status]} == 'RET'"))
-         .setHeader("case_id").simple("${header.event_key}")
-        .to("http://ccm-dems-adapter/inactivateCase")
-        .log(LoggingLevel.DEBUG,"Inactivate case done")
+          .setHeader("case_id").simple("${header.event_key}")
+          .to("http://ccm-dems-adapter/inactivateCase")
+          .log(LoggingLevel.DEBUG,"Inactivate case done")
       .endChoice()
     .otherwise()
-      .log(LoggingLevel.INFO, "DEMS Case is not in Active state, so skip.")
+      .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
     .end()
     ;
   }
