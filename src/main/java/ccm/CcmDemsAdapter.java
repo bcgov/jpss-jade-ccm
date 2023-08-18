@@ -2412,7 +2412,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     // first need to check if there are any records from source case which needs to be migrated.
     
-    .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -2679,7 +2679,7 @@ public class CcmDemsAdapter extends RouteBuilder {
    .toD("https://{{dems.host}}/cases/${header.case_id}/records?throwExceptionOnFailure=false")
    .doTry()
      .setProperty("length",jsonpath("$.totalRows"))
-     .log(LoggingLevel.INFO, "${exchangeProperty.length}")
+     .log(LoggingLevel.INFO, "Http Status : ${header.CamelHttpResponseCode} ,Length : ${exchangeProperty.length}")
      .choice()
        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
          .log(LoggingLevel.INFO, "Inactivate case")
@@ -2688,7 +2688,10 @@ public class CcmDemsAdapter extends RouteBuilder {
          .to("direct:getCourtCaseDataById")
          .setProperty("sourceCaseName",jsonpath("$.name"))
          .setProperty("sourceRccId",jsonpath("$.key"))
-     .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\"}"))
+         .setProperty("sourceAgencyFile",jsonpath("$.primaryAgencyFileNo"))
+   
+   
+    .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.sourceRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.sourceAgencyFile}\"}]}"))
      .removeHeader("CamelHttpUri")
      .removeHeader("CamelHttpBaseUri")
      .removeHeaders("CamelHttp*")
@@ -2696,7 +2699,10 @@ public class CcmDemsAdapter extends RouteBuilder {
      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
      .toD("https://{{dems.host}}/cases/${header.case_id}")
+     .log(LoggingLevel.INFO, "Case inactivated.")
      .endChoice()
+     .otherwise()
+     .log(LoggingLevel.INFO, "Number of rows not > 0")
      .end()
    .endDoTry()
    .doCatch(Exception.class)
@@ -2707,6 +2713,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.INFO, "Body: '${exception}'")
           .log(LoggingLevel.INFO, "${exception.message}")
+          .log(LoggingLevel.INFO, "Case not inactivated")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
