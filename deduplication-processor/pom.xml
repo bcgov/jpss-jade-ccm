@@ -11,6 +11,7 @@
     <properties>
         <quarkus.version>2.3.1.Final</quarkus.version> <!-- Adjust to the version you are using -->
         <kafka.version>2.8.1</kafka.version> <!-- Adjust to the version you are using -->
+        <junit.version>4.13.2</junit.version> <!-- Adjust to the version you are using -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -45,7 +46,7 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams-test-utils</artifactId>
-            <version>2.8.1</version>
+            <version>${kafka.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -53,6 +54,14 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- JUnit -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -78,6 +87,17 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.2</version> <!-- or a newer version -->
+                <dependencies>
+                    <dependency>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-engine</artifactId>
+                        <version>5.6.0</version> <!-- or the version you are using -->
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>

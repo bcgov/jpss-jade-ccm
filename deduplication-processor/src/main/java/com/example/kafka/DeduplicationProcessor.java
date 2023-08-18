@@ -1,56 +1,40 @@
 package com.example.kafka;
 
-import io.quarkus.kafka.client.serialization.JsonbSerde;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.Topology;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Disposes;
-import javax.inject.Inject;
-import java.util.Properties;
+import org.apache.kafka.streams.processor.AbstractProcessor;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
 
-@ApplicationScoped
-public class DeduplicationProcessor {
+public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
-    @ConfigProperty(name = "quarkus.kafka-streams.bootstrap-servers")
-    String bootstrapServers;
+    private KeyValueStore<String, Boolean> deduplicationStore;
+    private static final String STORE_NAME = "deduplication-store";
 
-    @ConfigProperty(name = "quarkus.kafka-streams.application-id")
-    String applicationId;
-
-    private KafkaStreams streams;
-
-    public void run() {
-        StreamsBuilder builder = new StreamsBuilder();
-
-        // Assuming the event has a String key and a Json value
-        KTable<String, String> deduplicatedTable = builder.table(
-            "<YOUR_TOPIC_NAME>",
-            Consumed.with(Serdes.String(), new JsonbSerde<>(String.class))
-        );
-
-        // TODO: Further processing or sending to another topic
-
-        Properties properties = new Properties();
-        properties.put("bootstrap.servers", bootstrapServers);
-        properties.put("application.id", applicationId);
-        
-        streams = new KafkaStreams(builder.build(), properties);
-        streams.start();
+    @Override
+    @SuppressWarnings("unchecked")
+    public void init(ProcessorContext context) {
+        super.init(context);
+        // Initialize the state store.
+        this.deduplicationStore = (KeyValueStore<String, Boolean>) context.getStateStore(STORE_NAME);
     }
 
-    void onStop(@Disposes KafkaStreams streams) {
-        streams.close();
+    @Override
+    public void process(String key, String value) {
+        if (key.isEmpty()) {
+            // If the key is empty, it's considered the end of the batch.
+            // We'll clear the state store for the next batch.
+            deduplicationStore.all().forEachRemaining(keyValue -> deduplicationStore.delete(keyValue.key));
+            return;
+        }
+
+        // If this key is not in the deduplication store, forward the record.
+        if (deduplicationStore.get(key) == null) {
+            deduplicationStore.put(key, true);
+            context().forward(key, value);
+        }
     }
 
-    public Topology buildTopology() {
-        StreamsBuilder builder = new StreamsBuilder();
-        // Your Kafka Streams logic here...
-        return builder.build();
+    @Override
+    public void close() {
+        // No additional cleanup is required as the store is managed by Kafka Streams.
     }
 }
-
