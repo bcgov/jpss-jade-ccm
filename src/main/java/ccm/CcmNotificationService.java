@@ -554,6 +554,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
 
     .unmarshal().json()
+    .setProperty("caseId", simple("${body[id]}"))
     .choice()
       .when(simple("${body[status]} == 'Active'"))
         .setHeader("number").simple("${header.event_key}")
@@ -561,7 +562,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
         // add-on any additional rccs from the dems side.
         .to("direct:compileRelatedChargeAssessments")
-        .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
+        .log(LoggingLevel.INFO,"Compiled court case in DEMS.  Court case data = ${body}.")
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
         .setBody(simple("${exchangeProperty.courtcase_data}"))
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -569,10 +570,19 @@ public class CcmNotificationService extends RouteBuilder {
         .to("http://ccm-dems-adapter/updateCourtCase")
         .log(LoggingLevel.INFO,"Update court case auth list.")
         .to("direct:processCourtCaseAuthListChanged")
-        .when(simple("${body[status]} == 'RET'"))
-          .setHeader("case_id").simple("${header.event_key}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+            exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+          }}
+        )
+        .choice()
+          .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+          .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.DEBUG,"Inactivate case done")
+          .endChoice()
       .endChoice()
     .otherwise()
       .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
