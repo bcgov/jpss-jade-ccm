@@ -95,6 +95,8 @@ public class ChargeAssessmentData {
             boolean hasIndigenous = false;
             boolean hasHroip = false;
             boolean hasDoLto = false;
+            //fix for JADE-2559
+            boolean hasRvo = false;
 
             for (JustinAccused ja : jaf.getAccused()) {
 
@@ -130,6 +132,11 @@ public class ChargeAssessmentData {
                     case_flags.add("DO/LTO");
                     hasDoLto = true;
                 }
+                //fix for JADE-2559
+                if (!hasRvo && accused.getRvo_yn()) {
+                    case_flags.add("RVO");
+                    hasRvo = true;
+                }
             }
         }
         setProposed_process_type_list(proposed_process_type_builder.toString());
@@ -149,7 +156,7 @@ public class ChargeAssessmentData {
                 break;
             case "RET":
                 setRcc_status_code("Return");
-                break;    
+                break;
             }
         }
     }
