@@ -1,5 +1,8 @@
 package com.example.kafka;
 
+import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -9,12 +12,18 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
     private KeyValueStore<String, Boolean> deduplicationStore;
     private static final String STORE_NAME = "deduplication-store";
 
+    private Serializer<String> stringSerializer;
+    private Deserializer<String> stringDeserializer;
+
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         super.init(context);
         // Initialize the state store.
         this.deduplicationStore = (KeyValueStore<String, Boolean>) context.getStateStore(STORE_NAME);
+        this.context = context;
+        this.stringSerializer = Serdes.String().serializer();
+        this.stringDeserializer = Serdes.String().deserializer();
     }
 
     @Override
