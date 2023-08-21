@@ -555,7 +555,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     .unmarshal().json()
     .choice()
-      .when(simple("${body[status]} == 'Active'"))
+      .when(simple("${body[status]} != 'Inactive'"))
         .setHeader("number").simple("${header.event_key}")
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
@@ -899,7 +899,7 @@ public class CcmNotificationService extends RouteBuilder {
     .unmarshal().json()
 
     .choice()
-      .when(simple("${body[status]} == 'Active'"))
+      .when(simple("${body[status]} != 'Inactive'"))
         .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
         .process(new Processor() {
           @Override
@@ -1060,7 +1060,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
 
       .choice()
-        .when(simple(" ${exchangeProperty.primary_yn} == 'Y' && ${body[status]} == 'Active'"))
+        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${body[status]} != 'Inactive'"))
           .setProperty("dems_court_files").simple("${body[courtFileId]}")
           .process(new Processor() {
             @Override
@@ -1197,7 +1197,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
 
       .choice()
-        .when(simple(" ${exchangeProperty.primary_yn} == 'Y' && ${body[status]} == 'Active'"))
+        .when(simple(" ${exchangeProperty.primary_yn} == 'Y' && ${body[status]} != 'Inactive'"))
           .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
           .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
           .to("direct:processPrimaryCourtCaseChanged")
@@ -1599,7 +1599,7 @@ public class CcmNotificationService extends RouteBuilder {
       // if the non primary dems case is still active, make call which will export the records over to the primary rcc
       // and then set the non primary case to no longer be active.
       .choice()
-        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${body[status]} == 'Active'"))
+        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${body[status]} != 'Inactive'"))
           // make call to merge docs and inactivate the non primary one
           .setHeader("sourceCaseId").simple("${exchangeProperty.sourceCaseId}")
           .setHeader("destinationCaseId").simple("${exchangeProperty.destinationCaseId}")
@@ -1627,7 +1627,7 @@ public class CcmNotificationService extends RouteBuilder {
     // proceed to update the agency file info in the case.
     //.log(LoggingLevel.INFO, "Agency File: ${body}")
     .choice()
-      .when(simple("${exchangeProperty.destinationCaseId} != '' && ${exchangeProperty.destinationCasesStatus} == 'Active'"))
+      .when(simple("${exchangeProperty.destinationCaseId} != '' && ${exchangeProperty.destinationCasesStatus} != 'Inactive'"))
         .log(LoggingLevel.INFO, "Updating dems case with latest merge data")
         .setHeader("number").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -1724,7 +1724,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("caseId").simple("${body[id]}")
       .setProperty("caseStatus").simple("${body[status]}")
       .choice()
-        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${exchangeProperty.caseStatus} == 'Active'"))
+        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${exchangeProperty.caseStatus} != 'Inactive'"))
           .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
           .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
           .setBody(simple("${exchangeProperty.business_data}"))
