@@ -581,7 +581,7 @@ public class CcmNotificationService extends RouteBuilder {
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
-          .log(LoggingLevel.DEBUG,"Inactivate case done")
+          .log(LoggingLevel.INFO,"Inactivate case done")
           .endChoice()
       .endChoice()
     .otherwise()
