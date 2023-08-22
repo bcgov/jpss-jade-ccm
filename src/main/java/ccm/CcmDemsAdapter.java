@@ -2425,7 +2425,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
           .log(LoggingLevel.INFO, "Migrate source case document records over to destination case")
           // copy the records over to the new destination case.
-          .setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+          //.setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+          .setBody(simple("{}"))
           .log(LoggingLevel.INFO, "prefixing: ${body}")
           .removeHeader("CamelHttpUri")
           .removeHeader("CamelHttpBaseUri")

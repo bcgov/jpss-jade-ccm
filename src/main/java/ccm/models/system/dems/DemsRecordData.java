@@ -231,8 +231,14 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        String fileNo = getOriginalFileNumber();
+        fileNo = fileNo.replaceAll(":", ".");
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll("(", ""));
+        setDocumentId(docId.replaceAll(")", ""));
+        setDocumentId(docId.replaceAll(",", "-"));
         setDocumentId(docId.replaceAll(":", ""));
+        setDocumentId(docId.replaceAll(" ", "-"));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -335,7 +341,14 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        String fileNo = getOriginalFileNumber();
+        fileNo = fileNo.replaceAll(":", ".");
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll("(", ""));
+        setDocumentId(docId.replaceAll(")", ""));
+        setDocumentId(docId.replaceAll(",", "-"));
+        setDocumentId(docId.replaceAll(":", ""));
+        setDocumentId(docId.replaceAll(" ", "-"));
         setDocumentId(docId.replaceAll(":", ""));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -439,7 +452,14 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        String fileNo = getOriginalFileNumber();
+        fileNo = fileNo.replaceAll(":", ".");
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        setDocumentId(docId.replaceAll("(", ""));
+        setDocumentId(docId.replaceAll(")", ""));
+        setDocumentId(docId.replaceAll(",", "-"));
+        setDocumentId(docId.replaceAll(":", ""));
+        setDocumentId(docId.replaceAll(" ", "-"));
         setDocumentId(docId.replaceAll(":", ""));
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
