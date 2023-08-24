@@ -1,0 +1,6 @@
+ns="ac13ae-dev"
+
+export TITLEPREFIX="DEMS Adapter $ns "
+
+echo -ne "\e]0;DEMS Adapter $ns\a"
+kamel -n $ns log ccm-dems-adapter
