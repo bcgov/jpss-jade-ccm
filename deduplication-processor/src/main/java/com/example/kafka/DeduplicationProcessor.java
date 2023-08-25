@@ -7,6 +7,9 @@ import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import javax.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
     private KeyValueStore<String, String> deduplicationStore;
@@ -14,6 +17,10 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
     private Serializer<String> stringSerializer;
     private Deserializer<String> stringDeserializer;
+
+    @Inject
+    @ConfigProperty(name = "custom.property")
+    String customProperty;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -24,6 +31,8 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
         this.context = context;
         this.stringSerializer = Serdes.String().serializer();
         this.stringDeserializer = Serdes.String().deserializer();
+
+        System.out.println("customProperty: " + customProperty);
     }
 
     @Override
@@ -37,7 +46,7 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
         // If this key is not in the deduplication store, forward the record.
         if (deduplicationStore.get(key) == null) {
-            deduplicationStore.put(key, "true");
+            deduplicationStore.put(key, key);
             context().forward(key, value);
         }
     }

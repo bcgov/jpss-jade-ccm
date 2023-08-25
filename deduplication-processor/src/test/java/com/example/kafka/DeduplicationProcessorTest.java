@@ -22,6 +22,7 @@ import com.example.kafka.DeduplicationProcessor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class DeduplicationProcessorTest {
 
@@ -46,27 +47,29 @@ public class DeduplicationProcessorTest {
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 
+        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
         testDriver = new TopologyTestDriver(topology, props);
 
         //inputTopic = testDriver.createInputTopic("user-accesses", Serdes.String().serializer(), Serdes.String().serializer());
         //outputTopic = testDriver.createOutputTopic("case-accesses", Serdes.String().deserializer(), Serdes.String().deserializer());
         inputTopic = testDriver.createInputTopic(INPUT_TOPIC, new StringSerializer(), new StringSerializer());
         outputTopic = testDriver.createOutputTopic(OUTPUT_TOPIC, new StringDeserializer(), new StringDeserializer());
-
     }
 
-    //@Test
+    @Test
     public void testDeduplication() {
         // Send some events with duplicates
-        inputTopic.pipeInput("key1", "true");
-        inputTopic.pipeInput("key2", "true");
-        inputTopic.pipeInput("key1", "true");  // Duplicate
+        inputTopic.pipeInput("key1", "key1");
+        inputTopic.pipeInput("key2", "key2");
+        inputTopic.pipeInput("key1", "key1");  // Duplicate
         inputTopic.pipeInput("", "");  // End event
 
-        assertEquals("true", outputTopic.readValue());
-        assertEquals("true", outputTopic.readValue());
-        // No more events, as the duplicate was filtered out
-        assertNull(outputTopic.readValue());
+        assertEquals("key1", outputTopic.readValue());
+        assertEquals("key2", outputTopic.readValue());
+
+        // Expect more events, as the duplicate was filtered out
+        assertTrue(outputTopic.isEmpty());
 
         testDriver.close();
     }
@@ -79,10 +82,4 @@ public class DeduplicationProcessorTest {
 
         testDriver.close();
     }
-
-    @Test
-    public void testInsertEvent() {
-        inputTopic.pipeInput("key1", "true");
-    }
-
 }
