@@ -9,7 +9,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
-    private KeyValueStore<String, Boolean> deduplicationStore;
+    private KeyValueStore<String, String> deduplicationStore;
     private static final String STORE_NAME = "deduplication-store";
 
     private Serializer<String> stringSerializer;
@@ -20,7 +20,7 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
     public void init(ProcessorContext context) {
         super.init(context);
         // Initialize the state store.
-        this.deduplicationStore = (KeyValueStore<String, Boolean>) context.getStateStore(STORE_NAME);
+        this.deduplicationStore = (KeyValueStore<String, String>) context.getStateStore(STORE_NAME);
         this.context = context;
         this.stringSerializer = Serdes.String().serializer();
         this.stringDeserializer = Serdes.String().deserializer();
@@ -37,7 +37,7 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
 
         // If this key is not in the deduplication store, forward the record.
         if (deduplicationStore.get(key) == null) {
-            deduplicationStore.put(key, true);
+            deduplicationStore.put(key, "true");
             context().forward(key, value);
         }
     }
