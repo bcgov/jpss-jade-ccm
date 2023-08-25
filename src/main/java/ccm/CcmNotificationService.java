@@ -917,14 +917,15 @@ public class CcmNotificationService extends RouteBuilder {
                 if(demsAgencyFileId.equalsIgnoreCase(courtfiledata.getRcc_id())) {
                   continue;
                 } else {
-                  String agencyFileId = null;
+                  boolean matchFound = false;
                   for(ChargeAssessmentData ccd : courtfiledata.getRelated_charge_assessments()) {
-                    agencyFileId = ccd.getRcc_id();
+                    String agencyFileId = ccd.getRcc_id();
                     if(demsAgencyFileId.equalsIgnoreCase(agencyFileId)) {
-                      continue;
+                      matchFound = true;
+                      break;
                     }
                   }
-                  if(agencyFileId == null) {
+                  if(!matchFound) {
                     agencyFileList.add(demsAgencyFileId);
                   }
                 }
@@ -1060,7 +1061,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
 
       .choice() // TODO: EW need to verify with business if we should be limiting to primary only or go through all rccs.
-        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${body[status]} != 'Inactive'"))
+        .when(simple("${body[status]} != 'Inactive'"))
           .setProperty("dems_court_files").simple("${body[courtFileId]}")
           .process(new Processor() {
             @Override
@@ -1070,18 +1071,23 @@ public class CcmNotificationService extends RouteBuilder {
               String[] demsCourtFileList = demsCourtFiles.split("; ");
               ArrayList<String> courtFileList = new ArrayList<String>();
               if(demsCourtFileList != null && demsCourtFileList.length > 0) {
+                log.info("metaMainCourtFile:"+metadata.getCourt_file_id());
                 for(String demsCourtFileId : demsCourtFileList) {
+                  log.info("Comparing court file:"+demsCourtFileId);
                   if(demsCourtFileId.equalsIgnoreCase(metadata.getCourt_file_id())) {
                     continue;
                   } else {
-                    String courtFileId = null;
+                    log.info("related length:"+metadata.getRelated_court_cases().size());
+                    boolean matchFound = false;
                     for(CourtCaseData ccd : metadata.getRelated_court_cases()) {
-                      courtFileId = ccd.getCourt_file_id();
+                      String courtFileId = ccd.getCourt_file_id();
+                      log.info("related court file:"+courtFileId);
                       if(demsCourtFileId.equalsIgnoreCase(courtFileId)) {
-                        continue;
+                        matchFound = true;
+                        break;
                       }
                     }
-                    if(courtFileId == null) {
+                    if(!matchFound) {
                       courtFileList.add(demsCourtFileId);
                     }
                   }
