@@ -234,11 +234,12 @@ public class DemsRecordData {
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll("(", ""));
-        setDocumentId(docId.replaceAll(")", ""));
-        setDocumentId(docId.replaceAll(",", "-"));
-        setDocumentId(docId.replaceAll(":", ""));
-        setDocumentId(docId.replaceAll(" ", "-"));
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -344,12 +345,12 @@ public class DemsRecordData {
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll("(", ""));
-        setDocumentId(docId.replaceAll(")", ""));
-        setDocumentId(docId.replaceAll(",", "-"));
-        setDocumentId(docId.replaceAll(":", ""));
-        setDocumentId(docId.replaceAll(" ", "-"));
-        setDocumentId(docId.replaceAll(":", ""));
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -455,12 +456,12 @@ public class DemsRecordData {
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll("(", ""));
-        setDocumentId(docId.replaceAll(")", ""));
-        setDocumentId(docId.replaceAll(",", "-"));
-        setDocumentId(docId.replaceAll(":", ""));
-        setDocumentId(docId.replaceAll(" ", "-"));
-        setDocumentId(docId.replaceAll(":", ""));
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 

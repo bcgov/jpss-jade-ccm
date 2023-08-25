@@ -391,7 +391,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     .setProperty("key", simple("${header.number}"))
     .log(LoggingLevel.INFO,"Case status exists key = ${exchangeProperty.key}")
-    
+
     .to("direct:getCourtCaseIdByKey")
     .setProperty("id", jsonpath("$.id"))
 
@@ -580,7 +580,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("x-amz*")
     .removeHeader(Exchange.CONTENT_ENCODING)
 
-    .log(LoggingLevel.INFO, "headers: ${headers}")
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getImageData")
 
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
