@@ -231,12 +231,15 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
+
+        //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
+        fileNo = fileNo.replaceAll(" ", "");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
-        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
         setDocumentId(docId);
@@ -342,12 +345,15 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
+
+        //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
+        fileNo = fileNo.replaceAll(" ", "");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
-        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
         setDocumentId(docId);
@@ -453,12 +459,15 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
+
+        //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
+        fileNo = fileNo.replaceAll(" ", "");
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
-        docId=docId.replaceAll(",", "-");
+        docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
         setDocumentId(docId);
