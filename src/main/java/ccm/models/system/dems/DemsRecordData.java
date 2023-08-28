@@ -77,7 +77,18 @@ public class DemsRecordData {
                 } else {
                     setTitle(nrd.getWitness_name().toUpperCase());
                 }
-
+            } else if(report.equals(REPORT_TYPES.ACCUSED_HISTORY_REPORT)) {
+                if(nrd.getParticipant_name() != null) {
+                    setTitle(nrd.getParticipant_name().toUpperCase());
+                } else {
+                    setTitle(report.getDescription());
+                }
+            } else if(report.equals(REPORT_TYPES.ACCUSED_INFO)) {
+                if(nrd.getParticipants() != null) {
+                    setTitle(nrd.getParticipants().toUpperCase());
+                } else {
+                    setTitle(report.getDescription());
+                }
             } else {
                 setTitle(nrd.getAgency_file_no());
             }
@@ -102,6 +113,8 @@ public class DemsRecordData {
                 setType("PARTNER AGENCY");
             } else if(report.equals(REPORT_TYPES.SUPPLEMENTAL)) {
                 setType("OPERATIONAL");
+            } else if(report.equals(REPORT_TYPES.ACCUSED_INFO)) {
+                setType("BIOGRAPHICAL");
             }
 
         }

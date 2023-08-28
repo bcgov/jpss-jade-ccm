@@ -15,6 +15,8 @@ public class DemsListItemFieldData {
         K("K"),
         Indigenous("Indigenous"),
         HROIP("HROIP"),
+        //fix for JADE-2559
+        RVO("RVO"),
         DO_LTO("DO/LTO");
 
         private String label;
@@ -73,7 +75,7 @@ public class DemsListItemFieldData {
 
         private String common_name;
         private String dems_name;
-        
+
 
         private CASE_GROUP_FIELD_MAPPINGS(String common_name, String dems_name) {
             this.common_name = common_name;
@@ -114,7 +116,7 @@ public class DemsListItemFieldData {
             } else if (SUBMITTING_AGENCY.getCommon_name().equals(justin_name)) {
                 caseGroup = SUBMITTING_AGENCY;
             }
-            
+
             return caseGroup;
         }
     }
@@ -133,4 +135,4 @@ public class DemsListItemFieldData {
         setName(name);
     }
 
-}   
+}

@@ -17,9 +17,11 @@ public class CaseAccused {
     private String offence_date;
     private Boolean indigenous_accused_yn;
     private String name_and_proposed_process_type;
-    private String birth_date;  
+    private String birth_date;
     private Boolean hroip_yn;
     private Boolean do_lto_yn;
+    //fix for JADE-2559
+    private Boolean rvo_yn;
 
     public CaseAccused() {
     }
@@ -39,10 +41,11 @@ public class CaseAccused {
 
         // Map 78
         setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
-            
+
         setHroip_yn(ja.getHroip_yn() != null && "Y".equalsIgnoreCase(ja.getHroip_yn()));
         setDo_lto_yn(ja.getDo_lto_yn() != null && "Y".equalsIgnoreCase(ja.getDo_lto_yn()));
-
+        //fix for JADE-2559
+        setRvo_yn(ja.getRvo_yn() != null && "Y".equalsIgnoreCase(ja.getRvo_yn()));
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
             name_process.append(ja.getProposed_process_type());
@@ -171,5 +174,10 @@ public class CaseAccused {
     public void setDo_lto_yn(Boolean do_lto_yn) {
         this.do_lto_yn = do_lto_yn;
     }
-    
+    public Boolean getRvo_yn() {
+        return rvo_yn;
+    }
+    public void setRvo_yn(Boolean rvo_yn) {
+        this.rvo_yn = rvo_yn;
+    }
 }

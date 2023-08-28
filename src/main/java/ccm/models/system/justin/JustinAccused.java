@@ -14,10 +14,12 @@ public class JustinAccused {
 
   private String indigenous_yn;
   private String birth_date;
-  
+
   private String hroip_yn;
   private String do_lto_yn;
-  
+  //fix for JADE-2559
+  private String rvo_yn;
+
   public String getPart_id() {
     return part_id;
   }
@@ -102,5 +104,11 @@ public class JustinAccused {
   }
   public void setDo_lto_yn(String do_lto_yn) {
     this.do_lto_yn = do_lto_yn;
+  }
+  public String getRvo_yn() {
+    return rvo_yn;
+  }
+  public void setRvo_yn(String rvo_yn) {
+    this.rvo_yn = rvo_yn;
   }
 }
