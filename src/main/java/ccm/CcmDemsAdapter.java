@@ -133,6 +133,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
+    inactivateCase();
   }
 
 
@@ -2411,7 +2412,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     // first need to check if there are any records from source case which needs to be migrated.
     
-    .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -2654,6 +2655,84 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void inactivateCase() {
+    // use method name as route id
+   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+   //IN: header.number
+   from("platform-http:/" + routeId)
+   .routeId(routeId)
+   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+   .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+   .removeHeader("CamelHttpUri")
+   .removeHeader("CamelHttpBaseUri")
+   .removeHeaders("CamelHttp*")
+   .removeHeader("kafka.HEADERS")
+   .removeHeaders("x-amz*")
+   .setProperty("dems_case_id", simple("${header.case_id}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+   .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+   .log(LoggingLevel.INFO,"Deleting DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+   .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/")
+   .log(LoggingLevel.INFO,"DEMS case record deleted.")
+   .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+   .toD("https://{{dems.host}}/cases/${header.case_id}/records?throwExceptionOnFailure=false")
+   .doTry()
+     .setProperty("length",jsonpath("$.totalRows"))
+     //.log(LoggingLevel.INFO, "Http Status : ${header.CamelHttpResponseCode} ,Length : ${exchangeProperty.length}")
+     .choice()
+       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+         .log(LoggingLevel.INFO, "Inactivate case")
+           // inactivate the case.
+         .setProperty("id", simple("${header.case_id}"))
+         .to("direct:getCourtCaseDataById")
+         .setProperty("sourceCaseName",jsonpath("$.name"))
+         .setProperty("sourceRccId",jsonpath("$.key"))
+         .setProperty("sourceAgencyFile",jsonpath("$.primaryAgencyFileNo"))
+   
+   
+    .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.sourceRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.sourceAgencyFile}\"}]}"))
+     .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpBaseUri")
+     .removeHeaders("CamelHttp*")
+     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+     .toD("https://{{dems.host}}/cases/${header.case_id}")
+     .log(LoggingLevel.INFO, "Case inactivated.")
+     .endChoice()
+     .otherwise()
+     .log(LoggingLevel.INFO, "Case lookup didn't return results.")
+     .end()
+   .endDoTry()
+   .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .log(LoggingLevel.INFO, "Case not inactivated")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+   .end();
+ }
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
