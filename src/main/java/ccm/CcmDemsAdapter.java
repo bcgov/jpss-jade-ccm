@@ -408,7 +408,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -423,9 +423,11 @@ public class CcmDemsAdapter extends RouteBuilder {
                 public void process(Exchange exchange) {
 
                   String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
+                  String caseKey = JsonParseUtils.getJsonElementValue(courtCaseJson, "key");
+                  String caseName = JsonParseUtils.getJsonElementValue(courtCaseJson, "name");
                   String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
                   String courtFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), "/value");
-                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
                   String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(),"/value");
                   String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(),"/value");
                   String primaryAgencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(),"/value");
@@ -437,6 +439,10 @@ public class CcmDemsAdapter extends RouteBuilder {
                   caseObjectJson.append("{");
                   caseObjectJson.append("\"id\":");
                   caseObjectJson.append("\"" + caseId + "\",");
+                  caseObjectJson.append("\"key\":");
+                  caseObjectJson.append("\"" + caseKey + "\",");
+                  caseObjectJson.append("\"name\":");
+                  caseObjectJson.append("\"" + caseName + "\",");
                   caseObjectJson.append("\"caseState\": ");
                   caseObjectJson.append( "\"" + caseState + "\",");
                   caseObjectJson.append("\"primaryAgencyFileId\": ");
@@ -2657,56 +2663,52 @@ public class CcmDemsAdapter extends RouteBuilder {
 
   private void inactivateCase() {
     // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-   //IN: header.number
-   from("platform-http:/" + routeId)
-   .routeId(routeId)
-   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
-   .removeHeader("CamelHttpUri")
-   .removeHeader("CamelHttpBaseUri")
-   .removeHeaders("CamelHttp*")
-   .removeHeader("kafka.HEADERS")
-   .removeHeaders("x-amz*")
-   .setProperty("dems_case_id", simple("${header.case_id}"))
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .setProperty("dems_case_id", simple("${header.case_id}"))
     .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
-   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-   .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-   .log(LoggingLevel.INFO,"Deleting DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
-   .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/")
-   .log(LoggingLevel.INFO,"DEMS case record deleted.")
-   .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-   .toD("https://{{dems.host}}/cases/${header.case_id}/records?throwExceptionOnFailure=false")
-   .doTry()
-     .setProperty("length",jsonpath("$.totalRows"))
-     //.log(LoggingLevel.INFO, "Http Status : ${header.CamelHttpResponseCode} ,Length : ${exchangeProperty.length}")
-     .choice()
-       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
-         .log(LoggingLevel.INFO, "Inactivate case")
-           // inactivate the case.
-         .setProperty("id", simple("${header.case_id}"))
-         .to("direct:getCourtCaseDataById")
-         .setProperty("sourceCaseName",jsonpath("$.name"))
-         .setProperty("sourceRccId",jsonpath("$.key"))
-         .setProperty("sourceAgencyFile",jsonpath("$.primaryAgencyFileNo"))
-   
-   
-    .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.sourceRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.sourceAgencyFile}\"}]}"))
-     .removeHeader("CamelHttpUri")
-     .removeHeader("CamelHttpBaseUri")
-     .removeHeaders("CamelHttp*")
-     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-     .toD("https://{{dems.host}}/cases/${header.case_id}")
-     .log(LoggingLevel.INFO, "Case inactivated.")
-     .endChoice()
-     .otherwise()
-     .log(LoggingLevel.INFO, "Case lookup didn't return results.")
-     .end()
-   .endDoTry()
-   .doCatch(Exception.class)
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log(LoggingLevel.INFO,"Deleting DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/")
+    .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+    .doTry()
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} >= 200 && ${header.CamelHttpResponseCode} < 300"))
+          .log(LoggingLevel.INFO, "Inactivate case")
+          // inactivate the case.
+          .setProperty("id", simple("${header.case_id}"))
+          .to("direct:getCourtCaseStatusById")
+          .setProperty("caseName",jsonpath("$.name"))
+          .setProperty("rccId",jsonpath("$.key"))
+
+          .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Inactive\"}"))
+          //.log(LoggingLevel.INFO, "${body}")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/cases/${header.case_id}")
+          .log(LoggingLevel.INFO, "Case inactivated.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO, "Case lookup didn't return results.")
+        .endChoice()
+      .end()
+    .endDoTry()
+    .doCatch(Exception.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
       .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
       .choice()
