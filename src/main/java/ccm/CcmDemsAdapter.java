@@ -2722,16 +2722,6 @@ public class CcmDemsAdapter extends RouteBuilder {
             .log(LoggingLevel.DEBUG, "body: ${body}")
             .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}/Native?renditionAction=delete")
             .log(LoggingLevel.INFO,"DEMS case record native file removed.")
-            .removeHeader("CamelHttpUri")
-            .removeHeader("CamelHttpBaseUri")
-            .removeHeaders("CamelHttp*")
-            .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-            .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${header.case_id} recordId = ${exchangeProperty.edtId}) ...")
-            .log(LoggingLevel.DEBUG, "headers: ${headers}")
-            .log(LoggingLevel.DEBUG, "body: ${body}")
-            .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}/Text")
-            .log(LoggingLevel.INFO,"DEMS case record text file removed.")
 
             /*
             .removeHeader("CamelHttpUri")

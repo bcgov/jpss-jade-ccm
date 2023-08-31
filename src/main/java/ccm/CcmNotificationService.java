@@ -1477,7 +1477,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO, "Case Flags initial: ${body}")
         .setProperty("caseFlags", simple("${body}"))
 
-        //TODO: EWong go through list of rccs and amalgamate case flags
+        // Go through list of related rccs and amalgamate case flags
 
         .process(new Processor() {
           @Override
