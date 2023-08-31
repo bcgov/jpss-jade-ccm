@@ -3,9 +3,12 @@ package ccm;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.StringTokenizer;
 import java.util.List;
+import java.util.Set;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -581,7 +584,7 @@ public class CcmNotificationService extends RouteBuilder {
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
-          .log(LoggingLevel.INFO,"Inactivate case done")
+          .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
           .endChoice()
       .endChoice()
     .otherwise()
@@ -1446,11 +1449,13 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .end()
-    .to("http://ccm-lookup-service/getCourtCaseExists")// requery if court case exists in DEMS, in case prev logic created the record.
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")// requery if court case exists in DEMS, in case prev logic created the record.
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
+    .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
+        .setHeader("number", simple("${exchangeProperty.rcc_id}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         // grab the case mappings from justin, for overriding case flags.
@@ -1465,15 +1470,109 @@ public class CcmNotificationService extends RouteBuilder {
             ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
             //log.debug(b.getCase_flags().toString());
             exchange.getMessage().setBody(b.getCase_flags());
+            exchange.setProperty("caseFlagsObject", b.getCase_flags());
           }
         })
-        .log(LoggingLevel.DEBUG, "Case Flags: ${body}")
-        .setHeader("caseFlags", simple("${body}"))
+
+        .log(LoggingLevel.INFO, "Case Flags initial: ${body}")
+        .setProperty("caseFlags", simple("${body}"))
+
+        //TODO: EWong go through list of rccs and amalgamate case flags
+
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
+            String primaryRccId = (String)exchange.getProperty("rcc_id", String.class);
+            log.info("agencyFileIds: "+demsAgencyFiles);
+            String[] demsAgencyFileList = demsAgencyFiles.split(";");
+            ArrayList<String> agencyFileList = new ArrayList<String>();
+            if(demsAgencyFileList != null && demsAgencyFileList.length > 0) {
+              for(String demsAgencyFileId : demsAgencyFileList) {
+                demsAgencyFileId = demsAgencyFileId.trim();
+                log.info("Comparing rcc: "+demsAgencyFileId);
+                if(demsAgencyFileId.equalsIgnoreCase(primaryRccId)) {
+                  continue;
+                } else {
+                  agencyFileList.add(demsAgencyFileId);
+                }
+              }
+            }
+            exchange.getMessage().setBody(agencyFileList);
+          }
+        })
+
+        .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+        .split().jsonpathWriteAsString("$.*")
+          .setProperty("agencyFileId", simple("${body}"))
+          .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              String agencyFileId = exchange.getProperty("agencyFileId", String.class);
+              log.info("agencyFileId:"+agencyFileId);
+              exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
+            }
+          })
+
+          .choice()
+            .when(simple("${exchangeProperty.agencyFileId} != ''"))
+              .log(LoggingLevel.INFO, "agency file id updated: ${exchangeProperty.agencyFileId}")
+              .setHeader("number").simple("${exchangeProperty.agencyFileId}")
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .removeHeader(Exchange.CONTENT_ENCODING)
+              .to("http://ccm-lookup-service/getCourtCaseDetails")
+
+              .log(LoggingLevel.INFO,"Retrieved related Court Case from JUSTIN: ${body}")
+              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+                  // go through list of existing case flags and add any which aren't already existing.
+                  List<String> existingCaseFlags = (List<String>)exchange.getProperty("caseFlagsObject", List.class);
+                  log.info("Printing flags:" + exchange.getProperty("caseFlags", String.class));
+
+                  log.info("Initial case flag list size: "+existingCaseFlags.size());
+                  log.info("Initial case flag list: "+existingCaseFlags);
+                  for(String flag : bcm.getCase_flags()) {
+                    log.info("Check On: " + flag);
+                    if(!existingCaseFlags.contains(flag)) {
+                      log.info("Adding: " + flag);
+                      existingCaseFlags.add(flag);
+                      log.info("Added: " + flag);
+                    }
+                  }
+                  log.info("Final case flag list size: "+existingCaseFlags.size());
+                  log.info("Final case flag list: "+existingCaseFlags);
+                  exchange.getMessage().setBody(existingCaseFlags);
+                  log.info("Set the property for caseFlags");
+                  exchange.setProperty("caseFlagsObject", existingCaseFlags);
+                }
+              })
+              .log(LoggingLevel.INFO, "Before the print case flags")
+              .log(LoggingLevel.INFO, "${body}")
+              .setProperty("caseFlags", simple("${body}"))
+              .log(LoggingLevel.INFO, "After the print case flags")
+              .log(LoggingLevel.INFO, "Properties Case Flags: ${exchangeProperty.caseFlags}")
+              
+              .setProperty("caseFlags", simple("${exchangeProperty.caseFlagsObject}"))
+              .log(LoggingLevel.INFO, "Properties Case Flags Object: ${exchangeProperty.caseFlags}")
+            .endChoice()
+          .end()
+          .log(LoggingLevel.INFO, "Properties Case Flags2: ${exchangeProperty.caseFlags}")
+        .end()
+
+        .log(LoggingLevel.INFO, "Case Flags: ${exchangeProperty.caseFlags}")
+
+
         // reset the original values
         .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
         .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
+        .setHeader("caseFlags", simple("${exchangeProperty.caseFlags}"))
         .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
         .setBody(simple("${exchangeProperty.metadata_data}"))
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -1825,7 +1924,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
 
     .setProperty("business_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.INFO, "business_data: ${exchangeProperty.business_data}")
+    .log(LoggingLevel.DEBUG, "business_data: ${exchangeProperty.business_data}")
 
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()

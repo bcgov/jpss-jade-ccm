@@ -234,8 +234,10 @@ public class DemsRecordData {
 
         //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
-        fileNo = fileNo.replaceAll(":", ".");
-        fileNo = fileNo.replaceAll(" ", "");
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
@@ -348,8 +350,10 @@ public class DemsRecordData {
 
         //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
-        fileNo = fileNo.replaceAll(":", ".");
-        fileNo = fileNo.replaceAll(" ", "");
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
@@ -462,8 +466,10 @@ public class DemsRecordData {
 
         //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
-        fileNo = fileNo.replaceAll(":", ".");
-        fileNo = fileNo.replaceAll(" ", "");
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
