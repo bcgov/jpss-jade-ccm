@@ -40,7 +40,7 @@ public class DemsApprovedCourtCaseData {
                 caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel());
             }
         }
-        // Note: intentionally left-out the K-file flag check in following code, as the metadata overrides that value.
+        // Note: JADE-2039 intentionally left-out the K-file flag check in following code, as the metadata overrides that value.
         for(String caseFlag : existingCaseFlags) {
             if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
                 if(!caseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel())) {
@@ -127,7 +127,11 @@ public class DemsApprovedCourtCaseData {
                 apprCrownAgenName.add(courtcase.getApproving_crown_agency_name());
                 for (String caseFlag : courtcase.getCase_flags()) {
                     //dataList.add(caseFlag);
-                    if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
+                    if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
                         if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel())) {
                             courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel());
                         }

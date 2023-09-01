@@ -2399,7 +2399,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
     .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "body: ${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=delete")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
     ;
   }
@@ -2690,7 +2690,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.INFO,"Body: ${body}")
       .doTry()
         .choice()
-          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS'"))
+          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
             // As per BCPSDEMS-415, only delete the native/pdf, leave the metadata
             .process(new Processor() {
               @Override
