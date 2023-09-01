@@ -30,6 +30,7 @@ public class DemsRecordData {
     private List<DemsFieldData> fields;
     private String reportType;
     private int incrementalDocCount = 1;
+    private String image_id;
 
     public String DescriptipnShortFormValue(String formTypeDescription) {
         Map<String, String> map = new HashMap<>();
@@ -460,6 +461,8 @@ public class DemsRecordData {
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
 
+        //jade-2617
+        setImage_id(nrd.getImage_id());
         //BCPSDEMS-1342 - doc id rules
         String fileNo = getOriginalFileNumber();
         fileNo = fileNo.replaceAll(":", ".");
@@ -522,6 +525,10 @@ public class DemsRecordData {
             DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(originalFileNumber);
         }
+        /*if(getImage_id() != null){
+            DemsFieldData imageID = new DemsFieldData("Image Id", getImage_id());
+            fieldData.add(imageID);
+        }*/
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
@@ -690,5 +697,12 @@ public class DemsRecordData {
         this.fields = fields;
     }
 
+    public String getImage_id() {
+        return image_id;
+      }
+    
+    public void setImage_id(String image_id) {
+    this.image_id = image_id;
+    }
 
 }
