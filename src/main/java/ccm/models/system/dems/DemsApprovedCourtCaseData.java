@@ -40,7 +40,7 @@ public class DemsApprovedCourtCaseData {
                 caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel());
             }
         }
-        // Note: intentionally left-out the K-file flag check in following code, as the metadata overrides that value.
+        // Note: JADE-2039 intentionally left-out the K-file flag check in following code, as the metadata overrides that value.
         for(String caseFlag : existingCaseFlags) {
             if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
                 if(!caseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel())) {
@@ -115,44 +115,50 @@ public class DemsApprovedCourtCaseData {
         cFlagList.addAll(caseFlagList);
 
         List<String> courtCaseDataCaseFlagList = new ArrayList<String>();
-        for (CourtCaseData courtcase : courtCaseDataList) {
-            //ccdList.add(courtcase);
-            ctHomeRegName.add(courtcase.getCourt_home_registry_name());
-            ctHomeReg.add(courtcase.getCourt_home_registry());
-            ctFileLevel.add(courtcase.getCourt_file_level());
-            ctFileClass.add(courtcase.getCourt_file_class());
-            ctFileDesig.add(courtcase.getCourt_file_designation());
-            antCrownElect.add(courtcase.getAnticipated_crown_election());
-            apprCrownAgenName.add(courtcase.getApproving_crown_agency_name());
-            for (String caseFlag : courtcase.getCase_flags()) {
-                //dataList.add(caseFlag);
-                if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel());
-                    }
-                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel());
-                    }
-                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel());
-                    }
-                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel());
-                    }
-                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel());
-                    }
-                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel().equals(caseFlag)) {
-                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel())) {
-                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
+        if(courtCaseDataList != null) {
+            for (CourtCaseData courtcase : courtCaseDataList) {
+                //ccdList.add(courtcase);
+                ctHomeRegName.add(courtcase.getCourt_home_registry_name());
+                ctHomeReg.add(courtcase.getCourt_home_registry());
+                ctFileLevel.add(courtcase.getCourt_file_level());
+                ctFileClass.add(courtcase.getCourt_file_class());
+                ctFileDesig.add(courtcase.getCourt_file_designation());
+                antCrownElect.add(courtcase.getAnticipated_crown_election());
+                apprCrownAgenName.add(courtcase.getApproving_crown_agency_name());
+                for (String caseFlag : courtcase.getCase_flags()) {
+                    //dataList.add(caseFlag);
+                    if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.K.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.VUL1.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CHI1.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.Indigenous.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.HROIP.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
+                        }
                     }
                 }
+                cFlagList.addAll(courtCaseDataCaseFlagList);
             }
-            cFlagList.addAll(courtCaseDataCaseFlagList);
         }
         //System.out.println("ctHomeRegName:"+ ctHomeRegName);
         //System.out.println("ctHomeReg:"+ ctHomeReg);

@@ -133,6 +133,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
+    deleteJustinRecords();
+    inactivateCase();
   }
 
 
@@ -351,6 +353,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
+        .log("Body: ${body}")
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
         .setBody(simple("{\"error\": \"${exception.message}\"}"))
         .transform().simple("Error reported: ${exception.message} - cannot process this message.")
@@ -407,7 +410,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -422,9 +425,11 @@ public class CcmDemsAdapter extends RouteBuilder {
                 public void process(Exchange exchange) {
 
                   String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
+                  String caseKey = JsonParseUtils.getJsonElementValue(courtCaseJson, "key");
+                  String caseName = JsonParseUtils.getJsonElementValue(courtCaseJson, "name");
                   String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
                   String courtFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), "/value");
-                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
                   String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(),"/value");
                   String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(),"/value");
                   String primaryAgencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(),"/value");
@@ -436,6 +441,10 @@ public class CcmDemsAdapter extends RouteBuilder {
                   caseObjectJson.append("{");
                   caseObjectJson.append("\"id\":");
                   caseObjectJson.append("\"" + caseId + "\",");
+                  caseObjectJson.append("\"key\":");
+                  caseObjectJson.append("\"" + caseKey + "\",");
+                  caseObjectJson.append("\"name\":");
+                  caseObjectJson.append("\"" + caseName + "\",");
                   caseObjectJson.append("\"caseState\": ");
                   caseObjectJson.append( "\"" + caseState + "\",");
                   caseObjectJson.append("\"primaryAgencyFileId\": ");
@@ -1704,7 +1713,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsApprovedCourtCaseData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
@@ -2390,7 +2399,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
     .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "body: ${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
     ;
   }
@@ -2411,7 +2420,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     // first need to check if there are any records from source case which needs to be migrated.
     
-    .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -2652,6 +2661,181 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     ;
+  }
+
+  private void deleteJustinRecords() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${header.case_id}/records?fields=cc_SaveVersion,cc_source")
+    .log(LoggingLevel.INFO,"returned case records = ${body}...")
+
+    .setProperty("length",jsonpath("$.items.length()"))
+    .log(LoggingLevel.INFO, "length: ${exchangeProperty.length}")
+    .split()
+      .jsonpathWriteAsString("$.items")
+      .setProperty("edtId",jsonpath("$.edtID"))
+      .setProperty("recordSource",jsonpath("$.cc_Source"))
+      .log(LoggingLevel.INFO,"Body: ${body}")
+      .doTry()
+        .choice()
+          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
+            // As per BCPSDEMS-415, only delete the native/pdf, leave the metadata
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception{
+                byte[] decodedBytes = null;
+                exchange.getIn().setBody(decodedBytes);
+                String fileName = "deleted.pdf";
+                String boundary = "simpleboundary";
+                String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
+                String multipartFooter = "\r\n" + "--" + boundary + "--";
+                byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
+                byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
+                byte[] multipartBody = new byte[headerBytes.length + footerBytes.length];
+                System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
+                System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length, footerBytes.length);
+                exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+                exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+                exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+                exchange.getMessage().setBody(multipartBody);
+              }
+            })
+            .removeHeader("CamelHttpUri")
+            .removeHeader("CamelHttpBaseUri")
+            .removeHeaders("CamelHttp*")
+            .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+            .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${header.case_id} recordId = ${exchangeProperty.edtId}) ...")
+            .log(LoggingLevel.DEBUG, "headers: ${headers}")
+            .log(LoggingLevel.DEBUG, "body: ${body}")
+            .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}/Native?renditionAction=delete")
+            .log(LoggingLevel.INFO,"DEMS case record native file removed.")
+
+            /*
+            .removeHeader("CamelHttpUri")
+            .removeHeader("CamelHttpBaseUri")
+            .removeHeaders("CamelHttp*")
+            .removeHeader("kafka.HEADERS")
+            .removeHeaders("x-amz*")
+            .setProperty("dems_case_id", simple("${header.case_id}"))
+            .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+            .log(LoggingLevel.INFO,"Deleting DEMS case record (case_id = ${header.case_id}) ...")
+            .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}")
+             */
+          .endChoice()
+        .end()
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR,"Exception: ${exception}")
+        .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+        .choice()
+          .when().simple("${exception.statusCode} >= 400")
+            .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+            .log(LoggingLevel.INFO, "Exception: '${exception}'")
+            .log(LoggingLevel.INFO, "${exception.message}")
+            .log(LoggingLevel.INFO, "Body: '${body}'")
+            .log(LoggingLevel.INFO, "Record not cleared")
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception {
+                try {
+                  HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                  exchange.getMessage().setBody(cause.getResponseBody());
+                  log.info("Returned body : " + cause.getResponseBody());
+                } catch(Exception ex) {
+                  ex.printStackTrace();
+                }
+              }
+            })
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .endChoice()
+        .end()
+      .end()
+    .end()
+    ;
+  }
+
+  private void inactivateCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+    
+    .setProperty("dems_case_id", simple("${header.case_id}"))
+    
+    .toD("direct:deleteJustinRecords")
+    .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+    .doTry()
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} >= 200 && ${header.CamelHttpResponseCode} < 300"))
+          .log(LoggingLevel.INFO, "Inactivate case")
+          // inactivate the case.
+          .setProperty("id", simple("${header.case_id}"))
+          .to("direct:getCourtCaseStatusById")
+          .setProperty("caseName",jsonpath("$.name"))
+          .setProperty("rccId",jsonpath("$.key"))
+
+          .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Inactive\"}"))
+          //.log(LoggingLevel.INFO, "${body}")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/cases/${header.case_id}")
+          .log(LoggingLevel.INFO, "Case inactivated.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO, "Case lookup didn't return results.")
+        .endChoice()
+      .end()
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .log(LoggingLevel.INFO, "Case not inactivated")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+   .end();
   }
 
   private void publishEventKPI() {
