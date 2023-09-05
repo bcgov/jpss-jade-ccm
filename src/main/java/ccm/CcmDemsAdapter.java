@@ -579,7 +579,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("justin_request").body()
     .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
     .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-    .log(LoggingLevel.INFO,"Inside processDocumentRecord")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .removeHeaders("CamelHttp*")
@@ -590,7 +589,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getImageData")
 
-    .log(LoggingLevel.INFO,"Received image data: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("report_document_list", simple("${bodyAs(String)}"))
     .setProperty("create_date") .jsonpath("$.create_date")
     .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
@@ -643,7 +642,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             ex.setProperty("reportType", demsRecord.getDescriptions());
             ex.setProperty("reportTitle", demsRecord.getTitle());
             ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-log.info("demsrecord:"+demsRecord.getImage_id());
+
             ex.getMessage().setBody(demsRecord);
           } else {
             log.debug("justin_request: " + ex.getProperty("justin_request",String.class));
@@ -698,7 +697,7 @@ log.info("demsrecord:"+demsRecord.getImage_id());
       .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
       .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
       .log(LoggingLevel.INFO,"image_id: ${header[image_id]}")
-      .log(LoggingLevel.INFO,"Generating derived dems record: ${body}")
+      .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
       .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
       .choice()
         .when(simple("${header.rcc_id} != null"))
@@ -771,7 +770,6 @@ log.info("demsrecord:"+demsRecord.getImage_id());
             .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
             .setProperty("dems_record").simple("${bodyAs(String)}")
             .to("direct:changeDocumentRecord")
-            .log(LoggingLevel.INFO, "processDocumentRecord: ${body}")
           .end()
           .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
           .endChoice()
@@ -2605,7 +2603,6 @@ log.info("demsrecord:"+demsRecord.getImage_id());
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Inside getCaseRecordIdByDocId")
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"documentId = ${header.documentId}...")
     .removeHeader("CamelHttpUri")
@@ -2617,7 +2614,7 @@ log.info("demsrecord:"+demsRecord.getImage_id());
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
-    .log(LoggingLevel.INFO,"returned case records = ${body}...")
+    .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
     .log(LoggingLevel.DEBUG, "length: ${exchangeProperty.length}")
@@ -2639,7 +2636,7 @@ log.info("demsrecord:"+demsRecord.getImage_id());
         .end()
         //jade 2617
         .doTry()
-          .setProperty("image_id", jsonpath("$.items[0].cc_JustinImageId"))
+          .setProperty("image_id", jsonpath("$.items[0].cc_JUSTINImageID"))
         .endDoTry()
         .doCatch(Exception.class)
           .setProperty("image_id", simple(""))
