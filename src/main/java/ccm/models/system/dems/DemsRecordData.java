@@ -531,10 +531,10 @@ public class DemsRecordData {
             DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(originalFileNumber);
         }
-        /*if(getImage_id() != null){
-            DemsFieldData imageID = new DemsFieldData("Image Id", getImage_id());
+        if(getImage_id() != null){
+            DemsFieldData imageID = new DemsFieldData("JUSTIN Image ID", getImage_id());
             fieldData.add(imageID);
-        }*/
+        }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
