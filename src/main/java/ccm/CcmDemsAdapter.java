@@ -581,7 +581,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("justin_request").body()
     .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
     .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .removeHeaders("CamelHttp*")
@@ -2616,7 +2615,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
@@ -2637,13 +2636,20 @@ public class CcmDemsAdapter extends RouteBuilder {
         .doCatch(Exception.class)
           .setProperty("saveVersion", simple(""))
         .end()
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\"}"))
-
+        //jade 2617
+        .doTry()
+          .setProperty("image_id", jsonpath("$.items[0].cc_JUSTINImageID"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("image_id", simple(""))
+        .end()
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\", \"image_id\": \"${exchangeProperty.image_id}\"}"))
+        .log(LoggingLevel.INFO,"${body}")
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\"}"))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"image_id\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
