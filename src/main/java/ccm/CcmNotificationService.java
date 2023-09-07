@@ -1081,6 +1081,20 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.INFO, "Dems case status: ${body}")
       .unmarshal().json()
 
+      .choice() // If this is an inactive cast, look for the primary, if it exists.  That one should have all court files listed.
+        .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ''"))
+          .setHeader("key").simple("${body[primaryAgencyFileId]}")
+          .setHeader("event_key",simple("${body[primaryAgencyFileId]}"))
+          .setHeader("number",simple("${body[primaryAgencyFileId]}"))
+          .log(LoggingLevel.INFO,"Retrieve court case status first")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+          .log(LoggingLevel.INFO, "Dems case status: ${body}")
+          .unmarshal().json()
+        .endChoice()
+      .end()
+
       .choice() // TODO: EW need to verify with business if we should be limiting to primary only or go through all rccs.
         .when(simple("${body[status]} != 'Inactive'"))
           .setProperty("dems_court_files").simple("${body[courtFileId]}")
@@ -1163,7 +1177,6 @@ public class CcmNotificationService extends RouteBuilder {
         .otherwise()
           // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
           .log(LoggingLevel.INFO, "Not an active primary case")
-
         .endChoice()
       .end()
 
@@ -1801,7 +1814,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     .setHeader("number", simple("${header[event_key]}"))
     .to("direct:compileRelatedCourtFiles")
-    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .log(LoggingLevel.INFO,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     // grab appearances from other related court files and add to appearance_list_object
     .split()
@@ -1811,6 +1824,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseAppearanceSummaryList")
 
+      .log(LoggingLevel.INFO, "JUSTIN Case Summary for cf ${header.number}: ${body}")
       .unmarshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
       .process(new Processor() {
         @Override
@@ -1836,7 +1850,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
 
     .setProperty("business_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.DEBUG, "business_data: ${exchangeProperty.business_data}")
+    .log(LoggingLevel.INFO, "business_data: ${exchangeProperty.business_data}")
 
     .setBody(simple("${exchangeProperty.metadata_data}"))
 
@@ -1847,13 +1861,22 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.INFO,"Check case (rcc_id ${exchangeProperty.rcc_id}) existence ...")
       .setHeader("number", simple("${exchangeProperty.rcc_id}"))
       .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      //.log(LoggingLevel.INFO, "${body}")
       .unmarshal().json()
       .setProperty("caseId").simple("${body[id]}")
       .setProperty("caseStatus").simple("${body[status]}")
+
+      // Make sure that we are re-routing to the primary case, if the value is set.
       .choice()
-        .when(simple("${exchangeProperty.primary_yn} == 'Y' && ${exchangeProperty.caseStatus} == 'Active'"))
+        .when(simple("${body[primaryAgencyFileId]} != ''"))
+          .setProperty("rcc_id", simple("${body[primaryAgencyFileId]}"))
+        .endChoice()
+      .end()
+
+      .choice()
+        .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.primary_yn} == 'Y'"))
           .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-          .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+          .log(LoggingLevel.INFO,"Found related court case. Rcc_id: ${header.rcc_id}")
           .setBody(simple("${exchangeProperty.business_data}"))
           .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -1898,6 +1921,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
+      .log(LoggingLevel.INFO, "JUSTIN Case Crown Assignment for cf ${header.number}: ${body}")
 
       .unmarshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
       .process(new Processor() {
@@ -1924,21 +1948,32 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
 
     .setProperty("business_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.DEBUG, "business_data: ${exchangeProperty.business_data}")
+    .log(LoggingLevel.INFO, "business_data: ${exchangeProperty.business_data}")
 
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
       .log(LoggingLevel.DEBUG,"Check case (rcc_id ${exchangeProperty.rcc_id}) existence ...")
       .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-      .to("http://ccm-lookup-service/getCourtCaseExists")
+      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      //.log(LoggingLevel.INFO, "${body}")
       .unmarshal().json()
       .setProperty("caseId").simple("${body[id]}")
+      .log(LoggingLevel.INFO, "Primary RCC ID: ${body[primaryAgencyFileId]}")
+
+      // Make sure that we are re-routing to the primary case, if the value is set.
       .choice()
-        .when(simple("${exchangeProperty.caseId} != ''"))
+        .when(simple("${body[primaryAgencyFileId]} != ''"))
+          .log(LoggingLevel.INFO, "Setting the rcc_id to the primary.")
+          .setProperty("rcc_id", simple("${body[primaryAgencyFileId]}"))
+        .endChoice()
+      .end()
+      .choice()
+        .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.primary_yn} == 'Y'"))
           .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-          .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+          .log(LoggingLevel.INFO,"Found related court case. Rcc_id: ${header.rcc_id}")
           .setBody(simple("${exchangeProperty.business_data}"))
           .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
