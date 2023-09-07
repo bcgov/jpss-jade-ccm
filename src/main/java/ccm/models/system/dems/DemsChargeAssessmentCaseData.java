@@ -149,10 +149,10 @@ public class DemsChargeAssessmentCaseData {
         String earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
         String propAppearanceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
         String limitationDateStr = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getLimitation_date());
-        ZonedDateTime earliestOffenceDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
-        ZonedDateTime propAppDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
-        ZonedDateTime limitationDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
-        ZonedDateTime earliestSubmitDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getLimitation_date());
+        ZonedDateTime earliestSubmitDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
+        ZonedDateTime earliestOffenceDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
+        ZonedDateTime propAppDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_proposed_appearance_date());
+        ZonedDateTime limitationDateObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(primaryChargeAssessmentData.getLimitation_date());
 
         List<String> assessmentCrownList = new ArrayList<String>();
         Set<String> assessmentCrownSet = new HashSet<>();
