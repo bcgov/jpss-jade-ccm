@@ -10,10 +10,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import javax.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-public class DeduplicationProcessor extends AbstractProcessor<String, String> {
+public class AccessDedupProcessor extends AbstractProcessor<String, String> {
 
-    private KeyValueStore<String, String> deduplicationStore;
-    private static final String STORE_NAME = "deduplication-store";
+    private KeyValueStore<String, String> accessdedupStore;
+    private static final String STORE_NAME = "ccm-accessdeup-store";
 
     private Serializer<String> stringSerializer;
     private Deserializer<String> stringDeserializer;
@@ -27,7 +27,7 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
     public void init(ProcessorContext context) {
         super.init(context);
         // Initialize the state store.
-        this.deduplicationStore = (KeyValueStore<String, String>) context.getStateStore(STORE_NAME);
+        this.accessdedupStore = (KeyValueStore<String, String>) context.getStateStore(STORE_NAME);
         this.context = context;
         this.stringSerializer = Serdes.String().serializer();
         this.stringDeserializer = Serdes.String().deserializer();
@@ -40,13 +40,13 @@ public class DeduplicationProcessor extends AbstractProcessor<String, String> {
         if (key.isEmpty()) {
             // If the key is empty, it's considered the end of the batch.
             // We'll clear the state store for the next batch.
-            deduplicationStore.all().forEachRemaining(keyValue -> deduplicationStore.delete(keyValue.key));
+            accessdedupStore.all().forEachRemaining(keyValue -> accessdedupStore.delete(keyValue.key));
             return;
         }
 
         // If this key is not in the deduplication store, forward the record.
-        if (deduplicationStore.get(key) == null) {
-            deduplicationStore.put(key, key);
+        if (accessdedupStore.get(key) == null) {
+            accessdedupStore.put(key, key);
             context().forward(key, value);
         }
     }

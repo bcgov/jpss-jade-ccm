@@ -1,4 +1,4 @@
-package com.example.kafka;
+package jpss.jade.ccm;
 
 import java.util.Properties;
 
@@ -17,14 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.example.kafka.DeduplicationProcessor;
+import jpss.jade.ccm.AccessDedupProcessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class DeduplicationProcessorTest {
+public class AccessDedupProcessorTest {
 
     private static final String INPUT_TOPIC = "user-accesses";
     private static final String OUTPUT_TOPIC = "case-accesses";
@@ -38,7 +38,7 @@ public class DeduplicationProcessorTest {
         Topology topology = new Topology();
 
         topology.addSource("source", "user-accesses")
-                .addProcessor("processor", (ProcessorSupplier<String, String>) DeduplicationProcessor::new, "source")
+                .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupProcessor::new, "source")
                 .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("deduplication-store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
                 .addSink("sink", "case-accesses", "processor");
 

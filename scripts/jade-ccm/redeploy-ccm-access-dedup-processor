@@ -1,0 +1,56 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1"
+   exit 1
+else
+   ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        ns=""
+        exit 1
+    fi
+else
+    logging_level="DEBUG"
+fi
+
+if [ "$env" != "local" ]; then
+    echo "Deploying to $ns not supported yet.  Aborting deployment."
+    exit 1
+fi
+
+# Remove the existing processor
+
+docker stop ccm-accessdedup-processor
+docker rm ccm-accessdedup-processor
+docker rmi ccm-accessdedup-processor
+
+# Deploy the processor
+
+pushd ../../ccm-accessdedup-processor
+
+mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level
+
+docker build -t ccm-accessdedup-processor .
+docker run --name ccm-accessdedup-processor -d ccm-accessdedup-processor
+
+popd

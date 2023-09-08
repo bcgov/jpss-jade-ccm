@@ -1,5 +1,5 @@
 
-# Kafka Deduplication Processor
+# CCM Acess Deduplication Processor
 
 A Kafka Streams processor designed to deduplicate incoming messages to ensure that each unique message is processed only once.
 
@@ -25,7 +25,7 @@ A Kafka Streams processor designed to deduplicate incoming messages to ensure th
 
 2. Navigate to the project directory:
    ```bash
-   cd kafka-deduplication
+   cd ccm-accessdedup-processor
    ```
 
 3. Build the project using Maven:
@@ -58,7 +58,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 
 ### Running Locally with Quarkus
 
-If you're using Quarkus, you can run the `DeduplicationProcessor` in development mode. This mode provides live coding capabilities, allowing for real-time updates without restarting the application.
+If you're using Quarkus, you can run the `ccm-accessdedup-processor` in development mode. This mode provides live coding capabilities, allowing for real-time updates without restarting the application.
 
 1. **Ensure Kafka is Running**: Make sure you have a local instance of Kafka running.
 2. **Navigate to the Project Directory**: This should be the directory containing your `pom.xml` file.
@@ -66,7 +66,7 @@ If you're using Quarkus, you can run the `DeduplicationProcessor` in development
    ```bash
    mvn quarkus:dev
    ```
-   This will start your Quarkus application with the `DeduplicationProcessor` in development mode.
+   This will start your Quarkus application with the `ccm-accessdedup-processor` in development mode.
 4. **Monitor**: Your processor should now be running and processing messages from Kafka topics. Produce messages to the input topic and monitor the deduplication results.
 5. **Live Coding**: With `mvn quarkus:dev`, you can make changes to your code and see the results immediately. Quarkus will automatically recompile and apply those changes in real-time.
 6. **Shutdown**: To stop the processor and exit development mode, press `Ctrl + C` in your terminal.
