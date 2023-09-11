@@ -65,6 +65,31 @@ public class CcmSplunkAdapter extends RouteBuilder {
     .handled(true)
     .end();
 
+    // HttpOperation Failed
+    onException(HttpOperationFailedException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+        log.error("HttpOperationFailedException caught, exception message : " + cause.getMessage());
+        log.error("HttpOperationFailedException class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
+        if(event != null) {
+          log.error("HttpOperation Exception event info : " + event.getEvent_source());
+        }
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
+      }
+    })
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
+    .maximumRedeliveries(2)
+    .redeliveryDelay(1000)
+    .backOffMultiplier(2)
+    .end();
+ 
+
     // General Exception
     onException(Exception.class)
     .process(new Processor() {
@@ -81,7 +106,8 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(5).redeliveryDelay(10000)
+    //.maximumRedeliveries(5).redeliveryDelay(10000)
+      .handled(true)
     .end();
   }
 

@@ -1338,7 +1338,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: exchangeProeprty.key
+    // IN: exchangeProperty.key
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -2516,6 +2516,89 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
+
+      // JADE-2671 - Search for all DEMS cases which have Primary Agency File of this recently inactivated case, and update those
+      // as well, to the new target primary agency file.
+      .log(LoggingLevel.INFO, "Updating related cases with new primary file id.")
+      //"Primary Agency File ID"
+      .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader("kafka.HEADERS")
+      .removeHeaders("x-amz*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/Primary Agency File ID:${exchangeProperty.sourceRccId}/id?throwExceptionOnFailure=false")
+
+      .setProperty("length",jsonpath("$.length()"))
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+          // Loop through list and update the primary id
+          .split()
+            .jsonpathWriteAsString("$.")
+            .setProperty("inactiveCaseId",jsonpath("$.id"))
+
+            // get dest key for setting primary agency file
+            .setProperty("id", simple("${exchangeProperty.inactiveCaseId}"))
+            .to("direct:getCourtCaseStatusById")
+            .setProperty("inactiveCaseName",jsonpath("$.name"))
+            .setProperty("inactiveRccId",jsonpath("$.key"))
+            .setProperty("inactiveStatus",jsonpath("$.status"))
+            .choice()
+              .when(simple("${exchangeProperty.inactiveStatus} == 'Inactive'"))
+                .setBody(simple("{\"name\": \"${exchangeProperty.inactiveCaseName}\",\"key\": \"${exchangeProperty.inactiveRccId}\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
+
+                .log(LoggingLevel.INFO, "Changing primary id for case id: ${exchangeProperty.inactiveCaseId}")
+                .removeHeader("CamelHttpUri")
+                .removeHeader("CamelHttpBaseUri")
+                .removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                .toD("https://{{dems.host}}/cases/${exchangeProperty.inactiveCaseId}")
+              .endChoice()
+              .otherwise()
+                .log(LoggingLevel.ERROR, "Case id: ${exchangeProperty.inactiveCaseId} has primary of an inactive case, but is active")
+              .endChoice()
+            .end()
+          .end()
+        .endChoice()
+        .when(simple("${header.CamelHttpResponseCode} == 200"))
+          .log(LoggingLevel.INFO,"No cases found with primary id of ${exchangeProperty.sourceRccId}.")
+        .endChoice()
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                  log.error("Returned body : " + exchange.getMessage().getBody(String.class));
+                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                  exchange.getMessage().setBody(body);
+                }
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .transform().simple("${body}")
+          .setHeader("CCMException", simple("{\"error\": \"${header.CamelHttpResponseCode}\"}"))
+          .setHeader("CCMExceptionEncoded", simple("${body}"))
+
+          .log(LoggingLevel.ERROR,"body = '${body}'.")
+        .endChoice()
+      .end()
+
+
+
+
+
     .endDoTry()
     .doCatch(Exception.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
