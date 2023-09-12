@@ -1590,8 +1590,38 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+    // Merge the accused persons from all related agency files into a unique list
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ChargeAssessmentData bcm = exchange.getProperty("CourtCaseMetadata", ChargeAssessmentData.class);
+        List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+        // go through each accused person and make sure it is not already in the existing list.
+        if(bcm.getRelated_charge_assessments() != null) {
+          for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+            List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+            for(CaseAccused relatedAccused: relatedAccusedPersons) {
+              boolean unique = true;
+              for(CaseAccused listedAccused : accusedPersons) {
+                if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                  unique = false;
+                  break;
+                }
+              }
+              if(unique) {
+                accusedPersons.add(relatedAccused);
+              }
+            }
+          }
+
+        }
+        exchange.getMessage().setBody(accusedPersons);
+      }
+    })
+    
+    .marshal().json()
     .split()
-      .jsonpathWriteAsString("$.accused_persons")
+      .jsonpathWriteAsString("$.*")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
       .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
@@ -1678,8 +1708,37 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"${body}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+      // Merge the accused persons from all related agency files into a unique list
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          ChargeAssessmentData bcm = exchange.getProperty("CourtCaseMetadata", ChargeAssessmentData.class);
+          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+          // go through each accused person and make sure it is not already in the existing list.
+          if(bcm.getRelated_charge_assessments() != null) {
+            for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+              for(CaseAccused relatedAccused: relatedAccusedPersons) {
+                boolean unique = true;
+                for(CaseAccused listedAccused : accusedPersons) {
+                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                    unique = false;
+                    break;
+                  }
+                }
+                if(unique) {
+                  accusedPersons.add(relatedAccused);
+                }
+              }
+            }
+          }
+          exchange.getMessage().setBody(accusedPersons);
+        }
+      })
+
+      .marshal().json()
       .split()
-        .jsonpathWriteAsString("$.accused_persons")
+        .jsonpathWriteAsString("$.*")
         .setHeader("key", jsonpath("$.identifier"))
         .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
         .log(LoggingLevel.INFO,"Updating accused participant ...")
@@ -1793,11 +1852,41 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
     .setBody(simple("${exchangeProperty.metadata_data}"))
+    // Merge the accused persons from all related court files into a unique list
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
+        List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+        // go through each accused person and make sure it is not already in the existing list.
+        if(bcm.getRelated_court_cases() != null) {
+          for(CourtCaseData bcmRelated : bcm.getRelated_court_cases()) {
+            List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+            for(CaseAccused relatedAccused: relatedAccusedPersons) {
+              boolean unique = true;
+              for(CaseAccused listedAccused : accusedPersons) {
+                if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                  unique = false;
+                  break;
+                }
+              }
+              if(unique) {
+                accusedPersons.add(relatedAccused);
+              }
+            }
+          }
+
+        }
+        exchange.getMessage().setBody(accusedPersons);
+      }
+    })
+    .marshal().json()
+    .log(LoggingLevel.INFO, "Unprocessed accused list: ${body}")
     .split()
-      .jsonpathWriteAsString("$.accused_persons")
+      .jsonpathWriteAsString("$.*")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-      .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
+      .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
       .to("direct:processAccusedPerson")
     .end()
     ;
@@ -2539,7 +2628,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
           // Loop through list and update the primary id
           .split()
-            .jsonpathWriteAsString("$.")
+            .jsonpathWriteAsString("$.*")
             .setProperty("inactiveCaseId",jsonpath("$.id"))
 
             // get dest key for setting primary agency file

@@ -1432,6 +1432,8 @@ public class CcmNotificationService extends RouteBuilder {
           Boolean autoCreateBoolean = Boolean.valueOf(autocreateFlag);
           Boolean createOverrideBoolean = Boolean.valueOf(createOverrideFlag);
           Boolean caseFoundBoolean = Boolean.valueOf(caseFound!="");
+          // If the case is not found in DEMS and autoCreateFlag is true, then set property
+          // to create the case in DEMS.
           log.info("caseFound:"+caseFoundBoolean);
           if((autoCreateBoolean || createOverrideBoolean ) && !caseFoundBoolean){
             ex.setProperty("createCase", "true");
@@ -1442,6 +1444,7 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .choice()
       .when(simple(" ${exchangeProperty.createCase} == 'true'"))
+        // proceed to create the case in DEMS, if it doesn't exist and criteria is met.
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
@@ -1477,10 +1480,13 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .end()
-    .to("http://ccm-lookup-service/getCourtCaseStatusExists")// requery if court case exists in DEMS, in case prev logic created the record.
+    // requery if court case exists in DEMS, in case prev logic created the record.
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
+    // look-up the case flags for each related rcc in JUSTIN
+    // agencyFileId will have a ";" delimited list of rccs to parse through.
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
         .setHeader("number", simple("${exchangeProperty.rcc_id}"))
@@ -1506,7 +1512,6 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("caseFlags", simple("${body}"))
 
         // Go through list of related rccs and amalgamate case flags
-
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
@@ -1595,7 +1600,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO, "Case Flags: ${exchangeProperty.caseFlags}")
 
 
-        // reset the original values
+        // reset the original values and add the JUSTIN derived list of case flags to the header.
         .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
