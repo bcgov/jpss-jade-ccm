@@ -1,16 +1,14 @@
 package ccm.models.system.dems;
 
-import java.util.List;
-import java.util.Set;
-
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.utils.DateTimeUtils;
-
-import java.time.ZonedDateTime;
 
 public class DemsChargeAssessmentCaseData {
     public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
@@ -32,7 +30,31 @@ public class DemsChargeAssessmentCaseData {
     {
 
         StringBuilder case_name = new StringBuilder();
-        for (CaseAccused ba : primaryChargeAssessmentData.getAccused_persons()) {
+        List<CaseAccused> caseAccusedList = new ArrayList<CaseAccused>();
+
+        if (primaryChargeAssessmentData.getAccused_persons() != null) {
+            for (CaseAccused caseAccused : primaryChargeAssessmentData.getAccused_persons()) {
+            
+                if (!caseAccusedList.contains(caseAccused)){
+                    caseAccusedList.add(caseAccused);
+                }
+            }
+        }
+        if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()) {
+            
+            for (ChargeAssessmentData chargeData : chargeAssessmentDataList) {
+                if (chargeData.getAccused_persons() != null) {
+                    for (CaseAccused caseAccused :  chargeData.getAccused_persons()) {
+            
+                        if (!caseAccusedList.contains(caseAccused)){
+                            caseAccusedList.add(caseAccused);
+                        }
+                    }
+                }      
+            }
+        }
+
+        for (CaseAccused ba : caseAccusedList) {
             // Map 87
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
@@ -59,6 +81,7 @@ public class DemsChargeAssessmentCaseData {
             case_name.append(" ...");
         }
         setName(case_name.toString());
+        
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(primaryChargeAssessmentData.getRcc_id());
         setDescription("");
@@ -276,7 +299,7 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData primaryAgencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(), primaryChargeAssessmentData.getAgency_file());
         StringBuilder accused_name_list = new StringBuilder();
 
-        if(primaryChargeAssessmentData.getAccused_persons() != null) {
+        /*if(primaryChargeAssessmentData.getAccused_persons() != null) {
             for (CaseAccused accused : primaryChargeAssessmentData.getAccused_persons()) {
                 // Map 101
                 if(accused_name_list.length() > 0) {
@@ -286,6 +309,15 @@ public class DemsChargeAssessmentCaseData {
                 String concatenated_name_string = DemsPersonData.generateFullGivenNamesAndLastNameFromAccused(accused);
                 accused_name_list.append(concatenated_name_string);
             }
+        }*/
+        for (CaseAccused accused : caseAccusedList) {
+                // Map 101
+                if(accused_name_list.length() > 0) {
+                    accused_name_list.append(", ");
+                }
+
+                String concatenated_name_string = DemsPersonData.generateFullGivenNamesAndLastNameFromAccused(accused);
+                accused_name_list.append(concatenated_name_string);
         }
         DemsFieldData accusedFullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), accused_name_list.toString());
 
