@@ -137,6 +137,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     publishEventKPI();
     deleteJustinRecords();
     inactivateCase();
+    getCaseListHyperlink();
   }
 
 

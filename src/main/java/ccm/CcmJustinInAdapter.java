@@ -217,6 +217,55 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
     .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
-    ;
+    
+
+    .doTry()
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader("key", simple("${exchangeProperty.rcc_id}"))
+    .to("http://ccm-lookup-service/getCaseListHyperlink")
+    .endDoTry()
+  .doCatch(HttpOperationFailedException.class)
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        JustinCaseHyperlinkData body = new JustinCaseHyperlinkData();
+        HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+        if (exception.getStatusCode() == 404) {
+          exchange.setProperty("errorMessage", "Case not found.");
+        } else {
+          exchange.setProperty("errorMessage", "Error retrieving case hyperlink.");
+        }
+        body.setMessage(exchange.getProperty("errorMessage", String.class));
+
+        exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exception.getStatusCode());
+        exchange.getMessage().setBody(body);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
+    .log(LoggingLevel.ERROR, "HTTP response ${header.CamelHttpResponseCode}. Error message: ${exchangeProperty.errorMessage}")
+    .log(LoggingLevel.DEBUG, "Body: ${body}.")
+    .stop()
+  .end()
+
+  // prepare response
+  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+  .process(new Processor() {
+    @Override
+    public void process(Exchange exchange) throws Exception {
+      CaseHyperlinkData data = exchange.getMessage().getBody(CaseHyperlinkData.class);
+      JustinCaseHyperlinkData body = new JustinCaseHyperlinkData(data);
+      exchange.getMessage().setBody(body);
+    }
+  })
+  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
+  .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
+  .log(LoggingLevel.DEBUG, "Body: ${body}")
+  ;
   }
 }
