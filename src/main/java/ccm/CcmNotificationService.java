@@ -37,6 +37,8 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
+import ccm.models.common.data.AuthUser;
+import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
@@ -635,13 +637,126 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+
+    .setHeader("number", simple("${header[event_key]}"))
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .unmarshal().json()
+
+    .choice() // If this is an inactive cast, look for the primary, if it exists.  That one should have all court files listed.
+      .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ''"))
+        .setHeader("key").simple("${body[primaryAgencyFileId]}")
+        .setHeader("event_key",simple("${body[primaryAgencyFileId]}"))
+        .setHeader("number",simple("${body[primaryAgencyFileId]}"))
+        .log(LoggingLevel.INFO,"Retrieve court case status first")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        .unmarshal().json()
+      .endChoice()
+    .end()
+
+    // Get list from the primary case.
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_key}")
     .log(LoggingLevel.INFO,"Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
-    .log(LoggingLevel.DEBUG,"Update court case auth list in DEMS.  Court case auth list = ${body}")
+
+    .setProperty("authlist_object", body())
+    .setBody(simple("${exchangeProperty.authlist_object}"))
+
+    .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        AuthUserList authListData = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+        String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
+        log.info("agencyFileIds: "+demsAgencyFiles);
+        String[] demsAgencyFileList = demsAgencyFiles.split(";");
+        ArrayList<String> agencyFileList = new ArrayList<String>();
+        if(demsAgencyFileList != null && demsAgencyFileList.length > 0) {
+          log.info("Primary rcc: "+authListData.getRcc_id());
+          for(String demsAgencyFileId : demsAgencyFileList) {
+            demsAgencyFileId = demsAgencyFileId.trim();
+            log.info("Comparing rcc: "+demsAgencyFileId);
+            if(demsAgencyFileId.equalsIgnoreCase(authListData.getRcc_id())) {
+              continue;
+            } else {
+              agencyFileList.add(demsAgencyFileId);
+            }
+          }
+        }
+        exchange.getMessage().setBody(agencyFileList);
+      }
+    })
+    .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+    .split().jsonpathWriteAsString("$.*")
+      .setProperty("agencyFileId", simple("${body}"))
+      .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          String agencyFileId = exchange.getProperty("agencyFileId", String.class);
+          log.info("agencyFileId:"+agencyFileId);
+          exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
+        }
+      })
+
+      .choice()
+        .when(simple("${exchangeProperty.agencyFileId} != ''"))
+          .log(LoggingLevel.INFO, "agency file updated: ${exchangeProperty.agencyFileId}")
+          .setHeader("number").simple("${exchangeProperty.agencyFileId}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
+          .log(LoggingLevel.INFO,"Retrieve court case auth list of ${exchangeProperty.agencyFileId}")
+          .to("http://ccm-lookup-service/getCourtCaseAuthList")
+
+          .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              AuthUserList bcm = exchange.getIn().getBody(AuthUserList.class);
+              AuthUserList metadata = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+              List<AuthUser> relatedCf = metadata.getAuth_user_list();
+              if(relatedCf == null) {
+                relatedCf = new ArrayList<AuthUser>();
+              }
+              relatedCf.addAll(bcm.getAuth_user_list());
+              exchange.setProperty("authlist_object", metadata);
+            }
+          })
+        .endChoice()
+      .end()
+
+    .end()
+
+
+    // set the updated metadata object to be the body
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        AuthUserList metadata = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+
+        exchange.getMessage().setBody(metadata, AuthUserList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+
+    .setProperty("authlist_data", simple("${bodyAs(String)}"))
+    .setBody(simple("${exchangeProperty.authlist_data}"))
+    /*
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_key}")
+    .log(LoggingLevel.INFO,"Retrieve court case auth list")
+    .to("http://ccm-lookup-service/getCourtCaseAuthList")*/
+
+    .log(LoggingLevel.INFO,"Update court case auth list in DEMS.  Court case auth list = ${body}")
+
+
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     //.setProperty("authlist_data", simple("${bodyAs(String)}"))
