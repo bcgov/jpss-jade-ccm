@@ -1544,6 +1544,56 @@ public class CcmDemsAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
     ;
   }
+ //as part of jade 2425
+  private void getCaseListHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header.key
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
+    .setProperty("key", simple("${header.key}"))
+    .to("direct:getCourtCaseIdByKey")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != ''"))
+        .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+        .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
+            String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+            String caseId = exchange.getProperty("caseId", String.class);
+            CaseHyperlinkData body = new CaseHyperlinkData();
+
+            body.setMessage("Case found.");
+            body.setHyperlink(prefix + caseId + suffix);
+            exchange.getMessage().setBody(body);
+          }
+        })
+        .log(LoggingLevel.INFO, "Case (key: ${header.key}) found; caseId: '${exchangeProperty.caseId}'")
+        .endChoice()
+      .otherwise()
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CaseHyperlinkData body = new CaseHyperlinkData();
+            body.setMessage("Case not found.");
+            exchange.getMessage().setBody(body);
+          }
+        })
+        .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+        .endChoice()
+    .end()
+    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+    ;
+  }
 
   private void createCourtCase() {
     // use method name as route id

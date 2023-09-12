@@ -20,6 +20,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.system.justin.*;
 import ccm.models.common.data.CaseHyperlinkData;
+import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.versioning.Version;
 
 public class CcmJustinInAdapter extends RouteBuilder {
@@ -203,5 +204,19 @@ public class CcmJustinInAdapter extends RouteBuilder {
    .end()
 
    .setProperty("rcc_id", simple("${header.rcc_id}"))
+   .unmarshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CommonCaseList data = exchange.getMessage().getBody(CommonCaseList.class);
+        JustinRccCaseList body = new JustinRccCaseList(data);
+        exchange.getMessage().setBody(body);
+      }
+    })
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
+    .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    ;
   }
 }
