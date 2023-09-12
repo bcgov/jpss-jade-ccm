@@ -656,6 +656,9 @@ public class CcmNotificationService extends RouteBuilder {
         .unmarshal().json()
       .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "Debugging ${body}")
+    .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
+    .log(LoggingLevel.INFO, "Debugging2")
 
     // Get list from the primary case.
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -663,11 +666,11 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number").simple("${header.event_key}")
     .log(LoggingLevel.INFO,"Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
+    .log(LoggingLevel.INFO, "finished first get.")
 
     .setProperty("authlist_object", body())
     .setBody(simple("${exchangeProperty.authlist_object}"))
 
-    .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
