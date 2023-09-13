@@ -1350,17 +1350,6 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:compileRelatedCourtFiles")
 
     .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
-    // go through list of rcc_ids and check on the state of the rcc in dems
-    // and copy into an array.
-    .setProperty("length",jsonpath("$.related_agency_file.length()"))
-    .choice()
-      .when(simple("${exchangeProperty.length} > 1"))
-        // potential merge, since there is > 1 related agencies
-        // call merge method which will go through list of agencies,
-        // merge the records and inactivate non-primary ones.
-        .to("direct:processCaseMerge")
-      .endChoice()
-    .end()
 
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -1392,6 +1381,20 @@ public class CcmNotificationService extends RouteBuilder {
         .endChoice()
       .end()
 
+    .end()
+
+    // re-set body to the metadata_data json.
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    // go through list of rcc_ids and check on the state of the rcc in dems
+    // and copy into an array.
+    .setProperty("length",jsonpath("$.related_agency_file.length()"))
+    .choice()
+      .when(simple("${exchangeProperty.length} > 1"))
+        // potential merge, since there is > 1 related agencies
+        // call merge method which will go through list of agencies,
+        // merge the records and inactivate non-primary ones.
+        .to("direct:processCaseMerge")
+      .endChoice()
     .end()
 
     .choice()

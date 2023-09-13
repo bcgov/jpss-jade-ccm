@@ -1422,15 +1422,41 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
-    .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
+      .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      // sometimes, if events come in a little too fast for the same case, it may caus an error
+      // wait 5 seconds then try again.
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+          log.error("Returned status code : " + cause.getStatusCode());
+          log.error("Response body : " + cause.getResponseBody());
+        }
+      })
+      .delay(5000)
+      .log(LoggingLevel.INFO,"Re-attempting to process request (id=${exchangeProperty.id})...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
+      .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+    .end()
     ;
   }
 
@@ -2559,8 +2585,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"prefixName = ${header[prefixName]}")
 
     // first need to check if there are any records from source case which needs to be migrated.
-    
-     .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -2571,7 +2596,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setProperty("length",jsonpath("$.totalRows"))
       .log(LoggingLevel.INFO, "${exchangeProperty.length}")
       .choice()
-        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0 && ${header[destinationCaseId]} != ''"))
           .log(LoggingLevel.INFO, "Migrate source case document records over to destination case")
           // copy the records over to the new destination case.
           //.setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
@@ -2612,7 +2637,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       // as well, to the new target primary agency file.
       .log(LoggingLevel.INFO, "Updating related cases with new primary file id.")
       //"Primary Agency File ID"
-      .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+      .log(LoggingLevel.INFO,"sourceRccId = ${exchangeProperty.sourceRccId}...")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
