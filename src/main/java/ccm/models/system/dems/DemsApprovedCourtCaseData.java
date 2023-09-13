@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
-import ccm.models.system.justin.JustinAccused;
 import ccm.utils.DateTimeUtils;
 
 public class DemsApprovedCourtCaseData {
@@ -79,8 +78,9 @@ public class DemsApprovedCourtCaseData {
                     for (CaseAccused ca : ccd.getAccused_persons()) {
                         boolean matchFound = false;
                         for(CaseAccused pca : primaryCourtCaseData.getAccused_persons()) {
-                            if(pca.getIdentifier() ==  ca.getIdentifier()) {
+                            if(pca.getIdentifier().equals(ca.getIdentifier())) {
                                 matchFound = true;
+                                break;
                             }
                         }
                         if(!matchFound) {
