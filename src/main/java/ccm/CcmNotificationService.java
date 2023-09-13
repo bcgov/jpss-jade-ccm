@@ -641,6 +641,8 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
 
     .setHeader("number", simple("${header[event_key]}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
 
