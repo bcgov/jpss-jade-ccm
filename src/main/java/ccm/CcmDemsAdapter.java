@@ -1590,11 +1590,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
     .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
     // Merge the accused persons from all related agency files into a unique list
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        ChargeAssessmentData bcm = exchange.getProperty("CourtCaseMetadata", ChargeAssessmentData.class);
+        ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
         List<CaseAccused> accusedPersons = bcm.getAccused_persons();
         // go through each accused person and make sure it is not already in the existing list.
         if(bcm.getRelated_charge_assessments() != null) {
@@ -1708,11 +1709,12 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"${body}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
       // Merge the accused persons from all related agency files into a unique list
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
-          ChargeAssessmentData bcm = exchange.getProperty("CourtCaseMetadata", ChargeAssessmentData.class);
+          ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
           List<CaseAccused> accusedPersons = bcm.getAccused_persons();
           // go through each accused person and make sure it is not already in the existing list.
           if(bcm.getRelated_charge_assessments() != null) {

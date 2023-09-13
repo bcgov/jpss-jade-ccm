@@ -3,12 +3,9 @@ package ccm;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.StringTokenizer;
 import java.util.List;
-import java.util.Set;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -184,8 +181,12 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_summary("Unable to process event, CamelException raised.");
         error.setError_details(cause.getMessage());
 
-        log.error("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+        log.error("CamelException caught, exception message : " + cause.getMessage());
         log.error("CamelException Exception event info : " + event.getEvent_source());
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
 
         // KPI
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
@@ -656,35 +657,32 @@ public class CcmNotificationService extends RouteBuilder {
         .unmarshal().json()
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO, "Debugging ${body}")
     .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
-    .log(LoggingLevel.INFO, "Debugging2")
 
     // Get list from the primary case.
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_key}")
-    .log(LoggingLevel.INFO,"Retrieve court case auth list")
     .to("http://ccm-lookup-service/getCourtCaseAuthList")
-    .log(LoggingLevel.INFO, "finished first get.")
+    .log(LoggingLevel.DEBUG, "Initial auth list for rcc: ${header.number}: ${body}")
 
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
     .setProperty("authlist_object", body())
-    .setBody(simple("${exchangeProperty.authlist_object}"))
 
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        AuthUserList authListData = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
         String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
+        String primaryRccId = (String)exchange.getMessage().getHeader("number");
         log.info("agencyFileIds: "+demsAgencyFiles);
         String[] demsAgencyFileList = demsAgencyFiles.split(";");
         ArrayList<String> agencyFileList = new ArrayList<String>();
         if(demsAgencyFileList != null && demsAgencyFileList.length > 0) {
-          log.info("Primary rcc: "+authListData.getRcc_id());
+          log.info("Primary rcc: "+primaryRccId);
           for(String demsAgencyFileId : demsAgencyFileList) {
             demsAgencyFileId = demsAgencyFileId.trim();
             log.info("Comparing rcc: "+demsAgencyFileId);
-            if(demsAgencyFileId.equalsIgnoreCase(authListData.getRcc_id())) {
+            if(demsAgencyFileId.equalsIgnoreCase(primaryRccId)) {
               continue;
             } else {
               agencyFileList.add(demsAgencyFileId);
@@ -716,19 +714,25 @@ public class CcmNotificationService extends RouteBuilder {
           .removeHeader(Exchange.CONTENT_ENCODING)
           .log(LoggingLevel.INFO,"Retrieve court case auth list of ${exchangeProperty.agencyFileId}")
           .to("http://ccm-lookup-service/getCourtCaseAuthList")
+          .log(LoggingLevel.DEBUG, "auth list for rcc: ${header.number}: ${body}")
 
           .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
-              AuthUserList bcm = exchange.getIn().getBody(AuthUserList.class);
-              AuthUserList metadata = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
-              List<AuthUser> relatedCf = metadata.getAuth_user_list();
-              if(relatedCf == null) {
-                relatedCf = new ArrayList<AuthUser>();
+              AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
+              AuthUserList paul = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+              List<AuthUser> authList = paul.getAuth_user_list();
+              if(authList == null) {
+                authList = new ArrayList<AuthUser>();
               }
-              relatedCf.addAll(bcm.getAuth_user_list());
-              exchange.setProperty("authlist_object", metadata);
+              if(aul.getAuth_user_list() != null) {
+                for(AuthUser user : aul.getAuth_user_list())
+                  if(!authList.stream().filter(o -> o.getKey().equals(user.getKey())).findFirst().isPresent()) {
+                    authList.add(user);
+                  }
+              }
+              exchange.setProperty("authlist_object", authList);
             }
           })
         .endChoice()

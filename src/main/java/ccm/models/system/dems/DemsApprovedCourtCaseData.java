@@ -8,8 +8,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
+import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.system.justin.JustinAccused;
 import ccm.utils.DateTimeUtils;
 
 public class DemsApprovedCourtCaseData {
@@ -71,11 +73,30 @@ public class DemsApprovedCourtCaseData {
 
         StringBuilder  accusedNames = new StringBuilder (primaryCourtCaseData.getAccused_names());
         if(courtCaseDataList != null) {
-            for (CourtCaseData d : courtCaseDataList){
-                accusedNames.append(", ");
-                accusedNames.append(d.getAccused_names());
+            for (CourtCaseData ccd : courtCaseDataList) {
+
+                if(ccd.getAccused_persons() != null) {
+                    for (CaseAccused ca : ccd.getAccused_persons()) {
+                        boolean matchFound = false;
+                        for(CaseAccused pca : primaryCourtCaseData.getAccused_persons()) {
+                            if(pca.getIdentifier() ==  ca.getIdentifier()) {
+                                matchFound = true;
+                            }
+                        }
+                        if(!matchFound) {
+                            // Map 87
+                            if(accusedNames.length() > 0) {
+                                accusedNames.append(", ");
+                            }
+                            accusedNames.append(ca.getGiven_1_name());
+                            accusedNames.append(" ");
+                            accusedNames.append(ca.getSurname());
+                        }
+                    }
+                }
             }
         }
+
         //DemsFieldData rmsProcStatus = new FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
         //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
         DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), accusedNames.toString());
