@@ -176,7 +176,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
    from("platform-http:/" + path + "?httpMethodRestrict=GET")
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-
+   .log(LoggingLevel.DEBUG,"getCaseListHyperlink request received. rcc_id = ${header.number}")
    .process(new Processor() {
      @Override
      public void process(Exchange exchange) throws Exception {
@@ -193,12 +193,12 @@ public class CcmJustinInAdapter extends RouteBuilder {
        .process(new Processor() {
          @Override
          public void process(Exchange exchange) throws Exception {
-           JustinCaseHyperlinkData body = new JustinCaseHyperlinkData();
-           body.setMessage("Unauthorized.");
+          JustinRccCaseList body = new JustinRccCaseList();
            exchange.getMessage().setBody(body);
          }
        })
-       .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
+       .log(LoggingLevel.INFO,"${body}")
+       .marshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
        .log(LoggingLevel.ERROR,"HTTP response 401. Body: ${body}")
        .stop()
    .end()
@@ -209,8 +209,8 @@ public class CcmJustinInAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         CommonCaseList data = exchange.getMessage().getBody(CommonCaseList.class);
-        JustinRccCaseList body = new JustinRccCaseList(data);
-        exchange.getMessage().setBody(body);
+        //JustinRccCaseList body = new JustinRccCaseList(data);
+        exchange.getMessage().setBody(data);
       }
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
