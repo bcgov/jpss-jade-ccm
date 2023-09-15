@@ -54,6 +54,7 @@ import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
+import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
 import ccm.models.common.data.CommonCaseList;
@@ -1556,57 +1557,70 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
-    .setProperty("key", simple("${header.key}"))
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
-    .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("key", simple("${header.rcc_ids}"))
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
-    .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
-    //.to("direct:getCourtCaseIdByKey")
-    .unmarshal().json()
-    .setProperty("caseId").simple("${body[id]}")
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .choice()
-      .when(simple("${exchangeProperty.caseId} != ''"))
-        .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
-        .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
-            String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-            String caseId = exchange.getProperty("caseId", String.class);
-            CaseHyperlinkData body = new CaseHyperlinkData();
-
-            body.setMessage("Case found.");
-            body.setHyperlink(prefix + caseId + suffix);
-            exchange.getMessage().setBody(body);
-          }
-        })
-        .log(LoggingLevel.INFO, "Case (key: ${header.key}) found; caseId: '${exchangeProperty.caseId}'")
+    .log(LoggingLevel.DEBUG, "Returned body: '${body}'")
+    .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
+    .choice() 
+    .when(simple("${header.rcc_ids} != null"))
+    .log(LoggingLevel.INFO,"rcc id list")
+    // need to parse through the list of rcc ids
+    .setBody(simple("${exchangeProperty.court_case_document}"))
+    .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
+    .split()
+      .jsonpathWriteAsString("$.rcc_ids")
+      .setProperty("rcc_id",jsonpath("$"))
+      .setProperty("key", simple("${header.key}"))
+      .to("direct:getCourtCaseIdByKey")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .choice()
+        .when(simple("${exchangeProperty.caseId} != ''"))
+          .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+          .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
+              String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+              String caseId = exchange.getProperty("caseId", String.class);
+              CaseHyperlinkData body = new CaseHyperlinkData();
+              CaseHyperlinkDataList bodyList = new CaseHyperlinkDataList(body);
+              body.setMessage("Case found.");
+              body.setHyperlink(prefix + caseId + suffix);
+              exchange.getMessage().setBody(body);
+            }
+          })
+          .log(LoggingLevel.INFO, "Case (key: ${header.key}) found;")
         .endChoice()
-      .otherwise()
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            CaseHyperlinkData body = new CaseHyperlinkData();
-            body.setMessage("Case not found.");
-            exchange.getMessage().setBody(body);
-          }
-        })
-        .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+        .otherwise()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              CaseHyperlinkData body = new CaseHyperlinkData();
+              body.setMessage("Case not found.");
+              exchange.getMessage().setBody(body);
+            }
+          })
+          .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
         .endChoice()
+      .end()
+      .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
     .end()
-    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+    .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
+    .endChoice()
+  .otherwise()
+    .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+    .endChoice()
     ;
   }
 

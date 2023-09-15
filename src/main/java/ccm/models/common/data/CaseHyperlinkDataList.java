@@ -3,9 +3,6 @@ package ccm.models.common.data;
 import java.util.ArrayList;
 import java.util.List;
 
-import ccm.models.system.justin.JustinCaseHyperlinkData;
-import ccm.models.system.justin.JustinCaseHyperlinkDataList;
-
 
 public class CaseHyperlinkDataList {
     private List<CaseHyperlinkData> caseHyperlink;
@@ -14,16 +11,11 @@ public class CaseHyperlinkDataList {
         caseHyperlink = new ArrayList<CaseHyperlinkData>();
     }
 
-    public CaseHyperlinkDataList(JustinCaseHyperlinkDataList casehyperlinkdata) {
+    public CaseHyperlinkDataList(CaseHyperlinkData body) {
         List<CaseHyperlinkData> chd = new ArrayList<CaseHyperlinkData>();
-        if(casehyperlinkdata.getCase_hyperlinks() != null) {
-            for (JustinCaseHyperlinkData jas : casehyperlinkdata.getCase_hyperlinks()) {
-                CaseHyperlinkData bcas = new CaseHyperlinkData(jas);
-                chd.add(bcas);
-            }
+        chd.add(body);    
+        setCaseHyperLinkList(chd);
     }
-    setCaseHyperLinkList(chd);
-}
        
     public List<CaseHyperlinkData> getCase_list() {
         return caseHyperlink;

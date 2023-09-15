@@ -518,9 +518,6 @@ public class CcmLookupService extends RouteBuilder {
    // use method name as route id
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-   // IN: header.key
-   // OUT: body as CaseHyperlinkData
-
    from("platform-http:/" + routeId)
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html

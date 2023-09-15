@@ -20,6 +20,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.system.justin.*;
 import ccm.models.common.data.CaseHyperlinkData;
+import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.versioning.Version;
 
@@ -202,8 +203,8 @@ public class CcmJustinInAdapter extends RouteBuilder {
        .log(LoggingLevel.ERROR,"HTTP response 401. Body: ${body}")
        .stop()
    .end()
-   .log(LoggingLevel.INFO,"rcc_ids : ${header.rcc_id}")
-   .setProperty("rcc_ids", simple("${header.rcc_id}"))
+   .log(LoggingLevel.INFO,"rcc_ids : ${header.rcc_ids}")
+   .setProperty("rcc_ids", simple("${header.rcc_ids}"))
 
    .unmarshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
     .process(new Processor() {
@@ -216,7 +217,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
+    .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_ids}) found.")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     
 //call to lookup service
@@ -225,7 +226,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader("key", simple("${exchangeProperty.rcc_id}"))
+    .setHeader("key", simple("${exchangeProperty.rcc_ids}"))
     .to("http://ccm-lookup-service/getCaseListHyperlink")
     .endDoTry()
   .doCatch(HttpOperationFailedException.class)
@@ -234,6 +235,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinCaseHyperlinkDataList body = new JustinCaseHyperlinkDataList();
+        CaseHyperlinkDataList c = new CaseHyperlinkDataList();
         HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
         if (exception.getStatusCode() == 404) {
