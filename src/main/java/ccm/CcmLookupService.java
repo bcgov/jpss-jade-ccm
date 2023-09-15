@@ -527,7 +527,7 @@ public class CcmLookupService extends RouteBuilder {
    .removeHeader("CamelHttpUri")
    .removeHeader("CamelHttpBaseUri")
    .removeHeaders("CamelHttp*")
-   .log(LoggingLevel.DEBUG,"Processing getCourtCaseExists request... key = ${header[key]}")
+   .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${header[key]}")
    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
 

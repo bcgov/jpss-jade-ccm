@@ -1,10 +1,20 @@
 package ccm.models.common.data;
 
+import ccm.models.system.justin.JustinCaseHyperlinkData;
+
 public class CaseHyperlinkData {
     String message;
     String hyperlink;
     String rcc_id;
 
+    public CaseHyperlinkData() {
+        
+    }
+    public CaseHyperlinkData(JustinCaseHyperlinkData jaf) {
+        setMessage(jaf.getMessage());
+        setHyperlink(jaf.getHyperlink());
+        setRcc_id(jaf.getRcc_id());
+      }
     public String getMessage() {
         return message;
     }

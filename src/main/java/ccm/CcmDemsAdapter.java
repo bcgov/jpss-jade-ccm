@@ -56,6 +56,7 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
+import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.data.document.ImageDocumentData;
@@ -1556,7 +1557,20 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
     .setProperty("key", simple("${header.key}"))
-    .to("direct:getCourtCaseIdByKey")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .setProperty("key", simple("${header.rcc_id}"))
+    .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
+    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
+    .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
+    //.to("direct:getCourtCaseIdByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))

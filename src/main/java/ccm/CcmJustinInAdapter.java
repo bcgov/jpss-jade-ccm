@@ -176,7 +176,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
    from("platform-http:/" + path + "?httpMethodRestrict=GET")
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .log(LoggingLevel.DEBUG,"getCaseListHyperlink request received. rcc_id = ${header.number}")
+   .log(LoggingLevel.DEBUG,"getCaseListHyperlink request received. rcc_ids = ${header.number}")
    .process(new Processor() {
      @Override
      public void process(Exchange exchange) throws Exception {
@@ -202,15 +202,16 @@ public class CcmJustinInAdapter extends RouteBuilder {
        .log(LoggingLevel.ERROR,"HTTP response 401. Body: ${body}")
        .stop()
    .end()
+   .log(LoggingLevel.INFO,"rcc_ids : ${header.rcc_id}")
+   .setProperty("rcc_ids", simple("${header.rcc_id}"))
 
-   .setProperty("rcc_id", simple("${header.rcc_id}"))
    .unmarshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-        CommonCaseList data = exchange.getMessage().getBody(CommonCaseList.class);
-        //JustinRccCaseList body = new JustinRccCaseList(data);
-        exchange.getMessage().setBody(data);
+        JustinRccCaseList data = exchange.getMessage().getBody(JustinRccCaseList.class);
+        CommonCaseList body = new CommonCaseList(data);
+        exchange.getMessage().setBody(body);
       }
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -218,7 +219,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     
-
+//call to lookup service
     .doTry()
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -232,7 +233,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-        JustinCaseHyperlinkData body = new JustinCaseHyperlinkData();
+        JustinCaseHyperlinkDataList body = new JustinCaseHyperlinkDataList();
         HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
         if (exception.getStatusCode() == 404) {
@@ -246,7 +247,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
         exchange.getMessage().setBody(body);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
+    .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
     .log(LoggingLevel.ERROR, "HTTP response ${header.CamelHttpResponseCode}. Error message: ${exchangeProperty.errorMessage}")
     .log(LoggingLevel.DEBUG, "Body: ${body}.")
     .stop()
