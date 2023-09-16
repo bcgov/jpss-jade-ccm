@@ -237,7 +237,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
         JustinCaseHyperlinkDataList body = new JustinCaseHyperlinkDataList();
         CaseHyperlinkDataList c = new CaseHyperlinkDataList();
         HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-
+        
         if (exception.getStatusCode() == 404) {
           exchange.setProperty("errorMessage", "Case not found.");
         } else {
@@ -256,7 +256,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
   .end()
 
   // prepare response
-  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+  /*.unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
   .process(new Processor() {
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -268,7 +268,24 @@ public class CcmJustinInAdapter extends RouteBuilder {
   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
   .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
   .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
-  .log(LoggingLevel.DEBUG, "Body: ${body}")
+  .log(LoggingLevel.DEBUG, "Body: ${body}")*/
+
+ // prepare response
+ .unmarshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
+ .process(new Processor() {
+   @Override
+   public void process(Exchange exchange) throws Exception {
+   // CaseHyperlinkDataList data = exchange.getMessage().getBody(CaseHyperlinkDataList.class);
+     JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
+     exchange.getMessage().setBody(body);
+   }
+ })
+ .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+ .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
+ .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
+ .log(LoggingLevel.DEBUG, "Body: ${body}")
+
+  
   ;
   }
 }
