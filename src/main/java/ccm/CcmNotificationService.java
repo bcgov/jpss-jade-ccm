@@ -1879,6 +1879,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
       // if the non-primary case is active, then merge it into the primary.
       .setProperty("sourceCaseId").simple("${body[id]}")
+      .setProperty("sourceCaseStatus").simple("${body[status]}")
       .log(LoggingLevel.INFO, "Source Case Id: ${exchangeProperty.sourceCaseId}")
       .log(LoggingLevel.INFO, "primary vs current: ${exchangeProperty.primary_rcc_id} vs ${exchangeProperty.rcc_id}")
       .log(LoggingLevel.INFO, "primary vs current: ${exchangeProperty.primary_agency_file} vs ${exchangeProperty.agency_file_no}")
@@ -1886,12 +1887,14 @@ public class CcmNotificationService extends RouteBuilder {
       // if the non primary dems case is still active, make call which will export the records over to the primary rcc
       // and then set the non primary case to no longer be active.
       .choice()
-        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${body[status]} == 'Active'"))
+        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${body[status]} == 'Active' && ${exchangeProperty.sourceCaseId} != '' && ${exchangeProperty.destinationCaseId} != ''"))
           // make call to merge docs and inactivate the non primary one
           .setHeader("sourceCaseId").simple("${exchangeProperty.sourceCaseId}")
           .setHeader("destinationCaseId").simple("${exchangeProperty.destinationCaseId}")
           .setHeader("prefixName").simple("${exchangeProperty.merge_prefix}")
           .to("http://ccm-dems-adapter/mergeCaseRecordsAndInactivateCase")
+        .endChoice()
+        .otherwise()
         .endChoice()
       .end()
     .end()
