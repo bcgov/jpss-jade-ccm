@@ -170,14 +170,14 @@ public class CcmJustinInAdapter extends RouteBuilder {
   private void getCaseListHyperlink() {
    // use method name as route id
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
    String path = "justin/api/v1/" + routeId;
 
    // IN: header = rcc_id
-   from("platform-http:/" + path + "?httpMethodRestrict=GET")
+   from("platform-http:/" + path + "?httpMethodRestrict=POST")
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .log(LoggingLevel.DEBUG,"getCaseListHyperlink request received. rcc_ids = ${header.number}")
+   .log(LoggingLevel.INFO,"getCaseListHyperlink request received.")
+   .log(LoggingLevel.INFO,"${body}")
    .process(new Processor() {
      @Override
      public void process(Exchange exchange) throws Exception {
@@ -204,8 +204,9 @@ public class CcmJustinInAdapter extends RouteBuilder {
        .stop()
    .end()
    .log(LoggingLevel.INFO,"rcc_ids : ${header.rcc_ids}")
-   .setProperty("rcc_ids", simple("${header.rcc_ids}"))
-
+   .log(LoggingLevel.INFO,"body1 : ${body}")
+   .setProperty("keys", simple("${body}"))
+   .log(LoggingLevel.INFO,"Keys : ${exchangeProperty.keys}")
    .unmarshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
     .process(new Processor() {
       @Override
@@ -217,16 +218,15 @@ public class CcmJustinInAdapter extends RouteBuilder {
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_ids}) found.")
-    .log(LoggingLevel.DEBUG, "Body: ${body}")
-    
+    .log(LoggingLevel.INFO, "Body2: ${body}")
 //call to lookup service
     .doTry()
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader("key", simple("${exchangeProperty.rcc_ids}"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("key", simple("${body}"))
     .to("http://ccm-lookup-service/getCaseListHyperlink")
     .endDoTry()
   .doCatch(HttpOperationFailedException.class)
@@ -246,7 +246,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
         body.setMessage(exchange.getProperty("errorMessage", String.class));
 
         exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exception.getStatusCode());
-        exchange.getMessage().setBody(body);
+        exchange.getMessage().setBody(c);
       }
     })
     .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
@@ -254,7 +254,6 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "Body: ${body}.")
     .stop()
   .end()
-
   // prepare response
   /*.unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
   .process(new Processor() {
@@ -271,21 +270,21 @@ public class CcmJustinInAdapter extends RouteBuilder {
   .log(LoggingLevel.DEBUG, "Body: ${body}")*/
 
  // prepare response
- .unmarshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
+ .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
  .process(new Processor() {
    @Override
    public void process(Exchange exchange) throws Exception {
-   // CaseHyperlinkDataList data = exchange.getMessage().getBody(CaseHyperlinkDataList.class);
-     JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
-     exchange.getMessage().setBody(body);
+     CaseHyperlinkDataList data = exchange.getMessage().getBody(CaseHyperlinkDataList.class);
+     //JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
+     JustinCaseHyperlinkDataList jchd = new JustinCaseHyperlinkDataList(data);
+     jchd.setMessage("");
+     exchange.getMessage().setBody(jchd,JustinCaseHyperlinkDataList.class);
    }
  })
  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
  .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
  .log(LoggingLevel.DEBUG, "Body: ${body}")
-
-  
   ;
   }
 }

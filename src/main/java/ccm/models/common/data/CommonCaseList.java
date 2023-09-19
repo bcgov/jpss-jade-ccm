@@ -2,9 +2,15 @@ package ccm.models.common.data;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import ccm.models.system.justin.JustinRccCaseList;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class CommonCaseList {
-    List<String> rcc_ids;
+    List<String> keys;
 
     public CommonCaseList() {
     }
@@ -12,15 +18,21 @@ public class CommonCaseList {
       List<String> rccList = new ArrayList<String>();
 
     if(jdl.getRcc_ids() != null) {
+     // ObjectMapper objectMapper = new ObjectMapper();
+     // try {
+     //   objectMapper.writeValueAsString(Arrays.asList(jdl.getRcc_ids()));
+     // } catch (JsonProcessingException e) {
+     //   e.printStackTrace();
+     // }
         rccList.addAll(jdl.getRcc_ids());
       }
-    setRcc_ids(rccList);
+      setKeys(rccList);
     }
 
-    public List<String> getRcc_ids() {
-        return rcc_ids;
+    public List<String> getKeys() {
+        return keys;
     }
-    public void setRcc_ids(List<String> rcc_ids) {
-        this.rcc_ids = rcc_ids;
+    public void setKeys(List<String> keys) {
+        this.keys = keys;
     }
 }

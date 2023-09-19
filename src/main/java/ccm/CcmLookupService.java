@@ -521,6 +521,7 @@ public class CcmLookupService extends RouteBuilder {
    from("platform-http:/" + routeId)
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+   .log(LoggingLevel.INFO,"Inside getCaseListHyperlink")
    .removeHeader("CamelHttpUri")
    .removeHeader("CamelHttpBaseUri")
    .removeHeaders("CamelHttp*")

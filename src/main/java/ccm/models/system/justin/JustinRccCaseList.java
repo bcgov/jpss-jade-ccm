@@ -11,7 +11,7 @@ public class JustinRccCaseList {
     }
 
     public JustinRccCaseList(CommonCaseList commonCaseList) {
-        this.setRcc_ids(commonCaseList.getRcc_ids());
+        this.setRcc_ids(commonCaseList.getKeys());
     }
 
     public List<String> getRcc_ids() {
