@@ -883,7 +883,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               .to("direct:createDocumentRecord")
             .endChoice()
             .otherwise()
-              .log(LoggingLevel.INFO, "Skipped adding image document.  One with image id already exists.")
+              .log(LoggingLevel.WARN, "Skipped adding image document.  One with image id already exists.")
             .endChoice()
           .end()
         .endDoTry()
@@ -938,8 +938,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     // IN
     // header: number
     // header: documentId
-    // property: dems_record
     // property: maxRecordIncrements
+    // property: drd (DemsRecordData object)
+    // OUT
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1062,6 +1064,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // IN
     // property: event_object
     // property: caseFound
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1078,8 +1081,32 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("caseId").simple("${body[id]}")
     .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+
+    // Check to make sure that there will not be any document collision.
+    .setBody(simple("${exchangeProperty.dems_record}"))
+    .unmarshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        // check to see if the record with the doc id exists, if so, increment the document id
+        DemsRecordData demsRecord = (DemsRecordData)ex.getIn().getBody(DemsRecordData.class);
+
+        ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+      }
+
+    })
+
+    // now check this next value to see if there is a collision of this document
+    .to("direct:getCaseDocIdExistsByKey")
+    .log(LoggingLevel.INFO, "returned key: ${body}")
+    .unmarshal().json()
+    .setProperty("existingRecordId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
+
+    // Make sure that it is an existing and active case, before attempting to add the record 
     .choice()
-      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
+      .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
 
@@ -1129,7 +1156,11 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:streamCaseRecord")
-        .endChoice()
+      .endChoice()
+      .when(simple("${exchangeProperty.existingRecordId} != ''"))
+        .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
+        .log(LoggingLevel.WARN, "${exchangeProperty.dems_record}")
+      .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
     ;
@@ -1141,8 +1172,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN
-    // property: event_object
-    // property: caseFound
+    // header: number (rcc_id)
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
