@@ -146,12 +146,12 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .backOffMultiplier(2)
-
+      .maximumRedeliveries(3).redeliveryDelay(10000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
-      .handled(false)
+      .handled(true)
     .end();
 
     // HttpOperation Failed
