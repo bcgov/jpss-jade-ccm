@@ -33,6 +33,7 @@ public class CourtCaseData {
 
   private List<CaseAccused> accused_persons;
   private List<ChargeAssessmentDataRef> related_agency_file;
+  private ChargeAssessmentDataRef primary_agency_file;
   //added as part of jade-2483
   private List<CourtFileDataRef> related_court_file;
 
@@ -128,9 +129,11 @@ public class CourtCaseData {
 
     if(jcf.getRelated_rcc() != null) {
       for (JustinAgencyFileRef jafr : jcf.getRelated_rcc()) {
-
         ChargeAssessmentDataRef agencyRef = new ChargeAssessmentDataRef(jafr);
         agencyList.add(agencyRef);
+        if(agencyRef.getPrimary_yn().equalsIgnoreCase("Y") || getPrimary_agency_file() == null) {
+          setPrimary_agency_file(agencyRef);
+        }
       }
     }
     setRelated_agency_file(agencyList);
@@ -298,6 +301,14 @@ public class CourtCaseData {
   }
   public void setRelated_agency_file(List<ChargeAssessmentDataRef> related_agency_file) {
     this.related_agency_file = related_agency_file;
+  }
+
+  public ChargeAssessmentDataRef getPrimary_agency_file() {
+    return primary_agency_file;
+  }
+
+  public void setPrimary_agency_file(ChargeAssessmentDataRef primary_agency_file) {
+    this.primary_agency_file = primary_agency_file;
   }
 
   public String getApproving_crown_agency_name() {

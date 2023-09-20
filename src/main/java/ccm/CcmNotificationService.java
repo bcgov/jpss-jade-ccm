@@ -348,7 +348,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_key}")
+    .removeHeader(Exchange.CONTENT_ENCODING)
     .to("http://ccm-lookup-service/getCourtCaseDetails")
+
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
@@ -579,11 +581,16 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${body[status]} == 'Active'"))
         .setHeader("number").simple("${header.event_key}")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .removeHeader(Exchange.CONTENT_ENCODING)
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
+
         // add-on any additional rccs from the dems side.
         .to("direct:compileRelatedChargeAssessments")
         .log(LoggingLevel.INFO,"Compiled court case in DEMS.  Court case data = ${body}.")
+
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
         .setBody(simple("${exchangeProperty.courtcase_data}"))
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -724,17 +731,21 @@ public class CcmNotificationService extends RouteBuilder {
             public void process(Exchange exchange) {
               AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
               AuthUserList paul = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
-              List<AuthUser> authList = paul.getAuth_user_list();
-              if(authList == null) {
-                authList = new ArrayList<AuthUser>();
+              List<AuthUser> intersectingAuthList = new ArrayList<AuthUser>();
+              List<AuthUser> primaryAuthList = paul.getAuth_user_list();
+              if(primaryAuthList == null) {
+                primaryAuthList = new ArrayList<AuthUser>();
               }
-              if(aul.getAuth_user_list() != null) {
-                for(AuthUser user : aul.getAuth_user_list())
-                  if(!authList.stream().filter(o -> o.getKey().equals(user.getKey())).findFirst().isPresent()) {
-                    authList.add(user);
+              // go through list of intersectingAuthList, and if it is not found in aul.getAuth_user_list() then remove it
+              List<AuthUser> nonPrimaryAuthList = aul.getAuth_user_list();
+              if(nonPrimaryAuthList != null) {
+                for(AuthUser pAuthUser : primaryAuthList) {
+                  if(nonPrimaryAuthList.stream().filter(o -> o.getKey().equals(pAuthUser.getKey())).findFirst().isPresent()) {
+                    intersectingAuthList.add(pAuthUser);
                   }
+                }
               }
-              exchange.setProperty("authlist_object", authList);
+              exchange.setProperty("authlist_object", intersectingAuthList);
             }
           })
         .endChoice()
@@ -1035,6 +1046,8 @@ public class CcmNotificationService extends RouteBuilder {
     // IN
     // header: event_key (rcc_id)
     // property: courtcase_data
+    // OUT
+    // property: courtcase_data
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1161,6 +1174,11 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    // IN
+    // header: event_key (mdoc_no)
+    // property: metadata_data
+    // OUT
+    // property: metadata_data
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1350,37 +1368,66 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:compileRelatedCourtFiles")
 
     .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
+    // get list of associated rcc_ids?
 
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
-    .split()
-      .jsonpathWriteAsString("$.related_agency_file")
-      .setProperty("rcc_id", jsonpath("$.rcc_id"))
-      .setProperty("primary_yn", jsonpath("$.primary_yn"))
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+        exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+    .setBody(simple("${bodyAs(String)}"))
 
-      .setHeader("key").simple("${exchangeProperty.rcc_id}")
-      .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
-      .setHeader("number",simple("${exchangeProperty.rcc_id}"))
-      .log(LoggingLevel.INFO,"Retrieve court case status first")
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-      .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
-      .unmarshal().json()
 
-      .choice()
-        .when(simple(" ${exchangeProperty.primary_yn} == 'Y' && ${body[status]} != 'Inactive'"))
-          .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
-          .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-          .to("direct:processPrimaryCourtCaseChanged")
-        .endChoice()
-        .otherwise()
-          // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
-          .log(LoggingLevel.INFO, "Not an active primary case")
+    .log(LoggingLevel.INFO, "Court File Primary Rcc: ${body}")
+    .setProperty("rcc_id", jsonpath("$.rcc_id"))
+    .setProperty("primary_yn", jsonpath("$.primary_yn"))
 
-        .endChoice()
-      .end()
+    .setHeader("key").simple("${exchangeProperty.rcc_id}")
+    .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+    .setHeader("number",simple("${exchangeProperty.rcc_id}"))
+    .log(LoggingLevel.INFO,"Retrieve court case status first")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+    .unmarshal().json()
 
+    .setProperty("primary_rcc_id", simple("${body[primaryAgencyFileId]}"))
+    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+
+    //JADE-2671 - look-up primary rcc for update.
+    .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
+      .when(simple("${body[status]} == 'Inactive' && ${exchangeProperty.primary_rcc_id} != ${header.event_key}"))
+        .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
+        .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
+        .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
+        .setProperty("rcc_id", simple("${exchangeProperty.primary_rcc_id}"))
+        .log(LoggingLevel.INFO,"Retrieve court case status first")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        .unmarshal().json()
+      .endChoice()
+    .end()
+
+    .choice()
+      .when(simple("${body[status]} != 'Inactive'"))
+        .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
+        .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
+        .to("direct:processPrimaryCourtCaseChanged")
+      .endChoice()
+      .otherwise()
+        // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
+        .log(LoggingLevel.WARN, "Not an active primary case")
+
+      .endChoice()
     .end()
 
     // re-set body to the metadata_data json.
@@ -1549,7 +1596,7 @@ public class CcmNotificationService extends RouteBuilder {
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-    .log(LoggingLevel.DEBUG,"createOverrideFlag = ${exchangeProperty.createOverrideFlag}")
+    .log(LoggingLevel.INFO,"key: ${header.number}")
     .process(new Processor() {
       @Override
         public void process(Exchange ex) {
@@ -1607,6 +1654,7 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .end()
+
     // requery if court case exists in DEMS, in case prev logic created the record.
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
@@ -1619,6 +1667,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number", simple("${exchangeProperty.rcc_id}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .removeHeader(Exchange.CONTENT_ENCODING)
         // grab the case mappings from justin, for overriding case flags.
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         //.log(LoggingLevel.INFO,"Case Flag Mappings court case in DEMS.  Court case data = ${body}.")
@@ -1754,6 +1803,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO, "processCaseMerge")
 
     .removeProperties("primary_courtcase_object")
     .setProperty("primary_rcc_id", simple(""))
@@ -1786,6 +1836,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .removeHeader(Exchange.CONTENT_ENCODING)
         .to("http://ccm-lookup-service/getCourtCaseDetails")
 
         .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
@@ -1821,6 +1872,7 @@ public class CcmNotificationService extends RouteBuilder {
           .setHeader("number").simple("${exchangeProperty.rcc_id}")
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
           .to("http://ccm-lookup-service/getCourtCaseDetails")
           .setProperty("courtcase_data", simple("${bodyAs(String)}"))
 
