@@ -1570,66 +1570,76 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "Returned body: '${body}'")
     .log(LoggingLevel.INFO,"rcc_ids: ${header[key]}")
     .choice() 
-    .when(simple("${header.key} != null"))
-    .log(LoggingLevel.INFO,"rcc id list")
-    // need to parse through the list of rcc ids
-    //.marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .unmarshal().json()
-    .log(LoggingLevel.INFO,"rcc id list2")
-    .split()
-      .jsonpathWriteAsString("$")
-      .setProperty("id",jsonpath("$.id"))
-      .setProperty("key", simple("$.key"))
-      .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id}")
-      //.log(LoggingLevel.INFO,"before getCourtCaseIdByKey ${exchangeProperty.key} ")
-      //.to("direct:getCourtCaseIdByKey")
-      .log(LoggingLevel.INFO,"after ${exchangeProperty.id}")
-      //.unmarshal().json()
-      //.setProperty("caseId").simple("${body[id]}")
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .choice()
-        .when(simple("${exchangeProperty.id} != ''"))
-          .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
-          .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-              String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
-              String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-              String caseId = exchange.getProperty("caseId", String.class);
-              CaseHyperlinkData body = new CaseHyperlinkData();
-              CaseHyperlinkDataList bodyList = new CaseHyperlinkDataList(body);
-              body.setMessage("Case found.");
-              body.setHyperlink(prefix + caseId + suffix);
-              exchange.getMessage().setBody(body);
-              exchange.getMessage().setBody(bodyList, CaseHyperlinkDataList.class);
-              
-            }
-          })
-          .log(LoggingLevel.INFO, "Case (key: ${header.key}) found;")
-          .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
-          .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-        .endChoice()
-        .otherwise()
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-              CaseHyperlinkData body = new CaseHyperlinkData();
-              body.setMessage("Case not found.");
-              exchange.getMessage().setBody(body);
-            }
-          })
-          .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-        .endChoice()
+      .when(simple("${header.key} != null"))
+      .log(LoggingLevel.INFO,"rcc id list")
+      // need to parse through the list of rcc ids
+      //.marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
+      .unmarshal().json()
+      .split()
+        .jsonpathWriteAsString("$")
+        .setProperty("id",jsonpath("$.id"))
+        .setProperty("key", jsonpath("$.key"))
+        .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.key}")
+        .log(LoggingLevel.INFO,"after ${exchangeProperty.key}")
+        //.unmarshal().json()
+        .setProperty("caseId").simple("${exchangeProperty.id}")
+        .log(LoggingLevel.INFO,"case id : ${exchangeProperty.caseId}")
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .choice()
+          .when(simple("${exchangeProperty.caseId} != ''"))
+            .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+            .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception {
+                String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
+                String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+                String caseId = exchange.getProperty("caseId", String.class);
+                String rccId = exchange.getProperty("key", String.class);
+                CaseHyperlinkData body = new CaseHyperlinkData();
+                body.setMessage("Case found.");
+                body.setHyperlink(prefix + caseId + suffix);
+                body.setRcc_id(rccId);
+                exchange.getMessage().setBody(body);
+              /* CaseHyperlinkDataList bodyList = new CaseHyperlinkDataList(body);
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                  objectMapper.writeValueAsString(Arrays.asList(body));
+                } catch (Exception e) {
+                  e.printStackTrace();
+                }
+                exchange.getMessage().setBody(bodyList, CaseHyperlinkDataList.class);
+                System.out.println(bodyList.getcase_hyperlinks().toString());*/
+                
+               }
+            })
+            .log(LoggingLevel.INFO, "Case found;")
+            .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+            //.setProperty("caseHyperlink").simple("${body}")
+            .log(LoggingLevel.INFO,"Converted response  : '${body}'")
+          .endChoice()
+          .otherwise()
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception {
+                CaseHyperlinkData body = new CaseHyperlinkData();
+                body.setMessage("Case not found.");
+                exchange.getMessage().setBody(body);
+              }
+            })
+            .log(LoggingLevel.INFO, "Case not found.")
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+          .endChoice()
+        .end()
+        .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
       .end()
-      .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
-    .end()
-    .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
-    .endChoice()
-  .otherwise()
-    .log(LoggingLevel.INFO,"No identifying values, so skipped.")
-    .endChoice()
+      .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
+    //.endChoice()
+   // .otherwise()
+     // .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+    //.endChoice()
+  .end() // end choice
+  .log(LoggingLevel.INFO, "end of getCaseListHyperlink")
     ;
   }
 
