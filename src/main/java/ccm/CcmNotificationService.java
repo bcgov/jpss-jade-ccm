@@ -701,22 +701,22 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.getMessage().setBody(agencyFileList);
       }
     })
-    .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+    .log(LoggingLevel.DEBUG, "Unprocessed agency file list: ${body}")
     .split().jsonpathWriteAsString("$.*")
       .setProperty("agencyFileId", simple("${body}"))
-      .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+      //.log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
           String agencyFileId = exchange.getProperty("agencyFileId", String.class);
-          log.info("agencyFileId:"+agencyFileId);
+          //log.info("agencyFileId:"+agencyFileId);
           exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
         }
       })
 
       .choice()
         .when(simple("${exchangeProperty.agencyFileId} != ''"))
-          .log(LoggingLevel.INFO, "agency file updated: ${exchangeProperty.agencyFileId}")
+          .log(LoggingLevel.DEBUG, "agency file updated: ${exchangeProperty.agencyFileId}")
           .setHeader("number").simple("${exchangeProperty.agencyFileId}")
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -731,6 +731,8 @@ public class CcmNotificationService extends RouteBuilder {
             public void process(Exchange exchange) {
               AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
               AuthUserList paul = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+              
+              //log.info("original authlist size: "+paul.getAuth_user_list().size());
               List<AuthUser> intersectingAuthList = new ArrayList<AuthUser>();
               List<AuthUser> primaryAuthList = paul.getAuth_user_list();
               if(primaryAuthList == null) {
@@ -741,11 +743,13 @@ public class CcmNotificationService extends RouteBuilder {
               if(nonPrimaryAuthList != null) {
                 for(AuthUser pAuthUser : primaryAuthList) {
                   if(nonPrimaryAuthList.stream().filter(o -> o.getKey().equals(pAuthUser.getKey())).findFirst().isPresent()) {
+                    //log.info("found intersecting part id: "+pAuthUser.getKey());
                     intersectingAuthList.add(pAuthUser);
                   }
                 }
               }
-              exchange.setProperty("authlist_object", intersectingAuthList);
+              paul.setAuth_user_list(intersectingAuthList);
+              exchange.setProperty("authlist_object", paul);
             }
           })
         .endChoice()
@@ -759,6 +763,7 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         AuthUserList metadata = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+        log.info("final authlist size: "+metadata.getAuth_user_list().size());
 
         exchange.getMessage().setBody(metadata, AuthUserList.class);
       }
@@ -767,15 +772,8 @@ public class CcmNotificationService extends RouteBuilder {
 
     .setProperty("authlist_data", simple("${bodyAs(String)}"))
     .setBody(simple("${exchangeProperty.authlist_data}"))
-    /*
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_key}")
-    .log(LoggingLevel.INFO,"Retrieve court case auth list")
-    .to("http://ccm-lookup-service/getCourtCaseAuthList")*/
 
     .log(LoggingLevel.INFO,"Update court case auth list in DEMS.  Court case auth list = ${body}")
-
 
     // JADE-1489 work around #1 -- not sure why body doesn't make it into dems-adapter
     //.log(LoggingLevel.INFO, "headers: ${headers}")
