@@ -605,12 +605,13 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
           }}
         )
+        /* BCPSDEMS-328, JADE-1751 - Commented-out for Sept 24, 2023 release.
         .choice()
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
-          .endChoice()
+          .endChoice()*/
       .endChoice()
     .otherwise()
       .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
