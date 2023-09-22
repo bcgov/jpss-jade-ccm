@@ -1548,130 +1548,6 @@ public class CcmDemsAdapter extends RouteBuilder {
  //as part of jade 2425
   private void getCaseListHyperlink() {
     // use method name as route id
-   /*  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: header.key
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
-    .setProperty("key", simple("${header.key}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .setBody(simple("${exchangeProperty.key}"))
-    .log(LoggingLevel.INFO,"${exchangeProperty.key}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
-   
-    .log(LoggingLevel.INFO, "Returned body: '${body}'")
-    .log(LoggingLevel.INFO,"rcc_ids: ${header[key]}")
-    .choice() 
-      .when(simple("${header.key} != null"))
-      .log(LoggingLevel.INFO,"rcc id list")
-      // need to parse through the list of rcc ids
-      //.marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-      .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .setProperty("metadata_object", body())
-        .setBody(simple("${exchangeProperty.metadata_data}"))
-        .log(LoggingLevel.INFO,"metadata_data1: ${exchangeProperty.metadata_data}")
-      .unmarshal().json()
-      .split()
-        .jsonpathWriteAsString("$")
-        .setProperty("id",jsonpath("$.id"))
-        .setProperty("key", jsonpath("$.key"))
-        .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.key}")
-        .log(LoggingLevel.INFO,"after ${exchangeProperty.key}")
-        //.unmarshal().json()
-        .setProperty("caseId").simple("${exchangeProperty.id}")
-        .log(LoggingLevel.INFO,"case id : ${exchangeProperty.caseId}")
-        .log(LoggingLevel.INFO,"metadata_data2: ${exchangeProperty.metadata_data}")
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .choice()
-          .when(simple("${exchangeProperty.caseId} != ''"))
-            .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
-            .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
-            .process(new Processor() {
-              @Override
-              public void process(Exchange exchange) throws Exception {
-                String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
-                String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-                String caseId = exchange.getProperty("caseId", String.class);
-                String rccId = exchange.getProperty("key", String.class);
-                CaseHyperlinkData body = new CaseHyperlinkData();
-                body.setMessage("Case found.");
-                body.setHyperlink(prefix + caseId + suffix);
-                body.setRcc_id(rccId);
-                exchange.getMessage().setBody(body);
-               }
-            })
-            .log(LoggingLevel.INFO, "Case found;")
-            .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
-            //.setProperty("keys", simple("${body}"))
-            .setProperty("caseHyperlink").simple("${body}")
-            .log(LoggingLevel.INFO,"Converted response  : '${body}'")
-          .endChoice()
-          .otherwise()
-            .process(new Processor() {
-              @Override
-              public void process(Exchange exchange) throws Exception {
-                CaseHyperlinkData body = new CaseHyperlinkData();
-                body.setMessage("Case not found.");
-                exchange.getMessage().setBody(body);
-              }
-            })
-            .log(LoggingLevel.INFO, "Case not found.")
-            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
-          .endChoice()
-        .end()
-        .setBody(simple("${body}"))
-        .setProperty("metadata_data", simple("${bodyAs(String)}"))
-        .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
-        .setProperty("metadata_object", body())
-        .log(LoggingLevel.INFO,"metadata_data 3: ${exchangeProperty.metadata_data}")
-        .log(LoggingLevel.INFO,"metadata_object 3: ${exchangeProperty.metadata_object}")
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            CaseHyperlinkData bcm = exchange.getIn().getBody(CaseHyperlinkData.class);
-            CaseHyperlinkData metadata = (CaseHyperlinkData)exchange.getProperty("metadata_object", CaseHyperlinkData.class);
-            List<CaseHyperlinkData> relatedCf = metadata.getCase_hyperlink_data();
-            if(relatedCf == null) {
-              relatedCf = new ArrayList<CaseHyperlinkData>();
-            }
-            relatedCf.add(bcm);
-            //bcm.setCase_hyperlink_data(relatedCf);
-            //exchange.setProperty("metadata_object", bcm);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
-         .setBody(simple("${exchangeProperty.metadata_data}"))
-         .log(LoggingLevel.INFO, "Body 1 : ${exchangeProperty.metadata_data}")
-        .log(LoggingLevel.INFO, "Body 1: ${body}")
-      .end()
-      // set the updated metadata object to be the body
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        CaseHyperlinkData metadata = (CaseHyperlinkData)exchange.getProperty("metadata_data", CaseHyperlinkData.class);
-log.info("metadata: "+ metadata);
-        exchange.getMessage().setBody(metadata, CaseHyperlinkData.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
-
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .setBody(simple("${exchangeProperty.metadata_data}"))
-    .log(LoggingLevel.DEBUG, "${body}")
-      .log(LoggingLevel.INFO, "Body 2 : ${exchangeProperty.metadata_data}")
-      .log(LoggingLevel.INFO, "Body2: ${body}")
-      .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
-    .end() // end choice
-    .log(LoggingLevel.INFO, "Body3: ${body}")
-    .log(LoggingLevel.INFO, "end of getCaseListHyperlink")*/
-
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header.key
@@ -1686,14 +1562,11 @@ log.info("metadata: "+ metadata);
       public void process(Exchange exchange) {
         CaseHyperlinkDataList hyperlinkObject = new CaseHyperlinkDataList();
         exchange.setProperty("metadata_object", hyperlinkObject);
+        exchange.setProperty("originalExchange", exchange);
       }
     })
     .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
-    //.setProperty("metadata_data", simple("${bodyAs(String)}"))
-    //.setProperty("metadata_object", body())
-    //.setBody(simple("${exchangeProperty.metadata_data}"))
-    .log(LoggingLevel.INFO,"metadata_data1: ${exchangeProperty.metadata_data}")
-    .log(LoggingLevel.INFO,"metadata_object1: ${exchangeProperty.metadata_object}")
+    .log(LoggingLevel.INFO,"metadata_object: ${exchangeProperty.metadata_object}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1727,7 +1600,6 @@ log.info("metadata: "+ metadata);
               String caseId = exchange.getProperty("caseId", String.class);
               String rccId = exchange.getProperty("key", String.class);
               CaseHyperlinkData body = new CaseHyperlinkData();
-
               body.setMessage("Case found.");
               body.setHyperlink(prefix + caseId + suffix);
               body.setRcc_id(rccId);
@@ -1763,25 +1635,22 @@ log.info("metadata: "+ metadata);
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
-          //CaseHyperlinkData bcm = exchange.getIn().getBody(CaseHyperlinkData.class);
           CaseHyperlinkData bcm = (CaseHyperlinkData)exchange.getProperty("cmetadata_object", CaseHyperlinkData.class);
           CaseHyperlinkData metadata = (CaseHyperlinkData)exchange.getProperty("cmetadata_object", CaseHyperlinkData.class);
-          //List<CaseHyperlinkData> relatedCf = metadata.getCase_hyperlink_data();
           CaseHyperlinkDataList body = new CaseHyperlinkDataList(metadata);
-          /*if(relatedCf == null) {
-            relatedCf = new ArrayList<CaseHyperlinkData>();
-          }*/
-          //relatedCf.add(bcm);
-          //metadata.setCase_hyperlink_data(relatedCf);
-          log.info("bcm "+ bcm.getRcc_id());log.info("case hyperlingbodylist:  "+ body.getcase_hyperlinks().iterator().next().getRcc_id());
+          Exchange originalExchange = exchange.getProperty("originalExchange", Exchange.class);
+        
+          log.info("bcm "+ bcm.getRcc_id());
+          log.info("case hyperlingbodylist:  "+ body.getcase_hyperlinks().iterator().next().getRcc_id());
           log.info("metadata " + metadata.getRcc_id());
           exchange.setProperty("metadata_object", body);
-          //exchange.getIn().setBody(metadata);
-          //exchange.getIn().setBody(body);
+          if (originalExchange != null) {
+            // Update the properties of the parent exchange
+            originalExchange.setProperty("metadata_object", body);
+        }
         }
       })
       //.setProperty("metadata_data", simple("${bodyAs(String)}"))
-      
       .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
       //.setBody(simple("${exchangeProperty.metadata_data}"))
       .setProperty("metadata_object", body())
@@ -1790,6 +1659,7 @@ log.info("metadata: "+ metadata);
       .log(LoggingLevel.INFO, "Body4: ${bodyAs(String)}")
     .end()
     //.setBody(simple("${exchangeProperty.metadata_data}"))
+      //.setBody(simple("${exchangeProperty.metadata_data}"))
     .log(LoggingLevel.INFO,"metadata_data 6: ${exchangeProperty.metadata_data}")
     .log(LoggingLevel.INFO,"metadata_object 6: ${exchangeProperty.metadata_object}")
     .log(LoggingLevel.INFO, "Body 6: ${exchangeProperty.body}")
@@ -1802,36 +1672,14 @@ log.info("metadata: "+ metadata);
       }
     })
     .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
-
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
     .setBody(simple("${exchangeProperty.metadata_data}"))
-    .log(LoggingLevel.INFO, "${body}")
+    .log(LoggingLevel.INFO,"metadata_data 7: ${exchangeProperty.metadata_data}")
+    .log(LoggingLevel.INFO,"metadata_object 7: ${exchangeProperty.metadata_object}")
+    .log(LoggingLevel.INFO, "Final body: ${body}")
     ;
   }
 
-  //as part of jade 2425
-  private void getCaseListHyperlink111() {
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: header.key
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() 
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
-    .setProperty("key", simple("${header.key}"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        CaseHyperlinkDataList hyperlinkObject = new CaseHyperlinkDataList ();
-        exchange.setProperty("metadata_object", hyperlinkObject);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
-    .log(LoggingLevel.INFO,"metadata_data1: ${exchangeProperty.metadata_data}")
-    .log(LoggingLevel.INFO,"metadata_object1: ${exchangeProperty.metadata_object}")
-;
-
-  }
   private void createCourtCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

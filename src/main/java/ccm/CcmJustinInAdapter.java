@@ -254,53 +254,24 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "Body: ${body}.")
     .stop()
   .end()
-  // prepare response
-  /*.unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
-  .process(new Processor() {
-    @Override
-    public void process(Exchange exchange) throws Exception {
-      CaseHyperlinkData data = exchange.getMessage().getBody(CaseHyperlinkData.class);
-      JustinCaseHyperlinkData body = new JustinCaseHyperlinkData(data);
-      exchange.getMessage().setBody(body);
-    }
-  })
-  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkData.class)
-  .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
-  .log(LoggingLevel.DEBUG, "Body: ${body}")*/
-
  // prepare response
- .log(LoggingLevel.DEBUG, "Body: ${body}.")
-  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+ .log(LoggingLevel.INFO, "Body got from dems: ${body}.")
+ .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
  .process(new Processor() {
    @Override
    public void process(Exchange exchange) throws Exception {
      CaseHyperlinkDataList data = exchange.getMessage().getBody(CaseHyperlinkDataList.class);
      //JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
+     log.info("data : "+ data.getcase_hyperlinks().iterator().next().getRcc_id());
      JustinCaseHyperlinkDataList jchd = new JustinCaseHyperlinkDataList(data);
      jchd.setMessage("");
+     log.info("JustinCaseHyperlinkDataList: " + jchd);
      exchange.getMessage().setBody(jchd,JustinCaseHyperlinkDataList.class);
    }
  })
  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
- .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
- .log(LoggingLevel.DEBUG, "Body: ${body}")
-/*  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
- .process(new Processor() {
-   @Override
-   public void process(Exchange exchange) throws Exception {
-     CaseHyperlinkData data = exchange.getMessage().getBody(CaseHyperlinkData.class);
-     //JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
-     JustinCaseHyperlinkDataList jchd = new JustinCaseHyperlinkDataList(data.getCase_hyperlink_data());
-     jchd.setMessage("");
-     exchange.getMessage().setBody(jchd,JustinCaseHyperlinkDataList.class);
-   }
- })
- .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
- .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
- .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
- .log(LoggingLevel.DEBUG, "Body: ${body}")*/
+ .log(LoggingLevel.INFO, "Body: ${body}")
   ;
   }
 }
