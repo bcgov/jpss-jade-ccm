@@ -1071,7 +1071,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-    
+
     .removeProperty("recordId")
 
     .setProperty("key", simple("${header.number}"))
@@ -1121,6 +1121,9 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
       .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Did not create case record due to existing record id: ${exchangeProperty.existingRecordId}, case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
+      .endChoice()
     .end()
     .choice()
       .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
@@ -1129,6 +1132,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
+            // There are potentially 3 different record object types returne from JUSTIN, find the correct one,
+            // convert it to DemsRecordDocumentData and set it as the body.
             ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
             CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
             ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
@@ -1180,15 +1185,17 @@ public class CcmDemsAdapter extends RouteBuilder {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+    .removeProperty("recordId")
 
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("direct:getCourtCaseIdByKey")
+    .to("direct:getCourtCaseStatusByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
     .choice()
-      .when(simple("${exchangeProperty.caseId} != ''"))
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Updating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
 
@@ -1203,7 +1210,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
 
-        .endChoice()
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Did not create case record due to case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
+      .endChoice()
     .end()
 
     .choice()
@@ -1213,6 +1223,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
+            // There are potentially 3 different record object types returne from JUSTIN, find the correct one,
+            // convert it to DemsRecordDocumentData and set it as the body.
             ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
             CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
             ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
@@ -1240,7 +1252,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:streamCaseRecord")
-        .endChoice()
+      .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of updateDocumentRecord")
     ;
@@ -2697,7 +2709,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             .setProperty("inactiveStatus",jsonpath("$.status"))
             .choice()
               .when(simple("${exchangeProperty.inactiveStatus} == 'Inactive'"))
-                .setBody(simple("{\"name\": \"${exchangeProperty.inactiveCaseName}\",\"key\": \"${exchangeProperty.inactiveRccId}\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
+                .setBody(simple("{\"name\": \"${exchangeProperty.inactiveCaseName}\",\"key\": \"${exchangeProperty.inactiveRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
 
                 .log(LoggingLevel.INFO, "Changing primary id for case id: ${exchangeProperty.inactiveCaseId}")
                 .removeHeader("CamelHttpUri")

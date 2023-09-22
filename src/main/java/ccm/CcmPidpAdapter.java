@@ -344,11 +344,6 @@ public class CcmPidpAdapter extends RouteBuilder {
 
     from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&securityProtocol=PLAINTEXT")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
-      "    on the topic ${headers[kafka.TOPIC]}\n" +
-      "    on the partition ${headers[kafka.PARTITION]}\n" +
-      "    with the offset ${headers[kafka.OFFSET]}\n" +
-      "    with the key ${headers[kafka.KEY]}")
     .setHeader("event_key")
       .jsonpath("$.event_key")
     .setHeader("event_status")
@@ -366,6 +361,11 @@ public class CcmPidpAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
       .when(header("justin_rcc_id").isEqualTo("0"))
+        .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+          "    on the topic ${headers[kafka.TOPIC]}\n" +
+          "    on the partition ${headers[kafka.PARTITION]}\n" +
+          "    with the offset ${headers[kafka.OFFSET]}\n" +
+          "    with the key ${headers[kafka.KEY]}")
         .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
