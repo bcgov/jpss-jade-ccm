@@ -2,6 +2,7 @@ package ccm.models.system.justin;
 
 import java.util.List;
 
+import ccm.models.common.data.CaseHyperlinkData;
 import ccm.models.common.data.CaseHyperlinkDataList;
 
 public class JustinCaseHyperlinkDataList {
@@ -13,6 +14,10 @@ public class JustinCaseHyperlinkDataList {
     }
 
     public JustinCaseHyperlinkDataList() {
+    }
+
+    public JustinCaseHyperlinkDataList(List<CaseHyperlinkData> case_hyperlink_data) {
+        this.setCase_hyperlinks(case_hyperlinks);
     }
 
     public String getMessage() {

@@ -270,7 +270,8 @@ public class CcmJustinInAdapter extends RouteBuilder {
   .log(LoggingLevel.DEBUG, "Body: ${body}")*/
 
  // prepare response
- .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+ .log(LoggingLevel.DEBUG, "Body: ${body}.")
+  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
  .process(new Processor() {
    @Override
    public void process(Exchange exchange) throws Exception {
@@ -285,6 +286,21 @@ public class CcmJustinInAdapter extends RouteBuilder {
  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
  .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
  .log(LoggingLevel.DEBUG, "Body: ${body}")
+/*  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+ .process(new Processor() {
+   @Override
+   public void process(Exchange exchange) throws Exception {
+     CaseHyperlinkData data = exchange.getMessage().getBody(CaseHyperlinkData.class);
+     //JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
+     JustinCaseHyperlinkDataList jchd = new JustinCaseHyperlinkDataList(data.getCase_hyperlink_data());
+     jchd.setMessage("");
+     exchange.getMessage().setBody(jchd,JustinCaseHyperlinkDataList.class);
+   }
+ })
+ .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+ .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
+ .log(LoggingLevel.INFO, "Case (RCC_ID: ${exchangeProperty.rcc_id}) found.")
+ .log(LoggingLevel.DEBUG, "Body: ${body}")*/
   ;
   }
 }

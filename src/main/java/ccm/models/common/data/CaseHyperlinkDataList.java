@@ -5,20 +5,17 @@ import java.util.List;
 
 
 public class CaseHyperlinkDataList {
-    private List<CaseHyperlinkData> case_hyperlinks;
+    private List<CaseHyperlinkData> case_hyperlinks = new ArrayList<CaseHyperlinkData>();
 
     public CaseHyperlinkDataList() {
         case_hyperlinks = new ArrayList<CaseHyperlinkData>();
     }
 
     public CaseHyperlinkDataList(CaseHyperlinkData body) {
-        this();
-        case_hyperlinks.add(body);
-       /* List<CaseHyperlinkData> chd = new ArrayList<CaseHyperlinkData>();
-        chd.add(body);    
-        setcase_hyperlinks(chd);*/
+       // List<CaseHyperlinkData> chd = new ArrayList<CaseHyperlinkData>();
+       case_hyperlinks.add(body);    
         setcase_hyperlinks(case_hyperlinks);
-        System.out.println(case_hyperlinks);
+        System.out.println("data 1:"+case_hyperlinks);
     }
        
     public List<CaseHyperlinkData> getcase_hyperlinks() {
