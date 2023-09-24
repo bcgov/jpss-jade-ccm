@@ -1801,13 +1801,13 @@ public class CcmNotificationService extends RouteBuilder {
           public void process(Exchange exchange) {
             String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
             String primaryRccId = (String)exchange.getProperty("rcc_id", String.class);
-            log.info("agencyFileIds: "+demsAgencyFiles);
+            //log.info("agencyFileIds: "+demsAgencyFiles);
             String[] demsAgencyFileList = demsAgencyFiles.split(";");
             ArrayList<String> agencyFileList = new ArrayList<String>();
             if(demsAgencyFileList != null && demsAgencyFileList.length > 0) {
               for(String demsAgencyFileId : demsAgencyFileList) {
                 demsAgencyFileId = demsAgencyFileId.trim();
-                log.info("Comparing rcc: "+demsAgencyFileId);
+                //log.info("Comparing rcc: "+demsAgencyFileId);
                 if(demsAgencyFileId.equalsIgnoreCase(primaryRccId)) {
                   continue;
                 } else {
@@ -1822,19 +1822,19 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
         .split().jsonpathWriteAsString("$.*")
           .setProperty("agencyFileId", simple("${body}"))
-          .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+          .log(LoggingLevel.DEBUG, "agency file: ${exchangeProperty.agencyFileId}")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
               String agencyFileId = exchange.getProperty("agencyFileId", String.class);
-              log.info("agencyFileId:"+agencyFileId);
+              //log.info("agencyFileId:"+agencyFileId);
               exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
             }
           })
 
           .choice()
             .when(simple("${exchangeProperty.agencyFileId} != ''"))
-              .log(LoggingLevel.INFO, "agency file id updated: ${exchangeProperty.agencyFileId}")
+              .log(LoggingLevel.DEBUG, "agency file id updated: ${exchangeProperty.agencyFileId}")
               .setHeader("number").simple("${exchangeProperty.agencyFileId}")
               .setHeader(Exchange.HTTP_METHOD, simple("GET"))
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
