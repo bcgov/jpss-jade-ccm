@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.StringTokenizer;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -1171,16 +1172,20 @@ public class CcmNotificationService extends RouteBuilder {
       .choice()
         .when(simple("${body[id]} != ''"))
           .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
+          .setProperty("related_primary_file").simple("${body[primaryAgencyFileId]}")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
               ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
               String demsAgencyFiles = (String)exchange.getProperty("dems_agency_files", String.class);
+              String primaryAgencyFile = (String)exchange.getProperty("related_primary_file", String.class);
               log.info("agencyFileIds: "+demsAgencyFiles);
-              String[] demsAgencyFileList = demsAgencyFiles.split(";");
+              String[] demsAgencyFileArray = demsAgencyFiles.split(";");
               ArrayList<String> agencyFileList = new ArrayList<String>();
-              if(demsAgencyFileList != null && demsAgencyFileList.length > 0) {
+              if(demsAgencyFileArray != null && demsAgencyFileArray.length > 0) {
                 log.info("Primary rcc: "+courtfiledata.getRcc_id());
+                ArrayList<String> demsAgencyFileList = new ArrayList<String>(Arrays.asList(demsAgencyFileArray));
+                demsAgencyFileList.add(primaryAgencyFile);
                 for(String demsAgencyFileId : demsAgencyFileList) {
                   demsAgencyFileId = demsAgencyFileId.trim();
                   log.info("Comparing rcc: "+demsAgencyFileId);
