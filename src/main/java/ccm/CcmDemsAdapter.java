@@ -374,7 +374,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"status exists key = ${header[number]}...")
+    .log(LoggingLevel.DEBUG,"status exists key = ${header[number]}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -491,7 +491,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.INFO,"Case not found.")
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO, "${body}")
+    .log(LoggingLevel.DEBUG, "DEMS Case Status: ${body}")
   ;
   }
 
@@ -878,7 +878,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               .to("direct:checkIncrementRecordDocId")
               // set back body to dems record
               .setBody(simple("${exchangeProperty.dems_record}"))
-              .log(LoggingLevel.INFO, "${body}")
+              .log(LoggingLevel.DEBUG, "${body}")
               .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
               .to("direct:createDocumentRecord")
             .endChoice()
@@ -1474,7 +1474,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
-      .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+      .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       // sometimes, if events come in a little too fast for the same case, it may caus an error
@@ -1621,6 +1621,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"createCourtCase")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
@@ -1635,7 +1636,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -1707,7 +1708,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("JustinCourtCase", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.event_key}"))
     .to("direct:getCourtCaseCourtFileUniqueIdByKey")
@@ -1745,7 +1746,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
@@ -1819,8 +1820,8 @@ public class CcmDemsAdapter extends RouteBuilder {
       .end()
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
-      .log(LoggingLevel.INFO,"Exception: ${exception}")
-      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -1892,7 +1893,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsApprovedCourtCaseData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
@@ -1952,7 +1953,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json()
-    .log(LoggingLevel.INFO, "Unprocessed accused list: ${body}")
+    .log(LoggingLevel.DEBUG, "Unprocessed accused list: ${body}")
     .split()
       .jsonpathWriteAsString("$.*")
       .setHeader("key", jsonpath("$.identifier"))
@@ -1973,6 +1974,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("key", simple("${header.rcc_id}"))
+    .log(LoggingLevel.INFO, "updateCourtCaseWithAppearanceSummary for rcc: ${header.rcc_id}")
     .unmarshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
@@ -2018,8 +2020,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("key", simple("${header.rcc_id}"))
+    .log(LoggingLevel.INFO, "updateCourtCaseWithCrownAssignmentData for rcc: ${header.rcc_id}")
     .unmarshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
@@ -2038,7 +2041,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsCaseCrownAssignmentData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // get case id
     .setProperty("key", jsonpath("$.key"))
@@ -2239,7 +2242,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
-    .log(LoggingLevel.INFO,"Check whether person exists in DEMS")
+    .log(LoggingLevel.DEBUG,"Check whether person exists in DEMS")
     .to("direct:getPersonExists")
     .log(LoggingLevel.DEBUG,"${body}")
     .unmarshal().json()
