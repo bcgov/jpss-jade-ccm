@@ -45,8 +45,7 @@ public class DemsChargeAssessmentCaseData {
             for (ChargeAssessmentData chargeData : chargeAssessmentDataList) {
                 if (chargeData.getAccused_persons() != null) {
                     for (CaseAccused caseAccused :  chargeData.getAccused_persons()) {
-            
-                        if (!caseAccusedList.contains(caseAccused)){
+                        if (!caseAccusedList.stream().filter(o -> o.getIdentifier().equals(caseAccused.getIdentifier())).findFirst().isPresent()) {
                             caseAccusedList.add(caseAccused);
                         }
                     }

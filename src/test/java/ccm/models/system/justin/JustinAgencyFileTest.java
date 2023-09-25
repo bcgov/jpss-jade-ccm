@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,8 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JustinAgencyFileTest {
 
-    private JustinAgencyFile getTestJustinFile() {
-        String fileName = "json/system/justin/justin_agency_file.json";
+    private JustinAgencyFile getJustinFile(String fileName) {
         ClassLoader classLoader = getClass().getClassLoader();
 
         try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
@@ -54,8 +54,22 @@ public class JustinAgencyFileTest {
         return new JustinAgencyFile();
     }
 
-    private DemsChargeAssessmentCaseData getTestDemsFile() {
-        String fileName = "json/system/dems/dems_agency_file.json";
+    private JustinAgencyFile getTestJustinFile() {
+        String fileName = "json/system/justin/justin_agency_file.json";
+        return getJustinFile(fileName);
+    }
+
+    private JustinAgencyFile getTestJustinFilePrimary() {
+        String fileName = "json/system/justin/justin_agency_file_merge_primary.json";
+        return getJustinFile(fileName);
+    }
+
+    private JustinAgencyFile getTestJustinFileSecond() {
+        String fileName = "json/system/justin/justin_agency_file_merge_second.json";
+        return getJustinFile(fileName);
+    }
+
+    private DemsChargeAssessmentCaseData getDemsFile(String fileName) {
         ClassLoader classLoader = getClass().getClassLoader();
 
         try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
@@ -72,6 +86,16 @@ public class JustinAgencyFileTest {
             e.printStackTrace();
         }
         return new DemsChargeAssessmentCaseData();
+    }
+
+    private DemsChargeAssessmentCaseData getTestDemsFile() {
+        String fileName = "json/system/dems/dems_agency_file.json";
+        return getDemsFile(fileName);
+    }
+
+    private DemsChargeAssessmentCaseData getTestDemsFileMerged() {
+        String fileName = "json/system/dems/dems_agency_file_merged.json";
+        return getDemsFile(fileName);
     }
 
     @Test
@@ -240,6 +264,48 @@ public class JustinAgencyFileTest {
 
     }
 
+
+    @Test
+    public void testMergeFileAgency() {
+        try {
+            //create ObjectMapper instance
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+        
+            JustinAgencyFile primaryAgencyFile = getTestJustinFilePrimary();
+            JustinAgencyFile secondaryAgencyFile = getTestJustinFileSecond();
+
+            ChargeAssessmentData businessPrimaryFile = new ChargeAssessmentData(primaryAgencyFile);
+            ChargeAssessmentData businessSecondaryFile = new ChargeAssessmentData(secondaryAgencyFile);
+            List<ChargeAssessmentData> secondaries = new ArrayList<ChargeAssessmentData>();
+            secondaries.add(businessSecondaryFile);
+
+            DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1",businessPrimaryFile, secondaries);
+
+            DemsChargeAssessmentCaseData expectedDemsCaseData = getTestDemsFileMerged();
+
+            // since Last JUSTIN Update is current date, set it to blank, so test doesn't fail
+            for(DemsFieldData fieldData : demsCaseFile.getFields()) {
+                if(fieldData.getName().equalsIgnoreCase("Last JUSTIN Update")) {
+                    fieldData.setValue(null);
+                }
+            }
+
+            StringWriter stringFile = new StringWriter();
+            objectMapper.writeValue(stringFile, demsCaseFile);
+            //System.out.println("DemsAgencyFile JSON is\n"+stringFile);
+
+            StringWriter stringFile2 = new StringWriter();
+            objectMapper.writeValue(stringFile2, expectedDemsCaseData);
+            //System.out.println("\n\nExpectedDemsChargeAssessmentCaseData JSON is\n"+stringFile2);
+
+            assertEquals(stringFile.toString(), stringFile2.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
 
 
