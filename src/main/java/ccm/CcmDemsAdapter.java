@@ -381,7 +381,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
-    
+
     .to("direct:getCourtCaseStatusByKey")
     .end()
     ;
@@ -404,7 +404,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("direct:getCourtCaseStatusById")
   ;
   }
- 
+
   private void getCourtCaseStatusById() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1099,7 +1099,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("existingRecordId").simple("${body[id]}")
     .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
 
-    // Make sure that it is an existing and active case, before attempting to add the record 
+    // Make sure that it is an existing and active case, before attempting to add the record
     .choice()
       .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
@@ -1180,7 +1180,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-    .removeProperty("recordId")
 
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
@@ -1201,7 +1200,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:updateCaseRecord")
-        .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+        .log(LoggingLevel.DEBUG,"Updated dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
 
@@ -1684,7 +1683,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         exchange.getMessage().setBody(accusedPersons);
       }
     })
-    
+
     .marshal().json()
     .split()
       .jsonpathWriteAsString("$.*")
@@ -2550,7 +2549,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Creating DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+    .log(LoggingLevel.INFO,"Update DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id} record_id = ${exchangeProperty.recordId}) ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.recordId}")
     .log(LoggingLevel.INFO,"DEMS case record created.")
     .setProperty("recordId", jsonpath("$.edtId"))
@@ -2621,9 +2620,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"sourceCaseId = ${header[sourceCaseId]}")
-    .log(LoggingLevel.INFO,"destinationCaseId = ${header[destinationCaseId]}")
-    .log(LoggingLevel.INFO,"prefixName = ${header[prefixName]}")
+    .log(LoggingLevel.INFO,"sourceCaseId = ${header[sourceCaseId]} destinationCaseId = ${header[destinationCaseId]} prefixName = ${header[prefixName]}")
 
     // first need to check if there are any records from source case which needs to be migrated.
     .removeHeader("CamelHttpUri")
@@ -2635,7 +2632,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/records?throwExceptionOnFailure=false")
     .doTry()
       .setProperty("length",jsonpath("$.totalRows"))
-      .log(LoggingLevel.INFO, "${exchangeProperty.length}")
+      .log(LoggingLevel.INFO, "Expected record migration count: ${exchangeProperty.length}")
       .choice()
         .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0 && ${header[destinationCaseId]} != ''"))
           .log(LoggingLevel.INFO, "Migrate source case document records over to destination case")
@@ -2650,7 +2647,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
-          .log(LoggingLevel.INFO, "Export report response: ${body}")
+          .log(LoggingLevel.INFO, "Export report response: '${body}'")
         .endChoice()
       .end()
 
@@ -2666,7 +2663,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .setProperty("destRccId",jsonpath("$.primaryAgencyFileId"))
       .setProperty("destAgencyFile",jsonpath("$.primaryAgencyFileNo"))
       .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
-      
+
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
@@ -3193,9 +3190,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
-    
+
     .setProperty("dems_case_id", simple("${header.case_id}"))
-    
+
     .toD("direct:deleteJustinRecords")
     .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
     .doTry()
