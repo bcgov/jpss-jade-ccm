@@ -55,6 +55,7 @@ import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
 import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
@@ -528,12 +529,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]}")
-    .log(LoggingLevel.INFO, "part_id = ${header[part_id]}")
-    .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
-    .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
-    .log(LoggingLevel.INFO, "image_id = ${header[image_id]}")
-    .log(LoggingLevel.INFO, "filtered_yn = ${header[filtered_yn]}")
+    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]} part_id = ${header[part_id]} mdoc_justin_no = ${header[mdoc_justin_no]} rcc_ids = ${header[rcc_ids]} image_id = ${header[image_id]} filtered_yn = ${header[filtered_yn]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
       .when(header("event_status").isNotNull())
@@ -581,7 +577,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setProperty("justin_request").body()
-    .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
     .log(LoggingLevel.INFO,"Lookup message: '${body}'")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -596,11 +591,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("report_document_list", simple("${bodyAs(String)}"))
     .setProperty("create_date") .jsonpath("$.create_date")
+    .setProperty("length",jsonpath("$.documents.length()"))
     .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
 
     // For cases like witness statement, there can be multiple docs returned.
     // This will split through each of the documents and process them individually.
-    .log(LoggingLevel.INFO,"Parsing through report documents")
+    .log(LoggingLevel.INFO,"Parsing through report documents of count: ${exchangeProperty.length}")
     .split()
       .jsonpathWriteAsString("$.documents")
       .log(LoggingLevel.INFO,"Parsing through single report document")
@@ -697,11 +693,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
       })
       .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
-      .log(LoggingLevel.INFO,"primary_rcc_id: ${header[primary_rcc_id]}")
-      .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
-      .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
-      .log(LoggingLevel.INFO,"image_id: ${header[image_id]}")
+      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]} primary_rcc_id: ${header[primary_rcc_id]} mdoc_justin_no: ${header[mdoc_justin_no]} rcc_ids: ${header[rcc_ids]} image_id: ${header[image_id]}")
       .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
       .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
       .choice()
@@ -904,26 +896,29 @@ public class CcmDemsAdapter extends RouteBuilder {
       .otherwise()
         .log(LoggingLevel.INFO,"Traverse through metadata to retrieve the rcc_ids to process.")
         .setBody(simple("${exchangeProperty.metadata_data}"))
-        .split()
-          .jsonpathWriteAsString("$.related_agency_file")
-          .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
-          .setProperty("rcc_id",jsonpath("$.rcc_id"))
-          .setProperty("primary_yn",jsonpath("$.primary_yn"))
-          .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id}")
-          .choice()
-            .when(simple("${exchangeProperty.primary_yn} == 'Y'")) // should only push to primary rcc.
-              .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-              .setHeader("reportType", simple("${exchangeProperty.reportType}"))
-              .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-              .setBody(simple("${exchangeProperty.dems_record}"))
-              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-              .to("direct:changeDocumentRecord")
-            .endChoice()
-            .otherwise()
-              .log(LoggingLevel.INFO, "Skipped rcc, as it is not primary")
-            .endChoice()
-          .end()
-        .end()
+
+
+        .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+            exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+        .setBody(simple("${bodyAs(String)}"))
+
+        .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
+        .setProperty("rcc_id",jsonpath("$.rcc_id"))
+        .setProperty("primary_yn",jsonpath("$.primary_yn"))
+        .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id} primary_yn: ${exchangeProperty.primary_yn}")
+        .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+        .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+        .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+        .to("direct:changeDocumentRecord")
       .endChoice()
     .end()
 
@@ -1164,7 +1159,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .endChoice()
       .when(simple("${exchangeProperty.existingRecordId} != ''"))
         .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
-        .log(LoggingLevel.WARN, "${exchangeProperty.dems_record}")
+        .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
       .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
@@ -2655,6 +2650,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
+          .log(LoggingLevel.INFO, "Export report response: ${body}")
         .endChoice()
       .end()
 
