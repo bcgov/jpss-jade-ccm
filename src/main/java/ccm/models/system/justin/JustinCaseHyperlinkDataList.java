@@ -9,20 +9,14 @@ import ccm.models.common.data.CaseHyperlinkData;
 
 public class JustinCaseHyperlinkDataList {
     String message;
-    //CaseHyperlinkDataList case_hyperlinks;
     private List<CaseHyperlinkData> case_hyperlinks_test = new ArrayList<CaseHyperlinkData>();
     private List<CaseHyperlinkData> case_hyperlinks;
 
     public JustinCaseHyperlinkDataList(CaseHyperlinkDataList caseHyperlinkData) {
-        System.out.println("Inside JustinCaseHyperlinkDataList : "+caseHyperlinkData.getcase_hyperlinks().get(0));
-        //case_hyperlinks_test.add(caseHyperlinkData);
         Iterator<CaseHyperlinkData> i = caseHyperlinkData.getcase_hyperlinks().iterator();
         while (i != null && i.hasNext()) {
             case_hyperlinks_test.add(i.next());
           }
-
-        System.out.println("case_hyperlinks_test : "+ case_hyperlinks_test);
-       //this.setCase_hyperlinks(caseHyperlinkData);
         this.setCase_hyperlinks(case_hyperlinks_test);
     }
 
@@ -42,11 +36,4 @@ public class JustinCaseHyperlinkDataList {
     public void setMessage(String message) {
         this.message = message;
     }
-    /*public CaseHyperlinkDataList getCase_hyperlinks() {
-        return case_hyperlinks;
-    }
-    public void setCase_hyperlinks(CaseHyperlinkDataList case_hyperlinks) {
-        this.case_hyperlinks = case_hyperlinks;
-    }*/
-
 }

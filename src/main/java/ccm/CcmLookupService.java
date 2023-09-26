@@ -521,14 +521,12 @@ public class CcmLookupService extends RouteBuilder {
    from("platform-http:/" + routeId)
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .log(LoggingLevel.INFO,"Inside getCaseListHyperlink")
    .removeHeader("CamelHttpUri")
    .removeHeader("CamelHttpBaseUri")
    .removeHeaders("CamelHttp*")
    .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${header[key]}")
    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-
    // attempt to retrieve case id using getCaseListHyperlink DEMS adapter endpoint.
    .doTry()
      .to("http://ccm-dems-adapter/getCaseListHyperlink")

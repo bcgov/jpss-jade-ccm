@@ -177,15 +177,14 @@ public class CcmJustinInAdapter extends RouteBuilder {
    .routeId(routeId)
    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
    .log(LoggingLevel.INFO,"getCaseListHyperlink request received.")
-   .log(LoggingLevel.INFO,"${body}")
+   .log(LoggingLevel.DEBUG,"${body}")
    .process(new Processor() {
      @Override
      public void process(Exchange exchange) throws Exception {
        exchange.setProperty("exchangeId",exchange.getExchangeId());
      }
    })
-   .log(LoggingLevel.INFO, "Received request (exchange id: ${exchangeProperty.exchangeId}) for case hyperlink. RCC_ID: ${header.rcc_id} ...")
-
+   .log(LoggingLevel.INFO, "Received request (exchange id: ${exchangeProperty.exchangeId}) for case list hyperlink.")
    // check for credentials
    .choice()
      .when(simple("${header.authorization} != 'Bearer {{justin.in.token}}'"))
@@ -198,15 +197,13 @@ public class CcmJustinInAdapter extends RouteBuilder {
            exchange.getMessage().setBody(body);
          }
        })
-       .log(LoggingLevel.INFO,"${body}")
+       .log(LoggingLevel.DEBUG,"${body}")
        .marshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
        .log(LoggingLevel.ERROR,"HTTP response 401. Body: ${body}")
        .stop()
    .end()
-   .log(LoggingLevel.INFO,"rcc_ids : ${header.rcc_ids}")
-   .log(LoggingLevel.INFO,"body1 : ${body}")
    .setProperty("keys", simple("${body}"))
-   .log(LoggingLevel.INFO,"Keys : ${exchangeProperty.keys}")
+   .log(LoggingLevel.DEBUG,"Keys : ${exchangeProperty.keys}")
    .unmarshal().json(JsonLibrary.Jackson, JustinRccCaseList.class)
     .process(new Processor() {
       @Override
@@ -218,8 +215,8 @@ public class CcmJustinInAdapter extends RouteBuilder {
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .log(LoggingLevel.INFO, "Body2: ${body}")
-//call to lookup service
+    .log(LoggingLevel.DEBUG, "Body : ${body}")
+    //call to lookup service
     .doTry()
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -255,23 +252,21 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .stop()
   .end()
  // prepare response
- .log(LoggingLevel.INFO, "Body got from dems: ${body}.")
+ .log(LoggingLevel.DEBUG, "Body got from dems: ${body}.")
  .unmarshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
  .process(new Processor() {
    @Override
    public void process(Exchange exchange) throws Exception {
      CaseHyperlinkDataList data = exchange.getMessage().getBody(CaseHyperlinkDataList.class);
      //JustinCaseHyperlinkDataList body = exchange.getMessage().getBody(JustinCaseHyperlinkDataList.class);
-     log.info("data : "+ data.getcase_hyperlinks().iterator().next().getRcc_id());
      JustinCaseHyperlinkDataList jchd = new JustinCaseHyperlinkDataList(data);
      jchd.setMessage("");
-     log.info("JustinCaseHyperlinkDataList: " + jchd);
      exchange.getMessage().setBody(jchd,JustinCaseHyperlinkDataList.class);
    }
  })
  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
- .log(LoggingLevel.INFO, "Body: ${body}")
+ .log(LoggingLevel.DEBUG, "Body: ${body}")
   ;
   }
 }
