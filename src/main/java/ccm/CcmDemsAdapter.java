@@ -1,5 +1,6 @@
 package ccm;
 
+import org.apache.camel.AggregationStrategy;
 import org.apache.camel.CamelException;
 
 // To run this integration use:
@@ -54,9 +55,11 @@ import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
+import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
+import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.data.document.ImageDocumentData;
@@ -68,15 +71,16 @@ import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
-
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-
+import java.util.Map;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -138,6 +142,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     publishEventKPI();
     deleteJustinRecords();
     inactivateCase();
+    getCaseListHyperlink();
   }
 
 
@@ -1606,6 +1611,99 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
     .end()
     .marshal().json(JsonLibrary.Jackson, CaseHyperlinkData.class)
+    ;
+  }
+ //as part of jade 2425
+  private void getCaseListHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header.key
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
+    .setProperty("key", simple("${header.key}"))
+    // set the hyperlink object to be returned in the body at end
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CaseHyperlinkDataList hyperlinkObject = new CaseHyperlinkDataList();
+        exchange.setProperty("metadata_object", hyperlinkObject);
+        exchange.setProperty("originalExchange", exchange);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .setBody(simple("${exchangeProperty.key}"))
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
+    .log(LoggingLevel.DEBUG, "Returned body from lookup id: '${body}'")
+    .log(LoggingLevel.DEBUG,"rcc_ids: ${header[key]}")
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .unmarshal().json(JsonLibrary.Jackson, List.class)
+    .choice()
+        .when(simple("${header[key]} != ''"))
+          .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+          .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+          .setProperty("caseIds").simple("${body}")
+          .log(LoggingLevel.INFO,"case ids: ${exchangeProperty.caseIds}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              List<Map<String, Object>> items = exchange.getIn().getBody(List.class);
+              List<Map<String, CaseHyperlinkData>> resultItems = new ArrayList<>();
+              String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
+              String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+              
+              List<CaseHyperlinkData> test =  new ArrayList<CaseHyperlinkData>();
+              CaseHyperlinkDataList bodyList = new CaseHyperlinkDataList();
+              for (Map<String, Object> item : items) {
+                CaseHyperlinkData body = new CaseHyperlinkData();
+                Integer id = (Integer) item.get("id");
+                String key = (String) item.get("key");
+
+                body.setHyperlink(prefix + id + suffix);
+                body.setRcc_id(key.toString());
+                body.setMessage("Case found.");
+                
+                test.add(body);
+            }
+              bodyList.addCaseHyperlinkData(test);
+              exchange.getMessage().setBody(bodyList);
+              Exchange originalExchange = exchange.getProperty("originalExchange", Exchange.class);
+              exchange.setProperty("metadata_object", bodyList);
+              if (originalExchange != null) {
+                // Update the properties of the parent exchange
+                originalExchange.setProperty("metadata_object", bodyList);
+            }
+            }
+          })
+          .log(LoggingLevel.INFO, "Case (key: ${header.key}) found;")
+          .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+          .setProperty("metadata_object", body())
+          .log(LoggingLevel.DEBUG, "Body: ${bodyAs(String)}")
+        .endChoice()
+        .otherwise()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              CaseHyperlinkData body = new CaseHyperlinkData();
+              body.setMessage("Case not found.");
+              exchange.getMessage().setBody(body);
+            }
+          })
+          .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+        .endChoice()
+    .end()
+    .setProperty("metadata_data", simple("${bodyAs(String)}"))
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .log(LoggingLevel.DEBUG, "Final body: ${body}")
     ;
   }
 
@@ -3286,5 +3384,4 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
-
 }
