@@ -70,6 +70,7 @@ import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
+import java.io.StringReader;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -80,6 +81,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -1587,17 +1593,47 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
           .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
           .setProperty("caseIds").simple("${body}")
+          .setProperty("keys").simple("${header[key]}")
           .log(LoggingLevel.INFO,"case ids: ${exchangeProperty.caseIds}")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
               List<Map<String, Object>> items = exchange.getIn().getBody(List.class);
+              String keyid = exchange.getProperty("keys", String.class);
               List<Map<String, CaseHyperlinkData>> resultItems = new ArrayList<>();
               String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
               String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
               
               List<CaseHyperlinkData> test =  new ArrayList<CaseHyperlinkData>();
               CaseHyperlinkDataList bodyList = new CaseHyperlinkDataList();
+              JsonReader jsonReader = Json.createReader(new StringReader(keyid));
+              JsonObject jsonObject = jsonReader.readObject();
+              // Extract the "keys" array
+              JsonArray jsonArray = jsonObject.getJsonArray("keys");
+              // Convert the JsonArray to a List of strings
+              List<String> keyList = new ArrayList<>();
+              jsonArray.forEach(jsonValue -> keyList.add(jsonValue.toString()));
+              // Print the List
+              List<String> extraKeys = new ArrayList<>();
+              List<String> sanitizedKeyList = new ArrayList<>();
+              // Remove quotes from the "key" values in keyList
+              for (String key : keyList) {
+                String sanitizedKey = key.replace("\"", ""); // Remove quotes
+                sanitizedKeyList.add(sanitizedKey);
+              }
+              for (String key : sanitizedKeyList) {
+                boolean found = false;
+                for (Map<String, Object> item : items) {
+                  String itemKey = (String) item.get("key");
+                    if (key.equals(itemKey)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    extraKeys.add(key);
+                }
+            }
               for (Map<String, Object> item : items) {
                 CaseHyperlinkData body = new CaseHyperlinkData();
                 Integer id = (Integer) item.get("id");
@@ -1609,6 +1645,16 @@ public class CcmDemsAdapter extends RouteBuilder {
                 
                 test.add(body);
             }
+            if(extraKeys != null){
+              for(String a : extraKeys){
+                CaseHyperlinkData body = new CaseHyperlinkData();
+
+                body.setHyperlink(null);
+                body.setRcc_id(a);
+                body.setMessage("Case not found.");
+                test.add(body);
+              }
+            }
               bodyList.addCaseHyperlinkData(test);
               exchange.getMessage().setBody(bodyList);
               Exchange originalExchange = exchange.getProperty("originalExchange", Exchange.class);
@@ -1619,7 +1665,7 @@ public class CcmDemsAdapter extends RouteBuilder {
             }
             }
           })
-          .log(LoggingLevel.INFO, "Case (key: ${header.key}) found;")
+          .log(LoggingLevel.INFO, "Case ${exchangeProperty.caseIds} found;")
           .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
           .setProperty("metadata_object", body())
           .log(LoggingLevel.DEBUG, "Body: ${bodyAs(String)}")
