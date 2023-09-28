@@ -9,6 +9,7 @@ package ccm;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -27,29 +28,35 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.http.base.HttpOperationFailedException;
-//import org.apache.camel.CamelException;
-//import org.apache.camel.component.kafka.KafkaConstants;
-//import org.apache.camel.model.;
+import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.support.service.ServiceHelper;
 
-import ccm.models.common.data.CourtCaseData;
-import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
-import ccm.models.common.event.CourtCaseEvent;
+import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.Error;
-import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.EventKPI;
-import ccm.models.system.justin.*;
-import ccm.utils.DateTimeUtils;
+import ccm.models.common.event.ReportEvent;
 import ccm.models.common.versioning.Version;
+import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
+import ccm.models.system.justin.JustinCourtFile;
+import ccm.models.system.justin.JustinCrownAssignmentList;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinEvent;
+import ccm.models.system.justin.JustinEventBatch;
+import ccm.utils.DateTimeUtils;
 
 public class CcmJustinAdapter extends RouteBuilder {
   @Override
@@ -61,6 +68,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     courtFileCreated();
     healthCheck();
     //readRCCFileSystem();
+    stopJustinEvents();
+    startJustinEvents();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
@@ -368,6 +377,59 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("https://{{justin.host}}/requeueEventById?id=4277") // USER_DPROV (PART_ID = null)
     ;
 
+  }
+
+  private void stopJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for ( Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue stopped")
+    ;
+  }
+
+  private void startJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Restarting pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        
+        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
+        ServiceHelper.startService(mainTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue started")
+    ;
   }
 
   private void requeueJustinEvent() {
