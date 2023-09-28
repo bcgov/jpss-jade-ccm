@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 public class AccessDedupProcessorTest {
 
     private static final String INPUT_TOPIC = "user-accesses";
-    private static final String OUTPUT_TOPIC = "case-accesses";
+    private static final String OUTPUT_TOPIC = "user-accesses-dedup";
 
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, String> inputTopic;
@@ -39,8 +39,8 @@ public class AccessDedupProcessorTest {
 
         topology.addSource("source", "user-accesses")
                 .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupProcessor::new, "source")
-                .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("deduplication-store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
-                .addSink("sink", "case-accesses", "processor");
+                .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
+                .addSink("sink", "user-accesses-dedup", "processor");
 
         Properties props = new Properties();
 
