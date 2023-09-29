@@ -524,8 +524,9 @@ public class CcmLookupService extends RouteBuilder {
    .removeHeader("CamelHttpUri")
    .removeHeader("CamelHttpBaseUri")
    .removeHeaders("CamelHttp*")
-   .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${header[key]}")
-   .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+   .log(LoggingLevel.INFO,"Processing getCaseListHyperlink request... key = ${body}")
+   .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+   .setProperty("body_request", body())
    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
    // attempt to retrieve case id using getCaseListHyperlink DEMS adapter endpoint.
    .doTry()
