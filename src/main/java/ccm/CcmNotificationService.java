@@ -63,7 +63,10 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
-    processBulkCaseUserEvents();
+
+    // no longer required; processing done via ccm-accessdedup-processor
+    // deprecated_processBulkCaseUserEvents();
+
     processCaseUserAccessAdded();
     processCaseUserAccessRemoved();
     processUnknownStatus();
@@ -643,7 +646,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processBulkCaseUserEvents() {
+  private void deprecated_processBulkCaseUserEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
