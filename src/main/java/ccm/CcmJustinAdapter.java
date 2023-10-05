@@ -393,7 +393,7 @@ public class CcmJustinAdapter extends RouteBuilder {
       public void process(Exchange exchange) throws Exception {
 
         List<Route> routeList = exchange.getContext().getRoutes();
-        for ( Route rte : routeList ) {
+        for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
         exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");

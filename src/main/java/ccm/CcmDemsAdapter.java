@@ -70,6 +70,7 @@ import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
+import java.io.StringReader;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -78,6 +79,11 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -502,7 +508,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=75")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -1644,10 +1650,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .setBody(simple("${exchangeProperty.key}"))
-    .log(LoggingLevel.INFO,"rcc_ids: ${exchangeProperty.key}")
+    .log(LoggingLevel.DEBUG,"rcc_ids: ${exchangeProperty.key}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
-    .log(LoggingLevel.INFO, "Returned body from lookup id: '${body}'")
-    .log(LoggingLevel.INFO,"rcc_ids: ${exchangeProperty.key}")
+    .log(LoggingLevel.DEBUG, "Returned body from lookup id: '${body}'")
+    .log(LoggingLevel.DEBUG,"rcc_ids: ${exchangeProperty.key}")
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
         .unmarshal().json(JsonLibrary.Jackson, List.class)
@@ -1662,11 +1668,11 @@ public class CcmDemsAdapter extends RouteBuilder {
             CaseHyperlinkDataList metadata = (CaseHyperlinkDataList)exchange.getProperty("metadata_object", CaseHyperlinkDataList.class);
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-            log.info("originalList size: "+metadata.getcase_hyperlinks().size());
+            //log.info("originalList size: "+metadata.getcase_hyperlinks().size());
             metadata.processHyperlinks(prefix, suffix, items);
-            log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
+            //log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
             for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
-              log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
+              //log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
             }
 
             exchange.setProperty("metadata_object", metadata);
@@ -1680,7 +1686,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .stop()
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO, "Final body: ${body}")
+    .log(LoggingLevel.DEBUG, "Final body: ${body}")
     ;
   }
 

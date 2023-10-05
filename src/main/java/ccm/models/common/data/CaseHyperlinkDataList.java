@@ -12,6 +12,7 @@ public class CaseHyperlinkDataList {
     public CaseHyperlinkDataList() {
         case_hyperlinks = new ArrayList<CaseHyperlinkData>();
     }
+
     public CaseHyperlinkDataList(CommonCaseList rccList) {
         case_hyperlinks = new ArrayList<CaseHyperlinkData>();
         for(String rcc : rccList.getKeys()) {
