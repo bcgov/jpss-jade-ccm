@@ -70,7 +70,7 @@ public class ParticipantMergeEvent extends BaseEvent {
       }
     }
 
-    setEvent_key(getJustin_from_part_id());
+    setEvent_key(getJustin_from_part_id().concat(",").concat(getJustin_to_part_id()));
   }
 
   public ParticipantMergeEvent(SOURCE source, ParticipantMergeEvent another) {
