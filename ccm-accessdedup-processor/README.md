@@ -3,23 +3,29 @@
 
 A Kafka Streams processor designed to deduplicate incoming messages to ensure that each unique message is processed only once.
 
-### Key Features
+## Table of Contents
+6. [Local Docker Deployment](#local-deploy)
+
+---
+
+### 1. Key Features
 - Utilizes Kafka's `AbstractProcessor` to process and filter out duplicate messages.
 - Uses a Kafka `KeyValueStore` to track previously processed messages.
 
-### Prerequisites
+### 2. Prerequisites
 - Java 11
 - Apache Maven
 
-### Dependencies
+### 3. Dependencies
 - Quarkus version: 2.3.1.Final
 - Apache Kafka version: 2.8.1
 - JUnit version: 4.13.2
 
-### Setup and Usage
+### 4. Setup and Usage
 
 1. Clone the repository:
-   ```bash
+   ```
+   bash
    git clone <repository_url>
    ```
 
@@ -29,13 +35,14 @@ A Kafka Streams processor designed to deduplicate incoming messages to ensure th
    ```
 
 3. Build the project using Maven:
-   ```bash
+   ```
+   bash
    mvn clean install
    ```
 
 4. Run the application (add any necessary commands specific to your application).
 
-### Testing
+### 5. Testing
 
 The project includes unit tests for the deduplication processor using Kafka's `TopologyTestDriver`. 
 
@@ -44,19 +51,30 @@ To run the tests:
 mvn test
 ```
 
-### Configuration
+### 6. Local Docker Deployment <a name="local-deploy"></a>
+
+1. Make sure JADE-Events are already running
+   ```
+   cd scripts/jade-events
+   docker-compose up
+   ```
+
+2. Navigate to the scripts directory
+   ```
+   cd scripts/jade-ccm
+   ```
+
+3. Execute the build and deploy script, specifying local deployment
+   ```
+   bash redeploy-ccm-accessdedeup-processor local
+   ```
+
+
+### 7. Configuration
 
 Ensure that you have Kafka up and running, and adjust any Kafka configurations as necessary in the application's properties or configuration files.
 
-### Contribution
-
-Feel free to fork the project, create a feature branch, and send us a pull request!
-
-### License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more information.
-
-### Running Locally with Quarkus
+### 8. Running Locally with Quarkus
 
 If you're using Quarkus, you can run the `ccm-accessdedup-processor` in development mode. This mode provides live coding capabilities, allowing for real-time updates without restarting the application.
 

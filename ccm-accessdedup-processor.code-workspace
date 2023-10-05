@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "ccm-accessdedup-processor"
+		},
+		{
+			"path": "scripts"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "ccm-accessdedup-processor-2"
+		}
+	],
+	"settings": {
+		"java.project.referencedLibraries": [
+			"lib/**/*.jar"
+		]
+	}
+}
