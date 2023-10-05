@@ -50,12 +50,12 @@ public class AccessDedupProcessor extends AbstractProcessor<String, String> {
             LOG.info("End of the batch is detected.");
 
             accessdedupStore.all().forEachRemaining(keyValue -> {
-                LOG.info("Forwarding (Key,Value) = ({},{}).", keyValue.key);
+                LOG.info("Forwarding (Key,Value) = ({},{}).", keyValue.key, keyValue.value);
                 context().forward(keyValue.key, keyValue.value);
             });
 
             accessdedupStore.all().forEachRemaining(keyValue -> {
-                LOG.info("Deleting (Key,Value) = ({},{}).", keyValue.key);
+                LOG.info("Deleting (Key,Value) = ({},{}).", keyValue.key, keyValue.value);
                 accessdedupStore.delete(keyValue.key);
             });
             
@@ -67,7 +67,7 @@ public class AccessDedupProcessor extends AbstractProcessor<String, String> {
             try {
                 JsonObject json = new JsonObject(value);
                 String message = json.getString("message", "");
-                LOG.info("Forwarding message with key: {}; new key in the batch. Message = {}", key, message);
+                LOG.info("Storing message with key: {}; new key in the batch. Message = {}", key, message);
                 accessdedupStore.put(key, value);
                 //context().forward(key, value);
             } catch (Exception e) {
