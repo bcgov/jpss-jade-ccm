@@ -11,10 +11,14 @@ public class ChargeAssessmentEvent extends BaseEvent {
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_rcc_id;
+  private String justin_from_part_id;
+  private String justin_to_part_id;
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_RCC_ID = "RCC_ID";  
+  public static final String JUSTIN_FROM_PART_ID = "FROM_PART_ID";  
+  public static final String JUSTIN_TO_PART_ID = "TO_PART_ID";
 
   public enum SOURCE {
     JUSTIN,
@@ -26,7 +30,8 @@ public class ChargeAssessmentEvent extends BaseEvent {
     CREATED,
     UPDATED,
     MANUALLY_CHANGED,
-    AUTH_LIST_CHANGED;
+    AUTH_LIST_CHANGED,
+    PART_MERGE;
   }
 
   public ChargeAssessmentEvent() {
@@ -53,6 +58,9 @@ public class ChargeAssessmentEvent extends BaseEvent {
       case USER_PROV:
         setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
         break;
+      case PART_MERGE:
+        setEvent_status(STATUS.PART_MERGE.toString());
+        break;
       default:
         // unknown status
         setEvent_status("");
@@ -73,10 +81,19 @@ public class ChargeAssessmentEvent extends BaseEvent {
         case JUSTIN_RCC_ID:
           setJustin_rcc_id(jed.getData_value_txt());
           break;
+        case JUSTIN_FROM_PART_ID:
+          setJustin_from_part_id(jed.getData_value_txt());
+          break;
+        case JUSTIN_TO_PART_ID:
+          setJustin_to_part_id(jed.getData_value_txt());
+          break;
       }
     }
-
-    setEvent_key(getJustin_rcc_id());
+    if(getJustin_from_part_id()!=null && getJustin_to_part_id()!= null){
+      setEvent_key(getJustin_from_part_id().concat(",").concat(getJustin_to_part_id()));
+    }else{
+      setEvent_key(getJustin_rcc_id());
+    }
   }
 
   public ChargeAssessmentEvent(SOURCE source, ChargeAssessmentEvent another) {
@@ -88,6 +105,10 @@ public class ChargeAssessmentEvent extends BaseEvent {
     this.justin_fetched_date = another.justin_fetched_date;
     this.justin_guid = another.justin_guid;
     this.justin_rcc_id = another.justin_rcc_id;
+    if(another.justin_from_part_id != null && another.justin_to_part_id != null){
+      this.justin_from_part_id = another.justin_from_part_id;
+      this.justin_to_part_id = another.justin_to_part_id;
+    }
   }
 
   public ChargeAssessmentEvent(SOURCE source, CaseUserEvent another) {
@@ -146,5 +167,21 @@ public class ChargeAssessmentEvent extends BaseEvent {
 
   public void setJustin_rcc_id(String justin_rcc_id) {
     this.justin_rcc_id = justin_rcc_id;
+  }
+
+  public String getJustin_from_part_id() {
+    return justin_from_part_id;
+  }
+
+  public void setJustin_from_part_id(String justin_from_part_id) {
+    this.justin_from_part_id = justin_from_part_id;
+  }
+
+  public String getJustin_to_part_id() {
+    return justin_to_part_id;
+  }
+
+  public void setJustin_to_part_id(String justin_to_part_id) {
+    this.justin_to_part_id = justin_to_part_id;
   }
 }
