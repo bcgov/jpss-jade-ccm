@@ -46,7 +46,9 @@ import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
-import ccm.models.common.event.ReportEvent;
+import ccm.models.common.event.ParticipantMergeEvent;
+import ccm.models.system.justin.*;
+import ccm.utils.DateTimeUtils;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAuthUsersList;
@@ -689,6 +691,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.INFO_DOCM))
           .to("direct:processReportEvents")
           .endChoice()
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.PART_MERGE))
+          .to("direct:processPartMergeEvents")
+          .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -841,6 +846,66 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.DEBUG,"Getting ready to send to Kafka: ${body}")
+    ;
+  }
+  // part of jade 1750
+  private void processPartMergeEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log(LoggingLevel.DEBUG,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
+    .doTry()
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+
+          ParticipantMergeEvent be = new ParticipantMergeEvent(je);
+
+          exchange.getMessage().setBody(be, ParticipantMergeEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+      .setProperty("business_event", body())
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.participantmerge.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.participantmerge.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
+      .setProperty("error_event_object", body())
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+      .choice()
+        .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
+      .end()
+    .end()
     ;
   }
 
