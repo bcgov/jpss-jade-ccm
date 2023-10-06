@@ -78,6 +78,15 @@
             <artifactId>javax.json</artifactId>
             <version>${glassfish.javax.json.version}</version>
         </dependency>
+
+        <!-- CCM Models -->
+        <dependency>
+            <groupId>src.main.resources</groupId>
+            <artifactId>ccm-models</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/../target/classes/ccm-models.jar</systemPath>
+        </dependency>
     </dependencies>
 
     <build>
