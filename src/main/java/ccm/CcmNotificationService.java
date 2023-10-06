@@ -84,6 +84,7 @@ public class CcmNotificationService extends RouteBuilder {
     publishEventKPI();
     publishBodyAsEventKPI();
     processParticipantMerge();
+    processParticipantMergeEvents();
   }
 
   private void attachExceptionHandlers() {
@@ -593,12 +594,12 @@ public class CcmNotificationService extends RouteBuilder {
        
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
         log.info("original_event : "+ original_event);
-
+        
         String part_id = ex.getProperty("original_event").toString();
-        String[] partIdList = part_id.split(",");
-        String fromPartId = partIdList [0];
-        String toPartId = partIdList [1];
-        log.info("fromPartId : "+ fromPartId);
+        //String[] partIdList = part_id.split(",");
+        String fromPartId = original_event.getJustin_from_part_id();
+        String toPartId = original_event.getJustin_to_part_id();
+        log.info("fromPartId : "+ original_event.getJustin_from_part_id());
         log.info("toPartId : "+ toPartId);
 
         ex.setProperty("fromPartId", fromPartId);
@@ -628,7 +629,10 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-dems-adapter/getPersonExists")
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     //if both exist calling the merge api
-
+    .setHeader("fromPartid", simple("${exchangeProperty.fromPartId}"))
+    .setHeader("toPartid", simple("${exchangeProperty.toPartId}"))
+    .to("http://ccm-dems-adapter/reassignCase")
+    .log(LoggingLevel.DEBUG,"Received response: '${body}'")
     .log(LoggingLevel.INFO, "Completed processParticipantMerge.")
     .end()
     ;

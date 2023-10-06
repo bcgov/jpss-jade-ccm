@@ -138,6 +138,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     publishEventKPI();
     deleteJustinRecords();
     inactivateCase();
+    reassignCase();
   }
 
 
@@ -2781,6 +2782,27 @@ public class CcmDemsAdapter extends RouteBuilder {
       .end()
     .end()
 
+    ;
+  }
+  //as part of jade 1750
+  private void reassignCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"fromPartid = ${header[fromPartid]} toPartid = ${header[toPartid]}")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign- cases/${header.toPartid}")
+    .log(LoggingLevel.INFO, "response: '${body}'")
+      
+    .end()
     ;
   }
 
