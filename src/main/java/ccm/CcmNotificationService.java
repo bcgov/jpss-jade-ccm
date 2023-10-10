@@ -344,7 +344,7 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.participantmerge.name}}?groupId=ccm-notification-service")
+    from("kafka:{{kafka.topic.participant.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.participantmerge.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -643,11 +643,10 @@ public class CcmNotificationService extends RouteBuilder {
     //if both exist calling the merge api
     .choice()
         .when(simple("${exchangeProperty.frompartId} != '' && ${exchangeProperty.topartId} != ''"))
-
         .setHeader("fromPartid", simple("${exchangeProperty.frompartId}"))
         .setHeader("toPartid", simple("${exchangeProperty.topartId}"))
-        .to("http://ccm-dems-adapter/reassignCase")
-        .log(LoggingLevel.DEBUG,"Received response: '${body}'")
+        .to("http://ccm-dems-adapter/reassignParticipantCases")
+        .log(LoggingLevel.INFO,"Received response: '${body}'")
         .endChoice()
       .end()
       .log(LoggingLevel.INFO, "Completed processParticipantMerge.")
