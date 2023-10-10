@@ -141,7 +141,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     deleteJustinRecords();
     inactivateCase();
     getCaseListHyperlink();
-    reassignCase();
+    reassignParticipantCases();
   }
 
 
@@ -2900,7 +2900,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
   //as part of jade 1750
-  private void reassignCase() {
+  private void reassignParticipantCases() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     from("platform-http:/" + routeId)
