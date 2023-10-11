@@ -443,11 +443,11 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .log(LoggingLevel.DEBUG,"Processing request... key = ${header[key]}")
+    .log(LoggingLevel.INFO,"Processing request... key = ${header[key]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getPersonExists")
-    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
     ;
   }
 
