@@ -346,7 +346,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     from("kafka:{{kafka.topic.participant.name}}?groupId=ccm-notification-service")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.participantmerge.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.participant.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -584,7 +584,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"processParticipantMerge : event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"processParticipantMerge : event_key = ${header[event_key]}")
     //.setHeader("number", simple("${header[event_key]}"))
     .process(new Processor() {
       @Override
@@ -593,33 +593,34 @@ public class CcmNotificationService extends RouteBuilder {
         ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
        
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
-        log.info("original_event : "+ original_event);
         
-        String part_id = ex.getProperty("original_event").toString();
-        //String[] partIdList = part_id.split(",");
+        
+        //String part_id = ex.getProperty("original_event").toString();
+        log.info("fromPartId : "+ original_event.getJustin_from_part_id());
+        log.info("toPartId : "+ original_event.getJustin_to_part_id());
         String fromPartId = original_event.getJustin_from_part_id();
         String toPartId = original_event.getJustin_to_part_id();
-        log.info("fromPartId : "+ original_event.getJustin_from_part_id());
-        log.info("toPartId : "+ toPartId);
+        //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
+        //log.info("toPartId : "+ toPartId);
 
         ex.setProperty("fromPartId", fromPartId);
         ex.setProperty("toPartId", toPartId);
       }
     })
     .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
-    .log(LoggingLevel.DEBUG,"Generating derived event: ${body}")
+    .log(LoggingLevel.INFO,"Generating derived event: ${body}")
+    .log(LoggingLevel.INFO,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
     //search if from part id exist in the dems system
     .choice()
       .when(simple(" ${exchangeProperty.fromPartId} != ''"))
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
-      .log(LoggingLevel.DEBUG,"Processing request... key = ${header[key]}")
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("key", simple("${exchangeProperty.fromPartId}"))
-      .to("http://ccm-dems-adapter/getPersonExists")
-      .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+      .to("http://ccm-dems-adapter/getPersonByKey")
+      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
       .unmarshal().json()
       .setProperty("frompartId").simple("${body[id]}")
       .endChoice()
@@ -633,8 +634,8 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("key", simple("${exchangeProperty.toPartId}"))
-      .to("http://ccm-dems-adapter/getPersonExists")
-      .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+      .to("http://ccm-dems-adapter/getPersonByKey")
+      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
       .unmarshal().json()
       .setProperty("topartId").simple("${body[id]}")
       .endChoice()

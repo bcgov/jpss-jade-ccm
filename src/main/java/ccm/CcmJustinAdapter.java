@@ -860,7 +860,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log(LoggingLevel.DEBUG,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.INFO,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -913,7 +913,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .doFinally()
       .choice()
         .when(exchangeProperty("kpi_event_topic_name").isNotNull())
-        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
         .setBody(simple("${exchangeProperty.justin_event}"))
         .setProperty("event_message_id")
           .jsonpath("$.event_message_id")
