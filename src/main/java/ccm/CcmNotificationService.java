@@ -584,7 +584,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"processParticipantMerge : event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO," event_key = ${header[event_key]}")
     //.setHeader("number", simple("${header[event_key]}"))
     .process(new Processor() {
       @Override
@@ -594,14 +594,10 @@ public class CcmNotificationService extends RouteBuilder {
        
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
         
-        
-        //String part_id = ex.getProperty("original_event").toString();
-        log.info("fromPartId : "+ original_event.getJustin_from_part_id());
-        log.info("toPartId : "+ original_event.getJustin_to_part_id());
+        //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
+        //log.info("toPartId : "+ original_event.getJustin_to_part_id());
         String fromPartId = original_event.getJustin_from_part_id();
         String toPartId = original_event.getJustin_to_part_id();
-        //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
-        //log.info("toPartId : "+ toPartId);
 
         ex.setProperty("fromPartId", fromPartId);
         ex.setProperty("toPartId", toPartId);
@@ -609,7 +605,7 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
     .log(LoggingLevel.INFO,"Generating derived event: ${body}")
-    .log(LoggingLevel.INFO,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
+    .log(LoggingLevel.DEBUG,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
     //search if from part id exist in the dems system
     .choice()
       .when(simple(" ${exchangeProperty.fromPartId} != ''"))
@@ -619,7 +615,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("key", simple("${exchangeProperty.fromPartId}"))
-      .to("http://ccm-dems-adapter/getPersonByKey")
+      .to("http://ccm-dems-adapter/checkPersonExist")
       .log(LoggingLevel.INFO,"Lookup response = '${body}'")
       .unmarshal().json()
       .setProperty("frompartId").simple("${body[id]}")
@@ -634,23 +630,26 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("key", simple("${exchangeProperty.toPartId}"))
-      .to("http://ccm-dems-adapter/getPersonByKey")
+      .to("http://ccm-dems-adapter/checkPersonExist")
       .log(LoggingLevel.INFO,"Lookup response = '${body}'")
       .unmarshal().json()
       .setProperty("topartId").simple("${body[id]}")
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO,"from part id :${exchangeProperty.frompartId} & to part id:${exchangeProperty.topartId}")
+    //.log(LoggingLevel.INFO,"from part id :${exchangeProperty.frompartId} & to part id:${exchangeProperty.topartId}")
     //if both exist calling the merge api
     .choice()
         .when(simple("${exchangeProperty.frompartId} != '' && ${exchangeProperty.topartId} != ''"))
-        .setHeader("fromPartid", simple("${exchangeProperty.frompartId}"))
-        .setHeader("toPartid", simple("${exchangeProperty.topartId}"))
-        .to("http://ccm-dems-adapter/reassignParticipantCases")
-        .log(LoggingLevel.INFO,"Received response: '${body}'")
+          .setHeader("fromPartid", simple("${exchangeProperty.frompartId}"))
+          .setHeader("toPartid", simple("${exchangeProperty.topartId}"))
+          .to("http://ccm-dems-adapter/reassignParticipantCases")
+          .log(LoggingLevel.INFO,"Received response: '${body}'")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"Participant not found")
         .endChoice()
       .end()
-      .log(LoggingLevel.INFO, "Completed processParticipantMerge.")
+      .log(LoggingLevel.INFO, "end of processParticipantMerge.")
     .end()
     ;
   }

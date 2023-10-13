@@ -48,7 +48,6 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
-import ccm.utils.DateTimeUtils;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinAgencyFile;
 import ccm.models.system.justin.JustinAuthUsersList;
@@ -860,7 +859,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log(LoggingLevel.INFO,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
+    .log(LoggingLevel.DEBUG,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -870,26 +869,13 @@ public class CcmJustinAdapter extends RouteBuilder {
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
 
           ParticipantMergeEvent be = new ParticipantMergeEvent(je);
-          //ChargeAssessmentEvent be = new ChargeAssessmentEvent(je);
           exchange.getMessage().setBody(be, ParticipantMergeEvent.class);
-          //exchange.getMessage().setBody(be, ChargeAssessmentEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
-          /*log.info("original_event : "+ be.getEvent_key());
-  
-          String part_id = be.getEvent_key().toString();
-          String[] partIdList = part_id.split(",");
-          String fromPartId = partIdList [0];
-          String toPartId = partIdList [1];log.info("fromPartId : "+ fromPartId);
-          log.info("toPartId : "+ toPartId);
-  
-          exchange.setProperty("from_part_id", fromPartId);
-          exchange.setProperty("toPartId", toPartId);*/
         }})
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
-      //.marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
       .setProperty("business_event", body())
-      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.participant.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.participant.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -913,7 +899,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .doFinally()
       .choice()
         .when(exchangeProperty("kpi_event_topic_name").isNotNull())
-        .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
         .setBody(simple("${exchangeProperty.justin_event}"))
         .setProperty("event_message_id")
           .jsonpath("$.event_message_id")

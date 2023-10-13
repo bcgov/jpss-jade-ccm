@@ -85,16 +85,6 @@ public class ParticipantMergeEvent extends BaseEvent {
     this.justin_to_part_id = another.justin_to_part_id;
   }
 
-  /*public ParticipantMergeEvent(SOURCE source, CaseUserEvent another) {
-    super(source.name(), another);
-
-    this.justin_event_message_id = another.getJustin_event_message_id();
-    this.justin_message_event_type_cd = another.getJustin_message_event_type_cd();
-    this.justin_event_dtm = another.getJustin_event_dtm();
-    this.justin_fetched_date = another.getJustin_fetched_date();
-    this.justin_guid = another.getJustin_guid();
-  }*/
-
   public int getJustin_event_message_id() {
     return justin_event_message_id;
   }
