@@ -107,7 +107,7 @@ public class CcmNotificationService extends RouteBuilder {
         error.setError_dtm(DateTimeUtils.generateCurrentDtm());
         error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
         error.setError_summary(cause.getMessage());
-        
+
         if(cause != null && !cause.getResponseBody().isEmpty()) {
           error.setError_details(cause.getResponseBody());
         } else if(cause != null && cause.getResponseHeaders().get("CCMExceptionEncoded") != null) {

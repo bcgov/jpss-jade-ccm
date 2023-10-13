@@ -3044,7 +3044,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
-    //.log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
