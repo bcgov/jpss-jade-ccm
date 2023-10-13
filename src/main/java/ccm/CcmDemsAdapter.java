@@ -1437,19 +1437,19 @@ public class CcmDemsAdapter extends RouteBuilder {
           .log(LoggingLevel.ERROR,"body = '${body}'.")
         .endChoice()
       .end()
-      .endDoTry()
-      .doCatch(Exception.class)
-        .log(LoggingLevel.INFO,"General Exception thrown.")
-        .log(LoggingLevel.INFO,"${exception}")
-        .process(new Processor() {
-          public void process(Exchange exchange) throws Exception {
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.INFO,"General Exception thrown.")
+      .log(LoggingLevel.INFO,"${exception}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
 
-            exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-            exchange.getMessage().setBody(exchange.getException().getMessage());
-            throw exchange.getException();
-          }
-        })
-      .end()
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+          exchange.getMessage().setBody(exchange.getException().getMessage());
+          throw exchange.getException();
+        }
+      })
+    .end()
     ;
   }
 
