@@ -1,0 +1,40 @@
+{
+    "rcc_id": "7031232.0009",
+    "agency_file_no": "23-9999903",
+    "security_clearance_level": "6",
+    "synopsis": "This is the synopsis for 23-9999903.",
+    "initiating_agency_name": "Vancouver Police Department",
+    "initiating_agency_identifier": "401",
+    "investigating_officer_name": "MacPherson, Michael Eamon",
+    "investigating_officer_pin": "VA2214",
+    "rcc_submit_date": "2023-09-24",
+    "vul1": "N",
+    "chi1": "Y",
+    "crn_decision_agency_identifier": "C304",
+    "crn_decision_agency_name": "Chilliwack Crown Counsel",
+    "assessment_crown_name": "Visiting, Crown",
+    "assessment_crown_part_id": "144433.0007",
+    "case_decision_cd": "ACT",
+    "charge": "CCC 266 Assault",
+    "limitation_date": "2024-08-22",
+    "min_offence_date": "2023-09-02",
+    "kfile_yn": "N",
+    "rcc_state_cd": "ACT",
+    "accused": [
+        {
+            "part_id": "9339057.0009",
+            "accused_name": "Bunny, Bugs Bouncy",
+            "accused_surname_nm": "Bunny",
+            "accused_given_1_nm": "Bugs",
+            "accused_given_2_nm": "Bouncy",
+            "accused_given_3_nm": null,
+            "proposed_process_type": "AWW",
+            "proposed_appr_date": "2023-09-02",
+            "indigenous_yn": "N",
+            "birth_date": "1950-06-01",
+            "hroip_yn": "N",
+            "do_lto_yn": "N",
+            "rvo_yn": "N"
+        }
+    ]
+}

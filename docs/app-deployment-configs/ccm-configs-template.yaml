@@ -13,6 +13,7 @@ data:
   splunk-host-url: tbd
   pidp-kafka-bootstrapservers-url: tbd
   pidp-kafka-topic-usercreation-name: tbd
+  pidp-kafka-topic-processresponse-name: tbd
   pidp-kafka-apicurioregistry-url: tbd
   kafka-broker-url: tbd
   pidp-kafa-oauth-client-id: tbd

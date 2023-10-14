@@ -6,6 +6,7 @@ import java.util.List;
 import ccm.models.common.data.CaseAppearanceSummary;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.utils.DateTimeUtils;
+import java.time.ZonedDateTime;
 
 public class DemsCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
@@ -23,14 +24,58 @@ public class DemsCaseAppearanceSummaryData {
         setName(name);
 
         if (commonList != null && commonList.getApprsummary() != null && commonList.getApprsummary().size() > 0) {
-            CaseAppearanceSummary bcas = commonList.getApprsummary().get(0);
 
-            DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bcas.getInitial_appr_dtm()));
-            DemsFieldData initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), bcas.getInitial_appr_rsn_cd());
-            DemsFieldData nextApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bcas.getNext_appr_dtm()));
-            DemsFieldData nextApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_REASON.getLabel(), bcas.getNext_appr_rsn_cd());
-            DemsFieldData trialStartApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_DT.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(bcas.getTrial_start_appr_dtm()));
-            DemsFieldData trialStartApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_REASON.getLabel(), bcas.getTrial_start_appr_rsn_cd());
+            ZonedDateTime earliestInitialApprDt = null;
+            String earliestInitialApprRsn = null;
+            ZonedDateTime earliestNextApprDt = null;
+            String earliestNextApprRsn = null;
+            ZonedDateTime earliestTrialStartApprDt = null;
+            String earliestTrialStartApprRsn = null;
+
+            for(CaseAppearanceSummary bcas : commonList.getApprsummary()) {
+
+                if(bcas.getInitial_appr_dtm() != null && !bcas.getInitial_appr_dtm().isEmpty()) {
+                    ZonedDateTime currentDtmObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(bcas.getInitial_appr_dtm());
+                    if (currentDtmObj != null) {
+                        if (earliestInitialApprDt == null || currentDtmObj.isBefore(earliestInitialApprDt)) {
+                            earliestInitialApprDt = currentDtmObj;
+                            earliestInitialApprRsn = bcas.getInitial_appr_rsn_cd();
+                        }
+                    }
+
+                }
+
+                if(bcas.getNext_appr_dtm() != null && !bcas.getNext_appr_dtm().isEmpty()) {
+                    ZonedDateTime currentDtmObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(bcas.getNext_appr_dtm());
+                    if (currentDtmObj != null) {
+                        if (earliestNextApprDt == null || currentDtmObj.isBefore(earliestNextApprDt)) {
+                            earliestNextApprDt = currentDtmObj;
+                            earliestNextApprRsn = bcas.getNext_appr_rsn_cd();
+                        }
+                    }
+
+                }
+
+                if(bcas.getTrial_start_appr_dtm() != null && !bcas.getTrial_start_appr_dtm().isEmpty()) {
+                    ZonedDateTime currentDtmObj = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(bcas.getTrial_start_appr_dtm());
+                    if (currentDtmObj != null) {
+                        if (earliestTrialStartApprDt == null || currentDtmObj.isBefore(earliestTrialStartApprDt)) {
+                            earliestTrialStartApprDt = currentDtmObj;
+                            earliestTrialStartApprRsn = bcas.getTrial_start_appr_rsn_cd();
+                        }
+                    }
+
+                }
+
+            }
+
+            DemsFieldData initialApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromZonedDateTime(earliestInitialApprDt));
+            DemsFieldData  initialApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIAL_APP_REASON.getLabel(), earliestInitialApprRsn);
+            DemsFieldData  nextApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_DT.getLabel(), DateTimeUtils.convertToUtcFromZonedDateTime(earliestNextApprDt));
+            DemsFieldData  nextApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.NEXT_APP_REASON.getLabel(), earliestNextApprRsn);
+            DemsFieldData  trialStartApprDt = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_DT.getLabel(), DateTimeUtils.convertToUtcFromZonedDateTime(earliestTrialStartApprDt));
+            DemsFieldData  trialStartApprRsnCd = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.FIRST_TRIAL_REASON.getLabel(), earliestTrialStartApprRsn);
+
 
             List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
             fieldData.add(initialApprDt);

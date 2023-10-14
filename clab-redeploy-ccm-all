@@ -1,0 +1,9 @@
+
+. ./repackage-ccm-models
+. ./clab-redeploy-ccm-splunk-adapter
+. ./clab-redeploy-ccm-dems-adapter
+. ./clab-redeploy-ccm-pidp-adapter
+. ./clab-redeploy-ccm-lookup-service
+. ./clab-redeploy-ccm-notification-service
+. ./clab-redeploy-ccm-justin-adapter
+. ./clab-redeploy-ccm-justin-in-adapter

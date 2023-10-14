@@ -8,6 +8,8 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.util.Base64;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -26,29 +28,35 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.http.base.HttpOperationFailedException;
-//import org.apache.camel.CamelException;
-//import org.apache.camel.component.kafka.KafkaConstants;
-//import org.apache.camel.model.;
+import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.support.service.ServiceHelper;
 
-import ccm.models.common.data.CourtCaseData;
-import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
-import ccm.models.common.event.CourtCaseEvent;
+import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.Error;
-import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.EventKPI;
-import ccm.models.system.justin.*;
-import ccm.utils.DateTimeUtils;
+import ccm.models.common.event.ReportEvent;
 import ccm.models.common.versioning.Version;
+import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
+import ccm.models.system.justin.JustinCourtFile;
+import ccm.models.system.justin.JustinCrownAssignmentList;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinEvent;
+import ccm.models.system.justin.JustinEventBatch;
+import ccm.utils.DateTimeUtils;
 
 public class CcmJustinAdapter extends RouteBuilder {
   @Override
@@ -60,6 +68,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     courtFileCreated();
     healthCheck();
     //readRCCFileSystem();
+    stopJustinEvents();
+    startJustinEvents();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
@@ -160,7 +170,10 @@ public class CcmJustinAdapter extends RouteBuilder {
             try {
               HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-              //exchange.getMessage().setBody(cause.getResponseBody());
+              if(cause != null && cause.getResponseBody() != null) {
+                String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                exchange.getMessage().setBody(body);
+              }
               log.error("Returned body : " + cause.getResponseBody());
             } catch(Exception ex) {
               ex.printStackTrace();
@@ -170,6 +183,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
         .transform().simple("${body}")
         .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMExceptionEncoded", simple("${body}"))
       .end()
 
     .end();
@@ -363,6 +377,59 @@ public class CcmJustinAdapter extends RouteBuilder {
     .to("https://{{justin.host}}/requeueEventById?id=4277") // USER_DPROV (PART_ID = null)
     ;
 
+  }
+
+  private void stopJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue stopped")
+    ;
+  }
+
+  private void startJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Restarting pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        
+        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
+        ServiceHelper.startService(mainTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue started")
+    ;
   }
 
   private void requeueJustinEvent() {
@@ -816,7 +883,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+    //  .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -825,11 +895,16 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
-      .setBody(simple("${exchangeProperty.justin_event}"))
-      .setProperty("event_message_id")
-        .jsonpath("$.event_message_id")
-      .to("direct:confirmEventProcessed")
+    .log(LoggingLevel.INFO,"${exchangeProperty.kpi_status} + ${exchangeProperty.event_message_id}")
+    .log(LoggingLevel.INFO, "${exchangeProperty.kpi_event_topic_name}")
+      .choice()
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
+      .end()
     .end()
     ;
   }
@@ -873,7 +948,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -882,11 +960,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
-      .setBody(simple("${exchangeProperty.justin_event}"))
-      .setProperty("event_message_id")
-        .jsonpath("$.event_message_id")
-      .to("direct:confirmEventProcessed")
+      .choice()
+        .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
+      .end()
     .end()
     ;
   }
@@ -990,7 +1071,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -999,11 +1083,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
+    .choice()
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
       .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
+      .end()
     .end()
     ;
   }
@@ -1039,11 +1126,17 @@ public class CcmJustinAdapter extends RouteBuilder {
       .to("kafka:{{kafka.topic.courtcases.name}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.courtcases.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
     .doCatch(Exception.class)
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -1052,15 +1145,18 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
+    .choice()
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
       .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
+      .end()
     .end()
-    .setProperty("kpi_component_route_name", simple(routeId))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:preprocessAndPublishEventCreatedKPI")
+    //.setProperty("kpi_component_route_name", simple(routeId))
+    //.setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    //.to("direct:preprocessAndPublishEventCreatedKPI")
     ;
   }
 
@@ -1102,7 +1198,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -1111,11 +1210,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
-      .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+    .choice()
+    .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+    .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
+      .end()
     .end()
     ;
   }
@@ -1158,7 +1260,10 @@ public class CcmJustinAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"General Exception thrown.")
       .log(LoggingLevel.DEBUG,"${exception}")
       .setProperty("error_event_object", body())
-      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
       .to("direct:publishJustinEventKPIError")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
@@ -1167,11 +1272,14 @@ public class CcmJustinAdapter extends RouteBuilder {
         }
       })
     .doFinally()
+    .choice()
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
       .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .to("direct:confirmEventProcessed")
+      .end()
     .end()
     ;
   }
@@ -1205,6 +1313,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name(routeId);
+          kpi.setEvent_details(je);
           exchange.getMessage().setBody(kpi, EventKPI.class);
         }
       })

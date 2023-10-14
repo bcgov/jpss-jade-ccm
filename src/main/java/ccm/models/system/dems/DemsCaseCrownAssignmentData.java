@@ -20,9 +20,16 @@ public class DemsCaseCrownAssignmentData {
         setKey(key);
         setName(name);
 
-        DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN.getLabel(), commonList.getCrownAssignmentList());
-        DemsFieldData assignedCrownName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), commonList.getCrownAssignmentName());
-        DemsFieldData assignedLegalStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), commonList.getLegalStaffAssignmentList());
+        List<String> assignedCrownList = new ArrayList<String>();
+        assignedCrownList.addAll(commonList.getCrownAssignmentList());
+        List<String> assignedCrownNameList = new ArrayList<String>();
+        assignedCrownNameList.addAll(commonList.getCrownAssignmentName());
+        List<String> assignedLegalStaffList = new ArrayList<String>();
+        assignedLegalStaffList.addAll(commonList.getLegalStaffAssignmentList());
+
+        DemsFieldData assignedCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN.getLabel(), assignedCrownList);
+        DemsFieldData assignedCrownName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_CROWN_NAME.getLabel(), assignedCrownNameList);
+        DemsFieldData assignedLegalStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), assignedLegalStaffList);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         fieldData.add(assignedCrownName);

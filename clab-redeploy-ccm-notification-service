@@ -1,0 +1,31 @@
+ns="ac13ae-dev"
+
+logging_level="INFO"
+
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
+
+echo "`basename $0` to $ns ..."
+
+pushd src/main/java/ccm
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmNotificationService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmNotificationService.java --port 4418 local/local.properties 
+else
+kamel -n $ns delete ccm-notification-service
+kamel -n $ns run \
+  CcmNotificationService.java \
+  --resource file:../../../../target/classes/ccm-models.jar \
+  --property file:ccmNotificationService.properties \
+  --label deployer="$deployer" \
+  --label version="$version" \
+  --config configmap:ccm-configs \
+  --profile openshift \
+  --trait logging.level=$logging_level \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait container.request-cpu=5m \
+  --trait service.node-port=false \
+  --trait route.enabled=false
+fi
+popd
+
+# kamel -n cef5dd-test log ccm-notification-service

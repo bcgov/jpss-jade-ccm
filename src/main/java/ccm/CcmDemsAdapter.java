@@ -31,14 +31,18 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel:camel-mail
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
 
+
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
+
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ccm.models.common.data.CourtCaseData;
@@ -50,8 +54,11 @@ import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
+import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.ChargeAssessmentDataRefList;
+import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.data.document.ImageDocumentData;
@@ -70,6 +77,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -88,6 +97,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseDataById();
     getCourtCaseDataByKey();
     getCourtCaseNameByKey();
+    getCourtCaseStatusExists();
+    getCourtCaseStatusByKey ();
+    getCourtCaseStatusById();
     getCourtCaseCourtFileUniqueIdByKey();
     getCaseHyperlink();
     createCourtCase();
@@ -117,25 +129,33 @@ public class CcmDemsAdapter extends RouteBuilder {
     createCaseRecord();
     updateCaseRecord();
     streamCaseRecord();
+    mergeCaseRecordsAndInactivateCase();
+    getCaseRecordImageExistsByKey();
+    getCaseRecordIdByDescriptionImageId();
     getCaseRecordExistsByKey();
     getCaseRecordIdByDescription();
     getCaseDocIdExistsByKey();
     getCaseRecordIdByDocId();
     processUnknownStatus();
     publishEventKPI();
+    deleteJustinRecords();
+    inactivateCase();
+    getCaseListHyperlink();
   }
+
+
 
   private void attachExceptionHandlers() {
 
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .backOffMultiplier(2)
-
+      .maximumRedeliveries(3).redeliveryDelay(10000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
-      .handled(false)
+      .handled(true)
     .end();
 
     // HttpOperation Failed
@@ -155,7 +175,13 @@ public class CcmDemsAdapter extends RouteBuilder {
 
             if(cause != null && !cause.getResponseBody().isEmpty()) {
               error.setError_details(cause.getResponseBody());
+            } else if(cause != null && cause.getResponseHeaders().get("CCMExceptionEncoded") != null) {
+              byte[] decodedException = Base64.getDecoder().decode(cause.getResponseHeaders().get("CCMExceptionEncoded"));
+              String decodedString = new String(decodedException);
+              log.error(decodedString);
+              error.setError_details(decodedString);
             } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
+              log.error(cause.getResponseHeaders().get("CCMException"));
               error.setError_details(cause.getResponseHeaders().get("CCMException"));
             }
 
@@ -196,7 +222,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             try {
               HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-              exchange.getMessage().setBody(cause.getResponseBody());
+              if(cause != null && cause.getResponseBody() != null) {
+                String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                exchange.getMessage().setBody(body);
+              }
               log.error("Returned body : " + cause.getResponseBody());
             } catch(Exception ex) {
               ex.printStackTrace();
@@ -205,7 +234,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
         .transform().simple("${body}")
-        .setHeader("CCMException", simple("${body}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMExceptionEncoded", simple("${body}"))
       .end()
 
     //re-queue based on the event type
@@ -329,22 +359,151 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
+        .log("Body: ${body}")
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
         .setBody(simple("{\"error\": \"${exception.message}\"}"))
         .transform().simple("Error reported: ${exception.message} - cannot process this message.")
         .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
         .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
       .end()
-   .end();
-
+   .end()
+   ;
   }
 
+  private void getCourtCaseStatusExists() {
+     // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"status exists key = ${header[number]}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+
+    .to("direct:getCourtCaseStatusByKey")
+    .end()
+    ;
+  }
+
+  private void getCourtCaseStatusByKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    //IN: header.number
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header.number}"))
+    .log(LoggingLevel.INFO,"Case status exists key = ${exchangeProperty.key}")
+
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("id", jsonpath("$.id"))
+
+    .to("direct:getCourtCaseStatusById")
+  ;
+  }
+
+  private void getCourtCaseStatusById() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    //IN: header.number
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
+
+    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
+    .choice()
+      .when(simple("${exchangeProperty.id} != ''"))
+        .doTry()
+          .to("direct:getCourtCaseDataById")
+          .choice()
+            .when(simple("${header.CamelHttpResponseCode} == 200"))
+              .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+
+                  String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
+                  String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
+                  String caseKey = JsonParseUtils.getJsonElementValue(courtCaseJson, "key");
+                  String caseName = JsonParseUtils.getJsonElementValue(courtCaseJson, "name");
+                  String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
+                  String courtFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), "/value");
+                  String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(),"/value");
+                  String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(),"/value");
+                  String primaryAgencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(),"/value");
+                  String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(),"/value");
+                  String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
+                  String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
+
+                  StringBuilder caseObjectJson = new StringBuilder("");
+                  caseObjectJson.append("{");
+                  caseObjectJson.append("\"id\":");
+                  caseObjectJson.append("\"" + caseId + "\",");
+                  caseObjectJson.append("\"key\":");
+                  caseObjectJson.append("\"" + caseKey + "\",");
+                  caseObjectJson.append("\"name\":");
+                  caseObjectJson.append("\"" + caseName + "\",");
+                  caseObjectJson.append("\"caseState\": ");
+                  caseObjectJson.append( "\"" + caseState + "\",");
+                  caseObjectJson.append("\"primaryAgencyFileId\": ");
+                  caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
+                  caseObjectJson.append("\"primaryAgencyFileNo\": ");
+                  caseObjectJson.append("\"" + primaryAgencyFileNo + "\",");
+                  caseObjectJson.append("\"agencyFileId\": ");
+                  caseObjectJson.append("\"" + agencyFileId + "\",");
+                  caseObjectJson.append("\"agencyFileNo\": ");
+                  caseObjectJson.append("\"" + agencyFileNo + "\",");
+                  caseObjectJson.append("\"courtFileId\": ");
+                  caseObjectJson.append("\"" + courtFileUniqueId + "\",");
+                  caseObjectJson.append("\"courtFileNo\": ");
+                  caseObjectJson.append("\"" + courtFileNo + "\",");
+                  caseObjectJson.append("\"status\": ");
+                  caseObjectJson.append( "\"" + status + "\"");
+                  caseObjectJson.append("}");
+
+                  exchange.getMessage().setBody(caseObjectJson.toString());
+                }
+              })
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.caseNotFound}"))
+              .setHeader("CamelHttpResponseCode", simple("200"))
+              .log(LoggingLevel.INFO,"Case not found.")
+            .endChoice()
+          .end() // choice end
+        .endDoTry()
+        .doCatch(Exception.class)
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+          .setBody(simple("${exchangeProperty.caseNotFound}"))
+          .setHeader("CamelHttpResponseCode", simple("200"))
+        .end()
+
+
+      .endChoice()
+      .otherwise()
+        .setBody(simple("${exchangeProperty.caseNotFound}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .log(LoggingLevel.INFO,"Case not found.")
+      .endChoice()
+    .end()
+    .log(LoggingLevel.DEBUG, "DEMS Case Status: ${body}")
+  ;
+  }
 
   private void processReportEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=30&maxPollIntervalMs=600000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -373,12 +532,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]}")
-    .log(LoggingLevel.INFO, "part_id = ${header[part_id]}")
-    .log(LoggingLevel.INFO, "mdoc_justin_no = ${header[mdoc_justin_no]}")
-    .log(LoggingLevel.INFO, "rcc_ids = ${header[rcc_ids]}")
-    .log(LoggingLevel.INFO, "image_id = ${header[image_id]}")
-    .log(LoggingLevel.INFO, "filtered_yn = ${header[filtered_yn]}")
+    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]} part_id = ${header[part_id]} mdoc_justin_no = ${header[mdoc_justin_no]} rcc_ids = ${header[rcc_ids]} image_id = ${header[image_id]} filtered_yn = ${header[filtered_yn]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
       .when(header("event_status").isNotNull())
@@ -426,18 +580,26 @@ public class CcmDemsAdapter extends RouteBuilder {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setProperty("justin_request").body()
-    .log(LoggingLevel.INFO,"rcc_ids = ${exchangeProperty.rcc_ids}")
-    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .removeHeader(Exchange.CONTENT_ENCODING)
+
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getImageData")
 
     .log(LoggingLevel.DEBUG,"Received image data: '${body}'")
     .setProperty("report_document_list", simple("${bodyAs(String)}"))
     .setProperty("create_date") .jsonpath("$.create_date")
+    .setProperty("length",jsonpath("$.documents.length()"))
     .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
 
     // For cases like witness statement, there can be multiple docs returned.
     // This will split through each of the documents and process them individually.
-    .log(LoggingLevel.INFO,"Parsing through report documents")
+    .log(LoggingLevel.INFO,"Parsing through report documents of count: ${exchangeProperty.length}")
     .split()
       .jsonpathWriteAsString("$.documents")
       .log(LoggingLevel.INFO,"Parsing through single report document")
@@ -507,7 +669,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
               ObjectMapper objectMapper = new ObjectMapper();
               try {
-                System.out.println(rcc_list);
+                //System.out.println(rcc_list);
                 String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
                 courtCaseDocument.setRcc_ids(Arrays.asList(rcc_id_list));
               } catch(Exception e) {
@@ -534,21 +696,37 @@ public class CcmDemsAdapter extends RouteBuilder {
 
       })
       .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]}")
-      .log(LoggingLevel.INFO,"mdoc_justin_no: ${header[mdoc_justin_no]}")
-      .log(LoggingLevel.INFO,"rcc_ids: ${header[rcc_ids]}")
-      .log(LoggingLevel.INFO,"image_id: ${header[image_id]}")
+      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]} primary_rcc_id: ${header[primary_rcc_id]} mdoc_justin_no: ${header[mdoc_justin_no]} rcc_ids: ${header[rcc_ids]} image_id: ${header[image_id]}")
       .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
       .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
       .choice()
         .when(simple("${header.rcc_id} != null"))
           .log(LoggingLevel.INFO,"RCC based report")
+          // get the primary rcc, based on the dems primary agency file id
 
           .setHeader("number", simple("${header[rcc_id]}"))
+          // look for current status of the dems case.
+          // and set the rcc to the primary rcc
+          .to("direct:getCourtCaseStatusByKey")
+          .unmarshal().json()
+          .setProperty("caseId").simple("${body[id]}")
+          .setProperty("caseStatus").simple("${body[status]}")
+          .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
+              if(caseRccId != null && !caseRccId.isEmpty()) {
+                exchange.getMessage().setHeader("number", caseRccId);
+              }
+            }
+          })
+
           .to("direct:createDocumentRecord")
         .endChoice()
         .when(simple("${header.mdoc_justin_no} != null"))
           .log(LoggingLevel.INFO,"MDOC based report")
+          // primary_rcc_id should end-up here, because we had also set the mdoc_justin_no
           // need to look-up the list of rcc ids associated to the mdoc
           .to("direct:processNonStaticDocuments")
           .endChoice()
@@ -560,10 +738,38 @@ public class CcmDemsAdapter extends RouteBuilder {
           .split()
             .jsonpathWriteAsString("$.rcc_ids")
             .setProperty("rcc_id",jsonpath("$"))
+            //JADE 2603 for scenario #3
+            .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+            .to("http://ccm-lookup-service/getCourtCaseDetails")
+            .log(LoggingLevel.DEBUG,"body : ${body}")
+            .setProperty("courtcase_data", simple("${body}"))
+            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                ChargeAssessmentData ccdd = exchange.getIn().getBody(ChargeAssessmentData.class);
+                CourtCaseDocumentData cadd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
+                DemsRecordData demsRecord = (DemsRecordData)exchange.getProperty("dems_record", DemsRecordData.class);
+                if(ccdd!=null){
+                  cadd.setCourt_file_no(ccdd.getAgency_file());
+                  demsRecord = new DemsRecordData(cadd);
+                }
+                if(demsRecord != null) {
+                  exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+                  exchange.setProperty("drd", demsRecord);
+                }
+                exchange.getMessage().setBody(demsRecord);
+              }
+            })
+            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+            .log(LoggingLevel.DEBUG,"demsrecord = ${bodyAs(String)}.")
+            .setBody(simple("${body}"))
             .setHeader("number", simple("${exchangeProperty.rcc_id}"))
             .setHeader("reportType", simple("${exchangeProperty.reportType}"))
             .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-            .setBody(simple("${exchangeProperty.dems_record}"))
+            .setProperty("dems_record").simple("${bodyAs(String)}")
             .to("direct:changeDocumentRecord")
           .end()
           .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
@@ -583,7 +789,7 @@ public class CcmDemsAdapter extends RouteBuilder {
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
    // IN
-   // header: mdoc_justin_no or primary_rcc_id
+   // header: mdoc_justin_no and/or primary_rcc_id
    // property: court_case_document or image_document
    from("direct:" + routeId)
     .routeId(routeId)
@@ -602,18 +808,19 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange ex) {
         CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
-        ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
+        ImageDocumentData idd = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
         CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
         DemsRecordData demsRecord = null;
         if(ccdd != null) { // This is an mdoc based report
           ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
           // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
           demsRecord = new DemsRecordData(ccdd);
-        } else if(id != null) { // This is a primary_rcc_id based report
-          id.setCourt_file_number(cdd.getCourt_file_number_seq_type());
-          log.info("CourtFileNumber:"+id.getCourt_file_number());
+        } else if(idd != null) { // This is a primary_rcc_id based report
+          idd.setCourt_file_number(cdd.getCourt_file_number_seq_type());
+          log.info("CourtFileNumber:"+idd.getCourt_file_number());
           // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
-          demsRecord = new DemsRecordData(id);
+          demsRecord = new DemsRecordData(idd);
+          ex.getMessage().setHeader("imageId", idd.getImage_id());
         }
         ex.setProperty("reportType", demsRecord.getDescriptions());
         ex.setProperty("reportTitle", demsRecord.getTitle());
@@ -634,32 +841,88 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when(simple("${header.primary_rcc_id} != null"))
         .log(LoggingLevel.INFO,"Primary RCC based report")
 
+        // BCPSDEMS-1401 make sure primary rcc is active
         .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
         .setHeader("number", simple("${header[rcc_id]}"))
-        // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
-        .setProperty("maxRecordIncrements").simple("10")
-        .to("direct:checkIncrementRecordDocId")
-        // set back body to dems record
-        .setBody(simple("${exchangeProperty.dems_record}"))
-        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-        .to("direct:createDocumentRecord")
-        .endChoice()
+
+        .doTry()
+          // look for current status of the dems case, and grab the primary agency file
+          .to("direct:getCourtCaseStatusByKey")
+          .unmarshal().json()
+          .setProperty("caseId").simple("${body[id]}")
+          .setProperty("caseStatus").simple("${body[status]}")
+          .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+          .setProperty("agencyRccId").simple("${body[agencyFileId]}")
+          .choice()
+            .when(simple("${exchangeProperty.caseRccId} != ''"))
+              .setHeader("rcc_id", simple("${exchangeProperty.caseRccId}"))
+              .setHeader("number", simple("${exchangeProperty.caseRccId}"))
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.INFO, "Skipped adding image document.  One with image id already exists.")
+            .endChoice()
+          .end()
+
+          // look-up the image id and do a check if it already exists.  If so, then skip.
+          .to("direct:getCaseRecordImageExistsByKey")
+          .unmarshal().json()
+          .choice()
+            .when(simple("${body[id]} == ''"))
+              // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
+              .setProperty("maxRecordIncrements").simple("10")
+              .to("direct:checkIncrementRecordDocId")
+              // set back body to dems record
+              .setBody(simple("${exchangeProperty.dems_record}"))
+              .log(LoggingLevel.DEBUG, "${body}")
+              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+              .to("direct:createDocumentRecord")
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.WARN, "Skipped adding image document.  One with image id already exists.")
+            .endChoice()
+          .end()
+        .endDoTry()
+        .doCatch(Exception.class)
+          .log(LoggingLevel.INFO,"General Exception thrown.")
+          .log(LoggingLevel.INFO,"${exception}")
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+
+              exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+              exchange.getMessage().setBody(exchange.getException().getMessage());
+              throw exchange.getException();
+            }
+          })
+        .end()
+        .log(LoggingLevel.INFO, "Completed primary rcc id based call.")
+      .endChoice()
       .otherwise()
         .log(LoggingLevel.INFO,"Traverse through metadata to retrieve the rcc_ids to process.")
         .setBody(simple("${exchangeProperty.metadata_data}"))
-        .split()
-          .jsonpathWriteAsString("$.related_agency_file")
-          .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
-          .setProperty("rcc_id",jsonpath("$.rcc_id"))
-          .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id}")
-          .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-          .setHeader("reportType", simple("${exchangeProperty.reportType}"))
-          .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-          .setBody(simple("${exchangeProperty.dems_record}"))
-          .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-          .to("direct:changeDocumentRecord")
-        .end()
-        .endChoice()
+
+
+        .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+            exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+        .setBody(simple("${bodyAs(String)}"))
+
+        .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
+        .setProperty("rcc_id",jsonpath("$.rcc_id"))
+        .setProperty("primary_yn",jsonpath("$.primary_yn"))
+        .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id} primary_yn: ${exchangeProperty.primary_yn}")
+        .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+        .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+        .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+        .to("direct:changeDocumentRecord")
+      .endChoice()
     .end()
 
    .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
@@ -673,8 +936,10 @@ public class CcmDemsAdapter extends RouteBuilder {
     // IN
     // header: number
     // header: documentId
-    // property: dems_record
     // property: maxRecordIncrements
+    // property: drd (DemsRecordData object)
+    // OUT
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -748,8 +1013,21 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // look for current status of the dems case.
+    .to("direct:getCourtCaseStatusByKey")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
+    .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+    .setProperty("agencyRccId").simple("${body[agencyFileId]}")
+    .choice()
+      .when(simple("${exchangeProperty.caseRccId} != ''"))
+        .setHeader("number", simple("${exchangeProperty.caseRccId}"))
+      .endChoice()
+    .end()
 
     // check to see if the court case exists, before trying to insert record to dems.
     .to("direct:getCaseRecordExistsByKey")
@@ -758,8 +1036,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
     .choice()
       .when(simple("${exchangeProperty.recordId} != ''"))
-        .log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
-        //.to("direct:updateDocumentRecord")
+        //.log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
+        .to("direct:updateDocumentRecord")
       .endChoice()
       .otherwise()
         // BCPSDEMS-1190 - If there is a doc id collision, increment.
@@ -771,7 +1049,6 @@ public class CcmDemsAdapter extends RouteBuilder {
         .to("direct:createDocumentRecord")
       .endChoice()
     .end()
-
 
     .log(LoggingLevel.INFO, "end of changeDocumentRecord")
     ;
@@ -785,21 +1062,49 @@ public class CcmDemsAdapter extends RouteBuilder {
     // IN
     // property: event_object
     // property: caseFound
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    .removeProperty("recordId")
 
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("direct:getCourtCaseIdByKey")
+    .to("direct:getCourtCaseStatusByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+
+    // Check to make sure that there will not be any document collision.
+    .setBody(simple("${exchangeProperty.dems_record}"))
+    .unmarshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        // check to see if the record with the doc id exists, if so, increment the document id
+        DemsRecordData demsRecord = (DemsRecordData)ex.getIn().getBody(DemsRecordData.class);
+
+        ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+      }
+
+    })
+
+    // now check this next value to see if there is a collision of this document
+    .to("direct:getCaseDocIdExistsByKey")
+    .log(LoggingLevel.INFO, "returned key: ${body}")
+    .unmarshal().json()
+    .setProperty("existingRecordId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
+
+    // Make sure that it is an existing and active case, before attempting to add the record
     .choice()
-      .when(simple("${exchangeProperty.caseId} != ''"))
+      .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
 
@@ -813,7 +1118,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
-        .endChoice()
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Did not create case record due to existing record id: ${exchangeProperty.existingRecordId}, case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
+      .endChoice()
     .end()
     .choice()
       .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
@@ -822,6 +1130,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
+            // There are potentially 3 different record object types returne from JUSTIN, find the correct one,
+            // convert it to DemsRecordDocumentData and set it as the body.
             ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
             CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
             ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
@@ -849,7 +1159,11 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:streamCaseRecord")
-        .endChoice()
+      .endChoice()
+      .when(simple("${exchangeProperty.existingRecordId} != ''"))
+        .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
+        .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
+      .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
     ;
@@ -861,23 +1175,24 @@ public class CcmDemsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN
-    // property: event_object
-    // property: caseFound
+    // header: number (rcc_id)
+    // property: dems_record
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("direct:getCourtCaseIdByKey")
+    .to("direct:getCourtCaseStatusByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
     .choice()
-      .when(simple("${exchangeProperty.caseId} != ''"))
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Updating document record in dems")
         .setBody(simple("${exchangeProperty.dems_record}"))
 
@@ -888,11 +1203,14 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:updateCaseRecord")
-        .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+        .log(LoggingLevel.DEBUG,"Updated dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
         .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
 
-        .endChoice()
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Did not create case record due to case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
+      .endChoice()
     .end()
 
     .choice()
@@ -902,6 +1220,8 @@ public class CcmDemsAdapter extends RouteBuilder {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
+            // There are potentially 3 different record object types returne from JUSTIN, find the correct one,
+            // convert it to DemsRecordDocumentData and set it as the body.
             ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
             CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
             ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
@@ -929,14 +1249,14 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("direct:streamCaseRecord")
-        .endChoice()
+      .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of updateDocumentRecord")
     ;
   }
 
 
-  private void version() {
+  protected void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -1058,7 +1378,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: exchangeProeprty.key
+    // IN: exchangeProperty.key
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -1068,6 +1388,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
+    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
@@ -1094,27 +1415,41 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
         .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                  log.error("Returned body : " + exchange.getMessage().getBody(String.class));
+                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                  exchange.getMessage().setBody(body);
+                }
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .transform().simple("${body}")
+          .setHeader("CCMException", simple("{\"error\": \"${header.CamelHttpResponseCode}\"}"))
+          .setHeader("CCMExceptionEncoded", simple("${body}"))
+
           .log(LoggingLevel.ERROR,"body = '${body}'.")
-          .setHeader("CCMException", simple("${body}"))
         .endChoice()
       .end()
-      .endDoTry()
-      .doCatch(Exception.class)
-        .log(LoggingLevel.INFO,"General Exception thrown.")
-        .log(LoggingLevel.INFO,"${exception}")
-        .log(LoggingLevel.ERROR,"body = '${body}'.")
-        .log(LoggingLevel.ERROR,"response code = '${header.CamelHttpResponseCode}'.")
-        .process(new Processor() {
-          public void process(Exchange exchange) throws Exception {
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.INFO,"General Exception thrown.")
+      .log(LoggingLevel.INFO,"${exception}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
 
-            exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-            if(exchange != null && exchange.getException() != null) {
-              exchange.getMessage().setBody(exchange.getException().getMessage());
-            }
-            throw exchange.getException();
-          }
-        })
-      .end()
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+          exchange.getMessage().setBody(exchange.getException().getMessage());
+          throw exchange.getException();
+        }
+      })
+    .end()
     ;
   }
 
@@ -1127,14 +1462,41 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
-    .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
+      .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      // sometimes, if events come in a little too fast for the same case, it may caus an error
+      // wait 5 seconds then try again.
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+          log.error("Returned status code : " + cause.getStatusCode());
+          log.error("Response body : " + cause.getResponseBody());
+        }
+      })
+      .delay(15000)
+      .log(LoggingLevel.INFO,"Re-attempting to process request (id=${exchangeProperty.id})...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
+      .log(LoggingLevel.INFO,"Retrieved court case data by id.")
+    .end()
     ;
   }
 
@@ -1187,7 +1549,6 @@ public class CcmDemsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
-        String caseFlagId = exchange.getProperty("caseFlagId", String.class);
         String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
         exchange.setProperty("courtFileUniqueId", courtFileUniqueId);
         String kFileValue = JsonParseUtils.readJsonElementKeyValue(JsonParseUtils.getJsonArrayElement(courtCaseJson, "/fields", "/name", "Case Flags", "/value")
@@ -1224,10 +1585,12 @@ public class CcmDemsAdapter extends RouteBuilder {
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
             String caseId = exchange.getProperty("caseId", String.class);
+            String rccId = exchange.getProperty("key", String.class);
             CaseHyperlinkData body = new CaseHyperlinkData();
 
             body.setMessage("Case found.");
             body.setHyperlink(prefix + caseId + suffix);
+            body.setRcc_id(rccId);
             exchange.getMessage().setBody(body);
           }
         })
@@ -1238,7 +1601,9 @@ public class CcmDemsAdapter extends RouteBuilder {
           @Override
           public void process(Exchange exchange) throws Exception {
             CaseHyperlinkData body = new CaseHyperlinkData();
+            String rccId = exchange.getProperty("key", String.class);
             body.setMessage("Case not found.");
+            body.setRcc_id(rccId);
             exchange.getMessage().setBody(body);
           }
         })
@@ -1250,6 +1615,76 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  //as part of jade 2425
+  private void getCaseListHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
+    .setProperty("key", simple("${body}"))
+    
+    .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
+    // set the hyperlink object to be returned in the body at end
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CommonCaseList data = exchange.getMessage().getBody(CommonCaseList.class);
+        CaseHyperlinkDataList hyperlinkObject = new CaseHyperlinkDataList(data);
+        exchange.setProperty("metadata_object", hyperlinkObject);
+      }
+    })
+
+    .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .setBody(simple("${exchangeProperty.key}"))
+    .log(LoggingLevel.DEBUG,"rcc_ids: ${exchangeProperty.key}")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
+    .log(LoggingLevel.DEBUG, "Returned body from lookup id: '${body}'")
+    .log(LoggingLevel.DEBUG,"rcc_ids: ${exchangeProperty.key}")
+    .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        .unmarshal().json(JsonLibrary.Jackson, List.class)
+        .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+        .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+        .setProperty("caseIds").simple("${body}")
+        .log(LoggingLevel.INFO,"case ids: ${exchangeProperty.caseIds}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            List<Map<String, Object>> items = exchange.getIn().getBody(List.class);
+            CaseHyperlinkDataList metadata = (CaseHyperlinkDataList)exchange.getProperty("metadata_object", CaseHyperlinkDataList.class);
+            String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
+            String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+            //log.info("originalList size: "+metadata.getcase_hyperlinks().size());
+            metadata.processHyperlinks(prefix, suffix, items);
+            //log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
+            for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
+              //log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
+            }
+
+            exchange.setProperty("metadata_object", metadata);
+            exchange.getIn().setBody(metadata);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
+      .endChoice()
+      .otherwise()
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+        .stop()
+      .endChoice()
+    .end()
+    .log(LoggingLevel.DEBUG, "Final body: ${body}")
+    ;
+  }
+
   private void createCourtCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1257,6 +1692,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"createCourtCase")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
@@ -1265,28 +1701,109 @@ public class CcmDemsAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsChargeAssessmentCaseData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases")
-    .log(LoggingLevel.INFO,"Court case created.")
-    .setProperty("courtCaseId", jsonpath("$.id"))
-    .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-    .split()
-      .jsonpathWriteAsString("$.accused_persons")
-      .setHeader("key", jsonpath("$.identifier"))
-      .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
-      .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
-      .to("direct:processAccusedPerson")
+    .doTry()
+      .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases")
+      .log(LoggingLevel.INFO,"Court case was created.")
+      .setProperty("courtCaseId", jsonpath("$.id"))
+      .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
+
+      //jade 1747
+      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+      .setProperty("ParticipantTypeFilter", simple("Accused"))
+      .setProperty("Participants",simple(""))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+      .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
+      .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+      // Merge the accused persons from all related agency files into a unique list
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+          // go through each accused person and make sure it is not already in the existing list.
+          if(bcm.getRelated_charge_assessments() != null) {
+            for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+              for(CaseAccused relatedAccused: relatedAccusedPersons) {
+                boolean unique = true;
+                for(CaseAccused listedAccused : accusedPersons) {
+                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                    unique = false;
+                    break;
+                  }
+                }
+                if(unique) {
+                  accusedPersons.add(relatedAccused);
+                }
+              }
+            }
+
+          }
+          exchange.getMessage().setBody(accusedPersons);
+        }
+      })
+
+      .marshal().json()
+      .split()
+        .jsonpathWriteAsString("$.*")
+        .setHeader("key", jsonpath("$.identifier"))
+        .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
+        .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
+        .to("direct:processAccusedPerson")
+      .end()
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 504")
+          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
+           // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
+          .delay(15000)
+        .endChoice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.ERROR, "Body: '${exception}'")
+          .log(LoggingLevel.ERROR, "${exception.message}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          //.transform(exceptionMessage())
+          .stop()
+        .endChoice()
+      .end()
     .end()
     ;
   }
@@ -1330,7 +1847,8 @@ public class CcmDemsAdapter extends RouteBuilder {
           }
 
         }
-        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b);
+
+        DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1341,33 +1859,77 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setProperty("key", jsonpath("$.key"))
     .to("direct:getCourtCaseIdByKey")
     .setProperty("dems_case_id", jsonpath("$.id"))
-    // update case
-    .setBody(simple("${exchangeProperty.update_data}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.DEBUG,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
+
     //JADE-2293
     .doTry()
+      // update case
+      .setBody(simple("${exchangeProperty.update_data}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .log(LoggingLevel.DEBUG,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"DEMS case updated.")
-      .setProperty("courtCaseId", jsonpath("$.id"))
+      //jade 1747
+      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+      .setProperty("ParticipantTypeFilter", simple("Accused"))
+      .setProperty("Participants",simple(""))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+      .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
       .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+      // Merge the accused persons from all related agency files into a unique list
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+          // go through each accused person and make sure it is not already in the existing list.
+          if(bcm.getRelated_charge_assessments() != null) {
+            for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+              for(CaseAccused relatedAccused: relatedAccusedPersons) {
+                boolean unique = true;
+                for(CaseAccused listedAccused : accusedPersons) {
+                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                    unique = false;
+                    break;
+                  }
+                }
+                if(unique) {
+                  accusedPersons.add(relatedAccused);
+                }
+              }
+            }
+          }
+          exchange.getMessage().setBody(accusedPersons);
+        }
+      })
+
+      .marshal().json()
       .split()
-        .jsonpathWriteAsString("$.accused_persons")
+        .jsonpathWriteAsString("$.*")
         .setHeader("key", jsonpath("$.identifier"))
         .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
         .log(LoggingLevel.INFO,"Updating accused participant ...")
         .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
         .to("direct:processAccusedPerson")
         .log(LoggingLevel.INFO,"Accused participant updated.")
-        .endDoTry()
+      .end()
+    .endDoTry()
     .doCatch(HttpOperationFailedException.class)
-      .log(LoggingLevel.INFO,"Exception: ${exception}")
-      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -1434,7 +1996,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         String key = exchange.getProperty("key", String.class);
         String courtCaseName = exchange.getProperty("courtCaseName", String.class);
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags);
+        DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags,bcm.getRelated_court_cases());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1456,12 +2018,55 @@ public class CcmDemsAdapter extends RouteBuilder {
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
     .log(LoggingLevel.INFO,"Court case updated.")
     .log(LoggingLevel.INFO,"Create participants")
+     //jade 1747
+    .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+    .setProperty("ParticipantTypeFilter", simple("Accused"))
+    .setProperty("Participants",simple(""))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+    .log(LoggingLevel.DEBUG,"${body}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
     .setBody(simple("${exchangeProperty.metadata_data}"))
+    // Merge the accused persons from all related court files into a unique list
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
+        List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+        // go through each accused person and make sure it is not already in the existing list.
+        if(bcm.getRelated_court_cases() != null) {
+          for(CourtCaseData bcmRelated : bcm.getRelated_court_cases()) {
+            List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+            for(CaseAccused relatedAccused: relatedAccusedPersons) {
+              boolean unique = true;
+              for(CaseAccused listedAccused : accusedPersons) {
+                if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                  unique = false;
+                  break;
+                }
+              }
+              if(unique) {
+                accusedPersons.add(relatedAccused);
+              }
+            }
+          }
+
+        }
+        exchange.getMessage().setBody(accusedPersons);
+      }
+    })
+    .marshal().json()
+    .log(LoggingLevel.DEBUG, "Unprocessed accused list: ${body}")
     .split()
-      .jsonpathWriteAsString("$.accused_persons")
+      .jsonpathWriteAsString("$.*")
       .setHeader("key", jsonpath("$.identifier"))
       .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-      .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
+      .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
       .to("direct:processAccusedPerson")
     .end()
     ;
@@ -1477,6 +2082,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("key", simple("${header.rcc_id}"))
+    .log(LoggingLevel.INFO, "updateCourtCaseWithAppearanceSummary for rcc: ${header.rcc_id}")
     .unmarshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
@@ -1524,6 +2130,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("key", simple("${header.rcc_id}"))
+    .log(LoggingLevel.INFO, "updateCourtCaseWithCrownAssignmentData for rcc: ${header.rcc_id}")
     .unmarshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
     .setProperty("business_data").body()
     // retrieve court case name from DEMS
@@ -1743,7 +2350,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
-    .log(LoggingLevel.INFO,"Check whether person exists in DEMS")
+    .log(LoggingLevel.DEBUG,"Check whether person exists in DEMS")
     .to("direct:getPersonExists")
     .log(LoggingLevel.DEBUG,"${body}")
     .unmarshal().json()
@@ -1790,10 +2397,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request (key=${header[key]})...")
+    .log(LoggingLevel.INFO,"Processing request (key=${header[key]})...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
@@ -2016,7 +2624,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
-    .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
     .setProperty("dems_case_id", jsonpath("$.id"))
     // update case
@@ -2044,7 +2652,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
-    .setProperty("key", simple("${header.rcc_id}"))
+    .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
     .setProperty("dems_case_id", jsonpath("$.id"))
     // update case
@@ -2055,7 +2663,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Creating DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+    .log(LoggingLevel.INFO,"Update DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id} record_id = ${exchangeProperty.recordId}) ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.recordId}")
     .log(LoggingLevel.INFO,"DEMS case record created.")
     .setProperty("recordId", jsonpath("$.edtId"))
@@ -2111,8 +2719,293 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
     .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "body: ${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    ;
+  }
+
+  private void mergeCaseRecordsAndInactivateCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header.sourceCaseId
+    // IN: header.destinationCaseId
+    // IN: header.prefixName
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"sourceCaseId = ${header[sourceCaseId]} destinationCaseId = ${header[destinationCaseId]} prefixName = ${header[prefixName]}")
+
+    // first need to check if there are any records from source case which needs to be migrated.
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/records?throwExceptionOnFailure=false")
+    .doTry()
+      .setProperty("length",jsonpath("$.totalRows"))
+      .log(LoggingLevel.INFO, "Expected record migration count: ${exchangeProperty.length}")
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0 && ${header[destinationCaseId]} != ''"))
+          .log(LoggingLevel.INFO, "Migrate source case document records over to destination case")
+          // copy the records over to the new destination case.
+          //.setBody(simple("{\"prefix\" : \"${header.prefixName}\"}"))
+          .setBody(simple("{}"))
+          .log(LoggingLevel.INFO, "prefixing: ${body}")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
+          .log(LoggingLevel.INFO, "Export report response: '${body}'")
+        .endChoice()
+      .end()
+
+      // inactivate the source case.
+      .setProperty("id", simple("${header.sourceCaseId}"))
+      .to("direct:getCourtCaseDataById")
+      .setProperty("sourceCaseName",jsonpath("$.name"))
+      .setProperty("sourceRccId",jsonpath("$.key"))
+
+      // get dest key for setting primary agency file
+      .setProperty("id", simple("${header.destinationCaseId}"))
+      .to("direct:getCourtCaseStatusById")
+      .setProperty("destRccId",jsonpath("$.primaryAgencyFileId"))
+      .setProperty("destAgencyFile",jsonpath("$.primaryAgencyFileNo"))
+      .setBody(simple("{\"name\": \"${exchangeProperty.sourceCaseName}\",\"key\": \"${exchangeProperty.sourceRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
+
+      .log(LoggingLevel.INFO, "Inactivation json: ${body}")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/cases/${header.sourceCaseId}")
+
+      // JADE-2671 - Search for all DEMS cases which have Primary Agency File of this recently inactivated case, and update those
+      // as well, to the new target primary agency file.
+      .log(LoggingLevel.INFO, "Updating related cases with new primary file id.")
+      //"Primary Agency File ID"
+      .log(LoggingLevel.INFO,"sourceRccId = ${exchangeProperty.sourceRccId}...")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .removeHeader("kafka.HEADERS")
+      .removeHeaders("x-amz*")
+      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/Primary Agency File ID:${exchangeProperty.sourceRccId}/id?throwExceptionOnFailure=false")
+
+      .setProperty("length",jsonpath("$.length()"))
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+          // Loop through list and update the primary id
+          .split()
+            .jsonpathWriteAsString("$.*")
+            .setProperty("inactiveCaseId",jsonpath("$.id"))
+
+            // get dest key for setting primary agency file
+            .setProperty("id", simple("${exchangeProperty.inactiveCaseId}"))
+            .to("direct:getCourtCaseStatusById")
+            .setProperty("inactiveCaseName",jsonpath("$.name"))
+            .setProperty("inactiveRccId",jsonpath("$.key"))
+            .setProperty("inactiveStatus",jsonpath("$.status"))
+            .choice()
+              .when(simple("${exchangeProperty.inactiveStatus} == 'Inactive'"))
+                .setBody(simple("{\"name\": \"${exchangeProperty.inactiveCaseName}\",\"key\": \"${exchangeProperty.inactiveRccId}\",\"status\": \"Inactive\", \"fields\": [{\"name\":\"Primary Agency File ID\",\"value\":\"${exchangeProperty.destRccId}\"}, {\"name\":\"Primary Agency File No.\",\"value\":\"${exchangeProperty.destAgencyFile}\"}]}"))
+
+                .log(LoggingLevel.INFO, "Changing primary id for case id: ${exchangeProperty.inactiveCaseId}")
+                .removeHeader("CamelHttpUri")
+                .removeHeader("CamelHttpBaseUri")
+                .removeHeaders("CamelHttp*")
+                .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                .toD("https://{{dems.host}}/cases/${exchangeProperty.inactiveCaseId}")
+              .endChoice()
+              .otherwise()
+                .log(LoggingLevel.ERROR, "Case id: ${exchangeProperty.inactiveCaseId} has primary of an inactive case, but is active")
+              .endChoice()
+            .end()
+          .end()
+        .endChoice()
+        .when(simple("${header.CamelHttpResponseCode} == 200"))
+          .log(LoggingLevel.INFO,"No cases found with primary id of ${exchangeProperty.sourceRccId}.")
+        .endChoice()
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                  log.error("Returned body : " + exchange.getMessage().getBody(String.class));
+                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                  exchange.getMessage().setBody(body);
+                }
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .transform().simple("${body}")
+          .setHeader("CCMException", simple("{\"error\": \"${header.CamelHttpResponseCode}\"}"))
+          .setHeader("CCMExceptionEncoded", simple("${body}"))
+
+          .log(LoggingLevel.ERROR,"body = '${body}'.")
+        .endChoice()
+      .end()
+
+
+
+
+
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+    .end()
+
+    ;
+  }
+
+  private void getCaseRecordImageExistsByKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    //IN: header.documentId
+
+    from("direct:" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .setProperty("key", simple("${header.number}"))
+      .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+      .to("direct:getCourtCaseIdByKey")
+      .setProperty("courtCaseId", jsonpath("$.id"))
+      .choice()
+        .when(simple("${exchangeProperty.courtCaseId} != ''"))
+          .to("direct:getCaseRecordIdByDescriptionImageId")
+        .endChoice()
+      .end()
+    ;
+  }
+
+  private void getCaseRecordIdByDescriptionImageId() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: property.courtCaseId
+    // IN: header.reportType
+    // IN: header.reportTitle
+    // IN: header.imageId
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
+    .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
+    //.log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    // filter on descriptions and title
+    // filter-out save version of Yes, and sort any No value first.
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
+    .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200"))
+        .unmarshal().json(JsonLibrary.Jackson, DemsRecordSearchDataList.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            StringBuffer outputStringBuffer = new StringBuffer();
+            DemsRecordSearchDataList rsl = exchange.getIn().getBody(DemsRecordSearchDataList.class);
+            String justinImageId = exchange.getMessage().getHeader("imageId", String.class);
+
+            for(DemsRecordSearchData record : rsl.getItems()) {
+              String id = "";
+              if(record.getEdtID() != null) {
+                id = record.getEdtID();
+              }
+              String originalFileNumber = "";
+              if(record.getCc_OriginalFileNumber() != null) {
+                originalFileNumber = record.getCc_OriginalFileNumber();
+              }
+              String saveVersion = "";
+              if(record.getCc_SaveVersion() != null) {
+                saveVersion = record.getCc_SaveVersion();
+              }
+              String imageId = "";
+              if(record.getCc_JUSTINImageID() != null) {
+                imageId = record.getCc_JUSTINImageID();
+              }
+
+              if(justinImageId != null && justinImageId.equalsIgnoreCase(imageId)) {
+                outputStringBuffer.append("{\"id\": \"");
+                outputStringBuffer.append(id);
+                outputStringBuffer.append("\", \"saveVersion\": \"");
+                outputStringBuffer.append(saveVersion);
+                outputStringBuffer.append("\", \"originalFileNumber\": \"");
+                outputStringBuffer.append(originalFileNumber);
+                outputStringBuffer.append("\", \"imageId\": \"");
+                outputStringBuffer.append(imageId);
+                outputStringBuffer.append("\"}");
+                exchange.setProperty("id", id);
+                break;
+              }
+            }
+            if(outputStringBuffer.length() == 0) {
+              outputStringBuffer.append("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"imageId\": \"\"}");
+              exchange.setProperty("id", "");
+              log.info("Case record not found.");
+            }
+            exchange.getMessage().setBody(outputStringBuffer.toString());
+
+          }
+        })
+      .endChoice()
+      .when(simple("${header.CamelHttpResponseCode} >= 300"))
+        .log(LoggingLevel.WARN,"body = '${body}'.")
+        .setProperty("id", simple(""))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"imageId\": \"\"}"))
+        .setHeader("CamelHttpResponseCode", simple("200"))
+        .log(LoggingLevel.INFO,"Ran into an error from EDT.")
+      .endChoice()
+    .end()
+    .log(LoggingLevel.INFO, "${body}")
     ;
   }
 
@@ -2160,7 +3053,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion&sort=cc_SaveVersion desc")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
@@ -2168,16 +3061,36 @@ public class CcmDemsAdapter extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\"}"))
+        .doTry()
+          .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("originalFileNumber", simple(""))
+        .end()
+        .doTry()
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("saveVersion", simple(""))
+        .end()
+        //jade 2617
+        .doTry()
+          .setProperty("imageId", jsonpath("$.items[0].cc_JUSTINImageID"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("imageId", simple(""))
+        .end()
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\", \"imageId\": \"${exchangeProperty.imageId}\"}"))
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\"}"))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"imageId\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "${body}")
     ;
   }
 
@@ -2222,25 +3135,46 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .setProperty("length",jsonpath("$.items.length()"))
-    .log(LoggingLevel.INFO, "length: ${exchangeProperty.length}")
+    .log(LoggingLevel.DEBUG, "length: ${exchangeProperty.length}")
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
         .setProperty("id", jsonpath("$.items[0].edtID"))
-        //.setProperty("save_version", jsonpath("$.items[0].cc_SaveVersion"))
-        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"save_version\": \"\"}"))
+
+        .doTry()
+          .setProperty("originalFileNumber", jsonpath("$.items[0].cc_OriginalFileNumber"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("originalFileNumber", simple(""))
+        .end()
+        .doTry()
+          .setProperty("saveVersion", jsonpath("$.items[0].cc_SaveVersion"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("saveVersion", simple(""))
+        .end()
+        //jade 2617
+        .doTry()
+          .setProperty("imageId", jsonpath("$.items[0].cc_JUSTINImageID"))
+        .endDoTry()
+        .doCatch(Exception.class)
+          .setProperty("imageId", simple(""))
+        .end()
+        .setBody(simple("{\"id\": \"${exchangeProperty.id}\", \"saveVersion\": \"${exchangeProperty.saveVersion}\", \"originalFileNumber\": \"${exchangeProperty.originalFileNumber}\", \"imageId\": \"${exchangeProperty.imageId}\"}"))
+        .log(LoggingLevel.INFO,"${body}")
       .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("id", simple(""))
-        .setBody(simple("{\"id\": \"\", \"save_version\": \"\"}"))
+        .setBody(simple("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"imageId\": \"\"}"))
         .setHeader("CamelHttpResponseCode", simple("200"))
         .log(LoggingLevel.INFO,"Case record not found.")
       .endChoice()
     .end()
+    .log(LoggingLevel.INFO, "${body}")
     ;
   }
 
@@ -2253,6 +3187,181 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     ;
+  }
+
+  private void deleteJustinRecords() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${header.case_id}/records?fields=cc_SaveVersion,cc_source")
+    .log(LoggingLevel.INFO,"returned case records = ${body}...")
+
+    .setProperty("length",jsonpath("$.items.length()"))
+    .log(LoggingLevel.INFO, "length: ${exchangeProperty.length}")
+    .split()
+      .jsonpathWriteAsString("$.items")
+      .setProperty("edtId",jsonpath("$.edtID"))
+      .setProperty("recordSource",jsonpath("$.cc_Source"))
+      .log(LoggingLevel.INFO,"Body: ${body}")
+      .doTry()
+        .choice()
+          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
+            // As per BCPSDEMS-415, only delete the native/pdf, leave the metadata
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception{
+                byte[] decodedBytes = null;
+                exchange.getIn().setBody(decodedBytes);
+                String fileName = "deleted.pdf";
+                String boundary = "simpleboundary";
+                String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
+                String multipartFooter = "\r\n" + "--" + boundary + "--";
+                byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
+                byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
+                byte[] multipartBody = new byte[headerBytes.length + footerBytes.length];
+                System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
+                System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length, footerBytes.length);
+                exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+                exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+                exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+                exchange.getMessage().setBody(multipartBody);
+              }
+            })
+            .removeHeader("CamelHttpUri")
+            .removeHeader("CamelHttpBaseUri")
+            .removeHeaders("CamelHttp*")
+            .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+            .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${header.case_id} recordId = ${exchangeProperty.edtId}) ...")
+            .log(LoggingLevel.DEBUG, "headers: ${headers}")
+            .log(LoggingLevel.DEBUG, "body: ${body}")
+            .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}/Native?renditionAction=delete")
+            .log(LoggingLevel.INFO,"DEMS case record native file removed.")
+
+            /*
+            .removeHeader("CamelHttpUri")
+            .removeHeader("CamelHttpBaseUri")
+            .removeHeaders("CamelHttp*")
+            .removeHeader("kafka.HEADERS")
+            .removeHeaders("x-amz*")
+            .setProperty("dems_case_id", simple("${header.case_id}"))
+            .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+            .log(LoggingLevel.INFO,"Deleting DEMS case record (case_id = ${header.case_id}) ...")
+            .toD("https://{{dems.host}}/cases/${header.case_id}/records/${exchangeProperty.edtId}")
+             */
+          .endChoice()
+        .end()
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR,"Exception: ${exception}")
+        .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+        .choice()
+          .when().simple("${exception.statusCode} >= 400")
+            .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+            .log(LoggingLevel.INFO, "Exception: '${exception}'")
+            .log(LoggingLevel.INFO, "${exception.message}")
+            .log(LoggingLevel.INFO, "Body: '${body}'")
+            .log(LoggingLevel.INFO, "Record not cleared")
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) throws Exception {
+                try {
+                  HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                  exchange.getMessage().setBody(cause.getResponseBody());
+                  log.info("Returned body : " + cause.getResponseBody());
+                } catch(Exception ex) {
+                  ex.printStackTrace();
+                }
+              }
+            })
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .endChoice()
+        .end()
+      .end()
+    .end()
+    ;
+  }
+
+  private void inactivateCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+
+    .setProperty("dems_case_id", simple("${header.case_id}"))
+
+    .toD("direct:deleteJustinRecords")
+    .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+    .doTry()
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} >= 200 && ${header.CamelHttpResponseCode} < 300"))
+          .log(LoggingLevel.INFO, "Inactivate case")
+          // inactivate the case.
+          .setProperty("id", simple("${header.case_id}"))
+          .to("direct:getCourtCaseStatusById")
+          .setProperty("caseName",jsonpath("$.name"))
+          .setProperty("rccId",jsonpath("$.key"))
+
+          .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Inactive\"}"))
+          //.log(LoggingLevel.INFO, "${body}")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/cases/${header.case_id}")
+          .log(LoggingLevel.INFO, "Case inactivated.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO, "Case lookup didn't return results.")
+        .endChoice()
+      .end()
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .log(LoggingLevel.INFO, "Case not inactivated")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned body : " + cause.getResponseBody());
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+   .end();
   }
 
   private void publishEventKPI() {
@@ -2289,5 +3398,4 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("kafka:{{kafka.topic.kpis.name}}")
     ;
   }
-
 }

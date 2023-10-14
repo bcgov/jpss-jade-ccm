@@ -1,0 +1,17 @@
+{
+    "create_date": "2023-09-03 21:16:33",
+    "version": "1.0",
+    "documents": [
+        {
+            "report_type": "ACCUSED_INFO",
+            "report_format": "pdfa",
+            "rcc_id": "7001980.0009",
+            "document_type": "Accused Information",
+            "agency_file_no": "703: 23-1007",
+            "submit_date": "2023-08-31",
+            "participants": "Smith, Johnathan",
+            "index": "1",
+            "data": ""
+        }
+    ]
+}

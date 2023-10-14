@@ -3,8 +3,27 @@ package ccm.utils;
 import java.util.Iterator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class JsonParseUtils {
+
+  static public String getJsonElementValue(String jsonString, String value) {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      JsonNode field = mapper.readTree(jsonString);
+      if (field.isObject()) {
+        ObjectNode obj = (ObjectNode) field;
+        if (obj.has(value)) {
+          return obj.get(value).asText("");
+        }
+      }
+      return "";
+      
+    } catch(Exception ex) {
+      // issue converting json response to json. ignore.
+    }
+    return "";// if not found, then just return blank string.
+  }
 
   static public String getJsonArrayElementValue(String jsonString, String arrayPath, String key, String keyValue, String valueKey) {
     ObjectMapper mapper = new ObjectMapper();

@@ -29,6 +29,20 @@ public class DateTimeUtils {
         return utcDateTimeString;
     }
 
+    public static String convertToUtcFromZonedDateTime(ZonedDateTime zonedDateTime) throws DateTimeParseException {
+        // Java 8 - Convert Date Time From One Timezone To Another
+        // https://www.javaprogramto.com/2020/12/java-convert-date-between-timezones.html
+
+        String utcDateTimeString = null;
+
+        if (zonedDateTime != null) {
+            utcDateTimeString = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        }
+
+        return utcDateTimeString;
+    }
+
     public static ZonedDateTime convertToZonedDateTimeFromBCDateTimeString(String bcDateTimeString) throws DateTimeParseException {
         ZonedDateTime zonedDateTime = null;
 

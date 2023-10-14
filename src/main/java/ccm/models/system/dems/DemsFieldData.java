@@ -88,7 +88,14 @@ public class DemsFieldData {
         CROWN_OFFICE("Crown Office"),
         RCC_STATUS("RCC Status"),
         LAST_JUSTIN_UPDATE("Last JUSTIN Update"),
-        LAST_API_RECORD_UPDATE("Last API Record Update");
+        LAST_API_RECORD_UPDATE("Last API Record Update"),
+        //added as part of jade-2483
+        CASE_STATE("Case State"),
+        //added as part of jade-2621
+        PRIMARY_AGENCY_FILE_ID("Primary Agency File ID"),
+        PRIMARY_AGENCY_FILE_NO("Primary Agency File No."),
+        //added as part of jade -2617
+        JUSTIN_IMAGE_ID("Image ID");
 
         private String label;
 
