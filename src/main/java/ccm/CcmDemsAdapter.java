@@ -2465,20 +2465,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons")
     .log(LoggingLevel.INFO,"Person created.")
-    //as part of jade 2696
-    //call to generate an external EDT ID for the person
-    .setProperty("entityType", simple("Person"))
-    .setProperty("entityId",jsonpath("$.id"))
-    .setProperty("identifierType", simple("EdtExternalId"))
-    .setBody(simple("{\"entityType\":\"${exchangeProperty.entityType}\",\"entityId\":\"${exchangeProperty.entityId}\",\"identifierType\":\"${exchangeProperty.identifierType}\",\"autoIncrementOptions\":{\"format\":\"000000\"}}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
-    .log(LoggingLevel.INFO,"Created external EDT ID")
     ;
   }
 
