@@ -1744,7 +1744,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .when().simple("${header.CamelHttpResponseCode} == 200")
         .unmarshal().json(JsonLibrary.Jackson, List.class)
         .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
-        .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+        .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.list.suffix}}"))
         .setProperty("caseIds").simple("${body}")
         .log(LoggingLevel.INFO,"case ids: ${exchangeProperty.caseIds}")
         .process(new Processor() {
