@@ -207,7 +207,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter")
+    from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter&maxPollRecords=100&maxPollIntervalMs=600000")
     .routeId(routeId)
     .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.kpis.name}} topic:\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
