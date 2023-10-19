@@ -31,7 +31,7 @@ public class CourtCaseDocumentData extends BaseDocumentData {
     if(rd.getRcc_ids() != null) {
       ObjectMapper objectMapper = new ObjectMapper();
       try {
-        System.out.println(rd.getRcc_ids());
+        //System.out.println(rd.getRcc_ids());
         String[] rcc_id_list = objectMapper.readValue(rd.getRcc_ids(), String[].class);
         this.setRcc_ids(Arrays.asList(rcc_id_list));
       } catch(Exception e) {

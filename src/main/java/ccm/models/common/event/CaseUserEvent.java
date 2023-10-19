@@ -31,7 +31,7 @@ public class CaseUserEvent extends BaseEvent {
     PIDP,
     JADE_CCM
   }
-  
+
   public enum STATUS {
     ACCOUNT_CREATED,
     ACCESS_ADDED,
@@ -63,7 +63,7 @@ public class CaseUserEvent extends BaseEvent {
         setEvent_status("");
         break;
     }
-    
+
     Iterator<JustinEventDataElement> i = je.getEvent_data().iterator();
     while(i.hasNext()) {
       JustinEventDataElement jed = i.next();
