@@ -4,13 +4,13 @@
 			"path": "ccm-accessdedup-processor"
 		},
 		{
+			"path": "ccm-accessdedup-transformer"
+		},
+		{
 			"path": "scripts"
 		},
 		{
 			"path": "."
-		},
-		{
-			"path": "ccm-accessdedup-processor-2"
 		}
 	],
 	"settings": {
