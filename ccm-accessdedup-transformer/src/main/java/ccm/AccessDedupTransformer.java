@@ -25,7 +25,7 @@ public class AccessDedupTransformer implements Transformer<String, String, KeyVa
     private static final Logger LOG = LoggerFactory.getLogger(AccessDedupTransformer.class);
 
     private KeyValueStore<String, String> accessdedupStore;
-    private static final String STORE_NAME = "transform-store";
+    private static final String STORE_NAME = "store";
 
     private ProcessorContext context;
 

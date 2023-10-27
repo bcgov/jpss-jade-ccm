@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 public class TransformedAccessDedupTopology {
     Logger LOG = LoggerFactory.getLogger(TransformedAccessDedupTopology.class);
 
-    private static final String STORE_NAME = "transform-store";
+    private static final String STORE_NAME = "store";
 
     @Inject
     @ConfigProperty(name = "custom.processor.name")

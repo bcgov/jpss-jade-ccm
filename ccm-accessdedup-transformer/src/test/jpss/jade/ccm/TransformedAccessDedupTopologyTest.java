@@ -17,14 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import jpss.jade.ccm.AccessDedupProcessor;
+import jpss.jade.ccm.AccessDedupTransformer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class AccessDedupProcessorTest {
+public class TransformedAccessDedupTopologyTest {
 
     private static final String INPUT_TOPIC = "user-accesses";
     private static final String OUTPUT_TOPIC = "user-accesses-dedup";
@@ -37,10 +37,10 @@ public class AccessDedupProcessorTest {
     public void setUp() {
         Topology topology = new Topology();
 
-        topology.addSource("source", "user-accesses")
-                .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupProcessor::new, "source")
+        topology.addSource("source", "transform-user-accesses")
+                .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupTransformer::new, "source")
                 .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
-                .addSink("sink", "user-accesses-dedup", "processor");
+                .addSink("sink", "transform-user-accesses-dedup", "processor");
 
         Properties props = new Properties();
 
