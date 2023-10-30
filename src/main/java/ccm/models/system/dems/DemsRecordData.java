@@ -557,7 +557,11 @@ public class DemsRecordData {
         docId.append(incrementalDocCount++);
         docId.append("_");
         docId.append(shortendStartDate);
-        setDocumentId(docId.toString().replaceAll(":", ""));
+        updateDocumentId(docId.toString().replaceAll(":", ""));
+    }
+
+    public void updateDocumentId(String newDocumentId) {
+        setDocumentId(newDocumentId);
 
         // Now need to go through the field records, and find the "Document Id"
         for(DemsFieldData fd : getFields()) {

@@ -1714,7 +1714,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
     .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
-    .log("User DEMS flag updated in JUSTIN.")
+    .log("User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
 
     // publish event KPI - processing completed
     .process(new Processor() {
