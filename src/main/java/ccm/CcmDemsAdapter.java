@@ -3046,6 +3046,11 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .setBody(simple("{\"entityType\":\"Person\",\"entityId\":\"${header.fromPartid}\",\"identifierType\":\"PrimaryId\",\"identifierValue\":\"${header.toPartid}\"}"))
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
     .log(LoggingLevel.INFO, "response: '${body}'")
       
