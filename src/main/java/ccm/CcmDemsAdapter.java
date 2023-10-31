@@ -3481,8 +3481,6 @@ public class CcmDemsAdapter extends RouteBuilder {
               .jsonpathWriteAsString("$.participants")
               .setProperty("personid",jsonpath("$.personId"))
               .log(LoggingLevel.INFO,"Id: ${exchangeProperty.personid}")
-              //.setHeader("personId").jsonpath("$.participants[0].personId")
-              //.log(LoggingLevel.INFO, "Person id: ${header.personId}")
                         //check if there already exists an edtexternalid for the person
                         .removeHeader("CamelHttpUri")
                         .removeHeader("CamelHttpBaseUri")
@@ -3497,8 +3495,9 @@ public class CcmDemsAdapter extends RouteBuilder {
                         .log(LoggingLevel.INFO,"total = ${exchangeProperty.total}")
                         .choice()
                           .when().simple("${exchangeProperty.total} == 0")
-                            /*.setProperty("entityType", simple("Person"))
-                            .setProperty("entityId",jsonpath("${header.personId}"))
+                            .setProperty("entityType", simple("Person"))
+                            .setProperty("entityId", simple("${exchangeProperty.personid}"))
+                            .log(LoggingLevel.INFO,"entity ID: ${exchangeProperty.entityId}")
                             .setProperty("identifierType", simple("EdtExternalId"))
                             .setBody(simple("{\"entityType\":\"${exchangeProperty.entityType}\",\"entityId\":\"${exchangeProperty.entityId}\",\"identifierType\":\"${exchangeProperty.identifierType}\",\"autoIncrementOptions\":{\"format\":\"000000\"}}"))
                             .removeHeader("CamelHttpUri")
@@ -3507,7 +3506,7 @@ public class CcmDemsAdapter extends RouteBuilder {
                             .setHeader(Exchange.HTTP_METHOD, simple("POST"))
                             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                             .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-                            .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")*/
+                            .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
                             .log(LoggingLevel.INFO,"TESTING :Created external EDT ID")
                           
                           .endChoice()
