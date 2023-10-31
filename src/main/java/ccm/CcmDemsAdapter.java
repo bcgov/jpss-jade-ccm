@@ -3339,14 +3339,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .choice()
-      .when(simple("${header.CamelHttpResponseCode} == 200"))
+      .when(simple("${header.CamelHttpResponseCode} < 300"))
         .unmarshal().json(JsonLibrary.Jackson, DemsRecordSearchDataList.class)
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
             StringBuffer outputStringBuffer = new StringBuffer();
             DemsRecordSearchDataList rsl = exchange.getIn().getBody(DemsRecordSearchDataList.class);
-            String justinImageId = exchange.getMessage().getHeader("imageId", String.class);
 
             for(DemsRecordSearchData record : rsl.getItems()) {
               String id = "";
@@ -3366,19 +3365,17 @@ public class CcmDemsAdapter extends RouteBuilder {
                 imageId = record.getCc_JUSTINImageID();
               }
 
-              if(justinImageId != null && justinImageId.equalsIgnoreCase(imageId)) {
-                outputStringBuffer.append("{\"id\": \"");
-                outputStringBuffer.append(id);
-                outputStringBuffer.append("\", \"saveVersion\": \"");
-                outputStringBuffer.append(saveVersion);
-                outputStringBuffer.append("\", \"originalFileNumber\": \"");
-                outputStringBuffer.append(originalFileNumber);
-                outputStringBuffer.append("\", \"imageId\": \"");
-                outputStringBuffer.append(imageId);
-                outputStringBuffer.append("\"}");
-                exchange.setProperty("id", id);
-                break;
-              }
+              outputStringBuffer.append("{\"id\": \"");
+              outputStringBuffer.append(id);
+              outputStringBuffer.append("\", \"saveVersion\": \"");
+              outputStringBuffer.append(saveVersion);
+              outputStringBuffer.append("\", \"originalFileNumber\": \"");
+              outputStringBuffer.append(originalFileNumber);
+              outputStringBuffer.append("\", \"imageId\": \"");
+              outputStringBuffer.append(imageId);
+              outputStringBuffer.append("\"}");
+              exchange.setProperty("id", id);
+              break;
             }
             if(outputStringBuffer.length() == 0) {
               outputStringBuffer.append("{\"id\": \"\", \"saveVersion\": \"\", \"originalFileNumber\": \"\", \"imageId\": \"\"}");
