@@ -3507,7 +3507,7 @@ public class CcmDemsAdapter extends RouteBuilder {
                             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                             .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                             .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
-                            .log(LoggingLevel.INFO,"TESTING :Created external EDT ID")
+                            .log(LoggingLevel.INFO,"Created external EDT ID")
                           
                           .endChoice()
                           .otherwise()
