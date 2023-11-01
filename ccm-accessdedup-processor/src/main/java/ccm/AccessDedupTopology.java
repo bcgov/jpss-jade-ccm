@@ -23,21 +23,31 @@ import org.slf4j.LoggerFactory;
 public class AccessDedupTopology {
     Logger LOG = LoggerFactory.getLogger(AccessDedupTopology.class);
 
+    private static final String STORE_NAME = "store";
+    private static final String SOURCE_TOPIC = "user-accesses";
+    private static final String TARGET_TOPIC = "user-accesses-dedup";
+
     @Inject
     @ConfigProperty(name = "custom.processor.name")
     String processorName;
+
+    @Inject
+    @ConfigProperty(name = "quarkus.kafka-streams.application-id")
+    String quarkusKafkaStreamsAppName;
 
     @Produces
     public Topology buildTopology() {
         // log the custom property
         LOG.info("Processor name: {}.", processorName);
 
+        LOG.info("Quarkus Kafka Streams application name: {}.", quarkusKafkaStreamsAppName);
+
         StreamsBuilder builder = new StreamsBuilder();
         
         // Define the state store.
         StoreBuilder<KeyValueStore<String, String>> dedupStoreBuilder = 
             Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore("store"),
+                Stores.persistentKeyValueStore(STORE_NAME),
                 org.apache.kafka.common.serialization.Serdes.String(),
                 org.apache.kafka.common.serialization.Serdes.String()
             );
@@ -46,13 +56,13 @@ public class AccessDedupTopology {
         builder.addStateStore(dedupStoreBuilder);
 
         // Define the source topic from which messages are consumed.
-        KStream<String, String> sourceStream = builder.stream("user-accesses", Consumed.with(Serdes.String(), Serdes.String()));
+        KStream<String, String> sourceStream = builder.stream(SOURCE_TOPIC, Consumed.with(Serdes.String(), Serdes.String()));
 
         // Process the messages using the AccessDedupProcessor.
-        sourceStream.process(AccessDedupProcessor::new, Named.as(processorName), "store");
+        KStream<String, String> transformedStream = sourceStream.transform(AccessDedupProcessor::new, Named.as(processorName), STORE_NAME);
 
         // Send deduplicated messages to another topic.
-        sourceStream.to("user-accesses-dedup", Produced.with(Serdes.String(), Serdes.String()));
+        transformedStream.to(TARGET_TOPIC, Produced.with(Serdes.String(), Serdes.String()));
 
         return builder.build();
     }

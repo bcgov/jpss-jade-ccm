@@ -24,10 +24,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class AccessDedupProcessorTest {
+public class AccessDedupTopologyTest {
 
-    private static final String INPUT_TOPIC = "user-accesses";
-    private static final String OUTPUT_TOPIC = "user-accesses-dedup";
+    private static final String SOURCE_TOPIC = "user-accesses";
+    private static final String TARGET_TOPIC = "user-accesses-dedup";
 
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, String> inputTopic;
@@ -37,10 +37,10 @@ public class AccessDedupProcessorTest {
     public void setUp() {
         Topology topology = new Topology();
 
-        topology.addSource("source", "user-accesses")
+        topology.addSource("source", SOURCE_TOPIC)
                 .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupProcessor::new, "source")
                 .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
-                .addSink("sink", "user-accesses-dedup", "processor");
+                .addSink("sink", TARGET_TOPIC, "processor");
 
         Properties props = new Properties();
 
@@ -53,8 +53,8 @@ public class AccessDedupProcessorTest {
 
         //inputTopic = testDriver.createInputTopic("user-accesses", Serdes.String().serializer(), Serdes.String().serializer());
         //outputTopic = testDriver.createOutputTopic("case-accesses", Serdes.String().deserializer(), Serdes.String().deserializer());
-        inputTopic = testDriver.createInputTopic(INPUT_TOPIC, new StringSerializer(), new StringSerializer());
-        outputTopic = testDriver.createOutputTopic(OUTPUT_TOPIC, new StringDeserializer(), new StringDeserializer());
+        inputTopic = testDriver.createInputTopic(SOURCE_TOPIC, new StringSerializer(), new StringSerializer());
+        outputTopic = testDriver.createOutputTopic(TARGET_TOPIC, new StringDeserializer(), new StringDeserializer());
     }
 
     @Test

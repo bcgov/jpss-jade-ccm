@@ -7,6 +7,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.kstream.Transformer;
 
 import javax.inject.Inject;
 
@@ -19,17 +20,18 @@ import org.slf4j.LoggerFactory;
 import ccm.models.common.versioning.Version;
 import io.vertx.core.json.JsonObject;
 
-public class AccessDedupProcessor extends AbstractProcessor<String, String> {
+public class AccessDedupProcessor implements Transformer<String, String, KeyValue<String, String>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccessDedupProcessor.class);
 
     private KeyValueStore<String, String> accessdedupStore;
     private static final String STORE_NAME = "store";
 
+    private ProcessorContext context;
+
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
-        super.init(context);
         // Initialize the state store.
         this.accessdedupStore = (KeyValueStore<String, String>) context.getStateStore(STORE_NAME);
         this.context = context;
@@ -44,14 +46,14 @@ public class AccessDedupProcessor extends AbstractProcessor<String, String> {
     }
 
     @Override
-    public void process(String key, String value) {
+    public KeyValue<String, String> transform(String key, String value) {
         if (key == null || key.isEmpty() || key.equalsIgnoreCase("END_OF_BATCH")) {
             // End of the batch is detected
             LOG.info("End of the batch is detected.");
 
             accessdedupStore.all().forEachRemaining(keyValue -> {
                 LOG.info("Forwarding (Key,Value) = ({},{}).", keyValue.key, keyValue.value);
-                context().forward(keyValue.key, keyValue.value);
+                context.forward(keyValue.key, keyValue.value);
             });
 
             accessdedupStore.all().forEachRemaining(keyValue -> {
@@ -59,7 +61,7 @@ public class AccessDedupProcessor extends AbstractProcessor<String, String> {
                 accessdedupStore.delete(keyValue.key);
             });
             
-            return;
+            return null;
         }
 
         // Only forward the message if the key is found in the deduplication store.
@@ -76,9 +78,10 @@ public class AccessDedupProcessor extends AbstractProcessor<String, String> {
         } else {
             LOG.info("Skipping message with key: {}; key already found in the batch.", key);
         }
+
+        return null;
     }
 
-    @Override
     public void close() {
         // No additional cleanup is required as the store is managed by Kafka Streams.
     }
