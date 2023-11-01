@@ -252,8 +252,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}" +
-      "?groupId={{pidp.kafka.consumergroup.name}}" // +
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId={{pidp.kafka.consumergroup.name}}" // +
       //"&autoOffsetReset=earliest"
     )
     .routeId(routeId)
@@ -342,7 +341,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&securityProtocol=PLAINTEXT")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&maxPollRecords=30&maxPollIntervalMs=600000&securityProtocol=PLAINTEXT")
     .routeId(routeId)
     .doTry()
       .setHeader("event_key")
