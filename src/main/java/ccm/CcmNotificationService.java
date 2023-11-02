@@ -261,7 +261,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=600000")
+    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -396,7 +396,7 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=600000")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -730,7 +730,7 @@ public class CcmNotificationService extends RouteBuilder {
             public void process(Exchange exchange) {
               AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
               AuthUserList paul = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
-              
+
               log.info("original authlist size: "+paul.getAuth_user_list().size());
               log.info("comparing authlist size: "+aul.getAuth_user_list().size());
               List<AuthUser> intersectingAuthList = new ArrayList<AuthUser>();
@@ -1050,7 +1050,7 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // based off of rcc, look-up the DEMS case record.
-    // If it exists, go through list of rccs in the 
+    // If it exists, go through list of rccs in the
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
@@ -1870,7 +1870,7 @@ public class CcmNotificationService extends RouteBuilder {
               .setProperty("caseFlags", simple("${body}"))
               //.log(LoggingLevel.INFO, "After the print case flags")
               //.log(LoggingLevel.DEBUG, "Properties Case Flags: ${exchangeProperty.caseFlags}")
-              
+
               .setProperty("caseFlags", simple("${exchangeProperty.caseFlagsObject}"))
               //.log(LoggingLevel.INFO, "Properties Case Flags Object: ${exchangeProperty.caseFlags}")
             .endChoice()
@@ -1912,9 +1912,9 @@ public class CcmNotificationService extends RouteBuilder {
 
     .removeProperties("primary_courtcase_object")
     .setProperty("primary_rcc_id", simple(""))
-    
+
     .setBody(simple("${exchangeProperty.metadata_data}"))
-    
+
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
 
     // look for the primary rcc id in the related agency file list.
@@ -1957,7 +1957,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .setBody(simple("${exchangeProperty.metadata_data}"))
-    // go through list of non-primary records and add to array list 
+    // go through list of non-primary records and add to array list
     .split()
       .jsonpathWriteAsString("$.related_agency_file")
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
@@ -2138,7 +2138,7 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
     .end()
-    
+
     // set the updated CaseAppearanceSummaryList object to be the body to use it to retrieve the earliest date.
     .process(new Processor() {
       @Override
@@ -2261,7 +2261,7 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
     .end()
-    
+
     // set the updated CaseCrownAssignmentList object to be the body to use it to retrieve all the assignments
     .process(new Processor() {
       @Override
