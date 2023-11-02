@@ -611,6 +611,7 @@ public class CcmNotificationService extends RouteBuilder {
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
           .endChoice()*/
+        .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
     .otherwise()
       .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
