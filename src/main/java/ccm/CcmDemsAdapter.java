@@ -144,6 +144,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseListHyperlink();
     reassignParticipantCases();
     checkPersonExist();
+    processDocumentRecordHttp(); // http version
   }
 
 
@@ -570,6 +571,18 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void processDocumentRecordHttp() throws HttpOperationFailedException{
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
+    .setProperty("justin_request").body()
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+    .to("direct:processDocumentRecord");
+  }
   private void processDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
