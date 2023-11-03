@@ -506,7 +506,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=30&maxPollIntervalMs=600000")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=10&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -744,7 +744,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               List<String> rccList = ccdd.getRcc_ids();
               exchange.setProperty("rcc_list", rccList);
             }
-          }) 
+          })
 
           .setBody(simple("${exchangeProperty.court_case_document}"))
           .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
@@ -1719,7 +1719,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
-    
+
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
     // set the hyperlink object to be returned in the body at end
     .process(new Processor() {
@@ -3048,7 +3048,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
     .log(LoggingLevel.INFO, "response: '${body}'")
-      
+
     .end()
     ;
   }
