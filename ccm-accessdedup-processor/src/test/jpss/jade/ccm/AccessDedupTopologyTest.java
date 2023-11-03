@@ -17,7 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import jpss.jade.ccm.AccessDedupProcessor;
+import jpss.jade.ccm.CaseAccessSyncTransformer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -26,21 +26,46 @@ import static org.junit.Assert.assertTrue;
 
 public class AccessDedupTopologyTest {
 
-    private static final String SOURCE_TOPIC = "user-accesses";
-    private static final String TARGET_TOPIC = "user-accesses-dedup";
+    @Inject
+    @ConfigProperty(name = "quarkus.kafka-streams.application-id")
+    String quarkusKafkaStreamsAppName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.topic.chargeassessments.name")
+    String chargeAssessmentsTopicName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.topic.chargeassessment-errors.name")
+    String chargeAssessmentErrorsTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.bulk-caseusers.name")
+    String bulkCaseUsersTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.caseuser-errors.name")
+    String caseUserErrorsTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.kpis.name")
+    String kpisTopicName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.store.caseaccesssync.name")
+    String caseAccessSyncStoreName;
 
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, String> inputTopic;
-    private TestOutputTopic<String, String> outputTopic;
+    private TestInputTopic<String, String> sourceTopic;
+    private TestOutputTopic<String, String> targetTopic;
 
     @BeforeEach
     public void setUp() {
         Topology topology = new Topology();
 
-        topology.addSource("source", SOURCE_TOPIC)
-                .addProcessor("processor", (ProcessorSupplier<String, String>) AccessDedupProcessor::new, "source")
-                .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore("store"), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
-                .addSink("sink", TARGET_TOPIC, "processor");
+        topology.addSource("source", bulkCaseUsersTopicName)
+                .addProcessor("processor", (ProcessorSupplier<String, String>) CaseAccessSyncTransformer::new, "source")
+                .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore(caseAccessSyncStoreName), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
+                .addSink("sink", chargeAssessmentsTopicName, "processor");
 
         Properties props = new Properties();
 
@@ -53,23 +78,23 @@ public class AccessDedupTopologyTest {
 
         //inputTopic = testDriver.createInputTopic("user-accesses", Serdes.String().serializer(), Serdes.String().serializer());
         //outputTopic = testDriver.createOutputTopic("case-accesses", Serdes.String().deserializer(), Serdes.String().deserializer());
-        inputTopic = testDriver.createInputTopic(SOURCE_TOPIC, new StringSerializer(), new StringSerializer());
-        outputTopic = testDriver.createOutputTopic(TARGET_TOPIC, new StringDeserializer(), new StringDeserializer());
+        sourceTopic = testDriver.createInputTopic(bulkCaseUsersTopicName, new StringSerializer(), new StringSerializer());
+        targetTopic = testDriver.createOutputTopic(chargeAssessmentsTopicName, new StringDeserializer(), new StringDeserializer());
     }
 
     @Test
     public void testDeduplication() {
         // Send some events with duplicates
-        inputTopic.pipeInput("key1", "key1");
-        inputTopic.pipeInput("key2", "key2");
-        inputTopic.pipeInput("key1", "key1");  // Duplicate
-        inputTopic.pipeInput("", "");  // End event
+        sourceTopic.pipeInput("key1", "key1");
+        sourceTopic.pipeInput("key2", "key2");
+        sourceTopic.pipeInput("key1", "key1");  // Duplicate
+        sourceTopic.pipeInput("", "");  // End event
 
-        assertEquals("key1", outputTopic.readValue());
-        assertEquals("key2", outputTopic.readValue());
+        assertEquals("key1", targetTopic.readValue());
+        assertEquals("key2", targetTopic.readValue());
 
         // Expect more events, as the duplicate was filtered out
-        assertTrue(outputTopic.isEmpty());
+        assertTrue(targetTopic.isEmpty());
 
         testDriver.close();
     }
@@ -77,8 +102,8 @@ public class AccessDedupTopologyTest {
     @Test
     public void testTopicsCreated() {
         // Send some events with duplicates
-        assertNotNull(inputTopic);
-        assertNotNull(outputTopic);
+        assertNotNull(sourceTopic);
+        assertNotNull(targetTopic);
 
         testDriver.close();
     }

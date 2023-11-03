@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "ccm-accessdedup-processor"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {

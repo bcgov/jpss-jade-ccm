@@ -42,6 +42,10 @@ if [ "$env" != "local" ]; then
     exit 1
 fi
 
+pushd ../..
+. ./repackage-ccm-models
+popd
+
 # Remove the existing processor
 
 docker stop ccm-accessdedup-processor

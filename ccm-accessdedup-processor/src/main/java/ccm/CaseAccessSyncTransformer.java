@@ -20,29 +20,38 @@ import org.slf4j.LoggerFactory;
 import ccm.models.common.versioning.Version;
 import io.vertx.core.json.JsonObject;
 
-public class AccessDedupProcessor implements Transformer<String, String, KeyValue<String, String>> {
+public class CaseAccessSyncTransformer implements Transformer<String, String, KeyValue<String, String>> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AccessDedupProcessor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CaseAccessSyncTransformer.class);
 
     private KeyValueStore<String, String> accessdedupStore;
-    private static final String STORE_NAME = "store";
 
     private ProcessorContext context;
 
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
+        // Dependency injection doesn't work in Kafka Streams.  We have to use the ConfigProvider.
+        String appId = ConfigProvider.getConfig().getValue("quarkus.kafka-streams.application-id", String.class);
+        String chargeAssessmentsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessments.name", String.class);
+        String chargeAssessmentErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessment-errors.name", String.class);
+        String bulkCaseUsersTopicName = ConfigProvider.getConfig().getValue("ccm.topic.bulk-caseusers.name", String.class);
+        String caseUserErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.caseuser-errors.name", String.class);
+        String kpisTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpis.name", String.class);
+        String kpiErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpi-errors.name", String.class);
+        String caseAccessSyncStoreName = ConfigProvider.getConfig().getValue("ccm.store.caseaccesssync.name", String.class);
+
+        LOG.info("caseAccessSyncStoreName: {}.", caseAccessSyncStoreName);
+
         // Initialize the state store.
-        this.accessdedupStore = (KeyValueStore<String, String>) context.getStateStore(STORE_NAME);
+        this.accessdedupStore = (KeyValueStore<String, String>) context.getStateStore(caseAccessSyncStoreName);
         this.context = context;
 
-        // Log the custom property
-
-        // Dependency injection doesn't work in Kafka Streams.  We have to use the ConfigProvider.
-        String property = ConfigProvider.getConfig().getValue("custom.processor.name", String.class);
-
-        LOG.info("Processor name: {}.", property);
+        LOG.info("Processor name: {}.", appId);
         LOG.info("ccm model version: {}.", Version.V1_0);
+
+        // Log the topic names.
+        LOG.info("bulkCaseUsersTopicName: {}.", bulkCaseUsersTopicName);
     }
 
     @Override
