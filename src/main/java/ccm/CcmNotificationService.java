@@ -917,7 +917,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=600000")
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -964,7 +964,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=600000")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
