@@ -2,6 +2,7 @@ package ccm;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.StringTokenizer;
 import java.util.List;
@@ -277,6 +278,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event_message_id")
       .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
@@ -398,44 +401,87 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number").simple("${header.event_key}")
     .removeHeader(Exchange.CONTENT_ENCODING)
     .to("http://ccm-lookup-service/getCourtCaseDetails")
-
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
     .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-    .to("http://ccm-dems-adapter/createCourtCase")
-    .log(LoggingLevel.DEBUG,"Update court case auth list.")
-    .to("direct:processCourtCaseAuthListChanged")
-    .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
-    // create Report Event for static type reports.
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+    .setProperty("courtcase_object", body())
+
+    .setProperty("allowCreateCase").simple("true")
+    .setProperty("autoCreateMaxDays").simple("{{dems.case.auto.creation.submit.date.cutoff}}")
+    // BCPSDEMS-1543 - Check to make sure rcc submit date is not before dems.case.auto.creation.submit.date.cutoff
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) {
-        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
-        String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
-        StringBuilder reportTypesSb = new StringBuilder("");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
-
-        ReportEvent re = new ReportEvent();
-        re.setJustin_rcc_id(rcc_id);
-        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
-        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
-        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
-        re.setReport_type(reportTypesSb.toString());
-        exchange.getMessage().setBody(re, ReportEvent.class);
+      public void process(Exchange ex) throws HttpOperationFailedException {
+        // based on the autoCreateMaxDays value, and the rcc's submit date and
+        // whether or not it is a manu_file or manu_cfile
+        String event_message_type = (String)ex.getMessage().getHeader("event_message_type");
+        if(event_message_type != null
+         && !event_message_type.equalsIgnoreCase("MANU_CFILE")
+         && !event_message_type.equalsIgnoreCase("MANU_FILE")) {
+          // Make sure that the message type isn't a manual creation first.
+          try {
+            Integer autoCreateMaxDays = (Integer)ex.getProperty("autoCreateMaxDays", Integer.class);
+            if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
+              ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
+              log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
+              // If no submit date, then don't create!
+              ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
+              ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
+              ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
+              
+              if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
+                ex.setProperty("allowCreateCase", "false");
+              }
+            }
+          } catch(Exception error) {
+            error.printStackTrace();
+          }
+         }
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-    .to("kafka:{{kafka.topic.reports.name}}")
+
+    .choice()
+      .when(simple("${exchangeProperty.allowCreateCase} == 'true'"))
+        .setBody(simple("${exchangeProperty.courtcase_data}"))
+        .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
+        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-dems-adapter/createCourtCase")
+        .log(LoggingLevel.DEBUG,"Update court case auth list.")
+        .to("direct:processCourtCaseAuthListChanged")
+        .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
+        // create Report Event for static type reports.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+            String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
+            StringBuilder reportTypesSb = new StringBuilder("");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+
+            ReportEvent re = new ReportEvent();
+            re.setJustin_rcc_id(rcc_id);
+            re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+            re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+            re.setReport_type(reportTypesSb.toString());
+            exchange.getMessage().setBody(re, ReportEvent.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .to("kafka:{{kafka.topic.reports.name}}")
+      .endChoice()
+    .otherwise()
+      .log(LoggingLevel.WARN, "Skipping creation of DEMS Case: ${header.event_key}")
+    .end();
     ;
   }
 
@@ -456,6 +502,8 @@ public class CcmNotificationService extends RouteBuilder {
       .jsonpath("$.event_status")
     .setHeader("event_message_id")
       .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
     .setHeader("event")
       .simple("${body}")
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
