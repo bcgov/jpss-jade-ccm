@@ -3,6 +3,7 @@
 | Key | Description | Type | 
 | - | - | - |
 | dems-case-auto-creation | DEMS case auto creation flag | true / false |
+| dems-case-auto-creation-submit-date-cutoff | Earliest RCC Submit date to allow auto creation | YYYY-MM-DD |
 | dems-case-template-id | DEMS case template id | numeric |
 | dems-host-url | DEMS URI | Host URI (without HTTP prefix) |
 | dems-org-unit-id | DEMS case organization unit id | numeric |
