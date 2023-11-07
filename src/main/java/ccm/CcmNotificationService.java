@@ -49,6 +49,7 @@ import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
@@ -83,6 +84,8 @@ public class CcmNotificationService extends RouteBuilder {
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
     publishBodyAsEventKPI();
+    processParticipantMerge();
+    processParticipantMergeEvents();
   }
 
   private void attachExceptionHandlers() {
@@ -340,6 +343,50 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
+  private void processParticipantMergeEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.participant.name}}?groupId=ccm-notification-service")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.participant.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(ParticipantMergeEvent.STATUS.PART_MERGE))
+        .setProperty("kpi_component_route_name", simple("processParticipantMerge"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processParticipantMerge")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
   private void processChargeAssessmentCreated() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -577,6 +624,84 @@ public class CcmNotificationService extends RouteBuilder {
     ;
     //throw new HttpOperationFailedException("testingCCMNotificationService",404,"Exception raised","CCMNotificationService",null, routeId);
   }
+//as part of jade 1750
+  private void processParticipantMerge() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO," event_key = ${header[event_key]}")
+    //.setHeader("number", simple("${header[event_key]}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) throws HttpOperationFailedException {
+        // KPI: Preserve original event properties
+        ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
+       
+        ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
+        
+        //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
+        //log.info("toPartId : "+ original_event.getJustin_to_part_id());
+        String fromPartId = original_event.getJustin_from_part_id();
+        String toPartId = original_event.getJustin_to_part_id();
+
+        ex.setProperty("fromPartId", fromPartId);
+        ex.setProperty("toPartId", toPartId);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+    .log(LoggingLevel.INFO,"Generating derived event: ${body}")
+    .log(LoggingLevel.DEBUG,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
+    //search if from part id exist in the dems system
+    .choice()
+      .when(simple(" ${exchangeProperty.fromPartId} != ''"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("key", simple("${exchangeProperty.fromPartId}"))
+      .to("http://ccm-dems-adapter/checkPersonExist")
+      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+      .unmarshal().json()
+      .setProperty("frompartId").simple("${body[id]}")
+      .endChoice()
+    .end()
+    //search if to part id exist in the dems system
+    .choice()
+      .when(simple(" ${exchangeProperty.toPartId} != ''"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("key", simple("${exchangeProperty.toPartId}"))
+      .to("http://ccm-dems-adapter/checkPersonExist")
+      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+      .unmarshal().json()
+      .setProperty("topartId").simple("${body[id]}")
+      .endChoice()
+    .end()
+    //.log(LoggingLevel.INFO,"from part id :${exchangeProperty.frompartId} & to part id:${exchangeProperty.topartId}")
+    //if both exist calling the merge api
+    .choice()
+        .when(simple("${exchangeProperty.frompartId} != '' && ${exchangeProperty.topartId} != ''"))
+          .setHeader("fromPartid", simple("${exchangeProperty.frompartId}"))
+          .setHeader("toPartid", simple("${exchangeProperty.topartId}"))
+          .to("http://ccm-dems-adapter/reassignParticipantCases")
+          .log(LoggingLevel.INFO,"Received response: '${body}'")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"Participant not found")
+        .endChoice()
+      .end()
+      .log(LoggingLevel.INFO, "end of processParticipantMerge.")
+    .end()
+    ;
+  }
+
 
   private void processManualChargeAssessmentChanged() {
     // use method name as route id

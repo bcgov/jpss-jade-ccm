@@ -4,17 +4,19 @@ import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
 
-public class ChargeAssessmentEvent extends BaseEvent {
+public class ParticipantMergeEvent extends BaseEvent {
   private int justin_event_message_id;
   private String justin_message_event_type_cd;
   private String justin_event_dtm;
-  private String justin_fetched_date;
+  private String justin_from_part_id;
   private String justin_guid;
-  private String justin_rcc_id;
+  private String justin_to_part_id;
+  private String justin_fetched_date;
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
-  public static final String JUSTIN_RCC_ID = "RCC_ID";
+  public static final String JUSTIN_FROM_PART_ID = "FROM_PART_ID";  
+  public static final String JUSTIN_TO_PART_ID = "TO_PART_ID";
 
   public enum SOURCE {
     JUSTIN,
@@ -22,18 +24,14 @@ public class ChargeAssessmentEvent extends BaseEvent {
   }
   
   public enum STATUS {
-    CHANGED,
-    CREATED,
-    UPDATED,
-    MANUALLY_CHANGED,
-    AUTH_LIST_CHANGED;
+    PART_MERGE;
   }
 
-  public ChargeAssessmentEvent() {
+  public ParticipantMergeEvent() {
     super();
   }
 
-  public ChargeAssessmentEvent(JustinEvent je) {
+  public ParticipantMergeEvent(JustinEvent je) {
     this();
 
     setEvent_source(SOURCE.JUSTIN.toString());
@@ -43,15 +41,8 @@ public class ChargeAssessmentEvent extends BaseEvent {
     setJustin_event_dtm(je.getEvent_dtm());
 
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
-      case AGEN_FILE:
-        setEvent_status(STATUS.CHANGED.toString());
-        break;
-      case MANU_FILE:
-        setEvent_status(STATUS.MANUALLY_CHANGED.toString());
-        break;
-      case AUTH_LIST:
-      case USER_PROV:
-        setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
+      case PART_MERGE:
+        setEvent_status(STATUS.PART_MERGE.toString());
         break;
       default:
         // unknown status
@@ -70,15 +61,19 @@ public class ChargeAssessmentEvent extends BaseEvent {
         case JUSTIN_GUID:
           setJustin_guid(jed.getData_value_txt());
           break;
-        case JUSTIN_RCC_ID:
-          setJustin_rcc_id(jed.getData_value_txt());
+        case JUSTIN_FROM_PART_ID:
+          setJustin_from_part_id(jed.getData_value_txt());
+          break;
+        case JUSTIN_TO_PART_ID:
+          setJustin_to_part_id(jed.getData_value_txt());
           break;
       }
     }
-      setEvent_key(getJustin_rcc_id());
+
+    setEvent_key(getJustin_from_part_id().concat(",").concat(getJustin_to_part_id()));
   }
 
-  public ChargeAssessmentEvent(SOURCE source, ChargeAssessmentEvent another) {
+  public ParticipantMergeEvent(SOURCE source, ParticipantMergeEvent another) {
     super(source.name(), another);
 
     this.justin_event_message_id = another.justin_event_message_id;
@@ -86,17 +81,8 @@ public class ChargeAssessmentEvent extends BaseEvent {
     this.justin_event_dtm = another.justin_event_dtm;
     this.justin_fetched_date = another.justin_fetched_date;
     this.justin_guid = another.justin_guid;
-    this.justin_rcc_id = another.justin_rcc_id;
-  }
-
-  public ChargeAssessmentEvent(SOURCE source, CaseUserEvent another) {
-    super(source.name(), another);
-
-    this.justin_event_message_id = another.getJustin_event_message_id();
-    this.justin_message_event_type_cd = another.getJustin_message_event_type_cd();
-    this.justin_event_dtm = another.getJustin_event_dtm();
-    this.justin_fetched_date = another.getJustin_fetched_date();
-    this.justin_guid = another.getJustin_guid();
+    this.justin_from_part_id = another.justin_from_part_id;
+    this.justin_to_part_id = another.justin_to_part_id;
   }
 
   public int getJustin_event_message_id() {
@@ -139,11 +125,19 @@ public class ChargeAssessmentEvent extends BaseEvent {
     this.justin_guid = justin_guid;
   }
 
-  public String getJustin_rcc_id() {
-    return justin_rcc_id;
+  public String getJustin_from_part_id() {
+    return justin_from_part_id;
   }
 
-  public void setJustin_rcc_id(String justin_rcc_id) {
-    this.justin_rcc_id = justin_rcc_id;
+  public void setJustin_from_part_id(String justin_from_part_id) {
+    this.justin_from_part_id = justin_from_part_id;
+  }
+
+  public String getJustin_to_part_id() {
+    return justin_to_part_id;
+  }
+
+  public void setJustin_to_part_id(String justin_to_part_id) {
+    this.justin_to_part_id = justin_to_part_id;
   }
 }
