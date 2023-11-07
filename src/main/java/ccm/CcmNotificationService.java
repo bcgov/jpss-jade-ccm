@@ -375,6 +375,7 @@ public class CcmNotificationService extends RouteBuilder {
             Integer autoCreateMaxDays = (Integer)ex.getProperty("autoCreateMaxDays", Integer.class);
             if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
               ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
+              log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
               // If no submit date, then don't create!
               ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
               ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
