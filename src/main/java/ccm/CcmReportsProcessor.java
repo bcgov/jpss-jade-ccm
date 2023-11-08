@@ -23,10 +23,12 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
 
 import org.apache.camel.builder.RouteBuilder;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.model.dataformat.JsonLibrary;
+
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ReportEvent;
@@ -35,6 +37,8 @@ import ccm.models.system.justin.JustinDocumentKeyList;
 
 
 public class CcmReportsProcessor extends RouteBuilder {
+
+  private static int POOL_SIZE = 3;
 
     @Override
     public void configure() throws Exception {
@@ -47,8 +51,9 @@ public class CcmReportsProcessor extends RouteBuilder {
         // use method name as route id
         String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     
-        from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=30&maxPollIntervalMs=600000")
+        from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-reports-processor&maxPollRecords=30&maxPollIntervalMs=600000&")
         .routeId(routeId)
+        .threads(POOL_SIZE)
         .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
           "    on the topic ${headers[kafka.TOPIC]}\n" +
           "    on the partition ${headers[kafka.PARTITION]}\n" +
@@ -111,6 +116,7 @@ public class CcmReportsProcessor extends RouteBuilder {
           .end();
         ;
       }
+      
 
       private void processUnknownStatus() {
         // use method name as route id
