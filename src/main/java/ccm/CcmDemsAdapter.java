@@ -142,7 +142,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseListHyperlink();
     reassignParticipantCases();
     checkPersonExist();
-    processDocumentRecordHttp(); // http version
+    // http version
+    checkIncrementRecordDocIdHttp();
+    changeDocumentRecordHttp();
+    getCourtCaseStatusByKeyHttp();
+    getCaseRecordImageExistsByKeyHttp();
+    createDocumentRecordHttp();
   }
 
 
@@ -569,18 +574,7 @@ public class CcmDemsAdapter extends RouteBuilder {
   //   ;
   // }
 
-  private void processDocumentRecordHttp() throws HttpOperationFailedException{
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    // need to look-up rcc_id if it exists in the body.
-    .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
-    .setProperty("justin_request").body()
-    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-    .to("direct:processDocumentRecord").threads(3);
-  }
+  
   private void processDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1033,6 +1027,8 @@ public class CcmDemsAdapter extends RouteBuilder {
    ;
   }
 
+  
+  
   private void checkIncrementRecordDocId() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1104,6 +1100,77 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void checkIncrementRecordDocIdHttp() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // header: number
+    // header: documentId
+    // property: maxRecordIncrements
+    // property: drd (DemsRecordData object)
+    // OUT
+    // property: dems_record
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.INFO,"documentId = ${header[documentId]}")
+    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // Just in case, if ${exchangeProperty.maxRecordIncrements} is not provided, default to 10
+    .choice()
+      .when(simple("${exchangeProperty.maxRecordIncrements} == null"))
+        .setProperty("maxRecordIncrements").simple("10")
+    .end()
+    .log(LoggingLevel.INFO,"maxRecordIncrements = ${exchangeProperty.maxRecordIncrements}")
+
+    // do a loop and keep looping until the recordId is null or blank.
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("direct:getCaseDocIdExistsByKey")
+    .log(LoggingLevel.INFO, "returned key: ${body}")
+    .unmarshal().json()
+    .setProperty("recordId").simple("${body[id]}")
+    .setProperty("incrementCount").simple("0")
+    .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+    // limit the number of times incremented to 10.
+    .loopDoWhile(simple("${exchangeProperty.recordId} != '' && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}")) // if the recordId value is not empty
+
+      .log(LoggingLevel.INFO, "*** Incrementing document id, due to collision.")
+      // increment the documentId.
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          // check to see if the record with the doc id exists, if so, increment the document id
+          DemsRecordData demsRecord = (DemsRecordData)ex.getProperty("drd", DemsRecordData.class);
+          log.info("Processing increment count of: "+demsRecord.getIncrementalDocCount());
+          demsRecord.incrementDocumentId();
+
+          ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+          Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+          incrementCount++;
+          ex.setProperty("incrementCount", incrementCount);
+          ex.setProperty("drd", demsRecord);
+          ex.getMessage().setBody(demsRecord);
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+      .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+
+      .log(LoggingLevel.INFO, "New document id: '${header[documentId]}'")
+      // now check this next value to see if there is a collision of this document
+      .to("direct:getCaseDocIdExistsByKey")
+      .unmarshal().json()
+      .setProperty("recordId").simple("${body[id]}")
+      .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+    .end() // end loop
+
+
+    .log(LoggingLevel.INFO, "end of incrementRecordDuplicateDocIdHttp")
+    ;
+  }
+
   private void changeDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1159,11 +1226,67 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+ 
+
+  private void changeDocumentRecordHttp() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // header: number
+    // header: reportType
+    // header: reportTitle
+    // header: documentId
+    // property: dems_record
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    // need to look-up rcc_id if it exists in the body.
+    .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
+    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+
+    // look for current status of the dems case.
+    .to("direct:getCourtCaseStatusByKey")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
+    .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+    .setProperty("agencyRccId").simple("${body[agencyFileId]}")
+    .choice()
+      .when(simple("${exchangeProperty.caseRccId} != ''"))
+        .setHeader("number", simple("${exchangeProperty.caseRccId}"))
+      .endChoice()
+    .end()
+
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("direct:getCaseRecordExistsByKey")
+    .unmarshal().json()
+    .setProperty("recordId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+    .choice()
+      .when(simple("${exchangeProperty.recordId} != ''"))
+        //.log(LoggingLevel.INFO, "Commented-out 5.5.2 and 5.5.3 value")
+        .to("direct:updateDocumentRecord")
+      .endChoice()
+      .otherwise()
+        // BCPSDEMS-1190 - If there is a doc id collision, increment.
+        .setProperty("maxRecordIncrements").simple("500")
+        .to("direct:checkIncrementRecordDocId")
+        // set back body to dems record
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+        .to("direct:createDocumentRecord")
+      .endChoice()
+    .end()
+
+    .log(LoggingLevel.INFO, "end of changeDocumentRecord")
+    ;
+  }
   private void createDocumentRecordHttp() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("platform-http:" + routeId)
+    from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
@@ -1286,6 +1409,23 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
+  private void getCourtCaseStatusByKeyHttp() throws HttpOperationFailedException{
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    //IN: header.number
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header.number}"))
+    .log(LoggingLevel.INFO,"Case status exists key = ${exchangeProperty.key}")
+
+    .to("direct:getCourtCaseIdByKey")
+    .setProperty("id", jsonpath("$.id"))
+
+    .to("direct:getCourtCaseStatusById")
+  ;
+  }
 
   private void updateDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
@@ -3089,6 +3229,28 @@ public class CcmDemsAdapter extends RouteBuilder {
     //IN: header.documentId
 
     from("direct:" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .setProperty("key", simple("${header.number}"))
+      .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+      .to("direct:getCourtCaseIdByKey")
+      .setProperty("courtCaseId", jsonpath("$.id"))
+      .choice()
+        .when(simple("${exchangeProperty.courtCaseId} != ''"))
+          .to("direct:getCaseRecordIdByDescriptionImageId")
+        .endChoice()
+      .end()
+    ;
+  }
+
+   private void getCaseRecordImageExistsByKeyHttp() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+    //IN: header.documentId
+
+    from("platform-http:/" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.number}"))
