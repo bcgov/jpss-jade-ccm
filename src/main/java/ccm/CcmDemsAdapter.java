@@ -1557,12 +1557,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
     .doTry()
-    
+
       .setProperty("maxRecordIncrements").simple("25")
       .setProperty("incrementCount").simple("0")
-      .setProperty("edtCaseStatus").simple("")
+      .setProperty("continueLoop").simple("true")
       // limit the number of times incremented to 10.
-      .loopDoWhile(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.id} != '' && ${exchangeProperty.id} != null && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}"))
+      .loopDoWhile(simple("${exchangeProperty.continueLoop} == 'true' && ${exchangeProperty.id} != '' && ${exchangeProperty.id} != null && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}"))
 
         .removeHeader("CamelHttpUri")
         .removeHeader("CamelHttpBaseUri")
@@ -1591,7 +1591,20 @@ public class CcmDemsAdapter extends RouteBuilder {
               }
             })
           .endChoice()
+          .otherwise()
+            .setProperty("continueLoop").simple("false")
+          .endChoice()
         .end()
+        // increment the documentId.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+            incrementCount++;
+            ex.setProperty("incrementCount", incrementCount);
+          }
+        })
+
       .end() // end loop
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
