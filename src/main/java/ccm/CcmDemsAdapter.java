@@ -1558,7 +1558,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
     .doTry()
     
-      .setProperty("maxRecordIncrements").simple("10")
+      .setProperty("maxRecordIncrements").simple("25")
       .setProperty("incrementCount").simple("0")
       .setProperty("edtCaseStatus").simple("")
       // limit the number of times incremented to 10.
@@ -1578,8 +1578,9 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
         .choice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active'"))
-            .log(LoggingLevel.INFO, "Case not active yet, wait...")
-            .delay(25000)
+            .log(LoggingLevel.DEBUG,"${body}")
+            .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds...")
+            .delay(10000)
             // increment the documentId.
             .process(new Processor() {
               @Override
@@ -1840,6 +1841,8 @@ public class CcmDemsAdapter extends RouteBuilder {
       //.toD("http://httpstat.us:443/504")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
+      .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
+      .to("direct:getCourtCaseDataById")
 
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
