@@ -1577,7 +1577,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setProperty("edtCaseStatus",jsonpath("$.status"))
         .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
         .choice()
-          .when(simple("${exchangeProperty.edtCaseStatus} != 'Active'"))
+          .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
             .log(LoggingLevel.DEBUG,"${body}")
             .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds...")
             .delay(10000)
