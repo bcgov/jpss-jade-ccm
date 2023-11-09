@@ -506,7 +506,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=5&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=3&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -1568,7 +1568,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
-      // sometimes, if events come in a little too fast for the same case, it may caus an error
+      // sometimes, if events come in a little too fast for the same case, it may cause an error
       // wait 25 seconds then try again.
       .process(new Processor() {
         @Override
@@ -1580,7 +1580,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         }
       })
       .delay(25000)
-      .log(LoggingLevel.INFO,"Re-attempting to process request (id=${exchangeProperty.id})...")
+      .log(LoggingLevel.WARN,"Re-attempting to retrieve case data (id=${exchangeProperty.id})...")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
