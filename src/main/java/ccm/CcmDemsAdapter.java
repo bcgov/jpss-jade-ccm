@@ -1573,13 +1573,13 @@ public class CcmDemsAdapter extends RouteBuilder {
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
         .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/info/${exchangeProperty.id}")
         .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
-        
+
         .setProperty("edtCaseStatus",jsonpath("$.status"))
         .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
         .choice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
             .log(LoggingLevel.DEBUG,"${body}")
-            .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds...")
+            .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
             .delay(10000)
             // increment the documentId.
             .process(new Processor() {
