@@ -1581,21 +1581,13 @@ public class CcmDemsAdapter extends RouteBuilder {
             .log(LoggingLevel.DEBUG,"${body}")
             .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
             .delay(10000)
-            // increment the documentId.
-            .process(new Processor() {
-              @Override
-              public void process(Exchange ex) {
-                Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
-                incrementCount++;
-                ex.setProperty("incrementCount", incrementCount);
-              }
-            })
+            .log(LoggingLevel.INFO, "Retry case data retrieval...")
           .endChoice()
           .otherwise()
             .setProperty("continueLoop").simple("false")
           .endChoice()
         .end()
-        // increment the documentId.
+        // increment the loop count.
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
@@ -2035,6 +2027,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         }
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
+        d.setWaitForCaseCompletion(false);
         exchange.getMessage().setBody(d);
       }
     })
