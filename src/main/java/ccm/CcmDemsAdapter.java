@@ -1575,8 +1575,10 @@ public class CcmDemsAdapter extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
         
         .setProperty("edtCaseStatus",jsonpath("$.status"))
+        .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
         .choice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active'"))
+            .log(LoggingLevel.INFO, "Case not active yet, wait...")
             .delay(25000)
             // increment the documentId.
             .process(new Processor() {
@@ -1589,7 +1591,6 @@ public class CcmDemsAdapter extends RouteBuilder {
             })
           .endChoice()
         .end()
-        .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
       .end() // end loop
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
