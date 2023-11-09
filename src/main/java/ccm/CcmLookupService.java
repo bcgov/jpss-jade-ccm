@@ -18,7 +18,6 @@ import java.net.SocketTimeoutException;
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
 
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,7 +63,7 @@ public class CcmLookupService extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(5).redeliveryDelay(10000)
+      .maximumRedeliveries(5).redeliveryDelay(20000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
@@ -524,7 +523,7 @@ public class CcmLookupService extends RouteBuilder {
    .removeHeader("CamelHttpUri")
    .removeHeader("CamelHttpBaseUri")
    .removeHeaders("CamelHttp*")
-   .log(LoggingLevel.INFO,"Processing getCaseListHyperlink request... key = ${body}")
+   .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${body}")
    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
    .setProperty("body_request", body())
    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))

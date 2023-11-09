@@ -1,0 +1,44 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+id="$2"
+
+idEnd="$3"
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: '$1'"
+   echo "$0 env justin_event_id"
+   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
+   echo "E.g., $0 dev 100"
+   echo "      $0 dev 100 105\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to requque events in PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        return 1
+    fi
+fi
+
+echo "`basename $0` to $ns ..."
+
+if [ "$idEnd" = "" ]; then
+    oc -n $ns exec service/ccm-dems-adapter -- curl \
+    -X PUT \
+    "http://ccm-dems-adapter/createEdtExternalIdExistingParticipant"
+else
+fi
