@@ -1581,6 +1581,10 @@ public class CcmDemsAdapter extends RouteBuilder {
             .log(LoggingLevel.WARN, "The case is removed in EDT, clear-out the returned body.")
             .setBody(simple(""))
             .setProperty("continueLoop").simple("false")
+
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("404"))
+            .setHeader("CCMException", simple("{\"error\": \"Record is deleted in EDT.\"}"))
+            .stop()
           .endChoice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
             .log(LoggingLevel.DEBUG,"${body}")
@@ -2880,6 +2884,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .removeHeader("CamelHttpUri")
         .removeHeader("CamelHttpBaseUri")
         .removeHeaders("CamelHttp*")
+        .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
