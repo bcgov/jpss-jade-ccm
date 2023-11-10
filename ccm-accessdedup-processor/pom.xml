@@ -5,13 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>jpss.jade.ccm</groupId>
-    <artifactId>accessdedup-transformer</artifactId>
+    <artifactId>accessdedup-processor</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
         <quarkus.version>2.3.1.Final</quarkus.version>
         <kafka.version>2.8.1</kafka.version>
-        <junit.version>4.13.2</junit.version>
+        <junit.version>5.10.1</junit.version>
+        <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
+        <mockito.version>3.9.0</mockito.version>
         <glassfish.javax.json.version>1.1.4</glassfish.javax.json.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
@@ -27,6 +29,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>${junit.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -57,12 +66,19 @@
             <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- JUnit 5 -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
         
-        <!-- JUnit -->
+        <!-- Mockito -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version> <!-- Use the version that is compatible with your project -->
             <scope>test</scope>
         </dependency>
 
@@ -70,7 +86,7 @@
         <dependency>
             <groupId>org.eclipse.microprofile.config</groupId>
             <artifactId>microprofile-config-api</artifactId>
-        </dependency>
+        </dependency>  
 
         <!-- Glassfish JSON -->
         <dependency>
@@ -109,14 +125,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.2</version> <!-- or a newer version -->
-                <dependencies>
-                    <dependency>
-                        <groupId>org.junit.jupiter</groupId>
-                        <artifactId>junit-jupiter-engine</artifactId>
-                        <version>5.6.0</version> <!-- or the version you are using -->
-                    </dependency>
-                </dependencies>
+                <version>${surefire-plugin.version}</version>
             </plugin>
         </plugins>
     </build>

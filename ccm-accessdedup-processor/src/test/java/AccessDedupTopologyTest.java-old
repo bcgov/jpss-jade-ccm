@@ -1,5 +1,3 @@
-package jpss.jade.ccm;
-
 import java.util.Properties;
 
 import org.apache.kafka.common.serialization.Serdes;
@@ -17,7 +15,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import jpss.jade.ccm.CaseAccessSyncTransformer;
+import javax.inject.Inject;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -60,6 +60,8 @@ public class AccessDedupTopologyTest {
 
     @BeforeEach
     public void setUp() {
+        System.out.println("quarkusKafkaStreamsAppName: " + quarkusKafkaStreamsAppName);
+
         Topology topology = new Topology();
 
         topology.addSource("source", bulkCaseUsersTopicName)
