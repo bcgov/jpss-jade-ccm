@@ -2027,7 +2027,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         }
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
-        d.setWaitForCaseCompletion(false);
+        d.setWaitForCaseCompletion(true);
         exchange.getMessage().setBody(d);
       }
     })
