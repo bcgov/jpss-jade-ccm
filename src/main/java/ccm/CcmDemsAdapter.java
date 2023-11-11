@@ -1558,15 +1558,56 @@ public class CcmDemsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Processing request (id=${exchangeProperty.id})...")
     .doTry()
-      .removeHeader("CamelHttpUri")
-      .removeHeader("CamelHttpBaseUri")
-      .removeHeaders("CamelHttp*")
-      .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.id}")
-      .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
+
+      .setProperty("maxRecordIncrements").simple("25")
+      .setProperty("incrementCount").simple("0")
+      .setProperty("continueLoop").simple("true")
+      // limit the number of times incremented to 10.
+      .loopDoWhile(simple("${exchangeProperty.continueLoop} == 'true' && ${exchangeProperty.id} != '' && ${exchangeProperty.id} != null && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}"))
+
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/info/${exchangeProperty.id}")
+        .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
+
+        .setProperty("edtCaseStatus",jsonpath("$.status"))
+        .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
+        .choice()
+          .when(simple("${exchangeProperty.edtCaseStatus} == 'Removed'"))
+            .log(LoggingLevel.WARN, "The case is removed in EDT, clear-out the returned body.")
+            .setBody(simple(""))
+            .setProperty("continueLoop").simple("false")
+
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("404"))
+            .setHeader("CCMException", simple("{\"error\": \"Record is deleted in EDT.\"}"))
+            .stop()
+          .endChoice()
+          .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
+            .log(LoggingLevel.DEBUG,"${body}")
+            .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
+            .delay(10000)
+            .log(LoggingLevel.INFO, "Retry case data retrieval...")
+          .endChoice()
+          .otherwise()
+            .setProperty("continueLoop").simple("false")
+          .endChoice()
+        .end()
+        // increment the loop count.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+            incrementCount++;
+            ex.setProperty("incrementCount", incrementCount);
+          }
+        })
+
+      .end() // end loop
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       // sometimes, if events come in a little too fast for the same case, it may cause an error
@@ -1815,6 +1856,8 @@ public class CcmDemsAdapter extends RouteBuilder {
       //.toD("http://httpstat.us:443/504")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
+      .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
+      .to("direct:getCourtCaseDataById")
 
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
@@ -1876,7 +1919,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .when().simple("${exception.statusCode} >= 504")
           .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
-          .delay(15000)
+          .delay(30000)
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setProperty("key", simple("${header.number}"))
@@ -1994,6 +2037,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         }
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
+        d.setWaitForCaseCompletion(true);
         exchange.getMessage().setBody(d);
       }
     })
@@ -2841,6 +2885,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .removeHeader("CamelHttpUri")
         .removeHeader("CamelHttpBaseUri")
         .removeHeaders("CamelHttp*")
+        .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
