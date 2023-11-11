@@ -140,7 +140,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     processUnknownStatus();
     publishEventKPI();
     deleteJustinRecords();
-    inactivateCase();
+    //inactivateCase();
     getCaseListHyperlink();
     reassignParticipantCases();
     checkPersonExist();
@@ -3620,7 +3620,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
-  private void inactivateCase() {
+  /*private void inactivateCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -3686,7 +3686,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .end()
    .end();
-  }
+  }*/
 
   private void publishEventKPI() {
     // use method name as route id
