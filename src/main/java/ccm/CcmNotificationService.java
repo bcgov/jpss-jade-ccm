@@ -573,6 +573,9 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
         .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
       .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Case does not exist in DEMS, skipped.")
+      .endChoice()
     .end()
     ;
     //throw new HttpOperationFailedException("testingCCMNotificationService",404,"Exception raised","CCMNotificationService",null, routeId);
