@@ -140,7 +140,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     processUnknownStatus();
     publishEventKPI();
     deleteJustinRecords();
-    //inactivateCase();
+    inactivateCase();
     getCaseListHyperlink();
     reassignParticipantCases();
     checkPersonExist();
@@ -3620,7 +3620,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     ;
   }
 
-  /*private void inactivateCase() {
+  private void inactivateCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -3632,11 +3632,11 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     .setProperty("dems_case_id", simple("${header.case_id}"))
 
-    .toD("direct:deleteJustinRecords")
-    .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+    //.toD("direct:deleteJustinRecords")
+    //.log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
     .doTry()
       .choice()
-        .when(simple("${header.CamelHttpResponseCode} >= 200 && ${header.CamelHttpResponseCode} < 300"))
+        .when(simple("${header[case_id]} != ''"))
           .log(LoggingLevel.INFO, "Inactivate case")
           // inactivate the case.
           .setProperty("id", simple("${header.case_id}"))
@@ -3686,7 +3686,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .end()
    .end();
-  }*/
+  }
 
   private void publishEventKPI() {
     // use method name as route id
