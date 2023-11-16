@@ -3832,11 +3832,11 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     .setProperty("dems_case_id", simple("${header.case_id}"))
 
-    .toD("direct:deleteJustinRecords")
-    .log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+    //.toD("direct:deleteJustinRecords")
+    //.log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
     .doTry()
       .choice()
-        .when(simple("${header.CamelHttpResponseCode} >= 200 && ${header.CamelHttpResponseCode} < 300"))
+        .when(simple("${header[case_id]} != ''"))
           .log(LoggingLevel.INFO, "Inactivate case")
           // inactivate the case.
           .setProperty("id", simple("${header.case_id}"))
