@@ -424,7 +424,7 @@ public class CcmJustinAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        
+
         Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
         Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
         ServiceHelper.startService(mainTimer.getConsumer());
@@ -692,9 +692,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.INFO_DOCM))
           .to("direct:processReportEvents")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.PART_MERGE))
-          .to("direct:processPartMergeEvents")
-          .endChoice()
+        //.when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.PART_MERGE))
+        //  .to("direct:processPartMergeEvents")
+        //  .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
