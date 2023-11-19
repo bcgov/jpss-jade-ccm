@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 import ccm.models.common.versioning.Version;
 import io.vertx.core.json.JsonObject;
 
-public class KpiStartProcessor extends AbstractProcessor<String, String> {
+public class CaseUserEventKpiStartProcessor extends AbstractProcessor<String, String> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(KpiStartProcessor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CaseUserEventKpiStartProcessor.class);
 
     private KeyValueStore<String, String> kpiStore;
 

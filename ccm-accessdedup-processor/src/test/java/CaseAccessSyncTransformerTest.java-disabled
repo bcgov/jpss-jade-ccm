@@ -38,7 +38,7 @@ public class CaseAccessSyncTransformerTest {
         transformer.init(context);
     }
 
-    //@Test
+    @Test
     public void testTransformEndOfBatch() {
         when(accessdedupStore.all()).thenReturn(iterator);
         when(iterator.hasNext()).thenReturn(true, false); // simulate one entry in the store
@@ -52,7 +52,7 @@ public class CaseAccessSyncTransformerTest {
         verify(accessdedupStore, times(1)).delete(eq("existing_key")); // Deleted once
     }
 
-    //@Test
+    @Test
     public void testTransformWithExistingKey() {
         String existingKey = "existing_key";
         String existingValue = "existing_value";
@@ -77,5 +77,14 @@ public class CaseAccessSyncTransformerTest {
 
         // Assert
         verify(accessdedupStore, times(1)).put(eq(newKey), eq(newValue)); // The store should be updated
+    }
+
+    @Test
+    public void testHello() {
+        String hello = "hell";
+
+        hello = hello + "o";
+
+        verify(hello.equals("hello"));
     }
 }

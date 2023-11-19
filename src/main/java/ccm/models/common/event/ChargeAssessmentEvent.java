@@ -3,6 +3,7 @@ package ccm.models.common.event;
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
+import ccm.utils.DateTimeUtils;
 
 public class ChargeAssessmentEvent extends BaseEvent {
   private int justin_event_message_id;
@@ -90,14 +91,18 @@ public class ChargeAssessmentEvent extends BaseEvent {
     this.justin_rcc_id = another.justin_rcc_id;
   }
 
-  public ChargeAssessmentEvent(SOURCE source, CaseUserEvent another) {
-    super(source.name(), another);
+  public ChargeAssessmentEvent(SOURCE source, CaseUserEvent caseUserEvent) {
+    super();
 
-    this.justin_event_message_id = another.getJustin_event_message_id();
-    this.justin_message_event_type_cd = another.getJustin_message_event_type_cd();
-    this.justin_event_dtm = another.getJustin_event_dtm();
-    this.justin_fetched_date = another.getJustin_fetched_date();
-    this.justin_guid = another.getJustin_guid();
+    this.setEvent_key(caseUserEvent.getJustin_rcc_id());
+    this.setEvent_source(source.name());
+    this.setEvent_status(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED.name());
+    this.setJustin_event_dtm(caseUserEvent.getJustin_event_dtm());
+    this.setJustin_event_message_id(caseUserEvent.getJustin_event_message_id());
+    this.setJustin_fetched_date(caseUserEvent.getJustin_fetched_date());
+    this.setJustin_guid(caseUserEvent.getJustin_guid());
+    this.setJustin_message_event_type_cd(caseUserEvent.getJustin_message_event_type_cd());
+    this.setJustin_rcc_id(caseUserEvent.getJustin_rcc_id());
   }
 
   public int getJustin_event_message_id() {

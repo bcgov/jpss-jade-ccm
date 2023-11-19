@@ -4,8 +4,11 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.kstream.Transformer;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 
@@ -15,8 +18,16 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ccm.models.common.versioning.Version;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.json.JsonObject;
+
+import ccm.models.common.versioning.Version;
+import ccm.models.common.event.CaseUserEvent;
+import ccm.models.common.event.ChargeAssessmentEvent;
+import ccm.models.common.event.EventKPI;
 
 public class CaseAccessSyncTransformer implements Transformer<String, String, KeyValue<String, String>> {
 
@@ -26,18 +37,27 @@ public class CaseAccessSyncTransformer implements Transformer<String, String, Ke
 
     private ProcessorContext context;
 
+    private String appId;
+    private String chargeAssessmentsTopicName;
+    private String chargeAssessmentErrorsTopicName;
+    private String bulkCaseUsersTopicName;
+    private String caseUserErrorsTopicName;
+    private String kpisTopicName;
+    private String kpiErrorsTopicName;
+    private String caseAccessSyncStoreName;
+
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         // Dependency injection doesn't work in Kafka Streams.  We have to use the ConfigProvider.
-        String appId = ConfigProvider.getConfig().getValue("quarkus.kafka-streams.application-id", String.class);
-        String chargeAssessmentsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessments.name", String.class);
-        String chargeAssessmentErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessment-errors.name", String.class);
-        String bulkCaseUsersTopicName = ConfigProvider.getConfig().getValue("ccm.topic.bulk-caseusers.name", String.class);
-        String caseUserErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.caseuser-errors.name", String.class);
-        String kpisTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpis.name", String.class);
-        String kpiErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpi-errors.name", String.class);
-        String caseAccessSyncStoreName = ConfigProvider.getConfig().getValue("ccm.store.caseaccesssync.name", String.class);
+        appId = ConfigProvider.getConfig().getValue("quarkus.kafka-streams.application-id", String.class);
+        chargeAssessmentsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessments.name", String.class);
+        chargeAssessmentErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessment-errors.name", String.class);
+        bulkCaseUsersTopicName = ConfigProvider.getConfig().getValue("ccm.topic.bulk-caseusers.name", String.class);
+        caseUserErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.caseuser-errors.name", String.class);
+        kpisTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpis.name", String.class);
+        kpiErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpi-errors.name", String.class);
+        caseAccessSyncStoreName = ConfigProvider.getConfig().getValue("ccm.store.caseaccesssync.name", String.class);
 
         LOG.info("caseAccessSyncStoreName: {}.", caseAccessSyncStoreName);
 
@@ -54,36 +74,59 @@ public class CaseAccessSyncTransformer implements Transformer<String, String, Ke
 
     @Override
     public KeyValue<String, String> transform(String key, String value) {
-        if (key == null || key.isEmpty() || key.equalsIgnoreCase("END_OF_BATCH")) {
-            // End of the batch is detected
-            LOG.info("End of the batch is detected.");
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            CaseUserEvent caseUserEvent = mapper
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue(value, CaseUserEvent.class);
 
-            accessdedupStore.all().forEachRemaining(keyValue -> {
-                LOG.info("Forwarding (Key,Value) = ({},{}).", keyValue.key, keyValue.value);
-                context.forward(keyValue.key, keyValue.value);
-            });
+            String rcc_id = caseUserEvent.getJustin_rcc_id();
 
-            accessdedupStore.all().forEachRemaining(keyValue -> {
-                LOG.info("Deleting (Key,Value) = ({},{}).", keyValue.key, keyValue.value);
-                accessdedupStore.delete(keyValue.key);
-            });
-            
-            return null;
-        }
+            if (key == null || key.isEmpty()) {
+                // End of the batch is detected
+                LOG.info("End of the event batch detected (event message key is empty).  Forwarding and clearing derived charge assessment events in {}...", caseAccessSyncStoreName);
 
-        // Only forward the message if the key is found in the deduplication store.
-        if (accessdedupStore.get(key) == null) {
-            try {
-                JsonObject json = new JsonObject(value);
-                String message = json.getString("message", "");
-                LOG.info("Storing message with key: {}; new key in the batch. Message = {}", key, message);
-                accessdedupStore.put(key, value);
-                //context().forward(key, value);
-            } catch (Exception e) {
-                LOG.error("Error processing message with key: {}.", key, e);
+                EventKPI eventKPI = new EventKPI(caseUserEvent, EventKPI.STATUS.EVENT_PROCESSING_STARTED);
+                eventKPI.setIntegration_component_name(appId);
+                eventKPI.setComponent_route_name(this.getClass().getSimpleName());
+                //this.context.forward(key, mapper.writeValueAsString(eventKPI), To.child(kpisTopicName)); 
+
+                AtomicLong event_count = new AtomicLong(0);
+
+                accessdedupStore.all().forEachRemaining(keyValue -> {
+                    event_count.incrementAndGet();
+                    LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
+                    //context.forward(keyValue.key, keyValue.value, To.child(chargeAssessmentsTopicName));
+                    context.forward(keyValue.key, keyValue.value);
+                });
+
+                accessdedupStore.all().forEachRemaining(keyValue -> {
+                    accessdedupStore.delete(keyValue.key);
+                });
+
+                LOG.info("Store cleared and {} event{} forwarded.", event_count.get(), event_count.get() == 1 ? "" : "s");
+                
+                return null;
             }
-        } else {
-            LOG.info("Skipping message with key: {}; key already found in the batch.", key);
+
+            // Only forward the message if the key is found in the deduplication store.
+            if (accessdedupStore.get(rcc_id) == null) {
+                    ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM,caseUserEvent);
+                    chargeAssessmentEvent.setEvent_key(rcc_id);
+
+                    String derivedEventValue = mapper.writeValueAsString(chargeAssessmentEvent);
+
+                    JsonObject json = new JsonObject(value);
+                    LOG.info("Storing the new charge assessment event {}, derived from case user event {}.", chargeAssessmentEvent.getEvent_key(), key);
+
+                    accessdedupStore.put(rcc_id, derivedEventValue);
+            } else {
+                LOG.info("Skipping case user event {}; the derived charge assessment event {} already exists in store.", key, rcc_id);
+            }
+        } catch (JsonProcessingException jpe) {
+            LOG.error("Error processing case user event message for {}. Error message: {}", key, jpe.getMessage());
+        } catch (Exception e) {
+            LOG.error("General error processing {}.  Error message: {}", key, e.getMessage());
         }
 
         return null;

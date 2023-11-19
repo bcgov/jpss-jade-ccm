@@ -35,7 +35,8 @@ public class CaseUserEvent extends BaseEvent {
   public enum STATUS {
     ACCOUNT_CREATED,
     ACCESS_ADDED,
-    ACCESS_REMOVED;
+    ACCESS_REMOVED,
+    EVENT_BATCH_ENDED;
   }
 
   public CaseUserEvent() {
@@ -201,5 +202,7 @@ public class CaseUserEvent extends BaseEvent {
     this.justin_record_num = justin_record_num;
   }
 
-
+  public boolean isEndOfBatch() {
+    return STATUS.EVENT_BATCH_ENDED.name().equalsIgnoreCase(this.getEvent_status());
+  }
 }

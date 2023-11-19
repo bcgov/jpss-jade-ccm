@@ -48,25 +48,17 @@ public class AccessDedupTopology {
     @ConfigProperty(name = "ccm.store.caseaccesssync.name")
     String caseAccessSyncStoreName;
 
-    private static final String CASEACCESSSYNC_TRANSFORMER_NAME = "caseaccesssync-transformer";
-
-    private static final String KPI_START_PROCESSOR_NAME = "kpi-start-processor";
-    private static final String KPI_STORE_NAME = "kpi-store";
-
     @Produces
     public Topology buildTopology() {
         // Log the applicaiton name.
         LOG.info("Quarkus Kafka Streams application name: {}.", quarkusKafkaStreamsAppName);
 
-        LOG.info("caseAccessSyncStoreName: {}.", caseAccessSyncStoreName);
+        LOG.info("CaseAccessSync store name: {}.", caseAccessSyncStoreName);
 
         // Create the topology.
         StreamsBuilder builder = new StreamsBuilder();
 
-
-        LOG.info("Creating key value store: {}.", caseAccessSyncStoreName);
-
-        // Define the kpi store.
+/*         // Define the kpi store.
         StoreBuilder<KeyValueStore<String, String>> kpiStoreBuilder = 
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(KPI_STORE_NAME),
@@ -75,33 +67,37 @@ public class AccessDedupTopology {
             );
 
         // Add the kpi state store to the topology.
-        builder.addStateStore(kpiStoreBuilder);
+        builder.addStateStore(kpiStoreBuilder); */
         
         // Define the deduplication store.
-        StoreBuilder<KeyValueStore<String, String>> dedupStoreBuilder = 
+        StoreBuilder<KeyValueStore<String, String>> caseAccessSyncStoreBuilder = 
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(caseAccessSyncStoreName),
                 org.apache.kafka.common.serialization.Serdes.String(),
                 org.apache.kafka.common.serialization.Serdes.String()
             );
-
-        LOG.info("Created key value store: {}.", dedupStoreBuilder.name());
         
         // Add the dedup state store to the topology.
-        builder.addStateStore(dedupStoreBuilder);
+        builder.addStateStore(caseAccessSyncStoreBuilder);
 
         // Define the source topic from which messages are consumed.
         KStream<String, String> sourceStream = builder.stream(bulkCaseUsersTopicName, Consumed.with(Serdes.String(), Serdes.String()));
 
-        // Process the messages using the AccessDedupProcessor.
-        sourceStream.process(KpiStartProcessor::new, Named.as(KPI_START_PROCESSOR_NAME), KPI_STORE_NAME);
-
         // Process the messages using the CaseAccessSyncTransformer.
-        KStream<String, String> transformedStream = sourceStream.transform(CaseAccessSyncTransformer::new, Named.as(CASEACCESSSYNC_TRANSFORMER_NAME), caseAccessSyncStoreName);
+        KStream<String, String> transformedStream = sourceStream.transform(CaseAccessSyncTransformer::new, Named.as(CaseAccessSyncTransformer.class.getSimpleName()), caseAccessSyncStoreName);
 
-        // Send deduplicated messages to another topic.
+        // Send consolidated event messsages to charge assessment topic.
         transformedStream.to(chargeAssessmentsTopicName, Produced.with(Serdes.String(), Serdes.String()));
 
-        return builder.build();
+        // Send kpi event messages to kpis topic.
+        //transformedStream.to(kpisTopicName, Produced.with(Serdes.String(), Serdes.String()));
+        //builder.addSink(kpisTopicName, kpisTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
+
+        Topology topology = builder.build();
+
+        //topology.addSink(chargeAssessmentsTopicName, chargeAssessmentsTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
+        //topology.addSink(kpisTopicName, kpisTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
+
+        return topology;
     }
 }
