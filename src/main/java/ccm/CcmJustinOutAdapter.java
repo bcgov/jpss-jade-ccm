@@ -32,8 +32,6 @@ import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.service.ServiceHelper;
-
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
@@ -69,14 +67,14 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     courtFileCreated();
     healthCheck();
     //readRCCFileSystem();
-    stopJustinEvents();
+    //stopJustinEvents();
     startJustinEvents();
     requeueJustinEvent();
     requeueJustinEventRange();
     //processJustinEventsMainTimer();
     //processJustinEventsBulkTimer();
-    processJustinMainEvents();
-    processJustinBulkEvents();
+    //processJustinMainEvents();
+    //processJustinBulkEvents();
 
     processAgenFileEvent();
     processAuthListEvent();
@@ -382,30 +380,30 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
   }
 
-  private void stopJustinEvents() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+  // private void stopJustinEvents() {
+  //   // use method name as route id
+  //   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
+  //   // IN: header = id
+  //   from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+  //   .routeId(routeId)
+  //   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  //   .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
+  //   .process(new Processor() {
+  //     @Override
+  //     public void process(Exchange exchange) throws Exception {
 
-        List<Route> routeList = exchange.getContext().getRoutes();
-        for (Route rte : routeList ) {
-          log.info("ROUTES: " + rte.getId());
-        }
-        //exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
-        //exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
-      }
-    })
-    .log(LoggingLevel.INFO,"Justin adapter queue stopped")
-    ;
-  }
+  //       List<Route> routeList = exchange.getContext().getRoutes();
+  //       for (Route rte : routeList ) {
+  //         log.info("ROUTES: " + rte.getId());
+  //       }
+  //       //exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+  //       //exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+  //     }
+  //   })
+  //   .log(LoggingLevel.INFO,"Justin adapter queue stopped")
+  //   ;
+  // }
 
   private void startJustinEvents() {
     // use method name as route id
