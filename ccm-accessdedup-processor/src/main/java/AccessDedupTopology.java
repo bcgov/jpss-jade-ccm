@@ -5,6 +5,7 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.processor.ProcessorSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.apache.kafka.streams.state.StoreBuilder;
@@ -50,53 +51,33 @@ public class AccessDedupTopology {
 
     @Produces
     public Topology buildTopology() {
-        // Log the applicaiton name.
         LOG.info("Quarkus Kafka Streams application name: {}.", quarkusKafkaStreamsAppName);
-
         LOG.info("CaseAccessSync store name: {}.", caseAccessSyncStoreName);
 
-        // Create the topology.
-        StreamsBuilder builder = new StreamsBuilder();
+        Topology topology = new Topology();
 
-/*         // Define the kpi store.
-        StoreBuilder<KeyValueStore<String, String>> kpiStoreBuilder = 
-            Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore(KPI_STORE_NAME),
-                org.apache.kafka.common.serialization.Serdes.String(),
-                org.apache.kafka.common.serialization.Serdes.String()
-            );
+        // Define the source processor
+        topology.addSource("Source", Serdes.String().deserializer(), Serdes.String().deserializer(), bulkCaseUsersTopicName);
 
-        // Add the kpi state store to the topology.
-        builder.addStateStore(kpiStoreBuilder); */
-        
-        // Define the deduplication store.
-        StoreBuilder<KeyValueStore<String, String>> caseAccessSyncStoreBuilder = 
+        // Add custom processor
+        topology.addProcessor("Processor", CaseAccessSyncProcessor::new, "Source");
+
+        // Define the state store
+        StoreBuilder<KeyValueStore<String, String>> caseAccessSyncStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(caseAccessSyncStoreName),
-                org.apache.kafka.common.serialization.Serdes.String(),
-                org.apache.kafka.common.serialization.Serdes.String()
+                Serdes.String(),
+                Serdes.String()
             );
-        
-        // Add the dedup state store to the topology.
-        builder.addStateStore(caseAccessSyncStoreBuilder);
+        topology.addStateStore(caseAccessSyncStoreBuilder, "Processor");
 
-        // Define the source topic from which messages are consumed.
-        KStream<String, String> sourceStream = builder.stream(bulkCaseUsersTopicName, Consumed.with(Serdes.String(), Serdes.String()));
-
-        // Process the messages using the CaseAccessSyncTransformer.
-        KStream<String, String> transformedStream = sourceStream.transform(CaseAccessSyncTransformer::new, Named.as(CaseAccessSyncTransformer.class.getSimpleName()), caseAccessSyncStoreName);
-
-        // Send consolidated event messsages to charge assessment topic.
-        transformedStream.to(chargeAssessmentsTopicName, Produced.with(Serdes.String(), Serdes.String()));
-
-        // Send kpi event messages to kpis topic.
-        //transformedStream.to(kpisTopicName, Produced.with(Serdes.String(), Serdes.String()));
-        //builder.addSink(kpisTopicName, kpisTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
-
-        Topology topology = builder.build();
-
-        //topology.addSink(chargeAssessmentsTopicName, chargeAssessmentsTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
-        //topology.addSink(kpisTopicName, kpisTopicName, Serdes.String().serializer(), Serdes.String().serializer(), transformedStream);
+        // Add sink processors
+        topology.addSink("SinkFor-" + chargeAssessmentsTopicName, chargeAssessmentsTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            "Processor");
+        topology.addSink("SinkFor-" + kpisTopicName, kpisTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            "Processor");
 
         return topology;
     }

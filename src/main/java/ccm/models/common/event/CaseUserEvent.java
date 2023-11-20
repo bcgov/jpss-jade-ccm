@@ -201,8 +201,4 @@ public class CaseUserEvent extends BaseEvent {
   public void setJustin_record_num(String justin_record_num) {
     this.justin_record_num = justin_record_num;
   }
-
-  public boolean isEndOfBatch() {
-    return STATUS.EVENT_BATCH_ENDED.name().equalsIgnoreCase(this.getEvent_status());
-  }
 }
