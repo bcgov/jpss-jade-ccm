@@ -734,9 +734,9 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number",simple("${header.event_key}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .to("http://ccm-lookup-service/getCourtCaseStatusExiststest")
     .unmarshal().json()
-
+    .log(LoggingLevel.INFO,"Status: ${body[status]}; ${body[primaryAgencyFileId]}; ${body[rccStatus]}; body: ${body}")
     //JADE-2671 - look-up primary rcc for update.
     .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
       .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ${header.event_key}"))
@@ -745,13 +745,14 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number",simple("${body[primaryAgencyFileId]}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+        .to("http://ccm-lookup-service/getCourtCaseStatusExiststest")
         .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
         .unmarshal().json()
       .endChoice()
     .end()
 
     .setProperty("caseId", simple("${body[id]}"))
+    .log(LoggingLevel.INFO,"Status: ${body[status]} ; ${body[rccStatus]}; body: ${body}")
     .choice()
       .when(simple("${body[status]} == 'Active'"))
         .setHeader("number").simple("${header.event_key}")
@@ -789,6 +790,42 @@ public class CcmNotificationService extends RouteBuilder {
           .endChoice()
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
+      //jade-2712 change
+      .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
+        .choice()
+          .when(simple("${body[rccStatus]} != null"))
+          .setHeader("rccStatus", simple("${body[rccStatus]}"))
+          .to("http://ccm-dems-adapter/getDemsFieldMappingstest")
+          .log(LoggingLevel.INFO,"${body}")
+          .log(LoggingLevel.INFO,"inside loop ")
+          .setHeader("number").simple("${header.event_key}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
+          .to("http://ccm-lookup-service/getCourtCaseDetails")
+          .log(LoggingLevel.DEBUG,"Retrieved Court Case from JUSTIN: ${body}")
+          .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+                exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
+              }
+            })
+            .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
+                .choice()
+                  .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'RET'"))
+                  .log(LoggingLevel.INFO,"ready for reactivating the case")
+                    /*.setHeader(Exchange.HTTP_METHOD, simple("POST"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .to("http://ccm-dems-adapter/updateCourtCase")
+                    .log(LoggingLevel.INFO,"Update court case auth list.")*/
+                  .endChoice()
+              .endChoice()
+        .endChoice()
+    .endChoice()
+     
     .otherwise()
       .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
     .end()
