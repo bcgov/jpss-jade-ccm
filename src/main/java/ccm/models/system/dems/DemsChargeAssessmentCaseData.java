@@ -22,6 +22,7 @@ public class DemsChargeAssessmentCaseData {
     private String timeZoneId;
     private String templateCase;
     private List<DemsFieldData> fields;
+    private boolean waitForCaseCompletion;
 
     public DemsChargeAssessmentCaseData() {
     }
@@ -444,6 +445,14 @@ public class DemsChargeAssessmentCaseData {
 
     public void setFields(List<DemsFieldData> fields) {
         this.fields = fields;
+    }
+
+    public boolean isWaitForCaseCompletion() {
+        return waitForCaseCompletion;
+    }
+
+    public void setWaitForCaseCompletion(boolean waitForCaseCompletion) {
+        this.waitForCaseCompletion = waitForCaseCompletion;
     }
 
 }

@@ -265,7 +265,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&maxPollRecords=5&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -489,7 +489,7 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&maxPollRecords=5&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -619,6 +619,9 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
         .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
         .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Case does not exist in DEMS, skipped.")
       .endChoice()
     .end()
     ;
@@ -777,13 +780,13 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
           }}
         )
-        /* BCPSDEMS-328, JADE-1751 - Commented-out for Sept 24, 2023 release.
+         //BCPSDEMS-328, JADE-1751 - Commented-out for Sept 24, 2023 release.
         .choice()
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
-          .endChoice()*/
+          .endChoice()
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
     .otherwise()
@@ -1012,7 +1015,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=30&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
