@@ -25,10 +25,14 @@ package ccm;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
+import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -48,6 +52,8 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.dems.DemsRecordData;
 import ccm.models.system.justin.JustinDocumentKeyList;
+import ccm.utils.DateTimeUtils;
+import ccm.models.common.event.Error;
 
 public class CcmReportsProcessor extends RouteBuilder {
 
@@ -55,13 +61,239 @@ public class CcmReportsProcessor extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
-       processReportEvents();
+      attachExceptionHandlers(); 
+      processReportEvents();
        publishEventKPI();
        processUnknownStatus();
        processNonStaticDocuments();
        processDocumentRecord();
+       
     }
 
+     private void attachExceptionHandlers() {
+
+
+    // handle network connectivity errors
+    onException(ConnectException.class, SocketTimeoutException.class)
+      .maximumRedeliveries(3).redeliveryDelay(10000)
+      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
+      .setBody(constant("An unexpected network error occurred"))
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
+
+    // HttpOperation Failed
+    onException(HttpOperationFailedException.class)
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            Error error = new Error();
+            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+            error.setError_code("HttpOperationFailed: " + cause.getStatusCode());
+            error.setError_summary(cause.getMessage());
+
+            if(cause != null && !cause.getResponseBody().isEmpty()) {
+              error.setError_details(cause.getResponseBody());
+            } else if(cause != null && cause.getResponseHeaders().get("CCMExceptionEncoded") != null) {
+              byte[] decodedException = Base64.getDecoder().decode(cause.getResponseHeaders().get("CCMExceptionEncoded"));
+              String decodedString = new String(decodedException);
+              log.error(decodedString);
+              error.setError_details(decodedString);
+            } else if(cause != null && cause.getResponseHeaders().get("CCMException") != null) {
+              log.error(cause.getResponseHeaders().get("CCMException"));
+              error.setError_details(cause.getResponseHeaders().get("CCMException"));
+            }
+
+            log.error("HttpOperationFailed caught, exception message : " + cause.getMessage());
+            //for(StackTraceElement trace : cause.getStackTrace())
+            //{
+            // log.error(trace.toString());
+            //}
+            log.error("Returned status code : " + cause.getStatusCode());
+            log.error("Response body : " + cause.getResponseBody());
+            exchange.setProperty("error_status_code", cause.getStatusCode());
+
+            log.error("HttpOperationFailed Exception event info : " + event.getEvent_source());
+            // KPI
+            EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+            kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+            kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+            kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+            kpi.setError(error);
+            exchange.getMessage().setBody(kpi);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.DEBUG,"Derived event KPI published.")
+        .log(LoggingLevel.INFO,"Caught HttpOperationFailed exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        //.handled(true)
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "HttpOperationFailedException thrown: ${exception.message}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            try {
+              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+              if(cause != null && cause.getResponseBody() != null) {
+                String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                exchange.getMessage().setBody(body);
+              }
+              log.error("Returned body : " + cause.getResponseBody());
+            } catch(Exception ex) {
+              ex.printStackTrace();
+            }
+          }
+        })
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .transform().simple("${body}")
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMExceptionEncoded", simple("${body}"))
+      .end()
+
+    //re-queue based on the event type
+    /*.choice()
+      .when(simple("${exchangeProperty.error_status_code} == '503'"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+            log.error("toString event: " + event.toString());
+
+            String kafkaTopic = getKafkaTopicByEventType(event.getEvent_type());
+            exchange.setProperty("kafka_topic_name", kafkaTopic);
+          }
+        })
+        .log(LoggingLevel.INFO, "retry the message")
+        .log(LoggingLevel.INFO, "${exchangeProperty.kafka_topic_name}")
+        .setBody(header("event"))
+            .to("kafka:{{kafka.topic.caseusers.name}}")
+
+      .end()*/
+
+    .end();
+
+    // Handle Camel Exception
+    onException(CamelException.class)
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+            Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+            ccm.models.common.event.Error error = new ccm.models.common.event.Error();
+            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+            error.setError_code("CamelException");
+            error.setError_summary("Unable to process event, CamelException raised.");
+            error.setError_details(cause.getMessage());
+            if(cause != null) {
+              cause.printStackTrace();
+            }
+
+            log.debug("CamelException caught, exception message : " + cause.getMessage() + " stack trace : " + cause.getStackTrace());
+            log.error("CamelException Exception event info : " + event.getEvent_source());
+            // KPI
+            EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+            // KPI
+
+            kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+            kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+            kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+            kpi.setError(error);
+            exchange.getMessage().setBody(kpi);
+            String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+            exchange.setProperty("kpi_component_route_name", failedRouteId);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.INFO,"Derived event KPI published.")
+        .log("Caught CamelException exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "CamelException thrown: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+      .end()
+    .end();
+
+    // General Exception
+    onException(Exception.class)
+    .choice()
+      .when(simple("${exchangeProperty.kpi_event_object} != null"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+            Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+
+            ccm.models.common.event.Error error = new ccm.models.common.event.Error();
+            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+            error.setError_dtm(DateTimeUtils.generateCurrentDtm());
+            error.setError_summary(cause.getMessage());
+            error.setError_code("General Exception");
+            error.setError_details(cause.toString());
+            if(cause != null) {
+              cause.printStackTrace();
+            }
+
+            log.error("General Exception caught, exception message : " + cause.getMessage());
+            log.error("General Exception event info : " + event.getEvent_source());
+            // KPI
+            EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
+
+            kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
+            kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
+            kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
+            kpi.setError(error);
+            exchange.getMessage().setBody(kpi);
+
+            String failedRouteId = exchange.getProperty(Exchange.FAILURE_ROUTE_ID, String.class);
+            exchange.setProperty("kpi_component_route_name", failedRouteId);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, EventKPI.class)
+        .log(LoggingLevel.ERROR,"Publishing derived event KPI in Exception handler ...")
+        .log(LoggingLevel.INFO,"Derived event KPI published.")
+        .log("Caught General exception exception")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .setProperty("error_event_object", body())
+        .to("kafka:{{kafka.topic.kpis.name}}")
+        .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
+        .log("Body: ${body}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+        .setBody(simple("{\"error\": \"${exception.message}\"}"))
+        .transform().simple("Error reported: ${exception.message} - cannot process this message.")
+        .setHeader(Exchange.HTTP_RESPONSE_TEXT, simple("{\"error\": \"${exception.message}\"}"))
+        .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+      .end()
+   .end()
+   ;
+  }
     private void processReportEvents() {
         // use method name as route id
         String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -272,7 +504,7 @@ public class CcmReportsProcessor extends RouteBuilder {
           .setHeader("number", simple("${header[rcc_id]}"))
           // look for current status of the dems case.
           // and set the rcc to the primary rcc
-          .to("http://ccm-dems-adapter/getCourtCaseStatusByKeyHttp")
+          .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
           .unmarshal().json()
           .setProperty("caseId").simple("${body[id]}")
           .setProperty("caseStatus").simple("${body[status]}")
@@ -319,7 +551,7 @@ public class CcmReportsProcessor extends RouteBuilder {
 
             .doTry()
               // look for current status of the dems case, and grab the primary agency file
-              .to("http://cc-dems-adapter/getCourtCaseStatusByKeyHttp")
+              .to("http://cc-dems-adapter/getCourtCaseStatusExists")
               .unmarshal().json()
               .setProperty("caseId").simple("${body[id]}")
               .setProperty("caseStatus").simple("${body[status]}")
@@ -502,7 +734,7 @@ public class CcmReportsProcessor extends RouteBuilder {
 
         .doTry()
           // look for current status of the dems case, and grab the primary agency file
-          .to("http://ccm-dems-adapter/getCourtCaseStatusByKeyHttp")
+          .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
           .unmarshal().json()
           .setProperty("caseId").simple("${body[id]}")
           .setProperty("caseStatus").simple("${body[status]}")
