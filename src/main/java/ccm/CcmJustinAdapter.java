@@ -1704,6 +1704,9 @@ public class CcmJustinAdapter extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
 
+    // wait at least a minute between calls, in case there are multiple provision calls.
+    // JUSTIN has issues processing multiple at the same time.
+    .delay(60000)
     // update JUSTIN user status
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
