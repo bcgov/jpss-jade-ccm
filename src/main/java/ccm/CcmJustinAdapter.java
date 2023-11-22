@@ -1703,6 +1703,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
+    .delay(60000)
 
     // update JUSTIN user status
     .removeHeader("CamelHttpUri")

@@ -3561,7 +3561,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.number}"))
       .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
-      .to("direct:getCourtCaseIdByKey")
+      .to("direct:getCourtCaseStatusByKey")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .choice()
         .when(simple("${exchangeProperty.courtCaseId} != ''"))
