@@ -102,7 +102,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseStatusExiststest();
     getCourtCaseStatusByKeytest ();
     getCourtCaseStatusByIdtest();
-    getDemsFieldMappingstest();
+    getDemsFieldMappingsrccStatus();
     getCourtCaseStatusById();
     getCourtCaseCourtFileUniqueIdByKey();
     getCaseHyperlink();
@@ -547,7 +547,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 ;
 }
 
-private void getDemsFieldMappingstest() {
+private void getDemsFieldMappingsrccStatus() {
   // use method name as route id
   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -566,7 +566,6 @@ private void getDemsFieldMappingstest() {
   .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/fields")
   .log(LoggingLevel.INFO,"Retrieved dems field mappings.")
   .setProperty("DemsFieldMappings", simple("${bodyAs(String)}"))
-    //.log(LoggingLevel.DEBUG,"Response: ${body}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
@@ -579,8 +578,7 @@ private void getDemsFieldMappingstest() {
       }
 
     })
-    .setBody(simple("${exchangeProperty.rccStatus}"))
-  ;
+    .setBody(simple("${exchangeProperty.rccStatus}"));
 }
 
   private void getCourtCaseStatusById() {
