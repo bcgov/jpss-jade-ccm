@@ -92,7 +92,7 @@ public class CcmNotificationService extends RouteBuilder {
 
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
-     .backOffMultiplier(2)
+     .maximumRedeliveries(5).redeliveryDelay(20000)
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
@@ -427,7 +427,7 @@ public class CcmNotificationService extends RouteBuilder {
               ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
               ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
               ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
-              
+
               if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
                 ex.setProperty("allowCreateCase", "false");
               }
@@ -631,7 +631,7 @@ public class CcmNotificationService extends RouteBuilder {
   private void processParticipantMerge() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    
+
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -642,9 +642,9 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange ex) throws HttpOperationFailedException {
         // KPI: Preserve original event properties
         ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-       
+
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
-        
+
         //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
         //log.info("toPartId : "+ original_event.getJustin_to_part_id());
         String fromPartId = original_event.getJustin_from_part_id();

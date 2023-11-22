@@ -1924,7 +1924,7 @@ public class CcmDemsAdapter extends RouteBuilder {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setProperty("key", simple("${header.number}"))
           .to("direct:getCourtCaseIdByKey")
-          
+
           .setProperty("courtCaseId", jsonpath("$.id"))
 
           //jade 1747
@@ -3561,7 +3561,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.number}"))
       .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
-      .to("direct:getCourtCaseIdByKey")
+      .to("direct:getCourtCaseStatusByKey")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .choice()
         .when(simple("${exchangeProperty.courtCaseId} != ''"))
@@ -3995,7 +3995,7 @@ public class CcmDemsAdapter extends RouteBuilder {
                             .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                             .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
                             .log(LoggingLevel.INFO,"Created external EDT ID")
-                          
+
                           .endChoice()
                           .otherwise()
                             .log(LoggingLevel.INFO,"External EDT ID already exist for person ${exchangeProperty.personid}")
