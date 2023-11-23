@@ -4,11 +4,13 @@ metadata:
   name: ccm-configs
 data:
   dems-case-auto-creation: tbd
+  dems-case-auto-creation-submit-date-cutoff: tbd
   dems-case-template-id: tbd
   dems-host-url: tbd
   dems-org-unit-id: tbd
   dems-case-hyperlink-prefix: tbd
   dems-caes-hyperlink-suffix: tbd
+  dems-case-hyperlinklist-suffix: tbd
   justin-host-url: tbd
   splunk-host-url: tbd
   pidp-kafka-bootstrapservers-url: tbd

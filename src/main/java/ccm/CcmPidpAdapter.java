@@ -252,8 +252,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}" +
-      "?groupId={{pidp.kafka.consumergroup.name}}" // +
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId={{pidp.kafka.consumergroup.name}}" // +
       //"&autoOffsetReset=earliest"
     )
     .routeId(routeId)
@@ -342,39 +341,46 @@ public class CcmPidpAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&securityProtocol=PLAINTEXT")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&maxPollRecords=30&maxPollIntervalMs=600000&securityProtocol=PLAINTEXT")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
-      "    on the topic ${headers[kafka.TOPIC]}\n" +
-      "    on the partition ${headers[kafka.PARTITION]}\n" +
-      "    with the offset ${headers[kafka.OFFSET]}\n" +
-      "    with the key ${headers[kafka.KEY]}")
-    .setHeader("event_key")
-      .jsonpath("$.event_key")
-    .setHeader("event_status")
-      .jsonpath("$.event_status")
-    .setHeader("justin_rcc_id")
-      .jsonpath("$.justin_rcc_id")
-    .setHeader("event")
-      .simple("${body}")
-    //.log(LoggingLevel.INFO, "${body}")
-    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .setProperty("event_object", body())
-    .setProperty("kpi_event_object", body())
-    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
-    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .choice()
-      .when(header("justin_rcc_id").isEqualTo("0"))
-        .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-        .to("direct:processCaseUserBulkLoadCompleted")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .end();
+    .doTry()
+      .setHeader("event_key")
+        .jsonpath("$.event_key")
+      .setHeader("event_status")
+        .jsonpath("$.event_status")
+      .setHeader("justin_rcc_id")
+        .jsonpath("$.justin_rcc_id")
+      .setHeader("event")
+        .simple("${body}")
+      //.log(LoggingLevel.INFO, "${body}")
+      .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .setProperty("event_object", body())
+      .setProperty("kpi_event_object", body())
+      .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+      .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .choice()
+        .when(header("justin_rcc_id").isEqualTo("0"))
+          .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+            "    on the topic ${headers[kafka.TOPIC]}\n" +
+            "    on the partition ${headers[kafka.PARTITION]}\n" +
+            "    with the offset ${headers[kafka.OFFSET]}\n" +
+            "    with the key ${headers[kafka.KEY]}")
+          .setProperty("kpi_component_route_name", simple("processCaseUserBulkLoadCompleted"))
+          .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+          .to("direct:publishEventKPI")
+          .setBody(header("event"))
+          .to("direct:processCaseUserBulkLoadCompleted")
+          .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+          .to("direct:publishEventKPI")
+          .endChoice()
+        .end()
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR,"Unable to process topic message: ${body}")
+        .log(LoggingLevel.ERROR,"General Exception thrown.")
+        .log(LoggingLevel.ERROR,"${exception}")
+      .end()
     ;
   }
 

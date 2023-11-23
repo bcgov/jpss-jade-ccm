@@ -15,7 +15,7 @@ public class ChargeAssessmentEvent extends BaseEvent {
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
-  public static final String JUSTIN_RCC_ID = "RCC_ID";  
+  public static final String JUSTIN_RCC_ID = "RCC_ID";
 
   public enum SOURCE {
     JUSTIN,
@@ -76,8 +76,7 @@ public class ChargeAssessmentEvent extends BaseEvent {
           break;
       }
     }
-
-    setEvent_key(getJustin_rcc_id());
+      setEvent_key(getJustin_rcc_id());
   }
 
   public ChargeAssessmentEvent(SOURCE source, ChargeAssessmentEvent another) {

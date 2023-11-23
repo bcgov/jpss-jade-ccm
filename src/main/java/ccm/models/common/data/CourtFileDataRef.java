@@ -1,10 +1,8 @@
 package ccm.models.common.data;
 
-import ccm.models.system.dems.DemsCaseRef;
 import ccm.models.system.justin.JustinCourtFileRef;
 
 public class CourtFileDataRef {
-    private String rcc_id;
     private String mdoc_justin_no;
     private String mdoc_relation_type_cd;
 
@@ -16,16 +14,6 @@ public class CourtFileDataRef {
         setMdoc_relation_type_cd(jafr.getMdoc_relation_type_cd());
     }
 
-    public CourtFileDataRef(DemsCaseRef demsCaseRef) {
-        setRcc_id(demsCaseRef.getKey());
-    }
-
-    public String getRcc_id() {
-        return rcc_id;
-    }
-    public void setRcc_id(String rcc_id) {
-        this.rcc_id = rcc_id;
-    }
     public String getMdoc_justin_no() {
         return mdoc_justin_no;
     }

@@ -6,7 +6,7 @@ import ccm.models.system.justin.JustinAgencyFileRef;
 public class ChargeAssessmentDataRef {
     private String rcc_id;
     private String agency_file_no;
-    private Boolean primary_rcc_yn;
+    private String primary_yn;
 
     public ChargeAssessmentDataRef() {
     }
@@ -14,6 +14,7 @@ public class ChargeAssessmentDataRef {
     public ChargeAssessmentDataRef(JustinAgencyFileRef jafr) {
         setRcc_id(jafr.getRcc_id());
         setAgency_file_no(jafr.getAgency_file_no());
+        setPrimary_yn(jafr.getPrimary_yn());
     }
 
     public ChargeAssessmentDataRef(DemsCaseRef demsCaseRef) {
@@ -33,11 +34,11 @@ public class ChargeAssessmentDataRef {
         this.agency_file_no = agency_file_no;
     }
 
-    public Boolean getPrimary_rcc_yn() {
-        return primary_rcc_yn;
+    public String getPrimary_yn() {
+        return primary_yn;
     }
 
-    public void setPrimary_rcc_yn(Boolean primary_rcc_yn) {
-        this.primary_rcc_yn = primary_rcc_yn;
+    public void setPrimary_yn(String primary_yn) {
+        this.primary_yn = primary_yn;
     }
 }

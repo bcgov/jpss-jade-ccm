@@ -46,6 +46,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
 
   private void retryExceptionHandler() {
     onException(ConnectException.class, SocketTimeoutException.class, NoHttpResponseException.class, HttpOperationFailedException.class)
+    .maximumRedeliveries(5).redeliveryDelay(10000)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -60,8 +61,34 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(5).redeliveryDelay(3000)
+    .retryAttemptedLogLevel(LoggingLevel.ERROR)
+    .handled(true)
     .end();
+
+    // HttpOperation Failed
+    onException(HttpOperationFailedException.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        BaseEvent event = (BaseEvent)exchange.getProperty("kpi_event_object");
+        HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+        log.error("HttpOperationFailedException caught, exception message : " + cause.getMessage());
+        log.error("HttpOperationFailedException class and local msg : " + cause.getClass().getName() + " message : " + cause.getLocalizedMessage());
+        if(event != null) {
+          log.error("HttpOperation Exception event info : " + event.getEvent_source());
+        }
+        for(StackTraceElement trace : cause.getStackTrace())
+        {
+         log.error(trace.toString());
+        }
+      }
+    })
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
+    .maximumRedeliveries(2)
+    .redeliveryDelay(1000)
+    .backOffMultiplier(2)
+    .end();
+ 
 
     // General Exception
     onException(Exception.class)
@@ -79,7 +106,8 @@ public class CcmSplunkAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.INFO, "Headers: ${headers}")
-    .maximumRedeliveries(3).redeliveryDelay(3000)
+    //.maximumRedeliveries(5).redeliveryDelay(10000)
+      .handled(true)
     .end();
   }
 
@@ -179,7 +207,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter")
+    from("kafka:{{kafka.topic.kpis.name}}?groupId=ccm-splunk-adapter&maxPollRecords=100&maxPollIntervalMs=600000")
     .routeId(routeId)
     .log(LoggingLevel.DEBUG,"Event from Kafka {{kafka.topic.kpis.name}} topic:\n" + 
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -211,6 +239,12 @@ public class CcmSplunkAdapter extends RouteBuilder {
     })
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .removeHeader(Exchange.CONTENT_ENCODING)
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
     .marshal().json(JsonLibrary.Jackson, SplunkEventLog.class)
     .log(LoggingLevel.INFO,"Publishing event KPI to splunk. Body = ${body} ...")
     .setHeader("Authorization", simple("Splunk {{splunk.token}}"))

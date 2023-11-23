@@ -17,7 +17,7 @@ public class CaseAccused {
     private String offence_date;
     private Boolean indigenous_accused_yn;
     private String name_and_proposed_process_type;
-    private String birth_date;  
+    private String birth_date;
     private Boolean hroip_yn;
     private Boolean do_lto_yn;
     //fix for JADE-2559
@@ -41,7 +41,7 @@ public class CaseAccused {
 
         // Map 78
         setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
-            
+
         setHroip_yn(ja.getHroip_yn() != null && "Y".equalsIgnoreCase(ja.getHroip_yn()));
         setDo_lto_yn(ja.getDo_lto_yn() != null && "Y".equalsIgnoreCase(ja.getDo_lto_yn()));
         //fix for JADE-2559

@@ -3,11 +3,13 @@
 | Key | Description | Type | 
 | - | - | - |
 | dems-case-auto-creation | DEMS case auto creation flag | true / false |
+| dems-case-auto-creation-submit-date-cutoff | Earliest RCC Submit date to allow auto creation | YYYY-MM-DD |
 | dems-case-template-id | DEMS case template id | numeric |
 | dems-host-url | DEMS URI | Host URI (without HTTP prefix) |
 | dems-org-unit-id | DEMS case organization unit id | numeric |
 | dems-case-hyperlink-prefix | DEMS case hyperlink prefix | string |
 | dems-case-hyperlink-suffix | DEMS case hyperlink suffix | string |
+| dems-case-hyperlinklist-suffix | DEMS case hyperlink list suffix | string |
 | justin-host-url | JUSTIN URI | Host URI (without HTTP prefix) |
 | splunk-host-url | Splunk URI | Host URI (without HTTP prefix) |
 | pidp-kafka-topic-usercreation-name | PIDP Kafka User Creation Topic Name | string |

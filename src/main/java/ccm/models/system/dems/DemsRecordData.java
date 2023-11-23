@@ -30,6 +30,7 @@ public class DemsRecordData {
     private List<DemsFieldData> fields;
     private String reportType;
     private int incrementalDocCount = 1;
+    private String image_id;
 
     public String DescriptipnShortFormValue(String formTypeDescription) {
         Map<String, String> map = new HashMap<>();
@@ -231,8 +232,20 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll(":", ""));
+
+        //BCPSDEMS-1342 - doc id rules
+        String fileNo = getOriginalFileNumber();
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -335,8 +348,20 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll(":", ""));
+
+        //BCPSDEMS-1342 - doc id rules
+        String fileNo = getOriginalFileNumber();
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -439,8 +464,22 @@ public class DemsRecordData {
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         String shortendStartDate = DateTimeUtils.shortDateTimeString(getStartDate());
-        String docId = descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
-        setDocumentId(docId.replaceAll(":", ""));
+
+        //jade-2617
+        setImage_id(nrd.getImage_id());
+        //BCPSDEMS-1342 - doc id rules
+        String fileNo = getOriginalFileNumber();
+        if(fileNo != null) {
+            fileNo = fileNo.replaceAll(":", ".");
+            fileNo = fileNo.replaceAll(" ", "");
+        }
+        String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        docId=docId.replaceAll("\\(", "");
+        docId=docId.replaceAll("\\)", "");
+        docId=docId.replaceAll(",", "");
+        docId=docId.replaceAll(":", "");
+        docId=docId.replaceAll(" ", "-");
+        setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
@@ -492,6 +531,10 @@ public class DemsRecordData {
             DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(originalFileNumber);
         }
+        if(getImage_id() != null){
+            DemsFieldData imageID = new DemsFieldData("JUSTIN Image ID", getImage_id());
+            fieldData.add(imageID);
+        }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
 
@@ -514,7 +557,11 @@ public class DemsRecordData {
         docId.append(incrementalDocCount++);
         docId.append("_");
         docId.append(shortendStartDate);
-        setDocumentId(docId.toString().replaceAll(":", ""));
+        updateDocumentId(docId.toString().replaceAll(":", ""));
+    }
+
+    public void updateDocumentId(String newDocumentId) {
+        setDocumentId(newDocumentId);
 
         // Now need to go through the field records, and find the "Document Id"
         for(DemsFieldData fd : getFields()) {
@@ -660,5 +707,12 @@ public class DemsRecordData {
         this.fields = fields;
     }
 
+    public String getImage_id() {
+        return image_id;
+      }
+    
+    public void setImage_id(String image_id) {
+    this.image_id = image_id;
+    }
 
 }

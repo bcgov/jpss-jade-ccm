@@ -9,6 +9,7 @@ package ccm;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
@@ -27,29 +28,36 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.http.base.HttpOperationFailedException;
-//import org.apache.camel.CamelException;
-//import org.apache.camel.component.kafka.KafkaConstants;
-//import org.apache.camel.model.;
+import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.support.service.ServiceHelper;
 
-import ccm.models.common.data.CourtCaseData;
-import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
-import ccm.models.common.event.CourtCaseEvent;
+import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
+import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.Error;
-import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.EventKPI;
-import ccm.models.system.justin.*;
-import ccm.utils.DateTimeUtils;
+import ccm.models.common.event.ReportEvent;
+import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.versioning.Version;
+import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAuthUsersList;
+import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
+import ccm.models.system.justin.JustinCourtFile;
+import ccm.models.system.justin.JustinCrownAssignmentList;
+import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinEvent;
+import ccm.models.system.justin.JustinEventBatch;
+import ccm.utils.DateTimeUtils;
 
 public class CcmJustinAdapter extends RouteBuilder {
   @Override
@@ -61,6 +69,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     courtFileCreated();
     healthCheck();
     //readRCCFileSystem();
+    stopJustinEvents();
+    startJustinEvents();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
@@ -77,6 +87,8 @@ public class CcmJustinAdapter extends RouteBuilder {
     processUserDProvEvent();
     processReportEvents();
     processUnknownEvent();
+
+    processPartMergeEvents();
 
     confirmEventProcessed();
     getCourtCaseDetails();
@@ -370,6 +382,59 @@ public class CcmJustinAdapter extends RouteBuilder {
 
   }
 
+  private void stopJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue stopped")
+    ;
+  }
+
+  private void startJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Restarting pulls from justin queue.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        
+        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
+        ServiceHelper.startService(mainTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());
+      }
+    })
+    .log(LoggingLevel.INFO,"Justin adapter queue started")
+    ;
+  }
+
   private void requeueJustinEvent() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -627,6 +692,9 @@ public class CcmJustinAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.INFO_DOCM))
           .to("direct:processReportEvents")
           .endChoice()
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.PART_MERGE))
+          .to("direct:processPartMergeEvents")
+          .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -779,6 +847,65 @@ public class CcmJustinAdapter extends RouteBuilder {
       }
     })
     .log(LoggingLevel.DEBUG,"Getting ready to send to Kafka: ${body}")
+    ;
+  }
+  // part of jade 1750
+  private void processPartMergeEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log(LoggingLevel.DEBUG,"Processing PART_MERGE event: ${exchangeProperty.justin_event}")
+    .doTry()
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+
+          ParticipantMergeEvent be = new ParticipantMergeEvent(je);
+          exchange.getMessage().setBody(be, ParticipantMergeEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+        }})
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+      .setProperty("business_event", body())
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.participant.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.participant.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
+      .setProperty("error_event_object", body())
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+      .choice()
+        .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
+      .end()
+    .end()
     ;
   }
 
@@ -1251,6 +1378,7 @@ public class CcmJustinAdapter extends RouteBuilder {
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name(routeId);
+          kpi.setEvent_details(je);
           exchange.getMessage().setBody(kpi, EventKPI.class);
         }
       })
@@ -1575,6 +1703,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
+    .delay(60000)
 
     // update JUSTIN user status
     .removeHeader("CamelHttpUri")
@@ -1586,7 +1715,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
     .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
-    .log("User DEMS flag updated in JUSTIN.")
+    .log("User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
 
     // publish event KPI - processing completed
     .process(new Processor() {

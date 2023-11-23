@@ -12,9 +12,9 @@ public class CaseCrownAssignmentList {
   public static final String ASSIGNMENT_TYPE_LST = "LST";
 
   private String mdoc_justin_no;
-  private String legalStaffAssignmentList;
-  private String crownAssignmentList;
-  private String crownAssignmentName;
+  private List<String> legalStaffAssignmentList;
+  private List<String> crownAssignmentList;
+  private List<String> crownAssignmentName;
 
   private List<CaseCrownAssignmentData> crown_assignment;
 
@@ -25,16 +25,15 @@ public class CaseCrownAssignmentList {
     setMdoc_justin_no(jasl.getMdoc_justin_no());
 
 
-    List<CaseCrownAssignmentData> appearanceList = new ArrayList<CaseCrownAssignmentData>();
-    
-    StringBuilder legalStaffAssignments = new StringBuilder();
-    StringBuilder crownAssignments = new StringBuilder();
-    StringBuilder crownAssignmentName = new StringBuilder();
+    List<CaseCrownAssignmentData> crownAssignmentList = new ArrayList<CaseCrownAssignmentData>();
+    List<String> legalStaffAssignments = new ArrayList<String>();
+    List<String> crownAssignments = new ArrayList<String>();
+    List<String> crownAssignmentName = new ArrayList<String>();
 
     if(jasl.getCrown_assignment() != null) {
       for (JustinCrownAssignmentData jas : jasl.getCrown_assignment()) {
         CaseCrownAssignmentData bcas = new CaseCrownAssignmentData(jas);
-        appearanceList.add(bcas);
+        crownAssignmentList.add(bcas);
 
         if(jas.getAssign_type_code() != null) {
 
@@ -45,42 +44,62 @@ public class CaseCrownAssignmentList {
         Crown Name and Assignment List: For every crown assignment If($MAPID45!="LST" then "$MAPID44 - $MAPID45")	Rhodes, Matt - AHR; Brown, James - B
         */
         if(ASSIGNMENT_TYPE_LST.equals(jas.getAssign_type_code())) {
-          if(legalStaffAssignments.length() > 0) {
-            legalStaffAssignments.append(SEMICOLON_STRING);
-          }
-          legalStaffAssignments.append(jas.getCrown_staff_name());
-          legalStaffAssignments.append(DASH_STRING);
-          legalStaffAssignments.append(jas.getAssign_type_code());
+          StringBuilder legalStaffAssignment = new StringBuilder(jas.getCrown_staff_name());
+
+          legalStaffAssignment.append(DASH_STRING);
+          legalStaffAssignment.append(jas.getAssign_type_code());
+          legalStaffAssignments.add(legalStaffAssignment.toString());
         }
         else {
-          if(crownAssignments.length() > 0) {
-            crownAssignments.append(SEMICOLON_STRING);
-            crownAssignmentName.append(SEMICOLON_STRING);
-          }
-          crownAssignments.append(jas.getCrown_staff_name());
-          crownAssignments.append(DASH_STRING);
-          crownAssignments.append(jas.getAssign_type_code());
+          StringBuilder crownAssignment = new StringBuilder();
+          StringBuilder crownAssignmentNm = new StringBuilder();
+
+          crownAssignment.append(jas.getCrown_staff_name());
+          crownAssignment.append(DASH_STRING);
+          crownAssignment.append(jas.getAssign_type_code());
+          crownAssignments.add(crownAssignment.toString());
           // need to split name by comma and put first name, then surname
           if(jas.getCrown_staff_name() != null) {
             String[] name = jas.getCrown_staff_name().split(COMMA_STRING);
             if(name.length>1) {
-              crownAssignmentName.append(name[1]);
-              crownAssignmentName.append(" ");
+              crownAssignmentNm.append(name[1]);
+              crownAssignmentNm.append(" ");
             }
-            crownAssignmentName.append(name[0]);
+            crownAssignmentNm.append(name[0]);
           }
-          //crownAssignmentName.append(jas.getCrown_staff_name());
+          crownAssignmentName.add(crownAssignmentNm.toString());
         }
 
       }
     }
 
-    setCrown_assignment(appearanceList);
-    setCrownAssignmentList(crownAssignments.toString());
-    setCrownAssignmentName(crownAssignmentName.toString());
-    setLegalStaffAssignmentList(legalStaffAssignments.toString());
+    setCrown_assignment(crownAssignmentList);
+    setCrownAssignmentList(crownAssignments);
+    setCrownAssignmentName(crownAssignmentName);
+    setLegalStaffAssignmentList(legalStaffAssignments);
   }
 
+  public void addCrownAssignment(CaseCrownAssignmentList newCrownAssignmentList) {
+    if(newCrownAssignmentList != null) {
+      newCrownAssignmentList.getCrown_assignment().addAll(newCrownAssignmentList.getCrown_assignment());
+      for(String assignments : newCrownAssignmentList.getCrownAssignmentList()) {
+        if(!this.getCrownAssignmentList().contains(assignments)) {
+          this.getCrownAssignmentList().add(assignments);
+        }
+      }
+      for(String assignments : newCrownAssignmentList.getCrownAssignmentName()) {
+        if(!this.getCrownAssignmentName().contains(assignments)) {
+          this.getCrownAssignmentName().add(assignments);
+        }
+      }
+      for(String assignments : newCrownAssignmentList.getLegalStaffAssignmentList()) {
+        if(!this.getLegalStaffAssignmentList().contains(assignments)) {
+          this.getLegalStaffAssignmentList().add(assignments);
+        }
+
+      }
+    }
+  }
 
 
   public String getMdoc_justin_no() {
@@ -89,27 +108,27 @@ public class CaseCrownAssignmentList {
   public void setMdoc_justin_no(String mdoc_justin_no) {
     this.mdoc_justin_no = mdoc_justin_no;
   }
-  public String getLegalStaffAssignmentList() {
+  public List<String> getLegalStaffAssignmentList() {
     return legalStaffAssignmentList;
   }
 
-  public void setLegalStaffAssignmentList(String legalStaffAssignmentList) {
+  public void setLegalStaffAssignmentList(List<String> legalStaffAssignmentList) {
     this.legalStaffAssignmentList = legalStaffAssignmentList;
   }
 
-  public String getCrownAssignmentList() {
+  public List<String> getCrownAssignmentList() {
     return crownAssignmentList;
   }
 
-  public void setCrownAssignmentList(String crownAssignmentList) {
+  public void setCrownAssignmentList(List<String> crownAssignmentList) {
     this.crownAssignmentList = crownAssignmentList;
   }
 
-  public String getCrownAssignmentName() {
+  public List<String> getCrownAssignmentName() {
     return crownAssignmentName;
   }
 
-  public void setCrownAssignmentName(String crownAssignmentName) {
+  public void setCrownAssignmentName(List<String> crownAssignmentName) {
     this.crownAssignmentName = crownAssignmentName;
   }
 

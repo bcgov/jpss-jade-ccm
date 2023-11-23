@@ -25,7 +25,7 @@ public class JustinEvent {
     USER_DPROV,
     REPORT,
     DOCM,
-    INFO_DOCM;
+    INFO_DOCM,PART_MERGE;
 
   }
 
