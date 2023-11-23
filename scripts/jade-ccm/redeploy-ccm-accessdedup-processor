@@ -1,4 +1,13 @@
+echo "Redeploying ccm-accessdedup-processor to $1 ..."
+
+####################################################################################################
+# 0. Validate environment
+
+echo "Step 0: Validating environment ..."
+
 ns_set="cef5dd"
+image_registry_url=$(oc registry info)
+app="ccm-accessdedup-processor"
 
 if [ "$1" = "dev" ]; then
     env="dev"
@@ -19,7 +28,30 @@ else
    ns="$ns_set-$env"
 fi
 
-# Set default logging level
+if [ "$env" != "local" ]; then
+    # Check if logged in to OpenShift
+    oc whoami > /dev/null 2> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error.  You are not logged in to OpenShift."
+        exit 1
+    fi
+fi
+
+# Capture the build / deployment labels
+deployer="`oc whoami | cut -d "@" -f 1`"
+version_file="../../src/main/java/ccm/models/common/versioning/Version.java"
+if [ ! -f $version_file ]; then
+    echo "Error.  Version file not found: $version_file"
+    exit 1
+fi
+version=`cat $version_file | grep V1_0 | cut -d'"' -f2`
+
+
+####################################################################################################
+# 1. Set default logging level
+
+echo 
+
 logging_level="INFO"
 
 if [ "$env" = "prod" ]; then
@@ -31,35 +63,111 @@ if [ "$env" = "prod" ]; then
         exit 1
     fi
 
-    # Set prod logging level to INFO
+    # Override logging level for Prod deployment
     logging_level="INFO"
 else
     # Keep dev/test/local logging level to default
 fi
 
-if [ "$env" != "local" ]; then
-    echo "Deploying to $ns not supported yet.  Aborting deployment."
-    exit 1
+
+####################################################################################################
+# 2. Un-deploy existing processor
+
+echo "Step 2: Un-deploying existing processor ..."
+
+if [ "$env" = "local" ]; then
+    # handle local deployment
+    docker stop $app
+    docker rm $app
+else
+    # handle OpenShift deployment
+
+    # remove the deployment from the OpenShift namespace
+    oc -n $ns delete deployment $app
+
+    # remove the image stream from the OpenShift namespace
+    oc -n $ns delete imagestream $app
+
+    # remove the OpenShift tagged image from the local docker registry
+    docker rmi $image_registry_url/$ns/$app
 fi
 
-pushd ../..
-. ./repackage-ccm-models
-popd
+# remove the image from the local docker registry
+docker rmi $app
 
-# Remove the existing processor
 
-docker stop ccm-accessdedup-processor
-docker rm ccm-accessdedup-processor
-docker rmi ccm-accessdedup-processor
+####################################################################################################
+# 3. Build the processor
 
-# Deploy the processor
+echo "Step 3: Building processor ..."
 
-pushd ../../ccm-accessdedup-processor
-
+pushd ../../$app
 mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level
+docker build --platform linux/amd64 -t $app .
 
-docker build -t ccm-accessdedup-processor .
-docker run --name ccm-accessdedup-processor --network jade-events_default -d ccm-accessdedup-processor
-
+if [ "$?" -ne 0 ]; then
+    echo "Error.  Build failed."
+    exit 1
+fi
 popd
+
+if [ "$env" != "local" ]; then
+    # create the image stream in the OpenShift namespace
+    ## tag image for OpenShift
+    docker tag $app $image_registry_url/$ns/$app
+    ## login to OpenShift image registry
+    echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
+    if [ $? -ne 0 ]; then
+        echo "Error.  Login to OpenShift image registry failed."
+        exit 1
+    fi
+    ## push image to OpenShift
+    docker push $image_registry_url/$ns/$app
+    ## logout of OpenShift image registry
+    docker logout $image_registry_url
+
+    # add image stream labels
+    oc -n $ns label imagestream $app deployer="$deployer" version="$version"
+fi
+
+####################################################################################################
+# 4. Deploy the processor
+
+echo "Step 4: Deploying processor ..."
+
+if [ "$env" = "local" ]; then
+    # handle local deployment
+
+    echo "Deploying $app to $env ..."
+
+    docker run --name $app --network jade-events_default -d $app
+
+    echo "Deployment complete."
+else
+    # handle OpenShift deployment
+
+    echo "Deploying $app to $ns ..."
+
+    # create the deployment in the OpenShift namespace
+    oc -n $ns apply -f "openshift/$app.yaml"
+
+    # wait for the deployment to complete
+    echo "Waiting for deployment to complete..."
+    while [ `oc -n $ns get pods | grep $app | grep -v deploy | grep -v build | grep -v Running | wc -l` -gt 0 ]; do
+        sleep 5
+    done
+
+    oc -n $ns rollout status deployment/$app
+    if [ $? -ne 0 ]; then
+        echo "Error.  Deployment failed."
+        exit 1
+    fi
+
+    # add deployment labels
+    oc -n $ns label deployment $app deployer="$deployer" version="$version"
+
+    echo "Deployment complete."
+    
+fi
+
 
