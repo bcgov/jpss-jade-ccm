@@ -28,10 +28,6 @@ public class AccessDedupTopology {
     @Inject
     @ConfigProperty(name = "ccm.topic.chargeassessments.name")
     String chargeAssessmentsTopicName;
-
-    @Inject
-    @ConfigProperty(name = "ccm.topic.chargeassessment-errors.name")
-    String chargeAssessmentErrorsTopicName;
     
     @Inject
     @ConfigProperty(name = "ccm.topic.bulk-caseusers.name")
@@ -49,6 +45,10 @@ public class AccessDedupTopology {
     @ConfigProperty(name = "ccm.store.caseaccesssync.name")
     String caseAccessSyncStoreName;
 
+    @Inject
+    @ConfigProperty(name = "ccm.application.name.propercase")
+    String applicationNameProperCase;
+
     @Produces
     public Topology buildTopology() {
         LOG.info("Quarkus Kafka Streams application name: {}.", quarkusKafkaStreamsAppName);
@@ -60,7 +60,7 @@ public class AccessDedupTopology {
         topology.addSource("Source", Serdes.String().deserializer(), Serdes.String().deserializer(), bulkCaseUsersTopicName);
 
         // Add custom processor
-        topology.addProcessor("Processor", CaseAccessSyncProcessor::new, "Source");
+        topology.addProcessor("Processor", CaseAccessSyncProducer::new, "Source");
 
         // Define the state store
         StoreBuilder<KeyValueStore<String, String>> caseAccessSyncStoreBuilder =
@@ -72,6 +72,9 @@ public class AccessDedupTopology {
         topology.addStateStore(caseAccessSyncStoreBuilder, "Processor");
 
         // Add sink processors
+        topology.addSink("SinkFor-" + caseUserErrorsTopicName, caseUserErrorsTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            "Processor");
         topology.addSink("SinkFor-" + chargeAssessmentsTopicName, chargeAssessmentsTopicName, 
             Serdes.String().serializer(), Serdes.String().serializer(), 
             "Processor");
