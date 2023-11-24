@@ -751,7 +751,6 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .setProperty("caseId", simple("${body[id]}"))
-    .log(LoggingLevel.INFO,"Status: ${body[status]} ; ${body[rccStatus]}; body: ${body}")
     .choice()
       .when(simple("${body[status]} == 'Active'"))
         .setHeader("number").simple("${header.event_key}")
@@ -795,8 +794,7 @@ public class CcmNotificationService extends RouteBuilder {
           .when(simple("${body[rccStatus]} != null"))
             .setHeader("rccStatus", simple("${body[rccStatus]}"))
             .to("http://ccm-dems-adapter/getDemsFieldMappingsrccStatus")
-            .log(LoggingLevel.INFO,"${body}")
-            .log(LoggingLevel.INFO,"inside loop ")
+            .log(LoggingLevel.DEBUG,"${body}")
             .choice()
               .when(simple("${body} == 'Return'" ))
                 .setHeader("number").simple("${header.event_key}")
@@ -806,7 +804,7 @@ public class CcmNotificationService extends RouteBuilder {
                 .to("http://ccm-lookup-service/getCourtCaseDetails")
                 .log(LoggingLevel.INFO,"Retrieved Court Case from JUSTIN: ${body}")
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-                .log(LoggingLevel.INFO,"courtcase_data : ${bodyAs(String)}")
+                .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
                   .process(new Processor() {
                     @Override
@@ -814,16 +812,16 @@ public class CcmNotificationService extends RouteBuilder {
                       ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
                       exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
                       exchange.setProperty("bodytest", b);
-                      System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
+                      //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
                       //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
-                      System.out.println("body : "+ b.toString());
+                      //System.out.println("body : "+ b.toString());
                     }
-                  }) .marshal().json().log(LoggingLevel.INFO, "body: ${exchangeProperty.bodytest}")
+                  }) .marshal().json()
                   .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
                     .choice()
                       .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return'"))
-                      .log(LoggingLevel.INFO,"ready for reactivating the case")
-                      .log(LoggingLevel.INFO,"courtcase_data : ${bodyAs(String)}")
+                      .log(LoggingLevel.DEBUG,"ready for reactivating the case")
+                      .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                       .setProperty("courtcase_data", simple("${bodyAs(String)}"))
                       .setBody(simple("${exchangeProperty.courtcase_data}"))
                         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
