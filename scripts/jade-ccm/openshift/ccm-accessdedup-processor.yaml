@@ -13,13 +13,16 @@ spec:
     metadata:
       labels:
         app: jade-ccm
-        deployer: agahchen
     spec:
       containers:
         - name: container
           image: >-
             image-registry.openshift-image-registry.svc:5000/cef5dd-test/ccm-accessdedup-processor:latest
-          env: []
+          env:
+            - name: 'TZ'
+              value: 'Canada/Pacific'
+            - name: 'KAFKA-BROKER-URL'
+              value: 'events-kafka-bootstrap:9092'
       imagePullSecrets: []
   strategy:
     type: RollingUpdate
