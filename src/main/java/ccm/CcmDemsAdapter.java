@@ -99,9 +99,9 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseNameByKey();
     getCourtCaseStatusExists();
     getCourtCaseStatusByKey ();
-    getCourtCaseStatusExiststest();
-    getCourtCaseStatusByKeytest ();
-    getCourtCaseStatusByIdtest();
+    checkCourtCaseStatusExists();
+    checkCourtCaseStatusByKey();
+    getCourtCaseStatusByIdwithrccStatus();
     getDemsFieldMappingsrccStatus();
     getCourtCaseStatusById();
     getCourtCaseCourtFileUniqueIdByKey();
@@ -415,7 +415,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("direct:getCourtCaseStatusById")
   ;
   }
-  private void getCourtCaseStatusExiststest() {
+  private void checkCourtCaseStatusExists() {
     // use method name as route id
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -430,12 +430,12 @@ public class CcmDemsAdapter extends RouteBuilder {
    .removeHeader("kafka.HEADERS")
    .removeHeaders("x-amz*")
 
-   .to("direct:getCourtCaseStatusByKeytest")
+   .to("direct:checkCourtCaseStatusByKey")
    .end()
    ;
  }
 
- private void getCourtCaseStatusByKeytest() {
+ private void checkCourtCaseStatusByKey() {
    // use method name as route id
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
    //IN: header.number
@@ -449,11 +449,11 @@ public class CcmDemsAdapter extends RouteBuilder {
    .to("direct:getCourtCaseIdByKey")
    .setProperty("id", jsonpath("$.id"))
 
-   .to("direct:getCourtCaseStatusByIdtest")
+   .to("direct:getCourtCaseStatusByIdwithrccStatus")
  ;
  }
 
- private void getCourtCaseStatusByIdtest() {
+ private void getCourtCaseStatusByIdwithrccStatus() {
   // use method name as route id
   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
   //IN: header.number

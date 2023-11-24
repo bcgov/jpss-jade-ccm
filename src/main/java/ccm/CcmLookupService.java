@@ -45,7 +45,7 @@ public class CcmLookupService extends RouteBuilder {
     attachExceptionHandlers();
     getCourtCaseExists();
     getCourtCaseStatusExists();
-    getCourtCaseStatusExiststest();
+    checkCourtCaseStatusExists();
     getCourtCaseDetails();
     getCourtCaseAuthList();
     getCourtCaseMetadata();
@@ -283,7 +283,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
   }
-  private void getCourtCaseStatusExiststest() {
+  private void checkCourtCaseStatusExists() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -299,7 +299,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.INFO,"Processing getCourtCaseExists request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-dems-adapter/getCourtCaseStatusExiststest")
+    .to("http://ccm-dems-adapter/checkCourtCaseStatusExists")
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
   }

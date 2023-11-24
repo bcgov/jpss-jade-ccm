@@ -734,7 +734,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number",simple("${header.event_key}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/getCourtCaseStatusExiststest")
+    .to("http://ccm-lookup-service/checkCourtCaseStatusExists")
     .unmarshal().json()
     //JADE-2671 - look-up primary rcc for update.
     .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
@@ -744,7 +744,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number",simple("${body[primaryAgencyFileId]}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("http://ccm-lookup-service/getCourtCaseStatusExiststest")
+        .to("http://ccm-lookup-service/checkCourtCaseStatusExists")
         .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
         .unmarshal().json()
       .endChoice()
@@ -855,6 +855,7 @@ public class CcmNotificationService extends RouteBuilder {
                             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
                             re.setJustin_event_message_id(Integer.parseInt(event_message_id));
                             re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+                            re.setForce_update(true);
                             re.setReport_type(reportTypesSb.toString());
                             exchange.getMessage().setBody(re, ReportEvent.class);
                           }
