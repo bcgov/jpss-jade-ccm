@@ -17,6 +17,9 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ccm.models.common.event.CaseUserEvent;
+import io.vertx.codegen.format.Case;
+
 @ApplicationScoped
 public class AccessDedupTopology {
     Logger LOG = LoggerFactory.getLogger(AccessDedupTopology.class);
@@ -56,31 +59,45 @@ public class AccessDedupTopology {
 
         Topology topology = new Topology();
 
-        // Define the source processor
-        topology.addSource("Source", Serdes.String().deserializer(), Serdes.String().deserializer(), bulkCaseUsersTopicName);
-
-        // Add custom processor
-        topology.addProcessor("Processor", CaseAccessSyncProducer::new, "Source");
-
-        // Define the state store
+        // Create the case user event handling topology
+        //// Define the case user event source
+        topology.addSource(CaseUserEventHandler.util_getTopologySourceName(), 
+            Serdes.String().deserializer(), Serdes.String().deserializer(), 
+            bulkCaseUsersTopicName);
+        //// Add case user event custom processor
+        topology.addProcessor(CaseUserEventHandler.class.getSimpleName(), 
+            CaseUserEventHandler::new, CaseUserEventHandler.util_getTopologySourceName());
+        //// Define the state store
         StoreBuilder<KeyValueStore<String, String>> caseAccessSyncStoreBuilder =
             Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore(caseAccessSyncStoreName),
                 Serdes.String(),
-                Serdes.String()
-            );
-        topology.addStateStore(caseAccessSyncStoreBuilder, "Processor");
+                Serdes.String());
+        topology.addStateStore(caseAccessSyncStoreBuilder, 
+            CaseUserEventHandler.util_getTopologyProcessorName());
+        //// Add case user event sink processors
+        topology.addSink(CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName), caseUserErrorsTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            CaseUserEventHandler.util_getTopologyProcessorName());
+        topology.addSink(CaseUserEventHandler.util_getToplogySinkName(chargeAssessmentsTopicName), chargeAssessmentsTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            CaseUserEventHandler.util_getTopologyProcessorName());
+        topology.addSink(CaseUserEventHandler.util_getToplogySinkName(kpisTopicName), kpisTopicName, 
+            Serdes.String().serializer(), Serdes.String().serializer(), 
+            CaseUserEventHandler.util_getTopologyProcessorName());
 
-        // Add sink processors
-        topology.addSink("SinkFor-" + caseUserErrorsTopicName, caseUserErrorsTopicName, 
+        // Create the charge assessment event handling topology
+        //// Define the charge assessment event source
+        topology.addSource(ChargeAssessmentEventHandler.util_getTopologySourceName(), 
+            Serdes.String().deserializer(), Serdes.String().deserializer(), 
+            chargeAssessmentsTopicName);
+        //// Add charge assessment event custom processor
+        topology.addProcessor(ChargeAssessmentEventHandler.class.getSimpleName(), 
+            ChargeAssessmentEventHandler::new, ChargeAssessmentEventHandler.util_getTopologySourceName());
+        //// Add charge assessment event sink processor
+        topology.addSink(ChargeAssessmentEventHandler.util_getToplogySinkName(kpisTopicName), kpisTopicName, 
             Serdes.String().serializer(), Serdes.String().serializer(), 
-            "Processor");
-        topology.addSink("SinkFor-" + chargeAssessmentsTopicName, chargeAssessmentsTopicName, 
-            Serdes.String().serializer(), Serdes.String().serializer(), 
-            "Processor");
-        topology.addSink("SinkFor-" + kpisTopicName, kpisTopicName, 
-            Serdes.String().serializer(), Serdes.String().serializer(), 
-            "Processor");
+            ChargeAssessmentEventHandler.util_getTopologyProcessorName());
 
         return topology;
     }

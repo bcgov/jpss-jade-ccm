@@ -1,6 +1,9 @@
+import java.nio.charset.StandardCharsets;
+
 import org.apache.kafka.streams.processor.AbstractProcessor;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import org.apache.kafka.common.serialization.Serializer;
@@ -31,8 +34,8 @@ import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.Error;
 
-public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
-    private static final Logger LOG = LoggerFactory.getLogger(CaseAccessSyncProducer.class);
+public class CaseUserEventHandler extends AbstractProcessor<String, String> {
+    private static final Logger LOG = LoggerFactory.getLogger(CaseUserEventHandler.class);
 
     private ProcessorContext context;
 
@@ -102,7 +105,7 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
                 (key != null && key.length() > 0) ? " for " + key : "");
 
             // Produce a KPI event for the case user event.
-            produceEventKpi(caseUserEvent, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.offset());
+            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.offset());
 
             if (CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
                 // End of the batch is detected; forward all stored events and clear the store.
@@ -114,19 +117,9 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
                 accessdedupStore.all().forEachRemaining(keyValue -> {
                     event_count.incrementAndGet();
                     LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
-                    context.forward(keyValue.key, keyValue.value, "SinkFor-" + chargeAssessmentsTopicName);
 
-                    // Produce a KPI event for the charge assessment event.
-                    try {
-                        ChargeAssessmentEvent event = mapper
-                            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                            .readValue(keyValue.value, ChargeAssessmentEvent.class);
-                        produceEventKpiNoContext(event, EventKPI.STATUS.EVENT_CREATED, chargeAssessmentsTopicName);
-                    } catch (JsonProcessingException jpe) {
-                        LOG.error("Error producing KPI for charge assessment event message for {}. Error message: {}", keyValue.key, keyValue.value, jpe.getMessage());
-                    } catch (Exception e) {
-                        LOG.error("General error producing KPI.  Error message: {}", keyValue.key, keyValue.value, e.getMessage());
-                    }
+                    context.forward(keyValue.key, keyValue.value, 
+                        CaseUserEventHandler.util_getToplogySinkName(chargeAssessmentsTopicName));
                 });
 
                 accessdedupStore.all().forEachRemaining(keyValue -> {
@@ -154,7 +147,7 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
             }
             
             // Produce a KPI event for the case user event.
-            produceEventKpi(caseUserEvent, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.offset());
+            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.offset());
         } catch (JsonProcessingException jpe) {
             String errorDetails = "Error processing case user event message for " + key + ". Error message: " + jpe;
             LOG.error(errorDetails);
@@ -164,9 +157,9 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
             error.setError_summary("Event processing failed");
             error.setError_details(errorDetails);
 
-            produceEventKpiByEventKeyValueError(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
+            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
 
-            context.forward(key, value, "SinkFor-" + caseUserErrorsTopicName);
+            context.forward(key, value, CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName));
         } catch (Exception e) {
             String errorDetails = "General error processing " + key + ".  Error message: " + e;
             LOG.error(errorDetails);
@@ -176,40 +169,13 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
             error.setError_summary("General error");
             error.setError_details(errorDetails);
 
-            produceEventKpiByEventKeyValueError(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
+            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
 
-            context.forward(key, value, "SinkFor-" + caseUserErrorsTopicName);
+            context.forward(key, value, CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName));
         }
     }
 
-    void produceEventKpiNoContext(BaseEvent event, EventKPI.STATUS status, String topicName) {
-        produceEventKpi(event, status, topicName, null);
-    }
-
-    void produceEventKpi(BaseEvent event, EventKPI.STATUS status, String topicName, long topicOffset) {
-        produceEventKpi(event, status, topicName, Long.toString(topicOffset));
-    }
-
-    void produceEventKpi(BaseEvent event, EventKPI.STATUS status, String topicName, String topicOffset) {
-        EventKPI eventKPI = new EventKPI(event, status);
-
-        eventKPI.setEvent_topic_name(topicName);
-        eventKPI.setEvent_topic_offset(topicOffset);
-
-        eventKPI.setIntegration_component_name(appNameProperCase);
-        eventKPI.setComponent_route_name(this.getClass().getSimpleName());
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            context.forward(null, mapper.writeValueAsString(eventKPI), "SinkFor-" + kpisTopicName); 
-        } catch (JsonProcessingException jpe) {
-            LOG.error("Error processing event KPI message for {}. Error message: {}", event.getEvent_key(), jpe.getMessage());
-        } catch (Exception e) {
-            LOG.error("General error processing event KPI message for {}.  Error message: {}", event.getEvent_key(), e.getMessage());
-        }
-    }
-
-    void produceEventKpiByEventKeyValueError(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicOffset) {
+    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicOffset) {
         EventKPI eventKPI = new EventKPI(status);
 
         eventKPI.setEvent_topic_name(topicName);
@@ -218,17 +184,38 @@ public class CaseAccessSyncProducer extends AbstractProcessor<String, String> {
         eventKPI.setIntegration_component_name(appNameProperCase);
         eventKPI.setComponent_route_name(this.getClass().getSimpleName());
 
-        eventKPI.setEvent_details(eventValue);
+        // convert event value to json object if possible
+        Object eventValueObject = null;
+        try {
+            // convert to json object
+            eventValueObject = new ObjectMapper().readValue(eventValue, Object.class);
+        } catch (Exception e) {
+            // not a json object; use the string value
+            eventValueObject = eventValue;
+        }
+        eventKPI.setEvent_details(eventValueObject);
 
         eventKPI.setError(eventError);
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            context.forward(null, mapper.writeValueAsString(eventKPI), "SinkFor-" + kpisTopicName); 
+            context.forward(null, mapper.writeValueAsString(eventKPI), CaseUserEventHandler.util_getToplogySinkName(kpisTopicName)); 
         } catch (JsonProcessingException jpe) {
             LOG.error("Error processing event KPI message for {}. Error message: {}", eventKey, jpe.getMessage());
         } catch (Exception e) {
             LOG.error("General error processing event KPI message for {}.  Error message: {}", eventKey, e.getMessage());
         }
+    }
+
+    public static String util_getTopologySourceName() {
+        return CaseUserEvent.class.getSimpleName() + "Source";
+    }
+
+    public static String util_getTopologyProcessorName() {
+        return CaseUserEventHandler.class.getSimpleName();
+    }
+
+    public static String util_getToplogySinkName(String topicName) {
+        return CaseUserEvent.class.getSimpleName() + "Sink-" + topicName;
     }
 }

@@ -34,6 +34,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.data.AuthUser;
@@ -327,7 +328,8 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED))
+      .when(PredicateBuilder.or(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED), 
+        header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED)))
         .setProperty("kpi_component_route_name", simple("processCourtCaseAuthListChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
