@@ -27,7 +27,8 @@ public class ChargeAssessmentEvent extends BaseEvent {
     CREATED,
     UPDATED,
     MANUALLY_CHANGED,
-    AUTH_LIST_CHANGED;
+    AUTH_LIST_CHANGED,
+    INFERRED_AUTH_LIST_CHANGED
   }
 
   public ChargeAssessmentEvent() {
@@ -51,7 +52,6 @@ public class ChargeAssessmentEvent extends BaseEvent {
         setEvent_status(STATUS.MANUALLY_CHANGED.toString());
         break;
       case AUTH_LIST:
-      case USER_PROV:
         setEvent_status(STATUS.AUTH_LIST_CHANGED.toString());
         break;
       default:
@@ -95,7 +95,7 @@ public class ChargeAssessmentEvent extends BaseEvent {
 
     this.setEvent_key(caseUserEvent.getJustin_rcc_id());
     this.setEvent_source(source.name());
-    this.setEvent_status(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED.name());
+    this.setEvent_status(ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED.name());
     this.setJustin_event_dtm(caseUserEvent.getJustin_event_dtm());
     this.setJustin_event_message_id(caseUserEvent.getJustin_event_message_id());
     this.setJustin_fetched_date(caseUserEvent.getJustin_fetched_date());
