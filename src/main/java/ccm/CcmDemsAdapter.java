@@ -43,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
 
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ccm.models.common.data.CourtCaseData;
@@ -92,6 +93,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     dems_version();
     getDemsFieldMappings();
     getDemsCaseFlagId();
+    getDemsFieldListIdName();
     getCourtCaseExists();
     getCourtCaseIdByKey();
     getCourtCaseDataById();
@@ -420,7 +422,12 @@ public class CcmDemsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
+    .process(exchange -> {
+      DemsCaseStatus emptyCase = new DemsCaseStatus();
+      exchange.getMessage().setBody(emptyCase);
+    })
+    .marshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
+    .setProperty("caseNotFound").simple("${bodyAs(String)}")
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -433,6 +440,7 @@ public class CcmDemsAdapter extends RouteBuilder {
               .process(new Processor() {
                 @Override
                 public void process(Exchange exchange) {
+                  DemsCaseStatus caseStatus = new DemsCaseStatus();
 
                   String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
                   String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
@@ -446,36 +454,44 @@ public class CcmDemsAdapter extends RouteBuilder {
                   String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(),"/value");
                   String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
                   String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
+                  String rccStatus = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(),"/value");
 
-                  StringBuilder caseObjectJson = new StringBuilder("");
-                  caseObjectJson.append("{");
-                  caseObjectJson.append("\"id\":");
-                  caseObjectJson.append("\"" + caseId + "\",");
-                  caseObjectJson.append("\"key\":");
-                  caseObjectJson.append("\"" + caseKey + "\",");
-                  caseObjectJson.append("\"name\":");
-                  caseObjectJson.append("\"" + caseName + "\",");
-                  caseObjectJson.append("\"caseState\": ");
-                  caseObjectJson.append( "\"" + caseState + "\",");
-                  caseObjectJson.append("\"primaryAgencyFileId\": ");
-                  caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
-                  caseObjectJson.append("\"primaryAgencyFileNo\": ");
-                  caseObjectJson.append("\"" + primaryAgencyFileNo + "\",");
-                  caseObjectJson.append("\"agencyFileId\": ");
-                  caseObjectJson.append("\"" + agencyFileId + "\",");
-                  caseObjectJson.append("\"agencyFileNo\": ");
-                  caseObjectJson.append("\"" + agencyFileNo + "\",");
-                  caseObjectJson.append("\"courtFileId\": ");
-                  caseObjectJson.append("\"" + courtFileUniqueId + "\",");
-                  caseObjectJson.append("\"courtFileNo\": ");
-                  caseObjectJson.append("\"" + courtFileNo + "\",");
-                  caseObjectJson.append("\"status\": ");
-                  caseObjectJson.append( "\"" + status + "\"");
-                  caseObjectJson.append("}");
 
-                  exchange.getMessage().setBody(caseObjectJson.toString());
+                  caseStatus.setId(caseId);
+                  caseStatus.setKey(caseKey);
+                  caseStatus.setName(caseName);
+                  caseStatus.setCaseState(caseState);
+                  caseStatus.setPrimaryAgencyFileId(primaryAgencyFileId);
+                  caseStatus.setPrimaryAgencyFileNo(primaryAgencyFileNo);
+                  caseStatus.setAgencyFileId(agencyFileId);
+                  caseStatus.setAgencyFileNo(agencyFileNo);
+                  caseStatus.setCourtFileId(courtFileUniqueId);
+                  caseStatus.setCourtFileNo(courtFileNo);
+                  caseStatus.setStatus(status);
+                  caseStatus.setRccStatus(rccStatus);
+
+                  exchange.getMessage().setBody(caseStatus);
+                  exchange.setProperty("fieldName", "RCC Status");
+                  exchange.setProperty("fieldListId", rccStatus);
                 }
               })
+              .setProperty("caseStatusObj", body())
+
+              // translate the rcc status with actual name.
+              .to("direct:getDemsFieldListIdName")
+              .log(LoggingLevel.INFO, "Returned Rcc Status: ${body}")
+
+              .process(exchange -> {
+                DemsCaseStatus caseStatus = exchange.getProperty("caseStatusObj", DemsCaseStatus.class);
+                String rccStatus = exchange.getIn().getBody(String.class);
+                if(rccStatus != null && !rccStatus.isEmpty()) {
+                  caseStatus.setRccStatus(rccStatus);
+                }
+
+                exchange.getMessage().setBody(caseStatus);
+              })
+              .marshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
+              .setProperty("caseStatus").simple("${bodyAs(String)}")
             .endChoice()
             .otherwise()
               .setBody(simple("${exchangeProperty.caseNotFound}"))
@@ -1448,6 +1464,44 @@ public class CcmDemsAdapter extends RouteBuilder {
 
       })
       .setBody(simple("${exchangeProperty.caseFlagId}"))
+      ;
+  }
+
+  private void getDemsFieldListIdName() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property.fieldName (i.e. "RCC Status")
+    //IN: property.fieldListId (i.e. "19")
+    //OUT: body (i.e. "Received")
+    from("direct:" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .log(LoggingLevel.INFO,"Field Name = ${exchangeProperty.fieldName} Field List Id = ${exchangeProperty.fieldListId}")
+      .choice()
+        .when(simple("${exchangeProperty.fieldName} != '' && ${exchangeProperty.fieldListId} != ''"))
+          .to("direct:getDemsFieldMappings")
+          .setProperty("DemsFieldMappings", simple("${bodyAs(String)}"))
+          .log(LoggingLevel.DEBUG,"Response: ${body}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              String demsFieldMappingsJson = exchange.getProperty("DemsFieldMappings", String.class);
+              String fieldName = exchange.getProperty("fieldName", String.class);
+              String fieldListId = exchange.getProperty("fieldListId", String.class);
+              JsonNode node = JsonParseUtils.getJsonArrayElement(demsFieldMappingsJson, "", "/name", fieldName, "/listItems");
+              String name = JsonParseUtils.readJsonElementKeyValue(node, "", "/id", fieldListId, "/name");
+              exchange.setProperty("fieldListName", name);
+              log.info("fieldListId: " + fieldListId + " fieldListName:" + name);
+            }
+
+          })
+          .setBody(simple("${exchangeProperty.fieldListName}"))
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.WARN, "Field Name or Filed List Id not provided.")
+          .setBody(simple(""))
+        .end()
       ;
   }
 
@@ -3561,7 +3615,7 @@ public class CcmDemsAdapter extends RouteBuilder {
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
       .setProperty("key", simple("${header.number}"))
       .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
-      .to("direct:getCourtCaseStatusByKey")
+      .to("direct:getCourtCaseDataByKey")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .choice()
         .when(simple("${exchangeProperty.courtCaseId} != ''"))
