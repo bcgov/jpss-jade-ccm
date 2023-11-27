@@ -35,7 +35,8 @@ public class CaseUserEvent extends BaseEvent {
   public enum STATUS {
     ACCOUNT_CREATED,
     ACCESS_ADDED,
-    ACCESS_REMOVED;
+    ACCESS_REMOVED,
+    EVENT_BATCH_ENDED;
   }
 
   public CaseUserEvent() {
@@ -200,6 +201,4 @@ public class CaseUserEvent extends BaseEvent {
   public void setJustin_record_num(String justin_record_num) {
     this.justin_record_num = justin_record_num;
   }
-
-
 }
