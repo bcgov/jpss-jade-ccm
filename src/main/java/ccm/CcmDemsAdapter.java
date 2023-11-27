@@ -99,9 +99,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCourtCaseNameByKey();
     getCourtCaseStatusExists();
     getCourtCaseStatusByKey ();
-    checkCourtCaseStatusExists();
-    checkCourtCaseStatusByKey();
-    getCourtCaseStatusByIdwithrccStatus();
     getDemsFieldMappingsrccStatus();
     getCourtCaseStatusById();
     getCourtCaseCourtFileUniqueIdByKey();
@@ -415,137 +412,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     .to("direct:getCourtCaseStatusById")
   ;
   }
-  private void checkCourtCaseStatusExists() {
-    // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-   //IN: header.number
-   from("platform-http:/" + routeId)
-   .routeId(routeId)
-   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .log(LoggingLevel.INFO,"status exists key = ${header[number]}...")
-   .removeHeader("CamelHttpUri")
-   .removeHeader("CamelHttpBaseUri")
-   .removeHeaders("CamelHttp*")
-   .removeHeader("kafka.HEADERS")
-   .removeHeaders("x-amz*")
-
-   .to("direct:checkCourtCaseStatusByKey")
-   .end()
-   ;
- }
-
- private void checkCourtCaseStatusByKey() {
-   // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-   //IN: header.number
-   from("direct:" + routeId)
-   .routeId(routeId)
-   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-
-   .setProperty("key", simple("${header.number}"))
-   .log(LoggingLevel.INFO,"Case status exists key = ${exchangeProperty.key}")
-
-   .to("direct:getCourtCaseIdByKey")
-   .setProperty("id", jsonpath("$.id"))
-
-   .to("direct:getCourtCaseStatusByIdwithrccStatus")
- ;
- }
-
- private void getCourtCaseStatusByIdwithrccStatus() {
-  // use method name as route id
-  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-  //IN: header.number
-  from("direct:" + routeId)
-  .routeId(routeId)
-  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-
-  .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\", \"rccStatus\": \"\"}"))
-
-  .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
-  .choice()
-    .when(simple("${exchangeProperty.id} != ''"))
-      .doTry()
-        .to("direct:getCourtCaseDataById")
-        .choice()
-          .when(simple("${header.CamelHttpResponseCode} == 200"))
-            .setProperty("DemsCourtCase", simple("${bodyAs(String)}"))
-            .process(new Processor() {
-              @Override
-              public void process(Exchange exchange) {
-
-                String courtCaseJson = exchange.getProperty("DemsCourtCase", String.class);
-                String caseId = JsonParseUtils.getJsonElementValue(courtCaseJson, "id");
-                String caseKey = JsonParseUtils.getJsonElementValue(courtCaseJson, "key");
-                String caseName = JsonParseUtils.getJsonElementValue(courtCaseJson, "name");
-                String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), "/value");
-                String courtFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.COURT_FILE_NO.getLabel(), "/value");
-                String caseState = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(),"/value");
-                String primaryAgencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(),"/value");
-                String primaryAgencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(),"/value");
-                String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(),"/value");
-                String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
-                String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
-                String rccStatus = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(),"/value");
-
-                StringBuilder caseObjectJson = new StringBuilder("");
-                caseObjectJson.append("{");
-                caseObjectJson.append("\"id\":");
-                caseObjectJson.append("\"" + caseId + "\",");
-                caseObjectJson.append("\"key\":");
-                caseObjectJson.append("\"" + caseKey + "\",");
-                caseObjectJson.append("\"name\":");
-                caseObjectJson.append("\"" + caseName + "\",");
-                caseObjectJson.append("\"caseState\": ");
-                caseObjectJson.append( "\"" + caseState + "\",");
-                caseObjectJson.append("\"primaryAgencyFileId\": ");
-                caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
-                caseObjectJson.append("\"primaryAgencyFileNo\": ");
-                caseObjectJson.append("\"" + primaryAgencyFileNo + "\",");
-                caseObjectJson.append("\"agencyFileId\": ");
-                caseObjectJson.append("\"" + agencyFileId + "\",");
-                caseObjectJson.append("\"agencyFileNo\": ");
-                caseObjectJson.append("\"" + agencyFileNo + "\",");
-                caseObjectJson.append("\"courtFileId\": ");
-                caseObjectJson.append("\"" + courtFileUniqueId + "\",");
-                caseObjectJson.append("\"courtFileNo\": ");
-                caseObjectJson.append("\"" + courtFileNo + "\",");
-                caseObjectJson.append("\"status\": ");
-                caseObjectJson.append( "\"" + status + "\",");
-                caseObjectJson.append("\"rccStatus\": ");
-                caseObjectJson.append( "\"" + rccStatus + "\"");
-                caseObjectJson.append("}");
-
-                exchange.getMessage().setBody(caseObjectJson.toString());
-              }
-            })
-          .endChoice()
-          .otherwise()
-            .setBody(simple("${exchangeProperty.caseNotFound}"))
-            .setHeader("CamelHttpResponseCode", simple("200"))
-            .log(LoggingLevel.INFO,"Case not found.")
-          .endChoice()
-        .end() // choice end
-      .endDoTry()
-      .doCatch(Exception.class)
-        .log(LoggingLevel.ERROR,"Exception: ${exception}")
-        .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
-        .setBody(simple("${exchangeProperty.caseNotFound}"))
-        .setHeader("CamelHttpResponseCode", simple("200"))
-      .end()
-
-
-    .endChoice()
-    .otherwise()
-      .setBody(simple("${exchangeProperty.caseNotFound}"))
-      .setHeader("CamelHttpResponseCode", simple("200"))
-      .log(LoggingLevel.INFO,"Case not found.")
-    .endChoice()
-  .end()
-  .log(LoggingLevel.DEBUG, "DEMS Case Status: ${body}")
-;
-}
 
 private void getDemsFieldMappingsrccStatus() {
   // use method name as route id
@@ -589,7 +455,7 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\"}"))
+    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\", \"rccStatus\": \"\"}"))
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -615,6 +481,7 @@ private void getDemsFieldMappingsrccStatus() {
                   String agencyFileId = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(),"/value");
                   String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
                   String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
+                  String rccStatus = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(),"/value");
 
                   StringBuilder caseObjectJson = new StringBuilder("");
                   caseObjectJson.append("{");
@@ -639,7 +506,9 @@ private void getDemsFieldMappingsrccStatus() {
                   caseObjectJson.append("\"courtFileNo\": ");
                   caseObjectJson.append("\"" + courtFileNo + "\",");
                   caseObjectJson.append("\"status\": ");
-                  caseObjectJson.append( "\"" + status + "\"");
+                  caseObjectJson.append( "\"" + status + "\",");
+                  caseObjectJson.append("\"rccStatus\": ");
+                  caseObjectJson.append( "\"" + rccStatus + "\"");
                   caseObjectJson.append("}");
 
                   exchange.getMessage().setBody(caseObjectJson.toString());

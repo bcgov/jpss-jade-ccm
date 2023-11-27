@@ -734,7 +734,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number",simple("${header.event_key}"))
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-lookup-service/checkCourtCaseStatusExists")
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
     //JADE-2671 - look-up primary rcc for update.
     .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
@@ -744,7 +744,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number",simple("${body[primaryAgencyFileId]}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("http://ccm-lookup-service/checkCourtCaseStatusExists")
+        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
         .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
         .unmarshal().json()
       .endChoice()

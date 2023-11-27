@@ -45,7 +45,6 @@ public class CcmLookupService extends RouteBuilder {
     attachExceptionHandlers();
     getCourtCaseExists();
     getCourtCaseStatusExists();
-    checkCourtCaseStatusExists();
     getCourtCaseDetails();
     getCourtCaseAuthList();
     getCourtCaseMetadata();
@@ -280,26 +279,6 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/getCourtCaseStatusExists")
-    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
-    ;
-  }
-  private void checkCourtCaseStatusExists() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //IN: header.number
-
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    //.setProperty("name",simple("${header[number]}"))
-    .log(LoggingLevel.INFO,"Processing getCourtCaseExists request... number = ${header[number]}")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-dems-adapter/checkCourtCaseStatusExists")
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     ;
   }
