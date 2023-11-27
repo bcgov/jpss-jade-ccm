@@ -26,6 +26,8 @@ public class ReportEvent extends BaseEvent{
     private String rcc_ids;
     private String image_id;
     private String docm_id;
+    //jade 2712
+    private Boolean force_update;
 
     public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
     public static final String JUSTIN_GUID = "GUID";
@@ -368,4 +370,11 @@ public class ReportEvent extends BaseEvent{
       this.docm_id = docm_id;
     }
 
+    public Boolean getForce_update() {
+      return force_update;
+    }
+
+    public void setForce_update(Boolean force_update) {
+      this.force_update = force_update;
+    }
 }
