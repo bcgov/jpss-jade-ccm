@@ -512,7 +512,7 @@ private void getDemsFieldMappingsrccStatus() {
               .setProperty("caseStatusObj", body())
 
               // translate the rcc status with actual name.
-              /*.to("direct:getDemsFieldListIdName")
+              .to("direct:getDemsFieldListIdName")
               .log(LoggingLevel.INFO, "Returned Rcc Status: ${body}")
 
               .process(exchange -> {
@@ -523,7 +523,7 @@ private void getDemsFieldMappingsrccStatus() {
                 }
 
                 exchange.getMessage().setBody(caseStatus);
-              })*/
+              })
               .marshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
               .setProperty("caseStatus").simple("${bodyAs(String)}")
             .endChoice()
