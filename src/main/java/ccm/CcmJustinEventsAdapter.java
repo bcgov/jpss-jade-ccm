@@ -475,7 +475,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .setHeader("id", simple("${exchangeProperty.id}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-justin-adapter/requeueJustinEvent")
+      .to("direct:requeueJustinEvent")
       .log(LoggingLevel.INFO,"JUSTIN event ${exchangeProperty.id} requeued.")
       .process(new Processor() {
         @Override
@@ -1641,7 +1641,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-events-adapter")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
     "    on the topic ${headers[kafka.TOPIC]}\n" +

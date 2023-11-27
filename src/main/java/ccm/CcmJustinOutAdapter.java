@@ -473,7 +473,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       .setHeader("id", simple("${exchangeProperty.id}"))
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-justin-adapter/requeueJustinEvent")
+      .to("http://ccm-justin-events-adapter/requeueJustinEvent")
       .log(LoggingLevel.INFO,"JUSTIN event ${exchangeProperty.id} requeued.")
       .process(new Processor() {
         @Override
