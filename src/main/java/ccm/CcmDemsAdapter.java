@@ -457,16 +457,12 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
 
-<<<<<<< HEAD
     .process(exchange -> {
       DemsCaseStatus emptyCase = new DemsCaseStatus();
       exchange.getMessage().setBody(emptyCase);
     })
     .marshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
     .setProperty("caseNotFound").simple("${bodyAs(String)}")
-=======
-    .setProperty("caseNotFound", simple("{\"id\": \"\", \"key\": \"\", \"name\": \"\", \"caseState\": \"\", \"primaryAgencyFileId\": \"\", \"primaryAgencyFileNo\": \"\", \"agencyFileId\": \"\", \"agencyFileNo\": \"\", \"courtFileId\": \"\", \"courtFileNo\": \"\", \"status\": \"\", \"rccStatus\": \"\"}"))
->>>>>>> 0a742e426271413cbdbb86072ee80ef9235371ea
 
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.id}'")
     .choice()
@@ -494,37 +490,6 @@ private void getDemsFieldMappingsrccStatus() {
                   String agencyFileNo = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(),"/value");
                   String status = JsonParseUtils.getJsonElementValue(courtCaseJson, "status");
                   String rccStatus = JsonParseUtils.getJsonArrayElementValue(courtCaseJson, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(),"/value");
-
-<<<<<<< HEAD
-=======
-                  StringBuilder caseObjectJson = new StringBuilder("");
-                  caseObjectJson.append("{");
-                  caseObjectJson.append("\"id\":");
-                  caseObjectJson.append("\"" + caseId + "\",");
-                  caseObjectJson.append("\"key\":");
-                  caseObjectJson.append("\"" + caseKey + "\",");
-                  caseObjectJson.append("\"name\":");
-                  caseObjectJson.append("\"" + caseName + "\",");
-                  caseObjectJson.append("\"caseState\": ");
-                  caseObjectJson.append( "\"" + caseState + "\",");
-                  caseObjectJson.append("\"primaryAgencyFileId\": ");
-                  caseObjectJson.append("\"" + primaryAgencyFileId + "\",");
-                  caseObjectJson.append("\"primaryAgencyFileNo\": ");
-                  caseObjectJson.append("\"" + primaryAgencyFileNo + "\",");
-                  caseObjectJson.append("\"agencyFileId\": ");
-                  caseObjectJson.append("\"" + agencyFileId + "\",");
-                  caseObjectJson.append("\"agencyFileNo\": ");
-                  caseObjectJson.append("\"" + agencyFileNo + "\",");
-                  caseObjectJson.append("\"courtFileId\": ");
-                  caseObjectJson.append("\"" + courtFileUniqueId + "\",");
-                  caseObjectJson.append("\"courtFileNo\": ");
-                  caseObjectJson.append("\"" + courtFileNo + "\",");
-                  caseObjectJson.append("\"status\": ");
-                  caseObjectJson.append( "\"" + status + "\",");
-                  caseObjectJson.append("\"rccStatus\": ");
-                  caseObjectJson.append( "\"" + rccStatus + "\"");
-                  caseObjectJson.append("}");
->>>>>>> 0a742e426271413cbdbb86072ee80ef9235371ea
 
                   caseStatus.setId(caseId);
                   caseStatus.setKey(caseKey);

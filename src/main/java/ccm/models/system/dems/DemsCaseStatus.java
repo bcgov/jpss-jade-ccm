@@ -1,18 +1,18 @@
 package ccm.models.system.dems;
 
 public class DemsCaseStatus {
-    private String id;
-    private String key;
-    private String name;
-    private String caseState;
-    private String primaryAgencyFileId;
-    private String primaryAgencyFileNo;
-    private String agencyFileId;
-    private String agencyFileNo;
-    private String courtFileId;
-    private String courtFileNo;
-    private String status;
-    private String rccStatus;
+    private String id = "";
+    private String key = "";
+    private String name = "";
+    private String caseState = "";
+    private String primaryAgencyFileId = "";
+    private String primaryAgencyFileNo = "";
+    private String agencyFileId = "";
+    private String agencyFileNo = "";
+    private String courtFileId = "";
+    private String courtFileNo = "";
+    private String status = "";
+    private String rccStatus = "";
 
     public DemsCaseStatus() {
     }
