@@ -812,63 +812,61 @@ public class CcmNotificationService extends RouteBuilder {
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
                 .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-                  .process(new Processor() {
-                    @Override
-                    public void process(Exchange exchange) {
-                      ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-                      exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
-                      exchange.setProperty("bodytest", b);
-                      //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
-                      //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
-                      //System.out.println("body : "+ b.toString());
-                    }
-                  }) .marshal().json()
-                  .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
-                    .choice()
-                      .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return'"))
-                      .log(LoggingLevel.DEBUG,"ready for reactivating the case")
-                      .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
-                      .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-                      .setBody(simple("${exchangeProperty.courtcase_data}"))
-                        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-                        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                        .to("http://ccm-dems-adapter/updateCourtCase")
-                        .log(LoggingLevel.INFO,"Update court case auth list.")
-                        .to("direct:processCourtCaseAuthListChanged")
-                        .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
-                        // create Report Event for static type reports.
-                        .process(new Processor() {
-                          @Override
-                          public void process(Exchange exchange) {
-                            String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
-                            String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
-                            StringBuilder reportTypesSb = new StringBuilder("");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
-                            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) {
+                    ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+                    exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
+                    exchange.setProperty("bodytest", b);
+                    //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
+                    //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
+                    //System.out.println("body : "+ b.toString());
+                  }
+                }) .marshal().json()
+                .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
+                .choice()
+                  .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return'"))
+                    .log(LoggingLevel.DEBUG,"ready for reactivating the case")
+                    .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
+                    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+                    .setBody(simple("${exchangeProperty.courtcase_data}"))
+                    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .to("http://ccm-dems-adapter/updateCourtCase")
+                    .log(LoggingLevel.INFO,"Update court case auth list.")
+                    .to("direct:processCourtCaseAuthListChanged")
+                    .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
+                    // create Report Event for static type reports.
+                    .process(new Processor() {
+                      @Override
+                      public void process(Exchange exchange) {
+                        String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+                        String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
+                        StringBuilder reportTypesSb = new StringBuilder("");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
+                        reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
-                            ReportEvent re = new ReportEvent();
-                            re.setJustin_rcc_id(rcc_id);
-                            re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-                            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
-                            re.setJustin_event_message_id(Integer.parseInt(event_message_id));
-                            re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
-                            re.setForce_update(true);
-                            re.setReport_type(reportTypesSb.toString());
-                            exchange.getMessage().setBody(re, ReportEvent.class);
-                          }
-                        })
-                        .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-                        .to("kafka:{{kafka.topic.reports.name}}")
-                      .endChoice()
-                    .endChoice()
-              .endChoice()
+                        ReportEvent re = new ReportEvent();
+                        re.setJustin_rcc_id(rcc_id);
+                        re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+                        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+                        re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+                        re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+                        re.setForce_update(true);
+                        re.setReport_type(reportTypesSb.toString());
+                        exchange.getMessage().setBody(re, ReportEvent.class);
+                      }
+                    })
+                    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+                    .to("kafka:{{kafka.topic.reports.name}}")
+                .endChoice()
             .endChoice()
         .endChoice()
       .endChoice()
@@ -2446,7 +2444,7 @@ public class CcmNotificationService extends RouteBuilder {
     // Make sure that we are re-routing to the primary case, if the value is set.
     .choice()
       .when(simple("${exchangeProperty.caseStatus} == 'Inactive' && ${exchangeProperty.primary_rcc_id} != ''"))
-      .log(LoggingLevel.INFO, "get primary value")
+        .log(LoggingLevel.INFO, "get primary value")
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
