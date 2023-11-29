@@ -9,12 +9,6 @@ ns_set="cef5dd"
 image_registry_url=$(oc registry info)
 app="ccm-accessdedup-processor"
 
-$(which docker) > /dev/null 2> /dev/null
-if [ $? -ne 0 ]; then
-    echo "Error.  Docker not found."
-    exit 1
-fi
-
 if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
@@ -71,8 +65,7 @@ if [ "$env" = "prod" ]; then
 
     # Override logging level for Prod deployment
     logging_level="INFO"
-else
-    # Keep dev/test/local logging level to default
+
 fi
 
 
