@@ -44,6 +44,7 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Case User | ACCOUNT_CREATED |[Diagram](../diagrams/img/ccm_case_user_account_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_account_created_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_ADDED |[Diagram](../diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_REMOVED |[Diagram](../diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
+| Case User | EVENT_BATCH_ENDED |[Diagram](../diagrams/img/ccm_case_user_event_batch_ended_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_event_batch_ended_processing_sequence_diagram.plantuml))|
 
 
 ### Example Event Processing Diagram 
