@@ -25,7 +25,6 @@ bulk_case_users_topic o-> accessdedup_processor : Process ACCESS_ADDED event
 activate accessdedup_processor
 
 accessdedup_processor -> case_access_sync_store: Query for case number
-activate case_access_sync_store
 
 alt Case not in store
     accessdedup_processor -> accessdedup_processor: Derive case number from event
@@ -33,7 +32,6 @@ alt Case not in store
 else Case already in store
     accessdedup_processor -> accessdedup_processor: Ignore event
 end
-deactivate case_access_sync_store
 
 deactivate accessdedup_processor
 
