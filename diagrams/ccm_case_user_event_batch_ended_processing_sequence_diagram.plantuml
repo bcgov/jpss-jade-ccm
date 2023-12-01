@@ -24,14 +24,18 @@ autonumber
 
 bulk_case_users_topic o-> accessdedup_processor : Process EVENT_BATCH_ENDED event
 
+activate accessdedup_processor
+
 loop for each event in store
     accessdedup_processor <-o case_access_sync_store : Retrieve event message from store
-    case_access_sync_store o->o charge_assessments_topic : Produce event message to topic
+    accessdedup_processor ->o charge_assessments_topic : Produce event message to topic
 end loop
 
 loop for each event in store
     accessdedup_processor ->o case_access_sync_store : Delete event message from store
 end loop
+
+deactivate accessdedup_processor
 
 caption
 Prepared by David Agahchen | Created November 29, 2023
