@@ -33,17 +33,19 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Business Object | Event | Processing Diagram (and source) |
 | --- | --- | --- |
 | All | JUSTIN Events | [Diagram](../diagrams/img/ccm_justin_event_processing_sequence_diagram.png) ([source](../diagrams/ccm_justin_event_processing_sequence_diagram.plantuml))|
-| Charge Assessment Case | MANUALLY_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.plantuml))|
-| Charge Assessment Case | CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_changed_processing_sequence_diagram.plantuml))|
-| Charge Assessment Case | CREATED |[Diagram](../diagrams/img/ccm_charge_assessment_case_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_created_processing_sequence_diagram.plantuml))|
-| Charge Assessment Case | UPDATED |[Diagram](../diagrams/img/ccm_charge_assessment_case_updated_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_updated_processing_sequence_diagram.plantuml))|
-| Charge Assessment Case | AUTH_LIST_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.plantuml))|
-| Approved Court Case | CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_changed_processing_sequence_diagram.plantuml))|
-| Approved Court Case | APPEARANCE_CHANGED |[Diagram](../diagrams/img/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.png) ([source](../diagrams/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.plantuml))|
-| Approved Court Case | CROWN_ASSIGNMENT_CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.plantuml))|
+| Charge Assessment | MANUALLY_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.plantuml))|
+| Charge Assessment | CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_changed_processing_sequence_diagram.plantuml))|
+| Charge Assessment | CREATED |[Diagram](../diagrams/img/ccm_charge_assessment_case_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_created_processing_sequence_diagram.plantuml))|
+| Charge Assessment | UPDATED |[Diagram](../diagrams/img/ccm_charge_assessment_case_updated_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_updated_processing_sequence_diagram.plantuml))|
+| Charge Assessment | AUTH_LIST_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.plantuml))|
+| Charge Assessment | INFERRED_AUTH_LIST_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_auth_list_changed_processing_sequence_diagram.plantuml))|
+| Court Case | CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_changed_processing_sequence_diagram.plantuml))|
+| Court Case | APPEARANCE_CHANGED |[Diagram](../diagrams/img/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.png) ([source](../diagrams/ccm_approved_cort_case_appearance_changed_processing_sqeuencing_diagram.plantuml))|
+| Court Case | CROWN_ASSIGNMENT_CHANGED |[Diagram](../diagrams/img/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_approved_court_case_crown_assignment_changed_processing_sequence_diagram.plantuml))|
 | Case User | ACCOUNT_CREATED |[Diagram](../diagrams/img/ccm_case_user_account_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_account_created_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_ADDED |[Diagram](../diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_REMOVED |[Diagram](../diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
+| Case User | EVENT_BATCH_ENDED |[Diagram](../diagrams/img/ccm_case_user_event_batch_ended_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_event_batch_ended_processing_sequence_diagram.plantuml))|
 
 
 ### Example Event Processing Diagram 
