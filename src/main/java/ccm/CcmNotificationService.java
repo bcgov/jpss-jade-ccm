@@ -400,49 +400,62 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
-    .log(LoggingLevel.DEBUG,"Retrieve latest court case details from JUSTIN.")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number").simple("${header.event_key}")
-    .removeHeader(Exchange.CONTENT_ENCODING)
-    .to("http://ccm-lookup-service/getCourtCaseDetails")
-    .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-    .setProperty("courtcase_object", body())
+    
+    // double check that case had not been already created since.
+    .setHeader("number", simple("${header[event_key]}"))
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseFound").simple("${body[id]}")
+    .choice()
+      .when(simple("${exchangeProperty.caseFound} == ''"))
+        .log(LoggingLevel.DEBUG,"Retrieve latest court case details from JUSTIN.")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("number").simple("${header.event_key}")
+        .removeHeader(Exchange.CONTENT_ENCODING)
+        .to("http://ccm-lookup-service/getCourtCaseDetails")
+        .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+        .setProperty("courtcase_object", body())
 
-    .setProperty("allowCreateCase").simple("true")
-    .setProperty("autoCreateMaxDays").simple("{{dems.case.auto.creation.submit.date.cutoff}}")
-    // BCPSDEMS-1543 - Check to make sure rcc submit date is not before dems.case.auto.creation.submit.date.cutoff
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) throws HttpOperationFailedException {
-        // based on the autoCreateMaxDays value, and the rcc's submit date and
-        // whether or not it is a manu_file or manu_cfile
-        String event_message_type = (String)ex.getMessage().getHeader("event_message_type");
-        if(event_message_type != null
-         && !event_message_type.equalsIgnoreCase("MANU_CFILE")
-         && !event_message_type.equalsIgnoreCase("MANU_FILE")) {
-          // Make sure that the message type isn't a manual creation first.
-          try {
-            Integer autoCreateMaxDays = (Integer)ex.getProperty("autoCreateMaxDays", Integer.class);
-            if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
-              ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
-              log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
-              // If no submit date, then don't create!
-              ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
-              ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
-              ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
-              
-              if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
-                ex.setProperty("allowCreateCase", "false");
+        .setProperty("allowCreateCase").simple("true")
+        .setProperty("autoCreateMaxDays").simple("{{dems.case.auto.creation.submit.date.cutoff}}")
+        // BCPSDEMS-1543 - Check to make sure rcc submit date is not before dems.case.auto.creation.submit.date.cutoff
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) throws HttpOperationFailedException {
+            // based on the autoCreateMaxDays value, and the rcc's submit date and
+            // whether or not it is a manu_file or manu_cfile
+            String event_message_type = (String)ex.getMessage().getHeader("event_message_type");
+            if(event_message_type != null
+            && !event_message_type.equalsIgnoreCase("MANU_CFILE")
+            && !event_message_type.equalsIgnoreCase("MANU_FILE")) {
+              // Make sure that the message type isn't a manual creation first.
+              try {
+                Integer autoCreateMaxDays = (Integer)ex.getProperty("autoCreateMaxDays", Integer.class);
+                if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
+                  ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
+                  log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
+                  // If no submit date, then don't create!
+                  ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
+                  ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
+                  ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
+                  
+                  if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
+                    ex.setProperty("allowCreateCase", "false");
+                  }
+                }
+              } catch(Exception error) {
+                error.printStackTrace();
               }
             }
-          } catch(Exception error) {
-            error.printStackTrace();
           }
-         }
-      }
-    })
+        })
+      .endChoice()
+    .otherwise()
+      .log(LoggingLevel.WARN, "RCC: ${header.event_key} already exists in DEMS.")
+      .setProperty("allowCreateCase").simple("false")
+    .end()
 
     .choice()
       .when(simple("${exchangeProperty.allowCreateCase} == 'true'"))

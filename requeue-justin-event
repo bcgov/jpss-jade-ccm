@@ -26,7 +26,7 @@ else
 fi
 
 if [ "$env" = "prod" ]; then
-    echo "WARNING:  You are about to requque events in PRODUCTION.  Are you sure? (y/n)"
+    echo "WARNING:  You are about to requeque events in PRODUCTION.  Are you sure? (y/n)"
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
