@@ -783,11 +783,13 @@ public class CcmNotificationService extends RouteBuilder {
           public void process(Exchange exchange) {
             ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
             exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+            exchange.setProperty("caseDecision", courtfiledata.getCase_decision_cd());
+            //System.out.println("casedecision "+courtfiledata.getCase_decision_cd());
           }}
         )
          //BCPSDEMS-328, JADE-1751 - Commented-out for Sept 24, 2023 release.
         .choice()
-          .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+          .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' && ${exchangeProperty.caseDecision} == 'NAC' || ${exchangeProperty.caseDecision} == 'RET'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
