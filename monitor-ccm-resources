@@ -19,7 +19,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-export TITLEPREFIX="Notification Events $ns "
-echo -ne "\e]0;Notification Events $ns\a"
+date
 
-kamel -n $ns log ccm-notification-service | grep "Event from Kafka "
+oc -n $ns adm top pods
+

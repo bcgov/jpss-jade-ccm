@@ -41,4 +41,5 @@ if [ "$idEnd" = "" ]; then
     -X PUT \
     "http://ccm-dems-adapter/createEdtExternalIdExistingParticipant"
 else
+  echo "Unable to execute script"
 fi

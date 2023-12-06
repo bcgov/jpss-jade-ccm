@@ -85,6 +85,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     processCrnAssignEvent();
     processUserProvEvent();
     processUserDProvEvent();
+    processBulkBatchEndedEvent();
     processReportEvents();
     processUnknownEvent();
 
@@ -544,6 +545,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     // process events
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
+    .setProperty("totalNumOfEvents", simple("${exchangeProperty.numOfEvents}"))
     .loopDoWhile(simple("${exchangeProperty.numOfEvents} > 0"))
       .to("direct:processJustinBulkEvents")
 
@@ -554,7 +556,17 @@ public class CcmJustinAdapter extends RouteBuilder {
       .toD("https://{{justin.host}}/newEventsBatch?system={{justin.queue.bulk.name}}") // mark all new events as "in progress"
       .setProperty("numOfEvents")
         .jsonpath("$.events.length()")
+      .process(exchange -> {
+        Integer totalNumOfEvents = exchange.getProperty("totalNumOfEvents", Integer.class);
+        Integer numOfEvents = exchange.getProperty("numOfEvents", Integer.class);
+        exchange.setProperty("totalNumOfEvents", totalNumOfEvents + numOfEvents);
+      })
     .end()
+    .choice()
+      .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
+        .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
+        .to("direct:processBulkBatchEndedEvent")
+      .endChoice()
     ;
   }
 
@@ -1160,6 +1172,50 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
   }
 
+  private void processBulkBatchEndedEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
+    .doTry()
+      .process(exchange -> {
+          CaseUserEvent event = new CaseUserEvent();
+          event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
+          event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+
+          exchange.getMessage().setBody(event, CaseUserEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+        })
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .setProperty("business_event", body())
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
+      .setProperty("error_event_object", body())
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .end()
+    ;
+  }
+
   private void processCourtFileEvent() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1703,6 +1759,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, EventKPI.class)
     .to("direct:publishBodyAsEventKPI")
+    .delay(60000)
 
     // update JUSTIN user status
     .removeHeader("CamelHttpUri")

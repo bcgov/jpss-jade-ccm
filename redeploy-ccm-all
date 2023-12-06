@@ -27,4 +27,5 @@ echo "`basename $0` to $env ..."
 . ./redeploy-ccm-justin-in-adapter $env
 . ./redeploy-ccm-justin-events-adapter $env
 . ./redeploy-ccm-justin-out-adapter $env
+. ./redeploy-ccm-accessdedup-processor $env
 

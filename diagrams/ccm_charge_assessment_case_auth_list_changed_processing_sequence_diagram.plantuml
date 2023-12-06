@@ -20,12 +20,16 @@ control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment AUTH_LIST_CHANGED Event Processing Sequence Diagram
+CCM Charge Assessment (INFERRED_)AUTH_LIST_CHANGED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-charge_assessment_cases_topic o-> notification_service : Process AUTH_LIST_CHANGED event
+alt 
+    charge_assessment_cases_topic o-> notification_service : Process AUTH_LIST_CHANGED event
+else 
+    charge_assessment_cases_topic o-> notification_service : Process INFERRED_AUTH_LIST_CHANGED event
+end
 activate notification_service
 
 group Call route processCourtCaseAuthListChanged
@@ -101,6 +105,6 @@ end group
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated November 29, 2023
 end caption
 @enduml
