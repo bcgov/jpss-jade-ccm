@@ -798,12 +798,12 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
           }}
         )
-         //BCPSDEMS-328, JADE-1751 - Commented-out for Sept 24, 2023 release.
+         //BCPSDEMS-328, JADE-1751
         .choice()
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
-          .log(LoggingLevel.INFO,"Deleted JUSTIN case records and inactivated case")
+          .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
           .endChoice()
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
@@ -1201,7 +1201,7 @@ public class CcmNotificationService extends RouteBuilder {
               .setProperty("rcc_id",jsonpath("$.rcc_id"))
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
               .setHeader("event_key", jsonpath("$.rcc_id"))
-              .log(LoggingLevel.DEBUG,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
+              .log(LoggingLevel.INFO,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
               .to("direct:processCourtCaseAuthListUpdated")
               .log(LoggingLevel.DEBUG,"Returned from processCourtCaseAuthListUpdated().")
             .endChoice()
@@ -1402,7 +1402,10 @@ public class CcmNotificationService extends RouteBuilder {
                   if(relatedCf == null) {
                     relatedCf = new ArrayList<ChargeAssessmentData>();
                   }
-                  relatedCf.add(bcm);
+                  if(bcm.getRcc_id() != null && !bcm.getRcc_id().isEmpty()) {
+                    // Only add if JUSTIN returned agency file info.
+                    relatedCf.add(bcm);
+                  }
                   log.info("Added new court file to metadata object.");
                   metadata.setRelated_charge_assessments(relatedCf);
                   exchange.setProperty("courtcase_object", metadata);
@@ -1507,7 +1510,10 @@ public class CcmNotificationService extends RouteBuilder {
                     if(relatedCf == null) {
                       relatedCf = new ArrayList<ChargeAssessmentData>();
                     }
-                    relatedCf.add(bcm);
+                    if(bcm.getRcc_id() != null && !bcm.getRcc_id().isEmpty()) {
+                      // Only add if JUSTIN returned agency file info.
+                      relatedCf.add(bcm);
+                    }
                     //log.info("Added new court file to metadata object.");
                     metadata.setRelated_charge_assessments(relatedCf);
                     exchange.setProperty("courtcase_object", metadata);
@@ -1586,7 +1592,10 @@ public class CcmNotificationService extends RouteBuilder {
           if(relatedCf == null) {
             relatedCf = new ArrayList<CourtCaseData>();
           }
-          relatedCf.add(bcm);
+          if(bcm.getCourt_file_id() != null && !bcm.getCourt_file_id().isEmpty()) {
+            // Only add if JUSTIN returned court file info.
+            relatedCf.add(bcm);
+          }
           metadata.setRelated_court_cases(relatedCf);
           exchange.setProperty("metadata_object", metadata);
         }
@@ -1692,7 +1701,10 @@ public class CcmNotificationService extends RouteBuilder {
                     if(relatedCf == null) {
                       relatedCf = new ArrayList<CourtCaseData>();
                     }
-                    relatedCf.add(bcm);
+                    if(bcm.getCourt_file_id() != null && !bcm.getCourt_file_id().isEmpty()) {
+                      // Only add if JUSTIN returned court file info.
+                      relatedCf.add(bcm);
+                    }
                     //log.info("Added new court file to metadata object.");
                     metadata.setRelated_court_cases(relatedCf);
                     exchange.setProperty("metadata_object", metadata);
