@@ -11,6 +11,8 @@ Available colours
 https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
 '/
 
+collections case_users_topic as "Case User Events"
+control notification_service as "Notification Service"
 collections bulk_case_users_topic as "Bulk Case User Events"
 control accessdedup_processor as "AccessDedup Processor"
 collections case_access_sync_store as "Case Access Sync Store"
@@ -20,6 +22,11 @@ CCM Case User ACCESS_ADDED Event Processing Sequence Diagram
 end title
 
 autonumber
+
+case_users_topic o-> notification_service : Process ACCESS_ADDED event
+activate notification_service
+notification_service ->o bulk_case_users_topic : Redirect event to the bulk topic
+deactivate notification_service
 
 bulk_case_users_topic o-> accessdedup_processor : Process ACCESS_ADDED event
 activate accessdedup_processor
@@ -36,6 +43,6 @@ end
 deactivate accessdedup_processor
 
 caption
-Prepared by David Agahchen | Updated November 29, 2023
+Prepared by David Agahchen | Updated December 6, 2023
 end caption
 @enduml

@@ -11,14 +11,11 @@ Available colours
 https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
 '/
 
-boundary j_interface as "JUSTIN Interface"
-control j_adapter as "JUSTIN Adapter"
 collections case_users_topic as "Case User Events"
 control notification_service as "Notification Service"
-control lookup_service as "Lookup Service"
-control d_adapter as "DEMS Adapter"
-boundary d_interface as "DEMS Interface"
-
+collections bulk_case_users_topic as "Bulk Case User Events"
+control accessdedup_processor as "AccessDedup Processor"
+collections case_access_sync_store as "Case Access Sync Store"
 
 title
 CCM Case User ACCESS_REMOVED Event Processing Sequence Diagram
@@ -28,73 +25,24 @@ autonumber
 
 case_users_topic o-> notification_service : Process ACCESS_REMOVED event
 activate notification_service
-
-notification_service -> lookup_service: Retrieve user accessible case list
-activate lookup_service
-lookup_service -> d_adapter: Retrieve user accessible case list from DEMS
-
-activate d_adapter
-d_adapter -> d_interface: Call getUserCases()
-activate d_interface
-d_interface --> d_adapter: Case list
-deactivate d_interface
-d_adapter -> d_adapter: Convert data from System (DEMS) to Business model
-d_adapter --> lookup_service: Case list
-deactivate d_adapter
-
-lookup_service --> notification_service: Case list
-deactivate lookup_service
-
-loop For every case
-    group Call route processCourtCaseAuthListUpdated
-        notification_service -> lookup_service: Retrieve court case authorized user list
-        activate lookup_service
-        lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
-
-        activate j_adapter
-        j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
-        j_adapter -> j_interface: Call getAuthUsers()
-        activate j_interface
-        j_interface --> j_adapter: Auth user list details
-        deactivate j_interface
-        j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-        j_adapter --> lookup_service: Auth user list details
-        deactivate j_adapter
-
-        lookup_service --> notification_service: Auth user list details details
-        deactivate lookup_service
-
-        notification_service -> d_adapter: Sync case users
-        activate d_adapter
-        d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-        d_adapter -> d_interface: Sync case users in DEMS
-        activate d_interface
-        d_interface --> d_adapter: Acknowledged
-        deactivate d_interface
-        d_adapter --> notification_service: Acknowledged
-        deactivate d_adapter
-
-        notification_service -> d_adapter: Sync case group members
-        activate d_adapter
-        d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-        d_adapter -> d_interface: Retrieve case-specific group name / id list
-        activate d_interface
-        d_interface --> d_adapter: Case-specific user group name / id list
-        deactivate d_interface
-        loop For every case-specific user group
-            d_adapter -> d_interface: Sync case group members in DEMS
-            activate d_interface
-            d_interface --> d_adapter: Acknowledged
-            deactivate d_interface
-        end
-        d_adapter --> notification_service: Acknowledged
-        deactivate d_adapter
-    end group
-end
-
+notification_service ->o bulk_case_users_topic : Redirect event to the bulk topic
 deactivate notification_service
 
+bulk_case_users_topic o-> accessdedup_processor : Process ACCESS_REMOVED event
+activate accessdedup_processor
+
+accessdedup_processor -> case_access_sync_store: Query for case number
+
+alt Case not in store
+    accessdedup_processor -> accessdedup_processor: Derive case number from event
+    accessdedup_processor ->o case_access_sync_store: Store INFERRED_AUTH_LIST_CHANGED charge assessment event
+else Case already in store
+    accessdedup_processor -> accessdedup_processor: Ignore event
+end
+
+deactivate accessdedup_processor
+
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated December 6, 2023
 end caption
 @enduml
