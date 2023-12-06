@@ -22,4 +22,4 @@ echo "`basename $0` to $ns ..."
 export TITLEPREFIX="JUSTIN Adapter $ns "
 echo -ne "\e]0;JUSTIN Adapter $ns\a"
 
-oc -n $ns logs -f deployment/ccm-justin-adapter
+kamel -n $ns log ccm-justin-adapter

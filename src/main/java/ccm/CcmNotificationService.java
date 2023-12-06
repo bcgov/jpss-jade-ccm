@@ -798,17 +798,17 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
           }}
         )
-         //BCPSDEMS-328, JADE-1751
-        .choice()
+         //BCPSDEMS-1518, JADE-1751
+        /*.choice()
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
-          .endChoice()
+          .endChoice()*/
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
-      //jade-2712 change
-      .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
+      // BCPSDEMS-1519, JADE-2712 change
+      /*.when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
         .choice()
           .when(simple("${body[rccStatus]} == 'Return'"))
             .setHeader("number").simple("${header.event_key}")
@@ -876,7 +876,7 @@ public class CcmNotificationService extends RouteBuilder {
                 .to("kafka:{{kafka.topic.reports.name}}")
             .endChoice()
         .endChoice()
-      .endChoice()
+      .endChoice()*/
       .otherwise()
         .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
     .end()
