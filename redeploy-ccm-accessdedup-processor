@@ -1,0 +1,5 @@
+pushd scripts/jade-ccm
+
+. ./redeploy-ccm-accessdedup-processor $1
+
+popd

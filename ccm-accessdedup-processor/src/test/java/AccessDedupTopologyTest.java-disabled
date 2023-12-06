@@ -1,0 +1,112 @@
+import java.util.Properties;
+
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.TopologyTestDriver;
+import org.apache.kafka.streams.processor.ProcessorSupplier;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
+import org.apache.kafka.streams.StreamsConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import javax.inject.Inject;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class AccessDedupTopologyTest {
+
+    @Inject
+    @ConfigProperty(name = "quarkus.kafka-streams.application-id")
+    String quarkusKafkaStreamsAppName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.topic.chargeassessments.name")
+    String chargeAssessmentsTopicName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.topic.chargeassessment-errors.name")
+    String chargeAssessmentErrorsTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.bulk-caseusers.name")
+    String bulkCaseUsersTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.caseuser-errors.name")
+    String caseUserErrorsTopicName;
+    
+    @Inject
+    @ConfigProperty(name = "ccm.topic.kpis.name")
+    String kpisTopicName;
+
+    @Inject
+    @ConfigProperty(name = "ccm.store.caseaccesssync.name")
+    String caseAccessSyncStoreName;
+
+    private TopologyTestDriver testDriver;
+    private TestInputTopic<String, String> sourceTopic;
+    private TestOutputTopic<String, String> targetTopic;
+
+    @BeforeEach
+    public void setUp() {
+        System.out.println("quarkusKafkaStreamsAppName: " + quarkusKafkaStreamsAppName);
+
+        Topology topology = new Topology();
+
+        topology.addSource("source", bulkCaseUsersTopicName)
+                .addProcessor("processor", (ProcessorSupplier<String, String>) CaseAccessSyncTransformer::new, "source")
+                .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore(caseAccessSyncStoreName), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
+                .addSink("sink", chargeAssessmentsTopicName, "processor");
+
+        Properties props = new Properties();
+
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        testDriver = new TopologyTestDriver(topology, props);
+
+        //inputTopic = testDriver.createInputTopic("user-accesses", Serdes.String().serializer(), Serdes.String().serializer());
+        //outputTopic = testDriver.createOutputTopic("case-accesses", Serdes.String().deserializer(), Serdes.String().deserializer());
+        sourceTopic = testDriver.createInputTopic(bulkCaseUsersTopicName, new StringSerializer(), new StringSerializer());
+        targetTopic = testDriver.createOutputTopic(chargeAssessmentsTopicName, new StringDeserializer(), new StringDeserializer());
+    }
+
+    @Test
+    public void testDeduplication() {
+        // Send some events with duplicates
+        sourceTopic.pipeInput("key1", "key1");
+        sourceTopic.pipeInput("key2", "key2");
+        sourceTopic.pipeInput("key1", "key1");  // Duplicate
+        sourceTopic.pipeInput("", "");  // End event
+
+        assertEquals("key1", targetTopic.readValue());
+        assertEquals("key2", targetTopic.readValue());
+
+        // Expect more events, as the duplicate was filtered out
+        assertTrue(targetTopic.isEmpty());
+
+        testDriver.close();
+    }
+
+    @Test
+    public void testTopicsCreated() {
+        // Send some events with duplicates
+        assertNotNull(sourceTopic);
+        assertNotNull(targetTopic);
+
+        testDriver.close();
+    }
+}
