@@ -14,7 +14,7 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 collections bulk_case_users_topic as "Bulk Case User Events"
 control accessdedup_processor as "AccessDedup Processor"
 collections case_access_sync_store as "Case Access Sync Store"
-collections charge_assessments_topic as "Charge Assessment Events"
+collections bulk_charge_assessments_topic as "Bulk Charge Assessment Events"
 
 title
 CCM Case User EVENT_BATCH_ENDED Event Processing Sequence Diagram
@@ -28,7 +28,7 @@ activate accessdedup_processor
 
 loop for each event in store
     accessdedup_processor <-o case_access_sync_store : Retrieve event message from store
-    accessdedup_processor ->o charge_assessments_topic : Produce event message to topic
+    accessdedup_processor ->o bulk_charge_assessments_topic : Produce event message to topic
 end loop
 
 loop for each event in store
@@ -38,6 +38,6 @@ end loop
 deactivate accessdedup_processor
 
 caption
-Prepared by David Agahchen | Created November 29, 2023
+Prepared by David Agahchen | Created December 7, 2023
 end caption
 @enduml

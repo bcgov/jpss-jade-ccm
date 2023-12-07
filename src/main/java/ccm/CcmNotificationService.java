@@ -62,6 +62,7 @@ public class CcmNotificationService extends RouteBuilder {
     attachExceptionHandlers();
 
     processChargeAssessmentEvents();
+    processBulkChargeAssessmentEvents();
     processCourtCaseEvents();
     processChargeAssessmentChanged();
     processManualChargeAssessmentChanged();
@@ -328,8 +329,53 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-      .when(PredicateBuilder.or(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED), 
-        header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED)))
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.AUTH_LIST_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseAuthListChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCourtCaseAuthListChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processBulkChargeAssessmentEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.bulk-chargeassessments.name}}?groupId=ccm-notification-service&maxPollRecords=5&maxPollIntervalMs=2400000")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED))
         .setProperty("kpi_component_route_name", simple("processCourtCaseAuthListChanged"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")

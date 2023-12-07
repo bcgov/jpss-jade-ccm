@@ -31,8 +31,8 @@ public class AccessDedupTopologyTest {
     String quarkusKafkaStreamsAppName;
 
     @Inject
-    @ConfigProperty(name = "ccm.topic.chargeassessments.name")
-    String chargeAssessmentsTopicName;
+    @ConfigProperty(name = "ccm.topic.bulk-chargeassessments.name")
+    String bulkChargeAssessmentsTopicName;
 
     @Inject
     @ConfigProperty(name = "ccm.topic.chargeassessment-errors.name")
@@ -67,7 +67,7 @@ public class AccessDedupTopologyTest {
         topology.addSource("source", bulkCaseUsersTopicName)
                 .addProcessor("processor", (ProcessorSupplier<String, String>) CaseAccessSyncTransformer::new, "source")
                 .addStateStore(Stores.keyValueStoreBuilder(Stores.inMemoryKeyValueStore(caseAccessSyncStoreName), Serdes.String(), Serdes.String()).withLoggingDisabled(), "processor")  // Logging disabled for testing
-                .addSink("sink", chargeAssessmentsTopicName, "processor");
+                .addSink("sink", bulkChargeAssessmentsTopicName, "processor");
 
         Properties props = new Properties();
 
@@ -81,7 +81,7 @@ public class AccessDedupTopologyTest {
         //inputTopic = testDriver.createInputTopic("user-accesses", Serdes.String().serializer(), Serdes.String().serializer());
         //outputTopic = testDriver.createOutputTopic("case-accesses", Serdes.String().deserializer(), Serdes.String().deserializer());
         sourceTopic = testDriver.createInputTopic(bulkCaseUsersTopicName, new StringSerializer(), new StringSerializer());
-        targetTopic = testDriver.createOutputTopic(chargeAssessmentsTopicName, new StringDeserializer(), new StringDeserializer());
+        targetTopic = testDriver.createOutputTopic(bulkChargeAssessmentsTopicName, new StringDeserializer(), new StringDeserializer());
     }
 
     @Test

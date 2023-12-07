@@ -13,19 +13,19 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections inferred_charge_assessment_cases_topic as "Bulk Charge Assessment Case Events"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
 control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment AUTH_LIST_CHANGED Event Processing Sequence Diagram
+CCM Charge Assessment INFERRED_AUTH_LIST_CHANGED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-charge_assessment_cases_topic o-> notification_service : Process AUTH_LIST_CHANGED event
+inferred_charge_assessment_cases_topic o-> notification_service : Process INFERRED_AUTH_LIST_CHANGED event
 activate notification_service
 
 group Call route processCourtCaseAuthListChanged

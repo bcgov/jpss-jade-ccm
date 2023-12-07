@@ -42,8 +42,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
     private KeyValueStore<String, String> accessdedupStore;
 
     private String appId;
-    private String chargeAssessmentsTopicName;
-    private String chargeAssessmentErrorsTopicName;
+    private String bulkChargeAssessmentsTopicName;
     private String bulkCaseUsersTopicName;
     private String caseUserErrorsTopicName;
     private String kpisTopicName;
@@ -58,7 +57,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
 
         // Dependency injection doesn't work in Kafka Streams.  We have to use the ConfigProvider.
         appId = ConfigProvider.getConfig().getValue("quarkus.kafka-streams.application-id", String.class);
-        chargeAssessmentsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.chargeassessments.name", String.class);
+        bulkChargeAssessmentsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.bulk-chargeassessments.name", String.class);
         bulkCaseUsersTopicName = ConfigProvider.getConfig().getValue("ccm.topic.bulk-caseusers.name", String.class);
         caseUserErrorsTopicName = ConfigProvider.getConfig().getValue("ccm.topic.caseuser-errors.name", String.class);
         kpisTopicName = ConfigProvider.getConfig().getValue("ccm.topic.kpis.name", String.class);
@@ -119,7 +118,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                     LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
 
                     context.forward(keyValue.key, keyValue.value, 
-                        CaseUserEventHandler.util_getToplogySinkName(chargeAssessmentsTopicName));
+                        CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
                 });
 
                 accessdedupStore.all().forEachRemaining(keyValue -> {

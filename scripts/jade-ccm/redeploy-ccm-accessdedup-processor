@@ -156,7 +156,7 @@ else
     echo "Deploying $app to $ns ..."
 
     # create the deployment in the OpenShift namespace
-    oc -n $ns apply -f "openshift/$app.yaml"
+    oc -n $ns process -f "openshift/template-$app.yaml" -p NAMESPACE=$ns | oc -n $ns apply -f -
 
     # wait for the deployment to complete
     echo "Waiting for deployment to complete..."

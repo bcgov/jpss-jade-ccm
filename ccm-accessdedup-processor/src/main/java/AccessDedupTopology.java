@@ -29,8 +29,8 @@ public class AccessDedupTopology {
     String quarkusKafkaStreamsAppName;
 
     @Inject
-    @ConfigProperty(name = "ccm.topic.chargeassessments.name")
-    String chargeAssessmentsTopicName;
+    @ConfigProperty(name = "ccm.topic.bulk-chargeassessments.name")
+    String bulkChargeAssessmentsTopicName;
     
     @Inject
     @ConfigProperty(name = "ccm.topic.bulk-caseusers.name")
@@ -79,7 +79,7 @@ public class AccessDedupTopology {
         topology.addSink(CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName), caseUserErrorsTopicName, 
             Serdes.String().serializer(), Serdes.String().serializer(), 
             CaseUserEventHandler.util_getTopologyProcessorName());
-        topology.addSink(CaseUserEventHandler.util_getToplogySinkName(chargeAssessmentsTopicName), chargeAssessmentsTopicName, 
+        topology.addSink(CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName), bulkChargeAssessmentsTopicName, 
             Serdes.String().serializer(), Serdes.String().serializer(), 
             CaseUserEventHandler.util_getTopologyProcessorName());
         topology.addSink(CaseUserEventHandler.util_getToplogySinkName(kpisTopicName), kpisTopicName, 
@@ -90,7 +90,7 @@ public class AccessDedupTopology {
         //// Define the charge assessment event source
         topology.addSource(ChargeAssessmentEventHandler.util_getTopologySourceName(), 
             Serdes.String().deserializer(), Serdes.String().deserializer(), 
-            chargeAssessmentsTopicName);
+            bulkChargeAssessmentsTopicName);
         //// Add charge assessment event custom processor
         topology.addProcessor(ChargeAssessmentEventHandler.class.getSimpleName(), 
             ChargeAssessmentEventHandler::new, ChargeAssessmentEventHandler.util_getTopologySourceName());
