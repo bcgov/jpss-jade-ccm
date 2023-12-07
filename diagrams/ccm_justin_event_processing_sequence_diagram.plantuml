@@ -52,8 +52,10 @@ par Main Processing
                     j_adapter ->o court_cases_topic: Produce APPEARANCE_CHANGED event
                 else CRN_ASSIGN
                     j_adapter ->o court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
+                else USER_PROV
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_ADDED event
                 else USER_DPROV
-                    j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_REMOVED event
                 else REPORT
                     j_adapter ->o reports_topic: <font color=grey>Produce REPORT event (Disabled)</font>
                 else DOCM
@@ -89,6 +91,8 @@ else Bulk Processing
                 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
                 alt USER_PROV
                     j_adapter ->o bulk_case_users_topic: Produce ACCESS_ADDED event
+                else USER_DPROV
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_REMOVED event
                 end
                 j_adapter -> j_interface: Mark event as processed
                 activate j_interface

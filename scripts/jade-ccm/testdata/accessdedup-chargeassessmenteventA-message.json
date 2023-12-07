@@ -6,7 +6,7 @@
     "event_status": "AUTH_LIST_CHANGED",
     "event_source": "JADE_CCM",
     "justin_event_message_id": 1,
-    "justin_message_event_type_cd": "PROV",
+    "justin_message_event_type_cd": "USER_PROV",
     "justin_event_dtm": "2023-11-16 11:11",
     "justin_fetched_date": "2023-11-16 11:11",
     "justin_guid": "123-456-7890",

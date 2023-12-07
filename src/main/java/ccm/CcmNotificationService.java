@@ -77,9 +77,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCaseMerge();
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
-    processCaseUserEvents();
-
-    processCaseUserAccessEventRedirectToBulkTopic();
+    
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();
@@ -1044,62 +1042,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/syncCaseUserList")
     .log(LoggingLevel.INFO,"Completed processCourtCaseAuthListUpdated call")
-    ;
-  }
-
-  private void processCaseUserEvents() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
-    .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
-      "    on the topic ${headers[kafka.TOPIC]}\n" +
-      "    on the partition ${headers[kafka.PARTITION]}\n" +
-      "    with the offset ${headers[kafka.OFFSET]}\n" +
-      "    with the key ${headers[kafka.KEY]}")
-    .setHeader("event_key")
-      .jsonpath("$.event_key")
-    .setHeader("event_status")
-      .jsonpath("$.event_status")
-    .setHeader("event")
-      .simple("${body}")
-    .unmarshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .setProperty("event_object", body())
-    .setProperty("kpi_event_object", body())
-    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
-    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-    .choice()
-      .when(PredicateBuilder.or(
-          header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_ADDED),
-          header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_REMOVED)))
-        .setProperty("kpi_component_route_name", simple("processCaseUserAccessEventRedirectToBulkTopic"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-        .to("direct:processCaseUserAccessEventRedirectToBulkTopic")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .end();
-    ;
-  }
-
-  private void processCaseUserAccessEventRedirectToBulkTopic() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN
-    // property: event_object
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
-    // redirect to bulk-caseusers event topic
-    .log(LoggingLevel.INFO,"Sending event message to the bulk case user events topic ...")
-    .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
     ;
   }
 
