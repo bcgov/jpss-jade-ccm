@@ -27,7 +27,7 @@ autonumber
 
 activate j_adapter
 
-par Main Processing
+par Parallel Main Processing
 
     loop Every 5 minutes
         j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Main Queue
@@ -52,10 +52,6 @@ par Main Processing
                     j_adapter ->o court_cases_topic: Produce APPEARANCE_CHANGED event
                 else CRN_ASSIGN
                     j_adapter ->o court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
-                else USER_PROV
-                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_ADDED event
-                else USER_DPROV
-                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_REMOVED event
                 else REPORT
                     j_adapter ->o reports_topic: <font color=grey>Produce REPORT event (Disabled)</font>
                 else DOCM
@@ -76,7 +72,7 @@ par Main Processing
         end
     end
 
-else Bulk Processing
+else Parallel Bulk Processing
 
     loop Every 5 minutes
         j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Bulk Queue
