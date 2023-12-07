@@ -15,7 +15,6 @@ boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
 collections court_cases_topic as "Court Case Events"
-collections case_users_topic as "Case User Events"
 collections bulk_case_users_topic as "Bulk Case User Events"
 collections reports_topic as "Report Events"
 
