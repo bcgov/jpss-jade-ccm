@@ -13,7 +13,7 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections charge_assessments_topic as "Charge Assessment Events"
 collections court_cases_topic as "Court Case Events"
 collections bulk_case_users_topic as "Bulk Case User Events"
 collections reports_topic as "Report Events"
@@ -40,11 +40,11 @@ par Parallel Main Processing
             loop For every JUSTIN event
                 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
                 alt MANU_FILE
-                    j_adapter ->o charge_assessment_cases_topic: Produce MANUALLY_CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce MANUALLY_CHANGED event
                 else AGEN_FILE
-                    j_adapter ->o charge_assessment_cases_topic: Produce CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce CHANGED event
                 else AUTH_LIST
-                    j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce AUTH_LIST_CHANGED event
                 else COURT_FILE
                     j_adapter ->o court_cases_topic: Produce CHANGED event
                 else APPR
