@@ -2648,7 +2648,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
     .setBody(simple("${exchangeProperty.dems_auth_user_list}"))
     .log(LoggingLevel.INFO,"Synchronizing case users ...")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/case-users/sync")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/users/sync")
     .log(LoggingLevel.INFO,"Case users synchronized.")
     // retrieve DEMS case group map
     .to("direct:getGroupMapByCaseId")
@@ -3391,8 +3391,6 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
     .log(LoggingLevel.INFO, "response: '${body}'")
-
-    .end()
     ;
   }
 

@@ -691,7 +691,8 @@ public class CcmNotificationService extends RouteBuilder {
     ;
     //throw new HttpOperationFailedException("testingCCMNotificationService",404,"Exception raised","CCMNotificationService",null, routeId);
   }
-//as part of jade 1750
+
+  //as part of jade 1750
   private void processParticipantMerge() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
