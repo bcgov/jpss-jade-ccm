@@ -22,6 +22,7 @@ objects:
       metadata:
         labels:
           app: jade-ccm
+          DataClass: Medium
       spec:
         containers:
           - name: container

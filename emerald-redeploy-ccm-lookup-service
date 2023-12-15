@@ -1,33 +1,42 @@
-ns_set="c02f7f"
+ns="c02f7f-dev"
 
-if [ "$1" = "" ] || [ "$1" = "dev" ]; then
-    env="dev"
-elif [ "$1" = "test" ]; then
-    env="test"
-else
-    env=""
-fi
+logging_level="INFO"
 
-if [ "$env" = "" ]; then
-   echo "Error.  Invalid environment specified: $1\n"
-   return 1
-else
-   ns="$ns_set-$env"
-fi
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
 
 echo "`basename $0` to $ns ..."
 
 pushd src/main/java/ccm
-
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmLookupService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmLookupService.java --port 4419 local/local.properties 
+else
 kamel -n $ns delete ccm-lookup-service
 kamel -n $ns run \
   CcmLookupService.java \
-  --resource file:../../../../classes/ccm-models.jar \
+  --resource file:../../../../target/classes/ccm-models.jar \
   --property file:ccmLookupService.properties \
+  --property custom.property2=configmap:ccm-configs:kafka-broker-url \
+  --label deployer="$deployer" \
+  --label version="$version" \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
   --profile openshift \
+  --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
+  --trait container.request-cpu=5m \
   --trait service.node-port=false \
   --trait route.enabled=false
-
+fi
 popd
 
+#  --config configmap:ccm-configs \
+#  --config secret:ccm-secrets \
+
+
+#--mount configmap/ccm-configs:/etc/camel/config.d/_configmaps/ccm-configs \
+#--mount secret/ccm-secrets:/etc/camel/config.d/_secrets/ccm-secrets \
+
+#--property camel.k.label="ccm (deployed on `date` by `oc whoami`)" \
+
+# kamel -n cef5dd-test log ccm-lookup-service
