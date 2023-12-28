@@ -148,6 +148,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     reassignParticipantCases();
     checkPersonExist();
     createEdtExternalIdExistingParticipant();
+    updateEdtExternalIdExistingParticipant();
   }
 
 
@@ -4092,6 +4093,95 @@ private void getDemsFieldMappingsrccStatus() {
             .otherwise()
               .log(LoggingLevel.INFO,"No data participants")
             .end()  
+        .end()
+      .end()
+    .end()
+    .log(LoggingLevel.INFO,"end of createEdtExternalIdExistingParticipant.")
+    ;
+  }
+
+  private void updateEdtExternalIdExistingParticipant() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"updateEdtExternalIdExistingParticipant...")
+    //.setProperty("id", header("id"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    //traverse through list of existing person records in EDT in DEMS
+    //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/list")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons")
+    .log(LoggingLevel.INFO,"Person list: '${body}'")
+    .split()
+      .jsonpathWriteAsString("$")
+      .setProperty("id",jsonpath("$.id"))
+      .setProperty("key",jsonpath("$.key"))
+      .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.id}, key: ${exchangeProperty.key}")
+      .choice()
+        .when().simple("${exchangeProperty.key} != null")
+          .setProperty("personId",jsonpath("$.id"))
+          .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.personid}")
+          //check if there already exists an edtexternalid for the person
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers?filter=itemType:Person,itemId:${exchangeProperty.personid},identifierType:EdtExternalId")
+          .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
+          .unmarshal().json()
+          .setProperty("total", jsonpath("$.total"))
+          .log(LoggingLevel.INFO,"total = ${exchangeProperty.total}")
+          .setProperty("length",jsonpath("$.identifierValue.length()"))
+          .log(LoggingLevel.INFO,"Length : ${exchangeProperty.length}")
+          .choice()
+                  .when().simple("${exchangeProperty.total} == 1 && ${exchangeProperty.length} == 6")
+                   /* .setProperty("entityType", simple("Person"))
+                    .setProperty("entityId", simple("${exchangeProperty.personid}"))
+                    .log(LoggingLevel.DEBUG,"entity ID: ${exchangeProperty.entityId}")
+                    .setProperty("identifierType", simple("EdtExternalId"))
+                    .setBody(simple("{\"entityType\":\"${exchangeProperty.entityType}\",\"entityId\":\"${exchangeProperty.entityId}\",\"identifierType\":\"${exchangeProperty.identifierType}\",\"autoIncrementOptions\":{\"format\":\"000000\"}}"))
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
+                    .log(LoggingLevel.INFO,"Created external EDT ID. ${body}")*/
+                    .setProperty("identifierValue", simple("${exchangeProperty.identifierValue}"))
+                    .log(LoggingLevel.INFO,"identifier value : ${exchangeProperty.identifierValue}")
+                    .setProperty("newidentifierValue", simple("23${exchangeProperty.identifierValue}"))
+                    .log(LoggingLevel.INFO,"identifier value : ${exchangeProperty.newidentifierValue}")
+                    .setProperty("id", simple("${exchangeProperty.id}"))
+                    .log(LoggingLevel.INFO,"id : ${exchangeProperty.id}")
+                    /*
+                    .setBody(simple("{\"id\":\"${exchangeProperty.id}\",\"identifierType\":\"${exchangeProperty.newidentifierValue}\"}"))
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
+                    .log(LoggingLevel.INFO,"Created external EDT ID. ${body}")
+                     
+                     */
+
+                  .endChoice()
+                  .otherwise()
+                    .log(LoggingLevel.INFO,"Either total is 0 or the lenght of identifierValue is not 6")
+                  .endChoice()
+                .end()
         .end()
       .end()
     .end()
