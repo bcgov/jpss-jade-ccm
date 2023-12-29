@@ -1828,7 +1828,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"createCourtCase")
+    .log(LoggingLevel.INFO,"createCourtCase ${header.event_key}")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("CourtCaseMetadata", simple("${bodyAs(String)}"))
     .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
@@ -1908,7 +1908,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .jsonpathWriteAsString("$.*")
         .setHeader("key", jsonpath("$.identifier"))
         .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
-        .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
+        .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.key}")
         .to("direct:processAccusedPerson")
       .end()
     .endDoTry()
@@ -1917,18 +1917,20 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 504")
-          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
+          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(30000)
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .setProperty("key", simple("${header.number}"))
+          .setProperty("key", simple("${header.event_key}"))
           .to("direct:getCourtCaseIdByKey")
 
           .setProperty("courtCaseId", jsonpath("$.id"))
+          .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
+          .to("direct:getCourtCaseDataById")
 
           //jade 1747
-          .log(LoggingLevel.INFO,"Retry Participants")
+          .log(LoggingLevel.INFO,"Retry Participants for case ${exchangePreoperty.courtCaseId}")
           .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
           .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
           // Merge the accused persons from all related agency files into a unique list
