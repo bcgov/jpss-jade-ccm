@@ -541,6 +541,7 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .delay(30000)
         .to("kafka:{{kafka.topic.reports.name}}")
       .endChoice()
     .otherwise()
@@ -1103,7 +1104,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=10&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=3&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -2008,6 +2009,7 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .delay(60000)
     .to("kafka:{{kafka.topic.reports.name}}")
     ;
   }
