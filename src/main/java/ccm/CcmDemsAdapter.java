@@ -1917,9 +1917,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 504")
-          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
-           // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
-          .delay(30000)
+          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 65 seconds to continue.")
+           // Sometimes EDT takes longer to create a case than their 65 second gateway timeout, so add a delay and continue on.
+          .delay(65000)
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setProperty("key", simple("${header.event_key}"))
@@ -2125,9 +2125,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 504")
-          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
+          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
-          .delay(15000)
+          .delay(30000)
 
           //jade 1747
           .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants")

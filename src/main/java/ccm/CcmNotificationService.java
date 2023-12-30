@@ -477,6 +477,7 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .delay(30000)
         .to("kafka:{{kafka.topic.reports.name}}")
       .endChoice()
     .otherwise()
@@ -1861,6 +1862,7 @@ public class CcmNotificationService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .delay(60000)
     .to("kafka:{{kafka.topic.reports.name}}")
     ;
   }
