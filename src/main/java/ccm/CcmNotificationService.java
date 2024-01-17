@@ -846,12 +846,12 @@ public class CcmNotificationService extends RouteBuilder {
           }}
         )
          //BCPSDEMS-1518, JADE-1751
-        /*.choice()
+        .choice()
           .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
           .setHeader("case_id").simple("${exchangeProperty.caseId}")
           .to("http://ccm-dems-adapter/inactivateCase")
           .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
-          .endChoice()*/
+          .endChoice()
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
       // BCPSDEMS-1519, JADE-2712 change
