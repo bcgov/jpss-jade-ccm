@@ -1793,7 +1793,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
+    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${header.key} ...")
     .setProperty("key", simple("${header.key}"))
     .to("direct:getCourtCaseIdByKey")
     .unmarshal().json()
@@ -1818,7 +1818,7 @@ private void getDemsFieldMappingsrccStatus() {
             exchange.getMessage().setBody(body);
           }
         })
-        .log(LoggingLevel.INFO, "Case (key: ${header.key}) found; caseId: '${exchangeProperty.caseId}'")
+        .log(LoggingLevel.DEBUG, "Case (key: ${header.key}) found; caseId: '${exchangeProperty.caseId}'")
         .endChoice()
       .otherwise()
         .process(new Processor() {
@@ -1831,7 +1831,7 @@ private void getDemsFieldMappingsrccStatus() {
             exchange.getMessage().setBody(body);
           }
         })
-        .log(LoggingLevel.INFO, "Case (key: ${header.key}) not found.")
+        .log(LoggingLevel.DEBUG, "Case (key: ${header.key}) not found.")
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
         .endChoice()
     .end()
@@ -1847,7 +1847,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
+    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
@@ -1879,7 +1879,7 @@ private void getDemsFieldMappingsrccStatus() {
         .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
         .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.list.suffix}}"))
         .setProperty("caseIds").simple("${body}")
-        .log(LoggingLevel.INFO,"case ids: ${exchangeProperty.caseIds}")
+        .log(LoggingLevel.DEBUG,"case ids: ${exchangeProperty.caseIds}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
