@@ -795,6 +795,15 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+
+    .choice() // force a retrigger of static reports, if this is a manual event.
+      .when(simple("${header[event_message_type]} == 'MANU_FILE'"))
+        .setProperty("triggerStaticReports", simple("true"))
+      .endChoice()
+      .otherwise()
+        .setProperty("triggerStaticReports", simple("false"))
+    .end()
+
     .setHeader("key").simple("${header.event_key}")
     .setHeader("event_key",simple("${header.event_key}"))
     .setHeader("number",simple("${header.event_key}"))
@@ -855,8 +864,9 @@ public class CcmNotificationService extends RouteBuilder {
           .endChoice()
         .log(LoggingLevel.INFO, "Court case updated")
       .endChoice()
-      // BCPSDEMS-1519, JADE-2712 change
-      /*.when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
+      // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
+      // check if this is a scenario of an rcc being re-submitted.
+      .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
         .choice()
           .when(simple("${body[rccStatus]} == 'Return'"))
             .setHeader("number").simple("${header.event_key}")
@@ -891,42 +901,47 @@ public class CcmNotificationService extends RouteBuilder {
                 .to("http://ccm-dems-adapter/updateCourtCase")
                 .log(LoggingLevel.INFO,"Update court case auth list.")
                 .to("direct:processCourtCaseAuthListChanged")
-                .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
-                // create Report Event for static type reports.
-                .process(new Processor() {
-                  @Override
-                  public void process(Exchange exchange) {
-                    String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
-                    String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
-                    StringBuilder reportTypesSb = new StringBuilder("");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
-                    reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
-
-                    ReportEvent re = new ReportEvent();
-                    re.setJustin_rcc_id(rcc_id);
-                    re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-                    re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
-                    re.setJustin_event_message_id(Integer.parseInt(event_message_id));
-                    re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
-                    re.setForce_update(true);
-                    re.setReport_type(reportTypesSb.toString());
-                    exchange.getMessage().setBody(re, ReportEvent.class);
-                  }
-                })
-                .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-                .to("kafka:{{kafka.topic.reports.name}}")
+                .setProperty("triggerStaticReports", simple("true"))
             .endChoice()
         .endChoice()
-      .endChoice()*/
+      .endChoice()
       .otherwise()
         .log(LoggingLevel.INFO, "DEMS Case is not in Active or RET state, so skip.")
+    .end()
+
+    .choice()
+      .when(simple("${exchangeProperty.triggerStaticReports} == 'true'"))
+        .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
+        // create Report Event for static type reports.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
+            String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
+            StringBuilder reportTypesSb = new StringBuilder("");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+
+            ReportEvent re = new ReportEvent();
+            re.setJustin_rcc_id(rcc_id);
+            re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setJustin_event_message_id(Integer.parseInt(event_message_id));
+            re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+            re.setForce_update(true);
+            re.setReport_type(reportTypesSb.toString());
+            exchange.getMessage().setBody(re, ReportEvent.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .to("kafka:{{kafka.topic.reports.name}}")
     .end()
     ;
   }
