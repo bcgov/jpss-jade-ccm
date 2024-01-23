@@ -4153,7 +4153,7 @@ private void getDemsFieldMappingsrccStatus() {
                           .when().simple("${exchangeProperty.total} > 0 && ${exchangeProperty.identifierValueLength} == 6")
                             .setProperty("identifierValue", simple("${exchangeProperty.identifierValueProperty}"))
                             .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.identifierValue}")
-                            .setProperty("newidentifierValue", simple("23${exchangeProperty.identifierValue}"))
+                            .setProperty("newidentifierValue", simple("0${exchangeProperty.identifierValue}"))
                             .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.newidentifierValue}")
                             .setProperty("idValue", jsonpath("$.id"))
                             .log(LoggingLevel.DEBUG,"id : ${exchangeProperty.idValue}")
