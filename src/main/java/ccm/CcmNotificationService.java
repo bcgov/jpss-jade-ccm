@@ -874,7 +874,7 @@ public class CcmNotificationService extends RouteBuilder {
             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
             .removeHeader(Exchange.CONTENT_ENCODING)
             .to("http://ccm-lookup-service/getCourtCaseDetails")
-            .log(LoggingLevel.INFO,"Retrieved Court Case from JUSTIN: ${body}")
+            .log(LoggingLevel.DEBUG,"Retrieved Court Case from JUSTIN: ${body}")
             .setProperty("courtcase_data", simple("${bodyAs(String)}"))
             .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
             .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
