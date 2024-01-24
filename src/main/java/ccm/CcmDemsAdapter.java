@@ -556,7 +556,7 @@ private void getDemsFieldMappingsrccStatus() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=3&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=1&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -4141,44 +4141,44 @@ private void getDemsFieldMappingsrccStatus() {
           .unmarshal().json()
           .setProperty("total", jsonpath("$.total"))
           .log(LoggingLevel.DEBUG,"total = ${exchangeProperty.total}")
-         .choice()
+          .choice()
             .when().simple("${exchangeProperty.total} > 0")
-                  .split()
-                    .jsonpathWriteAsString("$.items")
-                    .setHeader("identifierValue",jsonpath("$.identifierValue"))
-                    .setProperty("identifierValueProperty",jsonpath("$.identifierValue"))
-                    .setProperty("identifierValueLength", simple("${header.identifierValue.length()}"))
-                    .log(LoggingLevel.DEBUG,"Length : ${exchangeProperty.identifierValueLength}")
-                        .choice()
-                          .when().simple("${exchangeProperty.total} > 0 && ${exchangeProperty.identifierValueLength} == 6")
-                            .setProperty("identifierValue", simple("${exchangeProperty.identifierValueProperty}"))
-                            .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.identifierValue}")
-                            .setProperty("newidentifierValue", simple("0${exchangeProperty.identifierValue}"))
-                            .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.newidentifierValue}")
-                            .setProperty("idValue", jsonpath("$.id"))
-                            .log(LoggingLevel.DEBUG,"id : ${exchangeProperty.idValue}")
+              .split()
+                .jsonpathWriteAsString("$.items")
+                .setHeader("identifierValue",jsonpath("$.identifierValue"))
+                .setProperty("identifierValueProperty",jsonpath("$.identifierValue"))
+                .setProperty("identifierValueLength", simple("${header.identifierValue.length()}"))
+                .log(LoggingLevel.DEBUG,"Length : ${exchangeProperty.identifierValueLength}")
+                .choice()
+                  .when().simple("${exchangeProperty.total} > 0 && ${exchangeProperty.identifierValueLength} == 6")
+                    .setProperty("identifierValue", simple("${exchangeProperty.identifierValueProperty}"))
+                    .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.identifierValue}")
+                    .setProperty("newidentifierValue", simple("0${exchangeProperty.identifierValue}"))
+                    .log(LoggingLevel.DEBUG,"identifier value : ${exchangeProperty.newidentifierValue}")
+                    .setProperty("idValue", jsonpath("$.id"))
+                    .log(LoggingLevel.DEBUG,"id : ${exchangeProperty.idValue}")
 
-                            .removeHeader("CamelHttpUri")
-                            .removeHeader("CamelHttpBaseUri")
-                            .removeHeaders("CamelHttp*")
-                            .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-                            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                            .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-                            .setBody(simple("{\"id\":\"${exchangeProperty.idValue}\",\"identifierValue\":\"${exchangeProperty.newidentifierValue}\"}"))
-                            .log(LoggingLevel.INFO,"${body}")
-                            .toD("https://{{dems.host}}/identifiers")
-                            .log(LoggingLevel.INFO,"Update external EDT ID. ${body}")
-                          .endChoice()
-                          .otherwise()
-                            .log(LoggingLevel.INFO,"Either total is 0 or the length of identifierValue is not 6")
-                          .endChoice()
-                        .end()//choice
-                    .end()//split
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    .setBody(simple("{\"id\":\"${exchangeProperty.idValue}\",\"identifierValue\":\"${exchangeProperty.newidentifierValue}\"}"))
+                    .log(LoggingLevel.INFO,"${body}")
+                    .toD("https://{{dems.host}}/identifiers")
+                    .log(LoggingLevel.INFO,"Update external EDT ID. ${body}")
                   .endChoice()
                   .otherwise()
-                            .log(LoggingLevel.INFO," total is 0 means no data for exist")
+                    .log(LoggingLevel.INFO,"Either total is 0 or the length of identifierValue is not 6")
                   .endChoice()
-            .end()//choice
+                .end()//choice
+                .end()//split
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.INFO," total is 0 means no data for exist")
+            .endChoice()
+          .end()//choice
         .end()//when
       .end()//choice
     .end()//split
