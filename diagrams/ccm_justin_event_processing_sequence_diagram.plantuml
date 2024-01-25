@@ -13,9 +13,8 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 
 boundary j_interface as "JUSTIN Interface"
 control j_adapter as "JUSTIN Adapter"
-collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections charge_assessments_topic as "Charge Assessment Events"
 collections court_cases_topic as "Court Case Events"
-collections case_users_topic as "Case User Events"
 collections bulk_case_users_topic as "Bulk Case User Events"
 collections reports_topic as "Report Events"
 
@@ -27,7 +26,7 @@ autonumber
 
 activate j_adapter
 
-par Main Processing
+par Parallel Main Processing
 
     loop Every 5 minutes
         j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Main Queue
@@ -41,19 +40,17 @@ par Main Processing
             loop For every JUSTIN event
                 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
                 alt MANU_FILE
-                    j_adapter ->o charge_assessment_cases_topic: Produce MANUALLY_CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce MANUALLY_CHANGED event
                 else AGEN_FILE
-                    j_adapter ->o charge_assessment_cases_topic: Produce CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce CHANGED event
                 else AUTH_LIST
-                    j_adapter ->o charge_assessment_cases_topic: Produce AUTH_LIST_CHANGED event
+                    j_adapter ->o charge_assessments_topic: Produce AUTH_LIST_CHANGED event
                 else COURT_FILE
                     j_adapter ->o court_cases_topic: Produce CHANGED event
                 else APPR
                     j_adapter ->o court_cases_topic: Produce APPEARANCE_CHANGED event
                 else CRN_ASSIGN
                     j_adapter ->o court_cases_topic: Produce CROWN_ASSIGNMENT_CHANGED event
-                else USER_DPROV
-                    j_adapter ->o case_users_topic: Produce ACCESS_REMOVED event
                 else REPORT
                     j_adapter ->o reports_topic: <font color=grey>Produce REPORT event (Disabled)</font>
                 else DOCM
@@ -74,7 +71,7 @@ par Main Processing
         end
     end
 
-else Bulk Processing
+else Parallel Bulk Processing
 
     loop Every 5 minutes
         j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Bulk Queue
@@ -89,6 +86,8 @@ else Bulk Processing
                 j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
                 alt USER_PROV
                     j_adapter ->o bulk_case_users_topic: Produce ACCESS_ADDED event
+                else USER_DPROV
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_REMOVED event
                 end
                 j_adapter -> j_interface: Mark event as processed
                 activate j_interface
@@ -106,11 +105,10 @@ else Bulk Processing
     alt Total number of events in batch > 0
         j_adapter ->o bulk_case_users_topic : Produce EVENT_BATCH_ENDED event
     end
-
 end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated December 6, 2023
+Prepared by David Agahchen | Updated December 6, 2023 - version 2
 end caption
 @enduml

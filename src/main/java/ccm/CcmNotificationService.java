@@ -34,7 +34,6 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import ccm.models.common.data.AuthUser;
@@ -80,11 +79,9 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
 
-    // no longer required; processing done via ccm-accessdedup-processor
-    // deprecated_processBulkCaseUserEvents();
-
     processCaseUserAccessAdded();
     processCaseUserAccessRemoved();
+
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
     publishEventKPI();

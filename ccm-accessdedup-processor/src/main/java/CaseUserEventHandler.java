@@ -93,9 +93,13 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .readValue(value, CaseUserEvent.class);
 
-            if (!CaseUserEvent.STATUS.ACCESS_ADDED.name().equals(caseUserEvent.getEvent_status()) &&
-                !CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
-                // This is not a new access event or the end of the batch.  Ignore it.
+            // skip if event is not in scope
+            if (CaseUserEvent.STATUS.ACCESS_ADDED.name().equals(caseUserEvent.getEvent_status()) ||
+                CaseUserEvent.STATUS.ACCESS_REMOVED.name().equals(caseUserEvent.getEvent_status()) ||
+                CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
+                // This is an in-scope event.  Process it.
+            } else {
+                // This is a out-of-scope event.  Ignore it.
                 return;
             }
 
