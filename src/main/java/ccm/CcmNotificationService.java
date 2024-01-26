@@ -79,7 +79,6 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
 
-    processCaseUserAccessAdded();
     processCaseUserAccessRemoved();
 
     processUnknownStatus();
@@ -1136,15 +1135,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
-      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_ADDED))
-        .setProperty("kpi_component_route_name", simple("processCaseUserAccessAdded"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-        .to("direct:processCaseUserAccessAdded")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
       .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_REMOVED))
         .setProperty("kpi_component_route_name", simple("processCaseUserAccessRemoved"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
@@ -1155,29 +1145,6 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .end();
-    ;
-  }
-
-  private void processCaseUserAccessAdded() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN
-    // property: event_object
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        CaseUserEvent event = (CaseUserEvent)exchange.getProperty("event_object");
-        exchange.getMessage().setHeader("event_key", event.getJustin_rcc_id());
-      }
-    })
-    .log(LoggingLevel.INFO,"Calling route processCourtCaseAuthListChanged( rcc_id = ${header[event_key]} ) ...")
-    .to("direct:processCourtCaseAuthListChanged")
-    .log(LoggingLevel.INFO,"Returned from processCourtCaseAuthListChanged().")
     ;
   }
 
@@ -1197,6 +1164,7 @@ public class CcmNotificationService extends RouteBuilder {
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("caseLength", jsonpath("$.case_list.length()"))
+
         .split()
           .jsonpathWriteAsString("$.case_list")
           //The route should not continue through the rest of the cases in the list after an exception has occurred.
@@ -1210,18 +1178,50 @@ public class CcmNotificationService extends RouteBuilder {
             //only cases containing actual RCC_ID values (not null) should be processed.
             .when(simple("${header[rcc_id]} != null"))
               .setProperty("rcc_id",jsonpath("$.rcc_id"))
-              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-              .setHeader("event_key", jsonpath("$.rcc_id"))
-              .log(LoggingLevel.INFO,"Calling route processCourtCaseAuthListUpdated( rcc_id = ${header[event_key]} ) ...")
-              .to("direct:processCourtCaseAuthListUpdated")
-              .log(LoggingLevel.DEBUG,"Returned from processCourtCaseAuthListUpdated().")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  // Insert code that gets executed *before* delegating
+                  // to the next processor in the chain.
+                  CaseUserEvent event = (CaseUserEvent)exchange.getProperty("kpi_event_object", CaseUserEvent.class);
+                  String rccId = (String)exchange.getProperty("rcc_id", String.class);
+                  event.setJustin_rcc_id(rccId);
+                  event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+
+                  exchange.getMessage().setBody(event, CaseUserEvent.class);
+                }
+              })
+              .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+              .log(LoggingLevel.INFO,"Creating bulk event for ( part_id = ${header[event_key]} rcc_id = ${exchangeProperty.rcc_id} ) ...")
+              .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
             .endChoice()
             .otherwise()
             //nothing to do here
             .endChoice()
           .end()
         .end()
-      .endChoice()
+
+        .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
+        .process(exchange -> {
+            CaseUserEvent event = new CaseUserEvent();
+            event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
+            event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+  
+            exchange.getMessage().setBody(event, CaseUserEvent.class);
+            exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+          })
+        .setProperty("kpi_event_object", body())
+        .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+        .setProperty("business_event", body())
+        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+        .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("kpi_component_route_name", simple(routeId))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+        .to("direct:publishEventKPI")
+
+        .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 404"))
           .log(LoggingLevel.INFO,"User (key = ${header.event_key}) not found; Do nothing.")
       .endChoice()
