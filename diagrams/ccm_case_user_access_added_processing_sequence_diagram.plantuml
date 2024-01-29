@@ -11,13 +11,9 @@ Available colours
 https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
 '/
 
-boundary j_interface as "JUSTIN Interface"
-control j_adapter as "JUSTIN Adapter"
 collections bulk_case_users_topic as "Bulk Case User Events"
-control notification_service as "Notification Service"
-control lookup_service as "Lookup Service"
-control d_adapter as "DEMS Adapter"
-boundary d_interface as "DEMS Interface"
+control accessdedup_processor as "AccessDedup Processor"
+collections case_access_sync_store as "Case Access Sync Store"
 
 title
 CCM Case User ACCESS_ADDED Event Processing Sequence Diagram
@@ -25,82 +21,21 @@ end title
 
 autonumber
 
-bulk_case_users_topic o-> notification_service : Process ACCESS_ADDED event
-activate notification_service
+bulk_case_users_topic o-> accessdedup_processor : Process ACCESS_ADDED event
+activate accessdedup_processor
 
-group Call route processCourtCaseAuthListChanged
+accessdedup_processor -> case_access_sync_store: Query for case number
 
-    notification_service -> lookup_service: Check case exists
-    activate lookup_service
-    note over lookup_service, d_adapter
-    Integration assumption: DEMS is the system-of-record
-    for whether a court case already exists or not
-    end note
-    lookup_service -> d_adapter: Check case existence in DEMS
-    activate d_adapter
-    d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-    d_adapter -> d_interface: Check case existence in DEMS
-    activate d_interface
+alt Case not in store
+    accessdedup_processor -> accessdedup_processor: Derive case number from event
+    accessdedup_processor ->o case_access_sync_store: Store INFERRED_AUTH_LIST_CHANGED charge assessment event
+else Case already in store
+    accessdedup_processor -> accessdedup_processor: Ignore event
+end
 
-    break Case not found - end processing
-    d_interface --> d_adapter: Case not found
-    deactivate d_interface
-    d_adapter --> lookup_service: Case not found
-    lookup_service --> notification_service: Case not found
-    deactivate lookup_service
-    deactivate d_adapter
-    end break
-
-    group Call route processCourtCaseAuthListUpdated
-
-        notification_service -> lookup_service: Retrieve court case authorized user list
-        activate lookup_service
-        lookup_service -> j_adapter: Retrieve court case authorized user list from JUSTIN
-
-        activate j_adapter
-        j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
-        j_adapter -> j_interface: Call getAuthUsers()
-        activate j_interface
-        j_interface --> j_adapter: Auth user list details
-        deactivate j_interface
-        j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
-        j_adapter --> lookup_service: Auth user list details
-        deactivate j_adapter
-
-        lookup_service --> notification_service: Auth user list details details
-        deactivate lookup_service
-
-        notification_service -> d_adapter: Sync case users
-        activate d_adapter
-        d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-        d_adapter -> d_interface: Sync case users in DEMS
-        activate d_interface
-        d_interface --> d_adapter: Acknowledged
-        deactivate d_interface
-        d_adapter --> notification_service: Acknowledged
-        deactivate d_adapter
-
-        notification_service -> d_adapter: Sync case group members
-        activate d_adapter
-        d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
-        d_adapter -> d_interface: Retrieve case-specific group name / id list
-        activate d_interface
-        d_interface --> d_adapter: Case-specific user group name / id list
-        deactivate d_interface
-        loop For every case-specific user group
-            d_adapter -> d_interface: Sync case group members in DEMS
-            activate d_interface
-            d_interface --> d_adapter: Acknowledged
-            deactivate d_interface
-        end
-        d_adapter --> notification_service: Acknowledged
-        deactivate d_adapter
-    end group
-end group
-
-deactivate notification_service
+deactivate accessdedup_processor
 
 caption
-Prepared by David Agahchen | Updated March 6, 2023
+Prepared by David Agahchen | Updated November 29, 2023
 end caption
 @enduml

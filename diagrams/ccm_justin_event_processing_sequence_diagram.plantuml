@@ -103,10 +103,14 @@ else Bulk Processing
         end
     end
 
+    alt Total number of events in batch > 0
+        j_adapter ->o bulk_case_users_topic : Produce EVENT_BATCH_ENDED event
+    end
+
 end
 deactivate j_adapter
 
 caption
-Prepared by David Agahchen | Updated March 30, 2023
+Prepared by David Agahchen | Updated December 6, 2023
 end caption
 @enduml

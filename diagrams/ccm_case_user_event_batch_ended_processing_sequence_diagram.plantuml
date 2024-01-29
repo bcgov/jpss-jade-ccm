@@ -1,0 +1,43 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+collections bulk_case_users_topic as "Bulk Case User Events"
+control accessdedup_processor as "AccessDedup Processor"
+collections case_access_sync_store as "Case Access Sync Store"
+collections bulk_charge_assessments_topic as "Bulk Charge Assessment Events"
+
+title
+CCM Case User EVENT_BATCH_ENDED Event Processing Sequence Diagram
+end title
+
+autonumber
+
+bulk_case_users_topic o-> accessdedup_processor : Process EVENT_BATCH_ENDED event
+
+activate accessdedup_processor
+
+loop for each event in store
+    accessdedup_processor <-o case_access_sync_store : Retrieve event message from store
+    accessdedup_processor ->o bulk_charge_assessments_topic : Produce event message to topic
+end loop
+
+loop for each event in store
+    accessdedup_processor ->o case_access_sync_store : Delete event message from store
+end loop
+
+deactivate accessdedup_processor
+
+caption
+Prepared by David Agahchen | Created December 7, 2023
+end caption
+@enduml

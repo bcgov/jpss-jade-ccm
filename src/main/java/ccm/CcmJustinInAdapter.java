@@ -117,6 +117,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
 
     // attempt to retrieve case id using getCaseHyperlink lookup endpoint.
     .doTry()
+      .log(LoggingLevel.INFO, "Url Request for: ${exchangeProperty.rcc_id}")
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
@@ -215,7 +216,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .marshal().json(JsonLibrary.Jackson, CommonCaseList.class)
-    .log(LoggingLevel.DEBUG, "Body : ${body}")
+    .log(LoggingLevel.INFO, "Processing Request : ${body}")
     //call to lookup service
     .doTry()
     .removeHeader("CamelHttpUri")

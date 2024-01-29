@@ -160,6 +160,9 @@ public class ChargeAssessmentData {
             case "RET":
                 setRcc_status_code("Return");
                 break;
+            case "SUB":
+                setRcc_status_code("Submit");
+                break;
             }
         }
     }
