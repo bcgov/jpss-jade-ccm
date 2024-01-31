@@ -301,7 +301,7 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 
-  private void getCourtCaseAuthList() {
+  private void deprecated_getCourtCaseAuthList() {
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -356,6 +356,57 @@ public class CcmLookupService extends RouteBuilder {
     }).to("mock:result")
     .marshal()
     .json(JsonLibrary.Jackson, AuthUserList.class)
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    .end();
+  }
+
+  private void getCourtCaseAuthList() {
+
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header[number]}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("justinauthlist", body())
+
+    .log(LoggingLevel.DEBUG, "Retreiving list from PIDP...")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("pidpauthlist", body())
+
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+        AuthUserList userAuthList = new AuthUserList();
+        String rccId = (String)exchange.getProperty("key", String.class);
+        userAuthList.setRcc_id(rccId);
+        AuthUserList justinUserList = (AuthUserList)exchange.getProperty("justinauthlist", AuthUserList.class);
+        AuthUserList pdipAuthUserList = (AuthUserList)exchange.getProperty("pidpauthlist", AuthUserList.class);
+
+        userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+        userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+
+        exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }
