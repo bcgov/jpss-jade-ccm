@@ -93,7 +93,7 @@ public class CcmNotificationService extends RouteBuilder {
 
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
-     .maximumRedeliveries(5).redeliveryDelay(20000)
+     .maximumRedeliveries(10).redeliveryDelay(25000)
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
