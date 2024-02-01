@@ -1,0 +1,43 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+collections bulk_case_users_topic as "Bulk Case User Events"
+control accessdedup_processor as "AccessDedup Processor"
+collections case_access_sync_store as "Case Access Sync Store"
+
+title
+CCM Case User EVENT_BATCH_STARTED Event Processing Sequence Diagram
+end title
+
+autonumber
+
+bulk_case_users_topic o-> accessdedup_processor : Process EVENT_BATCH_STARTED event
+
+activate accessdedup_processor
+
+accessdedup_processor -> case_access_sync_store : Retrieve event batch count from store
+activate case_access_sync_store
+case_access_sync_store --> accessdedup_processor : Return event batch count
+
+alt event batch count exists and is greater than 0
+    accessdedup_processor ->o case_access_sync_store : Set event batch count to event batch count + 1
+else event batch count does not exist or is 0
+    accessdedup_processor ->o case_access_sync_store : Set event batch count to 1
+end
+
+deactivate accessdedup_processor
+
+caption
+Prepared by David Agahchen | Created January 31, 2024
+end caption
+@enduml
