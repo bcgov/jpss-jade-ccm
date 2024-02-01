@@ -477,7 +477,7 @@ public class CcmNotificationService extends RouteBuilder {
                 if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
                   ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
                   log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
-                  log.info("accused_persons: "+chargeAssessmentdata.getAccused_persons());
+                  log.debug("accused_persons: "+chargeAssessmentdata.getAccused_persons());
                   // If no submit date, then don't create!
                   ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
                   ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
@@ -841,14 +841,14 @@ public class CcmNotificationService extends RouteBuilder {
           @Override
           public void process(Exchange exchange) {
             ChargeAssessmentData courtfiledata = exchange.getIn().getBody(ChargeAssessmentData.class);
-            exchange.setProperty("accused_person", courtfiledata.getAccused_persons());
+            exchange.setProperty("accused_person", courtfiledata.getAccused_persons().size());
             exchange.setProperty("courtcase_data", courtfiledata);
           }}
         ).marshal().json()
         .log(LoggingLevel.DEBUG,"Accused_person : ${exchangeProperty.accused_person}" )
         .log(LoggingLevel.DEBUG,"Body: ${exchangeProperty.courtcase_data}")
         .choice()
-          .when(simple("${exchangeProperty.accused_person} != null"))
+          .when(simple("${exchangeProperty.accused_person} != '0'"))
               // add-on any additional rccs from the dems side.
               //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
               .to("direct:compileRelatedChargeAssessments")
@@ -902,7 +902,7 @@ public class CcmNotificationService extends RouteBuilder {
                 ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
                 exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
                 exchange.setProperty("bodytest", b);
-                exchange.setProperty("accused_person", b.getAccused_persons());
+                exchange.setProperty("accused_person", b.getAccused_persons().size());
                 //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
                 //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
                 //System.out.println("body : "+ b.toString());
@@ -910,7 +910,7 @@ public class CcmNotificationService extends RouteBuilder {
             }) .marshal().json()
             .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return' && ${exchangeProperty.accused_person} != null"))
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return' && ${exchangeProperty.accused_person} != '0'"))
                 .log(LoggingLevel.DEBUG,"ready for reactivating the case")
                 .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -923,7 +923,7 @@ public class CcmNotificationService extends RouteBuilder {
                 .setProperty("triggerStaticReports", simple("true"))
             .endChoice()
             //jade 2770 fix
-            .when(simple("${exchangeProperty.accused_person} == null"))
+            .when(simple("${exchangeProperty.accused_person} == '0'"))
               .log(LoggingLevel.WARN, "There is no accused person")
             .endChoice()
         .endChoice()
