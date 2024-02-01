@@ -93,7 +93,7 @@ public class CcmNotificationService extends RouteBuilder {
 
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
-     .maximumRedeliveries(5).redeliveryDelay(20000)
+     .maximumRedeliveries(10).redeliveryDelay(25000)
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
@@ -442,7 +442,6 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
-    
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
@@ -478,11 +477,15 @@ public class CcmNotificationService extends RouteBuilder {
                 if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
                   ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
                   log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
+                  log.debug("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
                   // If no submit date, then don't create!
                   ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
                   ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
                   ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
-                  
+                  // jade 2770 fix
+                  if(chargeAssessmentdata.getAccused_persons().size() == 0) {
+                    ex.setProperty("allowCreateCase", "false");
+                  }
                   if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
                     ex.setProperty("allowCreateCase", "false");
                   }
@@ -831,34 +834,53 @@ public class CcmNotificationService extends RouteBuilder {
         .removeHeader(Exchange.CONTENT_ENCODING)
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
-
-        // add-on any additional rccs from the dems side.
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        .to("direct:compileRelatedChargeAssessments")
-        .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
-
-        .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        .setBody(simple("${exchangeProperty.courtcase_data}"))
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("http://ccm-dems-adapter/updateCourtCase")
-        .log(LoggingLevel.INFO,"Update court case auth list.")
-        .to("direct:processCourtCaseAuthListChanged")
+        //jade 2770 fix 
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
-            ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
-            exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+            ChargeAssessmentData courtfiledata = exchange.getIn().getBody(ChargeAssessmentData.class);
+            exchange.setProperty("accused_person", courtfiledata.getAccused_persons().size());
+            exchange.setProperty("courtcase_data", courtfiledata);
           }}
-        )
-         //BCPSDEMS-1518, JADE-1751
+        ).marshal().json()
+        .log(LoggingLevel.DEBUG,"Accused_person : ${exchangeProperty.accused_person}" )
+        .log(LoggingLevel.DEBUG,"Body: ${exchangeProperty.courtcase_data}")
         .choice()
-          .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
-          .setHeader("case_id").simple("${exchangeProperty.caseId}")
-          .to("http://ccm-dems-adapter/inactivateCase")
-          .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
-          .endChoice()
-        .log(LoggingLevel.INFO, "Court case updated")
+          .when(simple("${exchangeProperty.accused_person} != '0'"))
+              // add-on any additional rccs from the dems side.
+              //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
+              .to("direct:compileRelatedChargeAssessments")
+              .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
+
+              .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+              .setBody(simple("${exchangeProperty.courtcase_data}"))
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .to("http://ccm-dems-adapter/updateCourtCase")
+              .log(LoggingLevel.INFO,"Update court case auth list.")
+              .to("direct:processCourtCaseAuthListChanged")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+                  exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+                }}
+              )
+              //BCPSDEMS-1518, JADE-1751
+              .choice()
+                .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+                .setHeader("case_id").simple("${exchangeProperty.caseId}")
+                .to("http://ccm-dems-adapter/inactivateCase")
+                .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
+                .endChoice()
+              .log(LoggingLevel.INFO, "Court case updated")
+              .endChoice()
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.WARN,"There is no accused person")
+            .endChoice()
       .endChoice()
       // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
       // check if this is a scenario of an rcc being re-submitted.
@@ -880,6 +902,7 @@ public class CcmNotificationService extends RouteBuilder {
                 ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
                 exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
                 exchange.setProperty("bodytest", b);
+                exchange.setProperty("accused_person", b.getAccused_persons().size());
                 //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
                 //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
                 //System.out.println("body : "+ b.toString());
@@ -887,7 +910,7 @@ public class CcmNotificationService extends RouteBuilder {
             }) .marshal().json()
             .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return'"))
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return' && ${exchangeProperty.accused_person} != '0'"))
                 .log(LoggingLevel.DEBUG,"ready for reactivating the case")
                 .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -898,6 +921,10 @@ public class CcmNotificationService extends RouteBuilder {
                 .log(LoggingLevel.INFO,"Update court case auth list.")
                 .to("direct:processCourtCaseAuthListChanged")
                 .setProperty("triggerStaticReports", simple("true"))
+            .endChoice()
+            //jade 2770 fix
+            .when(simple("${exchangeProperty.accused_person} == '0'"))
+              .log(LoggingLevel.WARN, "There is no accused person")
             .endChoice()
         .endChoice()
       .endChoice()
