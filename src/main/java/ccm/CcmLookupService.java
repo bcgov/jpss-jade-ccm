@@ -407,6 +407,8 @@ public class CcmLookupService extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    // remove the pidp token header, as it causes bad requests from JUSTIN side.
+    .removeHeaders("pidp*")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }

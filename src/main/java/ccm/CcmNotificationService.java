@@ -542,6 +542,7 @@ public class CcmNotificationService extends RouteBuilder {
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
         .delay(30000)
         .to("kafka:{{kafka.topic.reports.name}}")
+        .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
       .endChoice()
     .otherwise()
       .log(LoggingLevel.WARN, "Skipping creation of DEMS Case: ${header.event_key}")
@@ -1917,6 +1918,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .delay(60000)
     .to("kafka:{{kafka.topic.reports.name}}")
+    .log(LoggingLevel.INFO, "Completed processCourtCaseChanged")
     ;
   }
 
