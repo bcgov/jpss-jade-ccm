@@ -29,8 +29,6 @@ autonumber
 bulk_case_users_topic o-> notification_service : Process ACCESS_REMOVED_NO_DETAILS event
 activate notification_service
 
-notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_STARTED event
-
 notification_service -> lookup_service: Retrieve user accessible case list
 activate lookup_service
 lookup_service -> d_adapter: Retrieve user accessible case list from DEMS
@@ -47,13 +45,19 @@ deactivate d_adapter
 lookup_service --> notification_service: Case list
 deactivate lookup_service
 
-loop For every case
-    notification_service -> notification_service: Create ACCESS_REMOVED event
-    notification_service -> notification_service: Enrich event object with case number
-    notification_service ->o bulk_case_users_topic: Publish ACCESS_REMOVED event
-end
+alt User found
+    notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_STARTED event
 
-notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_ENDED event
+    loop For every case
+        notification_service -> notification_service: Create ACCESS_REMOVED event
+        notification_service -> notification_service: Enrich event object with case number
+        notification_service ->o bulk_case_users_topic: Publish ACCESS_REMOVED event
+    end
+
+    notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_ENDED event
+else User not found
+    notification_service -> notification_service: No operation
+end
 
 deactivate notification_service
 

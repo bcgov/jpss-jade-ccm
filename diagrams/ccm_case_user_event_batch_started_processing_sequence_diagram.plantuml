@@ -29,9 +29,9 @@ accessdedup_processor -> case_access_sync_store : Retrieve event batch count fro
 activate case_access_sync_store
 case_access_sync_store --> accessdedup_processor : Return event batch count
 
-alt event batch count exists and is greater than 0
+alt event batch count exists
     accessdedup_processor ->o case_access_sync_store : Set event batch count to event batch count + 1
-else event batch count does not exist or is 0
+else event batch count does not exist
     accessdedup_processor ->o case_access_sync_store : Set event batch count to 1
 end
 
