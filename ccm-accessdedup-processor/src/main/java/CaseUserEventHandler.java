@@ -123,7 +123,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                 AtomicLong batchCount = new AtomicLong((batchCountString != null) ? Long.parseLong(batchCountString) : 0);
 
                 // Increment the batch count and store it.
-                batchCount++;
+                batchCount.incrementAndGet();
                 accessdedupStore.put(EVENT_BATCH_COUNT_STRING, batchCount.toString());
 
                 LOG.info("Batch count incremented to {}.", batchCount.toString());
@@ -141,14 +141,19 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
 
                 // If this is the last batch, forward all stored events and clear the store.
                 if (batchCount.get() > 1) {
-                    // This is not the last batch.  Do nothing.
+                    // This is not the last batch.  Decrement the batch count and store it.
 
-                    LOG.info("This is not the last batch.  {} batch{} remaining.", batchCount.toString(), batchCount.get() == 1 ? "" : "es.  Do nothing.");
+                    batchCount.decrementAndGet();
+                    accessdedupStore.put(EVENT_BATCH_COUNT_STRING, batchCount.toString());
+
+                    LOG.info("This is not the last batch.  Batch count decremented to {}.", batchCount.toString());
                     return;
                 } else {
-                    // This is the last batch.  Forward all stored events and clear the store.
+                    // This is the last batch.  Remove batch count entry, forward all stored events, and clear the store.
 
-                    LOG.info("This is the last batch.  Forwarding all stored events and clearing the store.");
+                    LOG.info("This is the last batch.  Remove batch count entry, forwarding all stored events, and clearing the store.");
+
+                    accessdedupStore.delete(EVENT_BATCH_COUNT_STRING);
 
                     AtomicLong event_count = new AtomicLong(0);
 
