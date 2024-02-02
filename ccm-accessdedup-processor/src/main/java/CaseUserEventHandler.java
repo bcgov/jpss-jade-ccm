@@ -50,6 +50,8 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
     private String caseAccessSyncStoreName;
     private String appNameProperCase;
 
+    private static final String EVENT_BATCH_COUNT_STRING = "event_batch_count";
+
     @Override
     public void init(ProcessorContext context) {
         super.init(context);
@@ -94,9 +96,10 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                 .readValue(value, CaseUserEvent.class);
 
             // skip if event is not in scope
-            if (CaseUserEvent.STATUS.ACCESS_ADDED.name().equals(caseUserEvent.getEvent_status()) ||
-                CaseUserEvent.STATUS.ACCESS_REMOVED.name().equals(caseUserEvent.getEvent_status()) ||
-                CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
+            if (CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name().equals(caseUserEvent.getEvent_status()) ||
+                CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status()) || 
+                CaseUserEvent.STATUS.ACCESS_ADDED.name().equals(caseUserEvent.getEvent_status()) ||
+                CaseUserEvent.STATUS.ACCESS_REMOVED.name().equals(caseUserEvent.getEvent_status())) {
                 // This is an in-scope event.  Process it.
             } else {
                 // This is a out-of-scope event.  Ignore it.
@@ -110,26 +113,64 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
             // Produce a KPI event for the case user event.
             produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.offset());
 
-            if (CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
-                // End of the batch is detected; forward all stored events and clear the store.
+            if (CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name().equals(caseUserEvent.getEvent_status())) {
+                // Start of the batch is detected; update batch count in the store.
 
-                LOG.info("'End of event batch' message received.  Forwarding and clearing derived charge assessment event messages in {}...", caseAccessSyncStoreName);
+                LOG.info("'Start of event batch' message received.");
 
-                AtomicLong event_count = new AtomicLong(0);
+                // Get the current batch count from the store.
+                String batchCountString = accessdedupStore.get(EVENT_BATCH_COUNT_STRING);
+                AtomicLong batchCount = new AtomicLong((batchCountString != null) ? Long.parseLong(batchCountString) : 0);
 
-                accessdedupStore.all().forEachRemaining(keyValue -> {
-                    event_count.incrementAndGet();
-                    LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
+                // Increment the batch count and store it.
+                batchCount.incrementAndGet();
+                accessdedupStore.put(EVENT_BATCH_COUNT_STRING, batchCount.toString());
 
-                    context.forward(keyValue.key, keyValue.value, 
-                        CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
-                });
+                LOG.info("Batch count incremented to {}.", batchCount.toString());
 
-                accessdedupStore.all().forEachRemaining(keyValue -> {
-                    accessdedupStore.delete(keyValue.key);
-                });
+            } else if (CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name().equals(caseUserEvent.getEvent_status())) {
+                // End of the batch is detected; update batch count in the store.
+                // If this is the last batch, forward all stored events and clear the store.
 
-                LOG.info("Store cleared and {} event{} forwarded.", event_count.get(), event_count.get() == 1 ? "" : "s");
+                LOG.info("'End of event batch' message received.");
+
+                // Get the current batch count from the store.
+
+                String batchCountString = accessdedupStore.get(EVENT_BATCH_COUNT_STRING);
+                AtomicLong batchCount = new AtomicLong((batchCountString != null) ? Long.parseLong(batchCountString) : 0);
+
+                // If this is the last batch, forward all stored events and clear the store.
+                if (batchCount.get() > 1) {
+                    // This is not the last batch.  Decrement the batch count and store it.
+
+                    batchCount.decrementAndGet();
+                    accessdedupStore.put(EVENT_BATCH_COUNT_STRING, batchCount.toString());
+
+                    LOG.info("This is not the last batch.  Batch count decremented to {}.", batchCount.toString());
+                    return;
+                } else {
+                    // This is the last batch.  Remove batch count entry, forward all stored events, and clear the store.
+
+                    LOG.info("This is the last batch.  Remove batch count entry, forwarding all stored events, and clearing the store.");
+
+                    accessdedupStore.delete(EVENT_BATCH_COUNT_STRING);
+
+                    AtomicLong event_count = new AtomicLong(0);
+
+                    accessdedupStore.all().forEachRemaining(keyValue -> {
+                        event_count.incrementAndGet();
+                        LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
+
+                        context.forward(keyValue.key, keyValue.value, 
+                            CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
+                    });
+
+                    accessdedupStore.all().forEachRemaining(keyValue -> {
+                        accessdedupStore.delete(keyValue.key);
+                    });
+
+                    LOG.info("Store cleared and {} event{} forwarded.", event_count.get(), event_count.get() == 1 ? "" : "s");
+                }
             } else if (accessdedupStore.get(caseUserEvent.getJustin_rcc_id()) == null) {
                 // This is for a new charge assessment.  Create a new charge assessment event and store it.
 

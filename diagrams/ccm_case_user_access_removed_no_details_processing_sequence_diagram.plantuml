@@ -1,0 +1,67 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Adapter"
+collections bulk_case_users_topic as "Bulk Case User Events"
+control notification_service as "Notification Service"
+control lookup_service as "Lookup Service"
+control d_adapter as "DEMS Adapter"
+boundary d_interface as "DEMS Interface"
+
+
+title
+CCM Case User ACCESS_REMOVED_NO_DETAILS Event Processing Sequence Diagram
+end title
+
+autonumber
+
+bulk_case_users_topic o-> notification_service : Process ACCESS_REMOVED_NO_DETAILS event
+activate notification_service
+
+notification_service -> lookup_service: Retrieve user accessible case list
+activate lookup_service
+lookup_service -> d_adapter: Retrieve user accessible case list from DEMS
+
+activate d_adapter
+d_adapter -> d_interface: Call getUserCases()
+activate d_interface
+d_interface --> d_adapter: Case list
+deactivate d_interface
+d_adapter -> d_adapter: Convert data from System (DEMS) to Business model
+d_adapter --> lookup_service: Case list
+deactivate d_adapter
+
+lookup_service --> notification_service: Case list
+deactivate lookup_service
+
+alt User found
+    notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_STARTED event
+
+    loop For every case
+        notification_service -> notification_service: Create ACCESS_REMOVED event
+        notification_service -> notification_service: Enrich event object with case number
+        notification_service ->o bulk_case_users_topic: Publish ACCESS_REMOVED event
+    end
+
+    notification_service ->o bulk_case_users_topic: Produce EVENT_BATCH_ENDED event
+else User not found
+    notification_service -> notification_service: No operation
+end
+
+deactivate notification_service
+
+caption
+Prepared by David Agahchen | Updated January 31, 2024
+end caption
+@enduml

@@ -36,6 +36,8 @@ public class CaseUserEvent extends BaseEvent {
     ACCOUNT_CREATED,
     ACCESS_ADDED,
     ACCESS_REMOVED,
+    ACCESS_REMOVED_NO_DETAILS,
+    EVENT_BATCH_STARTED,
     EVENT_BATCH_ENDED;
   }
 
@@ -57,7 +59,7 @@ public class CaseUserEvent extends BaseEvent {
         setEvent_status(STATUS.ACCESS_ADDED.toString());
         break;
       case USER_DPROV:
-        setEvent_status(STATUS.ACCESS_REMOVED.toString());
+        setEvent_status(STATUS.ACCESS_REMOVED_NO_DETAILS.toString());
         break;
       default:
         // unknown status

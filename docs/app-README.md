@@ -32,7 +32,8 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 
 | Business Object | Event | Processing Diagram (and source) |
 | --- | --- | --- |
-| All | JUSTIN Events | [Diagram](../diagrams/img/ccm_justin_event_processing_sequence_diagram.png) ([source](../diagrams/ccm_justin_event_processing_sequence_diagram.plantuml))|
+| Main Queue | JUSTIN Main Queue Events | [Diagram](../diagrams/img/ccm_justin_main_queue_processing_sequence_diagram.png) ([source](../diagrams/ccm_justin_main_queue_processing_sequence_diagram.plantuml))|
+| Bulk Queue | JUSTIN Bulk Queue Events | [Diagram](../diagrams/img/ccm_justin_bulk_queue_processing_sequence_diagram.png) ([source](../diagrams/ccm_justin_bulk_queue_processing_sequence_diagram.plantuml))|
 | Charge Assessment | MANUALLY_CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_manually_changed_processing_sequence_diagram.plantuml))|
 | Charge Assessment | CHANGED |[Diagram](../diagrams/img/ccm_charge_assessment_case_changed_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_changed_processing_sequence_diagram.plantuml))|
 | Charge Assessment | CREATED |[Diagram](../diagrams/img/ccm_charge_assessment_case_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_charge_assessment_case_created_processing_sequence_diagram.plantuml))|
@@ -45,12 +46,14 @@ JADE-CCM event processing sequence diagrams are created using the PlantUML seque
 | Case User | ACCOUNT_CREATED |[Diagram](../diagrams/img/ccm_case_user_account_created_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_account_created_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_ADDED |[Diagram](../diagrams/img/ccm_case_user_access_added_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_added_processing_sequence_diagram.plantuml))|
 | Case User | ACCESS_REMOVED |[Diagram](../diagrams/img/ccm_case_user_access_removed_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_processing_sequence_diagram.plantuml))|
+| Case User | ACCESS_REMOVED_NO_DETAILS |[Diagram](../diagrams/img/ccm_case_user_access_removed_no_details_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_access_removed_no_details_processing_sequence_diagram.plantuml))|
+| Case User | EVENT_BATCH_STARTED |[Diagram](../diagrams/img/ccm_case_user_event_batch_started_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_event_batch_started_processing_sequence_diagram.plantuml))|
 | Case User | EVENT_BATCH_ENDED |[Diagram](../diagrams/img/ccm_case_user_event_batch_ended_processing_sequence_diagram.png) ([source](../diagrams/ccm_case_user_event_batch_ended_processing_sequence_diagram.plantuml))|
 
 
 ### Example Event Processing Diagram 
 
-<img src="../diagrams/img/ccm_justin_event_processing_sequence_diagram.png" alt="Example JADE-CCM JUSTIN Event Processing Diagram" style="border: 1px solid grey;">
+<img src="../diagrams/img/ccm_justin_main_queue_processing_sequence_diagram.png" alt="Example JADE-CCM JUSTIN Event Processing Diagram" style="border: 1px solid grey;">
 
 ---
 

@@ -79,7 +79,7 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
 
-    processCaseUserAccessRemoved();
+    processCaseUserAccessRemovedNoDetails();
 
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
@@ -1143,9 +1143,9 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=1&maxPollIntervalMs=4800000")
+    from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=1&maxPollIntervalMs=4800000")
     .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
@@ -1163,8 +1163,8 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
     .choice()
-      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_REMOVED))
-        .setProperty("kpi_component_route_name", simple("processCaseUserAccessRemoved"))
+      .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.ACCESS_REMOVED_NO_DETAILS))
+        .setProperty("kpi_component_route_name", simple("processCaseUserAccessRemovedNoDetails"))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
@@ -1176,7 +1176,7 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-  private void processCaseUserAccessRemoved() {
+  private void processCaseUserAccessRemovedNoDetails() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -1193,6 +1193,30 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
         .setProperty("caseLength", jsonpath("$.case_list.length()"))
 
+        // generate the batch-started event
+        .log(LoggingLevel.DEBUG,"Creating case user 'batch-started' event")
+        .process(exchange -> {
+            CaseUserEvent event = new CaseUserEvent();
+            event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name());
+            event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+  
+            exchange.getMessage().setBody(event, CaseUserEvent.class);
+            exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+          })
+        .setProperty("kpi_event_object", body())
+        .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+        .setProperty("business_event", body())
+        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+        .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+
+        // generate event-created KPI
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("kpi_component_route_name", simple(routeId))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+        .to("direct:publishEventKPI")
+
+        // process each case
         .split()
           .jsonpathWriteAsString("$.case_list")
           //The route should not continue through the rest of the cases in the list after an exception has occurred.
@@ -1211,24 +1235,36 @@ public class CcmNotificationService extends RouteBuilder {
                 public void process(Exchange exchange) throws Exception {
                   // Insert code that gets executed *before* delegating
                   // to the next processor in the chain.
-                  CaseUserEvent event = (CaseUserEvent)exchange.getProperty("kpi_event_object", CaseUserEvent.class);
+                  CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("kpi_event_object", CaseUserEvent.class);
+                  CaseUserEvent event = new CaseUserEvent(CaseUserEvent.SOURCE.JADE_CCM, originalEvent);
+
                   String rccId = (String)exchange.getProperty("rcc_id", String.class);
                   event.setJustin_rcc_id(rccId);
-                  event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
 
                   exchange.getMessage().setBody(event, CaseUserEvent.class);
+                  exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
                 }
               })
               .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-              .log(LoggingLevel.INFO,"Creating bulk event for ( part_id = ${header[event_key]} rcc_id = ${exchangeProperty.rcc_id} ) ...")
+              .log(LoggingLevel.INFO,"Creating an enriched " + CaseUserEvent.class.getSimpleName() + "." + CaseUserEvent.STATUS.ACCESS_REMOVED.name() + " event for ( part_id = ${header[event_key]} rcc_id = ${exchangeProperty.rcc_id} ) ...")
               .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
-            .endChoice()
+
+              // generate event-created KPI
+              .setProperty("kpi_event_object", body())
+              .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+              .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+              .setProperty("kpi_component_route_name", simple(routeId))
+              .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+              .to("direct:publishEventKPI")
+
+              .endChoice()
             .otherwise()
-            //nothing to do here
-            .endChoice()
+              //nothing to do here
+              .endChoice()
           .end()
         .end()
 
+        // generate the batch-ended event
         .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
         .process(exchange -> {
             CaseUserEvent event = new CaseUserEvent();
@@ -1243,6 +1279,8 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("business_event", body())
         .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
         .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+
+        // generate event-created KPI
         .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
         .setProperty("kpi_component_route_name", simple(routeId))
