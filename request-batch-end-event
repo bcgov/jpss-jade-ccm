@@ -1,0 +1,24 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: '$1'"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+echo "`basename $0` to $ns ..."
+
+oc -n $ns exec service/ccm-notification-service -- curl \
+-X PUT \
+"http://ccm-notification-service/createBatchEndEvent"

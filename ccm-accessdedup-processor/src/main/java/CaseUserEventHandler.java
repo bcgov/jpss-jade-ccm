@@ -147,7 +147,6 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                     accessdedupStore.put(EVENT_BATCH_COUNT_STRING, batchCount.toString());
 
                     LOG.info("This is not the last batch.  Batch count decremented to {}.", batchCount.toString());
-                    return;
                 } else {
                     // This is the last batch.  Remove batch count entry, forward all stored events, and clear the store.
 

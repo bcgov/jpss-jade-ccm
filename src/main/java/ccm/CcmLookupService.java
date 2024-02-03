@@ -301,7 +301,7 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 
-  private void deprecated_getCourtCaseAuthList() {
+  private void getCourtCaseAuthList() {
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -360,7 +360,7 @@ public class CcmLookupService extends RouteBuilder {
     .end();
   }
 
-  private void getCourtCaseAuthList() {
+  private void deprecated_getCourtCaseAuthList() {
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

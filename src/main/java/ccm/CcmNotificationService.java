@@ -78,8 +78,10 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
-
     processCaseUserAccessRemovedNoDetails();
+    http_createBatchEndEvent();
+    createBatchEndEventPaused();
+    createBatchEndEvent();
 
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
@@ -1150,6 +1152,7 @@ public class CcmNotificationService extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
       "    with the key ${headers[kafka.KEY]}")
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .setHeader("event_key")
       .jsonpath("$.event_key")
     .setHeader("event_status")
@@ -1168,7 +1171,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCaseUserAccessRemoved")
+        .to("direct:processCaseUserAccessRemovedNoDetails")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -1191,7 +1194,9 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
+        .setProperty("caseEvent", simple("${exchangeProperty.kpi_event_object}"))
         .setProperty("caseLength", jsonpath("$.case_list.length()"))
+        .setProperty("caseList", body())
 
         // generate the batch-started event
         .log(LoggingLevel.DEBUG,"Creating case user 'batch-started' event")
@@ -1215,6 +1220,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_component_route_name", simple(routeId))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
         .to("direct:publishEventKPI")
+        .setBody(simple("${exchangeProperty.caseList}"))
 
         // process each case
         .split()
@@ -1235,8 +1241,9 @@ public class CcmNotificationService extends RouteBuilder {
                 public void process(Exchange exchange) throws Exception {
                   // Insert code that gets executed *before* delegating
                   // to the next processor in the chain.
-                  CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("kpi_event_object", CaseUserEvent.class);
+                  CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("caseEvent", CaseUserEvent.class);
                   CaseUserEvent event = new CaseUserEvent(CaseUserEvent.SOURCE.JADE_CCM, originalEvent);
+                  event.setEvent_status(CaseUserEvent.STATUS.ACCESS_REMOVED.toString());
 
                   String rccId = (String)exchange.getProperty("rcc_id", String.class);
                   event.setJustin_rcc_id(rccId);
@@ -1245,12 +1252,13 @@ public class CcmNotificationService extends RouteBuilder {
                   exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
                 }
               })
+              .setProperty("kpi_event_object", body())
               .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
               .log(LoggingLevel.INFO,"Creating an enriched " + CaseUserEvent.class.getSimpleName() + "." + CaseUserEvent.STATUS.ACCESS_REMOVED.name() + " event for ( part_id = ${header[event_key]} rcc_id = ${exchangeProperty.rcc_id} ) ...")
+              .log(LoggingLevel.DEBUG,"${body}")
               .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
 
               // generate event-created KPI
-              .setProperty("kpi_event_object", body())
               .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
               .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
               .setProperty("kpi_component_route_name", simple(routeId))
@@ -1264,34 +1272,68 @@ public class CcmNotificationService extends RouteBuilder {
           .end()
         .end()
 
-        // generate the batch-ended event
-        .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
-        .process(exchange -> {
-            CaseUserEvent event = new CaseUserEvent();
-            event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
-            event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
-  
-            exchange.getMessage().setBody(event, CaseUserEvent.class);
-            exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
-          })
-        .setProperty("kpi_event_object", body())
-        .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-        .setProperty("business_event", body())
-        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-        .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+        .wireTap("direct:createBatchEndEventPaused")
 
-        // generate event-created KPI
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
-        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-        .setProperty("kpi_component_route_name", simple(routeId))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-        .to("direct:publishEventKPI")
-
+        .setProperty("kpi_event_object", simple("${exchangeProperty.caseEvent}"))
         .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 404"))
           .log(LoggingLevel.INFO,"User (key = ${header.event_key}) not found; Do nothing.")
       .endChoice()
     .end()
+    ;
+  }
+
+  private void http_createBatchEndEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/createBatchEndEvent")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:createBatchEndEvent");
+  }
+
+  private void createBatchEndEventPaused() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .delay(35000)
+    .to("direct:createBatchEndEvent");
+  }
+
+  private void createBatchEndEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    // generate the batch-ended event
+    .log(LoggingLevel.INFO,"Creating case user 'batch-ended' event")
+    .process(exchange -> {
+        CaseUserEvent event = new CaseUserEvent();
+        event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
+        event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+
+        exchange.getMessage().setBody(event, CaseUserEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+      })
+    .setProperty("kpi_event_object", body())
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("business_event", body())
+    .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+
+    // generate event-created KPI
+    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:publishEventKPI")
     ;
   }
 
