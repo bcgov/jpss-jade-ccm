@@ -158,7 +158,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(3).redeliveryDelay(10000)
+      .maximumRedeliveries(10).redeliveryDelay(25000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
@@ -1471,7 +1471,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/fields")
-    .log(LoggingLevel.INFO,"Retrieved dems field mappings.")
+    .log(LoggingLevel.DEBUG,"Retrieved dems field mappings.")
     ;
   }
 
@@ -1512,7 +1512,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-      .log(LoggingLevel.INFO,"Field Name = ${exchangeProperty.fieldName} Field List Id = ${exchangeProperty.fieldListId}")
+      .log(LoggingLevel.DEBUG,"Field Name = ${exchangeProperty.fieldName} Field List Id = ${exchangeProperty.fieldListId}")
       .choice()
         .when(simple("${exchangeProperty.fieldName} != '' && ${exchangeProperty.fieldListId} != ''"))
           .to("direct:getDemsFieldMappings")

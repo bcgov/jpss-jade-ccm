@@ -78,8 +78,10 @@ public class CcmNotificationService extends RouteBuilder {
     processCourtCaseAppearanceChanged();
     processCourtCaseCrownAssignmentChanged();
     processCaseUserEvents();
-
     processCaseUserAccessRemovedNoDetails();
+    http_createBatchEndEvent();
+    createBatchEndEventPaused();
+    createBatchEndEvent();
 
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
@@ -93,7 +95,7 @@ public class CcmNotificationService extends RouteBuilder {
 
    // handle network connectivity errors
    onException(ConnectException.class, SocketTimeoutException.class)
-     .maximumRedeliveries(5).redeliveryDelay(20000)
+     .maximumRedeliveries(10).redeliveryDelay(25000)
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
@@ -442,7 +444,6 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
-    
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getCourtCaseExists")
@@ -478,11 +479,15 @@ public class CcmNotificationService extends RouteBuilder {
                 if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
                   ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
                   log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
+                  log.debug("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
                   // If no submit date, then don't create!
                   ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
                   ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
                   ZonedDateTime maxSubmitDateTime = currentDateTime.minusDays(autoCreateMaxDays);
-                  
+                  // jade 2770 fix
+                  if(chargeAssessmentdata.getAccused_persons().size() == 0) {
+                    ex.setProperty("allowCreateCase", "false");
+                  }
                   if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
                     ex.setProperty("allowCreateCase", "false");
                   }
@@ -539,6 +544,7 @@ public class CcmNotificationService extends RouteBuilder {
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
         .delay(30000)
         .to("kafka:{{kafka.topic.reports.name}}")
+        .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
       .endChoice()
     .otherwise()
       .log(LoggingLevel.WARN, "Skipping creation of DEMS Case: ${header.event_key}")
@@ -831,34 +837,53 @@ public class CcmNotificationService extends RouteBuilder {
         .removeHeader(Exchange.CONTENT_ENCODING)
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
-
-        // add-on any additional rccs from the dems side.
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        .to("direct:compileRelatedChargeAssessments")
-        .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
-
-        .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        .setBody(simple("${exchangeProperty.courtcase_data}"))
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("http://ccm-dems-adapter/updateCourtCase")
-        .log(LoggingLevel.INFO,"Update court case auth list.")
-        .to("direct:processCourtCaseAuthListChanged")
+        //jade 2770 fix 
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) {
-            ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
-            exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+            ChargeAssessmentData courtfiledata = exchange.getIn().getBody(ChargeAssessmentData.class);
+            exchange.setProperty("accused_person", courtfiledata.getAccused_persons().size());
+            exchange.setProperty("courtcase_data", courtfiledata);
           }}
-        )
-         //BCPSDEMS-1518, JADE-1751
+        ).marshal().json()
+        .log(LoggingLevel.DEBUG,"Accused_person : ${exchangeProperty.accused_person}" )
+        .log(LoggingLevel.DEBUG,"Body: ${exchangeProperty.courtcase_data}")
         .choice()
-          .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
-          .setHeader("case_id").simple("${exchangeProperty.caseId}")
-          .to("http://ccm-dems-adapter/inactivateCase")
-          .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
-          .endChoice()
-        .log(LoggingLevel.INFO, "Court case updated")
+          .when(simple("${exchangeProperty.accused_person} != '0'"))
+              // add-on any additional rccs from the dems side.
+              //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
+              .to("direct:compileRelatedChargeAssessments")
+              .log(LoggingLevel.DEBUG,"Compiled court case in DEMS.  Court case data = ${body}.")
+
+              .setProperty("courtcase_data", simple("${bodyAs(String)}"))
+              .setBody(simple("${exchangeProperty.courtcase_data}"))
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .to("http://ccm-dems-adapter/updateCourtCase")
+              .log(LoggingLevel.INFO,"Update court case auth list.")
+              .to("direct:processCourtCaseAuthListChanged")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+                  exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+                }}
+              )
+              //BCPSDEMS-1518, JADE-1751
+              .choice()
+                .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+                .setHeader("case_id").simple("${exchangeProperty.caseId}")
+                .to("http://ccm-dems-adapter/inactivateCase")
+                .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
+                .endChoice()
+              .log(LoggingLevel.INFO, "Court case updated")
+              .endChoice()
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.WARN,"There is no accused person")
+            .endChoice()
       .endChoice()
       // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
       // check if this is a scenario of an rcc being re-submitted.
@@ -880,6 +905,7 @@ public class CcmNotificationService extends RouteBuilder {
                 ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
                 exchange.setProperty("justinCourtCaseStatus", b.getRcc_status_code());
                 exchange.setProperty("bodytest", b);
+                exchange.setProperty("accused_person", b.getAccused_persons().size());
                 //System.out.println("justinCourtCaseStatus:" +  b.getRcc_status_code());
                 //exchange.getMessage().setBody(b, ChargeAssessmentData.class);
                 //System.out.println("body : "+ b.toString());
@@ -887,7 +913,7 @@ public class CcmNotificationService extends RouteBuilder {
             }) .marshal().json()
             .log(LoggingLevel.INFO, "justinCourtCaseStatus: ${exchangeProperty.justinCourtCaseStatus}")
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return'"))
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} != 'Return' && ${exchangeProperty.accused_person} != '0'"))
                 .log(LoggingLevel.DEBUG,"ready for reactivating the case")
                 .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
@@ -898,6 +924,10 @@ public class CcmNotificationService extends RouteBuilder {
                 .log(LoggingLevel.INFO,"Update court case auth list.")
                 .to("direct:processCourtCaseAuthListChanged")
                 .setProperty("triggerStaticReports", simple("true"))
+            .endChoice()
+            //jade 2770 fix
+            .when(simple("${exchangeProperty.accused_person} == '0'"))
+              .log(LoggingLevel.WARN, "There is no accused person")
             .endChoice()
         .endChoice()
       .endChoice()
@@ -1122,6 +1152,7 @@ public class CcmNotificationService extends RouteBuilder {
       "    on the partition ${headers[kafka.PARTITION]}\n" +
       "    with the offset ${headers[kafka.OFFSET]}\n" +
       "    with the key ${headers[kafka.KEY]}")
+    //.log(LoggingLevel.INFO, "headers: ${headers}")
     .setHeader("event_key")
       .jsonpath("$.event_key")
     .setHeader("event_status")
@@ -1140,7 +1171,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
         .setBody(header("event"))
-        .to("direct:processCaseUserAccessRemoved")
+        .to("direct:processCaseUserAccessRemovedNoDetails")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -1163,7 +1194,9 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
         .log(LoggingLevel.DEBUG,"body = '${body}'.")
+        .setProperty("caseEvent", simple("${exchangeProperty.kpi_event_object}"))
         .setProperty("caseLength", jsonpath("$.case_list.length()"))
+        .setProperty("caseList", body())
 
         // generate the batch-started event
         .log(LoggingLevel.DEBUG,"Creating case user 'batch-started' event")
@@ -1187,6 +1220,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_component_route_name", simple(routeId))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
         .to("direct:publishEventKPI")
+        .setBody(simple("${exchangeProperty.caseList}"))
 
         // process each case
         .split()
@@ -1207,8 +1241,9 @@ public class CcmNotificationService extends RouteBuilder {
                 public void process(Exchange exchange) throws Exception {
                   // Insert code that gets executed *before* delegating
                   // to the next processor in the chain.
-                  CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("kpi_event_object", CaseUserEvent.class);
+                  CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("caseEvent", CaseUserEvent.class);
                   CaseUserEvent event = new CaseUserEvent(CaseUserEvent.SOURCE.JADE_CCM, originalEvent);
+                  event.setEvent_status(CaseUserEvent.STATUS.ACCESS_REMOVED.toString());
 
                   String rccId = (String)exchange.getProperty("rcc_id", String.class);
                   event.setJustin_rcc_id(rccId);
@@ -1217,12 +1252,13 @@ public class CcmNotificationService extends RouteBuilder {
                   exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
                 }
               })
+              .setProperty("kpi_event_object", body())
               .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
               .log(LoggingLevel.INFO,"Creating an enriched " + CaseUserEvent.class.getSimpleName() + "." + CaseUserEvent.STATUS.ACCESS_REMOVED.name() + " event for ( part_id = ${header[event_key]} rcc_id = ${exchangeProperty.rcc_id} ) ...")
+              .log(LoggingLevel.DEBUG,"${body}")
               .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
 
               // generate event-created KPI
-              .setProperty("kpi_event_object", body())
               .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
               .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
               .setProperty("kpi_component_route_name", simple(routeId))
@@ -1236,34 +1272,70 @@ public class CcmNotificationService extends RouteBuilder {
           .end()
         .end()
 
-        // generate the batch-ended event
-        .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
-        .process(exchange -> {
-            CaseUserEvent event = new CaseUserEvent();
-            event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
-            event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
-  
-            exchange.getMessage().setBody(event, CaseUserEvent.class);
-            exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
-          })
-        .setProperty("kpi_event_object", body())
-        .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
-        .setProperty("business_event", body())
-        .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-        .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+        // wireTap makes an call and immediate return without waiting for the process to complete
+        // the direct call will wait for a certain time before creating the Batch End event.
+        .wireTap("direct:createBatchEndEventPaused")
 
-        // generate event-created KPI
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
-        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-        .setProperty("kpi_component_route_name", simple(routeId))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-        .to("direct:publishEventKPI")
-
+        .setProperty("kpi_event_object", simple("${exchangeProperty.caseEvent}"))
         .endChoice()
       .when(simple("${header.CamelHttpResponseCode} == 404"))
           .log(LoggingLevel.INFO,"User (key = ${header.event_key}) not found; Do nothing.")
       .endChoice()
     .end()
+    ;
+  }
+
+  private void http_createBatchEndEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/createBatchEndEvent")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:createBatchEndEvent");
+  }
+
+  private void createBatchEndEventPaused() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .delay(35000)
+    .to("direct:createBatchEndEvent");
+  }
+
+  private void createBatchEndEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    // generate the batch-ended event
+    .log(LoggingLevel.INFO,"Creating case user 'batch-ended' event")
+    .process(exchange -> {
+        CaseUserEvent event = new CaseUserEvent();
+        event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
+        event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+
+        exchange.getMessage().setBody(event, CaseUserEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+      })
+    .setProperty("kpi_event_object", body())
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("business_event", body())
+    .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+
+    // generate event-created KPI
+    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:publishEventKPI")
     ;
   }
 
@@ -1928,6 +2000,7 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .delay(60000)
     .to("kafka:{{kafka.topic.reports.name}}")
+    .log(LoggingLevel.INFO, "Completed processCourtCaseChanged")
     ;
   }
 
