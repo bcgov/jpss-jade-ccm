@@ -85,6 +85,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     processCrnAssignEvent();
     processUserProvEvent();
     processUserDProvEvent();
+    processBulkBatchStartedEvent();
     processBulkBatchEndedEvent();
     processReportEvents();
     processUnknownEvent();
@@ -543,10 +544,23 @@ public class CcmJustinAdapter extends RouteBuilder {
     .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.bulk.name}}") // retrieve all "in progress" events
     //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
 
-    // process events
+    // set initial event count
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
     .setProperty("totalNumOfEvents", simple("${exchangeProperty.numOfEvents}"))
+
+    // check to see if there are any events to process
+    .choice()
+      .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
+
+        // generate batch-started event
+        .log(LoggingLevel.INFO,"Start processing ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
+        .to("direct:processBulkBatchStartedEvent")
+
+      .endChoice()
+    .end()
+
+    // process events
     .loopDoWhile(simple("${exchangeProperty.numOfEvents} > 0"))
       .to("direct:processJustinBulkEvents")
 
@@ -563,11 +577,17 @@ public class CcmJustinAdapter extends RouteBuilder {
         exchange.setProperty("totalNumOfEvents", totalNumOfEvents + numOfEvents);
       })
     .end()
+
     .choice()
       .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
-      .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
-        .to("direct:processBulkBatchEndedEvent")
+        // generate batch-ended event
+        .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
+        // wireTap makes an call and immediate return without waiting for the process to complete
+        // the direct call will wait for a certain time before creating the Batch End event.
+        .wireTap("direct:processBulkBatchEndedEvent")
+        .log(LoggingLevel.INFO,"Kick off END Batch Event")
       .endChoice()
+    .end()
     ;
   }
 
@@ -689,9 +709,6 @@ public class CcmJustinAdapter extends RouteBuilder {
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.CRN_ASSIGN))
           .to("direct:processCrnAssignEvent")
-          .endChoice()
-        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_PROV))
-          .to("direct:processUserProvEvent")
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.USER_DPROV))
           .to("direct:processUserDProvEvent")
@@ -1140,8 +1157,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .setProperty("business_event", body())
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-      .to("kafka:{{kafka.topic.caseusers.name}}")
-      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.caseusers.name}}"))
+      .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
       .setProperty("kpi_component_route_name", simple(routeId))
       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
@@ -1174,6 +1191,50 @@ public class CcmJustinAdapter extends RouteBuilder {
     ;
   }
 
+  private void processBulkBatchStartedEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log(LoggingLevel.DEBUG,"Creating case user 'batch-started' event")
+    .doTry()
+      .process(exchange -> {
+          CaseUserEvent event = new CaseUserEvent();
+          event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name());
+          event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+
+          exchange.getMessage().setBody(event, CaseUserEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+        })
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+      .setProperty("business_event", body())
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
+      .setProperty("error_event_object", body())
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .end()
+    ;
+  }
+
   private void processBulkBatchEndedEvent() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1183,6 +1244,7 @@ public class CcmJustinAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("kpi_component_route_name", simple(routeId))
     .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
+    .delay(35000)
     .doTry()
       .process(exchange -> {
           CaseUserEvent event = new CaseUserEvent();

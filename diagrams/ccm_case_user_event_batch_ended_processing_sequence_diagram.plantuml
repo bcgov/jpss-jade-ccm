@@ -26,18 +26,30 @@ bulk_case_users_topic o-> accessdedup_processor : Process EVENT_BATCH_ENDED even
 
 activate accessdedup_processor
 
-loop for each event in store
-    accessdedup_processor <-o case_access_sync_store : Retrieve event message from store
-    accessdedup_processor ->o bulk_charge_assessments_topic : Produce event message to topic
-end loop
+accessdedup_processor -> case_access_sync_store : Retrieve event batch count from store
+activate case_access_sync_store
+case_access_sync_store --> accessdedup_processor : Return event batch count
 
-loop for each event in store
-    accessdedup_processor ->o case_access_sync_store : Delete event message from store
-end loop
+alt event batch count > 1 (more event batches to process)
+    accessdedup_processor ->o case_access_sync_store : Set event batch count to event batch count - 1
+else event batch count = 1 (final event batch)
+    accessdedup_processor ->o case_access_sync_store : Set event batch count to 0
+
+    loop for each event in store
+        accessdedup_processor -> case_access_sync_store : Retrieve event message from store
+        accessdedup_processor <-- case_access_sync_store : Return event message
+        accessdedup_processor ->o bulk_charge_assessments_topic : Produce event message to topic
+    end loop
+
+    loop for each event in store
+        accessdedup_processor ->o case_access_sync_store : Delete event message from store
+    end loop
+
+end
 
 deactivate accessdedup_processor
 
 caption
-Prepared by David Agahchen | Created December 7, 2023
+Prepared by David Agahchen | Created January 31, 2024
 end caption
 @enduml

@@ -1,0 +1,68 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Adapter"
+collections bulk_case_users_topic as "Bulk Case User Events"
+
+title
+CCM JUSTIN Bulk Queue Processing Sequence Diagram
+end title
+
+autonumber
+
+activate j_adapter
+
+loop Every 5 minutes
+    j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Bulk Queue
+    activate j_interface
+    j_interface --> j_adapter: List of JUSTIN events from Bulk Queue
+    j_adapter-> j_interface: Retrieve all in progress JUSTIN events from Bulk Queue
+    j_interface --> j_adapter: List of JUSTIN events from Bulk Queue
+    deactivate j_interface
+
+    alt event batch is empty
+        j_adapter -> j_adapter: No operation
+    else event batch is not empty
+        j_adapter ->o bulk_case_users_topic : Produce EVENT_BATCH_STARTED event
+
+        loop While there are JUSTIN events
+            loop For every JUSTIN event
+                j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+                alt USER_PROV
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_ADDED event
+                else USER_DPROV
+                    j_adapter ->o bulk_case_users_topic: Produce ACCESS_REMOVED_NO_DETAILS event
+                end
+                j_adapter -> j_interface: Mark event as processed
+                activate j_interface
+                j_interface --> j_adapter: Acknowledgement
+                deactivate j_interface
+            end
+
+            j_adapter-> j_interface: Retrieve new batch of JUSTIN events from Bulk Queue
+            activate j_interface
+            j_interface --> j_adapter: List of JUSTIN events from Bulk Queue
+            deactivate j_interface
+        end
+
+        j_adapter ->o bulk_case_users_topic : Produce EVENT_BATCH_ENDED event
+    end
+end
+
+deactivate j_adapter
+
+caption
+Prepared by David Agahchen | Updated January 31, 2024
+end caption
+@enduml
