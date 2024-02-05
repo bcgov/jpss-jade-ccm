@@ -12,10 +12,7 @@ fi
 
 if [ "$env" = "" ]; then
    echo "Error.  Invalid environment specified: '$1'"
-   echo "$0 env justin_event_id"
-   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
-   echo "E.g., $0 dev 100"
-   echo "      $0 dev 100 105\n"
+   echo "E.g., $0 dev\n"
    return 1
 else
    ns="$ns_set-$env"
@@ -33,7 +30,7 @@ fi
 echo "`basename $0` to $ns ..."
 
 if [ "$ns" != "" ]; then
-    oc -n $ns exec service/ccm-justin-adapter -- curl \
+    oc -n $ns exec service/ccm-justin-events-adapter -- curl \
     -X PUT \
     "http://ccm-justin-events-adapter/startJustinEvents"
 fi

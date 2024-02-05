@@ -377,7 +377,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAuthList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseAuthList")
     .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
     .setProperty("justinauthlist", body())
 

@@ -48,10 +48,6 @@ kamel -n $ns delete ccm-justin-out-adapter
 kamel -n $ns run \
   CcmJustinOutAdapter.java \
   --resource file:../../../../target/classes/ccm-models.jar \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-oneRCC.json \
-  --resource file:../../../../mapping/data/system/justin/arc/eventBatch-empty.json \
-  --resource file:../../../../mapping/data/system/justin/sampleEventRecord.json \
   --property file:ccmJustinOutAdapter.properties \
   --label deployer="$deployer" \
   --label version="$version" \
