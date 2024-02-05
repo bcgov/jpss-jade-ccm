@@ -35,5 +35,5 @@ echo "`basename $0` to $ns ..."
 if [ "$ns" != "" ]; then
     oc -n $ns exec service/ccm-justin-adapter -- curl \
     -X PUT \
-    "http://ccm-justin-adapter/stopJustinEvents"
+    "http://ccm-justin-events-adapter/stopJustinEvents"
 fi
