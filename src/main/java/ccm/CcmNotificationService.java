@@ -1272,6 +1272,8 @@ public class CcmNotificationService extends RouteBuilder {
           .end()
         .end()
 
+        // wireTap makes an call and immediate return without waiting for the process to complete
+        // the direct call will wait for a certain time before creating the Batch End event.
         .wireTap("direct:createBatchEndEventPaused")
 
         .setProperty("kpi_event_object", simple("${exchangeProperty.caseEvent}"))

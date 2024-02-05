@@ -582,6 +582,8 @@ public class CcmJustinAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
         // generate batch-ended event
         .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
+        // wireTap makes an call and immediate return without waiting for the process to complete
+        // the direct call will wait for a certain time before creating the Batch End event.
         .wireTap("direct:processBulkBatchEndedEvent")
         .log(LoggingLevel.INFO,"Kick off END Batch Event")
       .endChoice()
