@@ -63,6 +63,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     processJustinEventsBulkTimer();
     processJustinMainEvents();
     processJustinBulkEvents();
+    processBulkBatchStartedEvent();
+    processBulkBatchEndedEvent();
 
     processAgenFileEvent();
     processAuthListEvent();
@@ -346,7 +348,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        
+
         Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
         Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
         ServiceHelper.startService(mainTimer.getConsumer());
@@ -427,7 +429,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.main.name}}") // retrieve all "in progress" events
-    //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
 
     // process events
     .setProperty("numOfEvents")
@@ -461,24 +463,13 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/inProgressEvents?system={{justin.queue.bulk.name}}") // retrieve all "in progress" events
-    //.log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing in progress events from JUSTIN: ${body}")
 
     // set initial event count
     .setProperty("numOfEvents")
       .jsonpath("$.events.length()")
     .setProperty("totalNumOfEvents", simple("${exchangeProperty.numOfEvents}"))
-
-    // check to see if there are any events to process
-    .choice()
-      .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
-
-        // generate batch-started event
-        .log(LoggingLevel.INFO,"Start processing ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
-        .to("direct:processBulkBatchStartedEvent")
-
-      .endChoice()
-    .end()
-
+    .log(LoggingLevel.DEBUG,"Total num events: ${exchangeProperty.numOfEvents}")
     // process events
     .loopDoWhile(simple("${exchangeProperty.numOfEvents} > 0"))
       .to("direct:processJustinBulkEvents")
@@ -499,6 +490,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
     .choice()
       .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
+
+        // generate batch-started event
+        .log(LoggingLevel.INFO,"Start processing ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
+        .to("direct:processBulkBatchStartedEvent")
+
         // generate batch-ended event
         .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
         // wireTap makes an call and immediate return without waiting for the process to complete
