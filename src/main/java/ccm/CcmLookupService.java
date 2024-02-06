@@ -296,7 +296,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseDetails")
+    .to("http://ccm-justin-out-adapter/getCourtCaseDetails")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -337,7 +337,7 @@ public class CcmLookupService extends RouteBuilder {
 
         ProducerTemplate justinTemplate = getContext().createProducerTemplate();
         String justinResponse = justinTemplate.requestBodyAndHeaders(
-                                   "http://ccm-justin-adapter/getCourtCaseAuthList",
+                                   "http://ccm-justin-out-adapter/getCourtCaseAuthList",
                                    null, headers, String.class);
 
         AuthUserList justinUserList = null;
@@ -377,7 +377,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAuthList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseAuthList")
     .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
     .setProperty("justinauthlist", body())
 
@@ -426,7 +426,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseMetadata")
+    .to("http://ccm-justin-out-adapter/getCourtCaseMetadata")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -444,7 +444,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAppearanceSummaryList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseAppearanceSummaryList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -462,7 +462,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseCrownAssignmentList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseCrownAssignmentList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -481,7 +481,7 @@ public class CcmLookupService extends RouteBuilder {
     .setProperty("image_request", body())
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getImageData")
+    .to("http://ccm-justin-out-adapter/getImageData")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }

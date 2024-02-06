@@ -34,12 +34,6 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.support.service.ServiceHelper;
 
-import ccm.models.common.data.AuthUserList;
-import ccm.models.common.data.CaseAppearanceSummaryList;
-import ccm.models.common.data.CaseCrownAssignmentList;
-import ccm.models.common.data.ChargeAssessmentData;
-import ccm.models.common.data.CourtCaseData;
-import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
@@ -49,17 +43,11 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.versioning.Version;
-import ccm.models.system.justin.JustinAgencyFile;
-import ccm.models.system.justin.JustinAuthUsersList;
-import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
-import ccm.models.system.justin.JustinCourtFile;
-import ccm.models.system.justin.JustinCrownAssignmentList;
-import ccm.models.system.justin.JustinDocumentList;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventBatch;
 import ccm.utils.DateTimeUtils;
 
-public class CcmJustinAdapter extends RouteBuilder {
+public class CcmJustinEventsAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
     attachExceptionHandlers();
@@ -67,8 +55,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     version();
 
     courtFileCreated();
-    healthCheck();
-    //readRCCFileSystem();
     stopJustinEvents();
     startJustinEvents();
     requeueJustinEvent();
@@ -85,20 +71,12 @@ public class CcmJustinAdapter extends RouteBuilder {
     processCrnAssignEvent();
     processUserProvEvent();
     processUserDProvEvent();
-    processBulkBatchStartedEvent();
-    processBulkBatchEndedEvent();
     processReportEvents();
     processUnknownEvent();
 
     processPartMergeEvents();
 
     confirmEventProcessed();
-    getCourtCaseDetails();
-    getCourtCaseAuthList();
-    getCourtCaseMetadata();
-    getCourtCaseAppearanceSummaryList();
-    getCourtCaseCrownAssignmentList();
-    getImageData();
 
     processCaseUserEvents();
     processCaseUserAccountCreated();
@@ -323,65 +301,6 @@ public class CcmJustinAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"body (after unmarshalling): '${body}'")
     .to("kafka:{{kafka.topic.chargeassessments.name}}");
 
-
-  }
-
-  private void healthCheck() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/v1/health?httpMethodRestrict=GET")
-    .routeId(routeId)
-    .removeHeaders("CamelHttp*")
-    .log(LoggingLevel.DEBUG,"/v1/health request received")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .to("https://{{justin.host}}/health");
-
-  }
-
-  private void readRCCFileSystem() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("file:/tmp/?fileName=eventBatch-oneRCC.json&exchangePattern=InOnly")
-    .routeId(routeId)
-    //.log(LoggingLevel.DEBUG,"Processing file with content: ${body}")
-    //.to("direct:processJustinEventBatch")
-    .log(LoggingLevel.DEBUG,"Re-queueing event(s)...")
-    //.removeHeaders("*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    //.to("https://{{justin.host}}/requeueEventById?id=2045")
-    //.to("https://{{justin.host}}/requeueEventById?id=2060")
-    //.to("https://{{justin.host}}/requeueEventById?id=2307") // AGEN_FILE 50431.0734
-    //.to("https://{{justin.host}}/requeueEventById?id=2309") // AUTH_LIST 50431.0734
-    //.to("https://{{justin.host}}/requeueEventById?id=2367") // AGEN_FILE 50433.0734
-    //.to("https://{{justin.host}}/requeueEventById?id=2368") // AUTH_LIST 50433.0734
-    //.to("https://{{justin.host}}/requeueEventById?id=2451") // COURT_FILE 39857
-
-    // JSIT Sep 8
-    //.to("https://{{justin.host}}/requeueEventById?id=2581") // AGEN_FILE 49408.0734 (case name: YOYO, Yammy; SOSO, Yolando ...)
-    //.to("https://{{justin.host}}/requeueEventById?id=2590") // AGEN_FILE 50448.0734 (case name: VADER, Darth)
-    //.to("https://{{justin.host}}/requeueEventById?id=2592") // COURT_FILE 39861 (court file for Vader agency file)
-
-    //.to("https://{{justin.host}}/requeueEventById?id=2362") // AGEN_FILE 50431.0734
-    //.to("https://{{justin.host}}/requeueEventById?id=2320") // COURT_FILE 39849 (RCC_ID 50431.0734)
-    //.to("https://{{justin.host}}/requeueEventById?id=2327") // APPR (mdoc no 39849; RCC_ID = 50431.0734)
-    //.to("https://{{justin.host}}/requeueEventById?id=2321") // CRN_ASSIGN (mdoc no 39849; RCC_ID 50431.0734)
-
-    // JSIT Sep 29
-    //.to("https://{{justin.host}}/requeueEventById?id=2753") // AGEN_FILE (RCC_ID = 50454.0734)
-    //.to("https://{{justin.host}}/requeueEventById?id=2759") // APPR (mdoc no 39869; RCC_ID = 50444.0734)
-
-    // JSIT Oct 27
-    .to("https://{{justin.host}}/requeueEventById?id=2003") // AGEN_FILE (RCC_ID = 50414.0734)
-
-    // Pre-JSIT Dec 6 (Dev)
-    .to("https://{{justin.host}}/requeueEventById?id=4277") // USER_DPROV (PART_ID = null)
-    ;
 
   }
 
@@ -1571,188 +1490,6 @@ public class CcmJustinAdapter extends RouteBuilder {
         .endChoice()
       .end()
     .end()
-    ;
-  }
-
-  private void getCourtCaseDetails() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseDetails request received. number = ${header[number]}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .removeHeader("rcc_id")
-    .toD("https://{{justin.host}}/agencyFile?rcc_id=${header[number]}")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinAgencyFile.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinAgencyFile j = exchange.getIn().getBody(JustinAgencyFile.class);
-        ChargeAssessmentData b = new ChargeAssessmentData(j);
-        exchange.getMessage().setBody(b, ChargeAssessmentData.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-    ;
-  }
-
-  private void getCourtCaseAuthList() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseAuthList request received. rcc_id = ${header.number}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/authUsers?rcc_id=${header.number}")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinAuthUsersList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinAuthUsersList j = exchange.getIn().getBody(JustinAuthUsersList.class);
-        AuthUserList b = new AuthUserList(j);
-        exchange.getMessage().setBody(b, AuthUserList.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-    ;
-  }
-
-  private void getCourtCaseAppearanceSummaryList() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/apprSummary?mdoc_justin_no=${header.number}")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinCourtAppearanceSummaryList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinCourtAppearanceSummaryList j = exchange.getIn().getBody(JustinCourtAppearanceSummaryList.class);
-        CaseAppearanceSummaryList b = new CaseAppearanceSummaryList(j);
-        exchange.getMessage().setBody(b, CaseAppearanceSummaryList.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CaseAppearanceSummaryList.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-    ;
-  }
-
-  private void getCourtCaseMetadata() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseMetadata request received. mdoc_no = ${header.number}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/courtFile?mdoc_justin_no=${header.number}")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinCourtFile.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinCourtFile j = exchange.getIn().getBody(JustinCourtFile.class);
-        CourtCaseData b = new CourtCaseData(j);
-        exchange.getMessage().setBody(b, CourtCaseData.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-    ;
-  }
-
-  private void getCourtCaseCrownAssignmentList() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/crownAssignments?mdoc_justin_no=${header.number}")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinCrownAssignmentList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinCrownAssignmentList j = exchange.getIn().getBody(JustinCrownAssignmentList.class);
-        CaseCrownAssignmentList b = new CaseCrownAssignmentList(j);
-        exchange.getMessage().setBody(b, CaseCrownAssignmentList.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, CaseCrownAssignmentList.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
-    ;
-  }
-
-  private void getImageData() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/imageDataGet")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
-        ReportDocumentList rd = new ReportDocumentList(j);
-        exchange.getMessage().setBody(rd, ReportDocumentList.class);
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
