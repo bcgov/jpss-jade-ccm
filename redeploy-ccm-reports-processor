@@ -1,5 +1,6 @@
 ns_set="cef5dd"
 
+
 if [ "$1" = "dev" ]; then
     env="dev"
 elif [ "$1" = "test" ]; then
@@ -30,24 +31,25 @@ if [ "$env" = "prod" ]; then
         return 1
     fi
 else
-    logging_level="DEBUG"
+    #logging_level="DEBUG" 
+    logging_level="INFO"
 fi
 
 deployer="`oc whoami | cut -d "@" -f 1`"
 version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
 
 echo "`basename $0` to $ns ..."
-
+ 
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
-    camel run  --properties=ccmLookupService.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmLookupService.java --port 4419 local/local.properties 
+    camel run  --properties=ccmReportsProcessor.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmReportsProcessor.java --port 4414 local/local.properties
+    
 else
-kamel -n $ns delete ccm-lookup-service
+kamel -n $ns delete ccm-reports-processor
 kamel -n $ns run \
-  CcmLookupService.java \
+  CcmReportsProcessor.java \
   --resource file:../../../../target/classes/ccm-models.jar \
-  --property file:ccmLookupService.properties \
-  --property custom.property2=configmap:ccm-configs:kafka-broker-url \
+  --property file:ccmReportsProcessor.properties \
   --label deployer="$deployer" \
   --label version="$version" \
   --config configmap:ccm-configs \
@@ -59,21 +61,28 @@ kamel -n $ns run \
   --trait container.request-memory=500mi \
   --trait container.limit-cpu=200m \
   --trait container.limit-memory=1000mi \
-  --trait service.node-port=false \
-  --trait route.enabled=false
+  --trait route.enabled=false \
+  --trait service.node-port=false
 fi
+  ## https://camel.apache.org/camel-k/1.10.x/traits/container.html
 
-kubectl -n $ns patch integration ccm-lookup-service --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 3}]'
+  #--trait route.tls-termination=edge \
+  #--trait route.tls-insecure-edge-termination-policy=Redirect \
+  #--trait route.host=ccm-dems-adapter-test.apps.silver.devops.gov.bc.ca \  
+  #--trait logging.level=DEBUG \
+  #--trait dependencies.enabled=true \
+  #--trait route.enabled=false \
+  #--trait service.node-port=false
+
+  #--trait container.request-cpu=25m
+  #--trait container.request-memory=500mi
+  #--trait container.limit-cpu=200m
+  #--trait container.limit-memory=1000mi
+
+  ## https://justice.gov.bc.ca/jira/browse/JADE-2024
+  ## https://www.youtube.com/watch?v=Wmg7-PZgQJI
+  #--trait quarkus.package-type=native
 
 popd
 
-#  --config configmap:ccm-configs \
-#  --config secret:ccm-secrets \
-
-
-#--mount configmap/ccm-configs:/etc/camel/config.d/_configmaps/ccm-configs \
-#--mount secret/ccm-secrets:/etc/camel/config.d/_secrets/ccm-secrets \
-
-#--property camel.k.label="ccm (deployed on `date` by `oc whoami`)" \
-
-# kamel -n cef5dd-test log ccm-lookup-service
+# kamel -n cef5dd-test log ccm-dems-adapter
