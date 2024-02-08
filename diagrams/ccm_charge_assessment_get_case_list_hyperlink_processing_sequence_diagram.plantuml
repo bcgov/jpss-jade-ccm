@@ -1,0 +1,69 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+entity enterprise_app as "Enterprise App (e.g., JUSTIN, CCSS)"
+boundary zb_interface as "ZoneB Proxy"
+control ji_adapter as "JUSTIN In Adapter"
+control lookup_service as "Lookup Service"
+control d_adapter as "DEMS Adapter"
+boundary d_interface as "DEMS Interface"
+
+title
+CCM Charge Assessment Get Case List Hyperlink Processing Sequence Diagram
+end title
+
+autonumber
+
+activate enterprise_app
+enterprise_app -> zb_interface: Get list of DEMS case hyperlinks by RCC id list
+activate zb_interface
+
+zb_interface -> ji_adapter: Get list of DEMS hyperlinks by RCC id list
+activate ji_adapter
+
+break Not authenticated (HTTP 401)
+    ji_adapter --> enterprise_app: Error Response (converted)
+end break
+
+ji_adapter -> ji_adapter: Convert data from System (JUSTIN) to Business model
+ji_adapter -> lookup_service: Get DEMS list of case hyperlinks by charge asessment key list
+
+activate lookup_service
+lookup_service -> d_adapter: Get DEMS list of case hyperlinks by charge asessment key list
+
+activate d_adapter
+d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+d_adapter -> d_interface: Get case id list by charge assessement key list
+
+activate d_interface
+
+d_interface -> d_adapter: Case id list
+deactivate d_interface
+
+d_adapter -> d_adapter: Convert data from System (DEMS) to Business model
+d_adapter -> lookup_service: Case hyperlink list
+deactivate d_adapter
+
+lookup_service -> ji_adapter: Case hyperlink list
+deactivate lookup_service
+
+ji_adapter -> ji_adapter: Convert data from Business to System (JUSTIN) model
+ji_adapter -> zb_interface: Case hyperlink list
+
+deactivate ji_adapter
+zb_interface -> enterprise_app: Case hyperlink list
+
+caption
+Prepared by David Agahchen | Created February 7, 2024
+end caption
+@enduml
