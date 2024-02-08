@@ -12,20 +12,20 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 '/
 
 boundary j_interface as "JUSTIN Interface"
-control j_adapter as "JUSTIN Adapter"
-collections court_cases_topic as "Charge Assessment Case Events"
+control j_adapter as "JUSTIN Out Adapter"
+collections charge_assessments_topic as "Charge Assessment Events"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
 control d_adapter as "DEMS Adapter"
 boundary d_interface as "DEMS Interface"
 
 title
-CCM Charge Assessment Case UPDATED Event Processing Sequence Diagram
+CCM Charge Assessment UPDATED Event Processing Sequence Diagram
 end title
 
 autonumber
 
-court_cases_topic o-> notification_service : Process UPDATED event
+charge_assessments_topic o-> notification_service : Process UPDATED event
 activate notification_service
 notification_service -> lookup_service: Retrieve court case details
 activate lookup_service
@@ -152,6 +152,6 @@ deactivate notification_service
 end
 
 caption
-Prepared by David Agahchen | Updated July 16, 2023
+Prepared by David Agahchen | Updated February 7, 2024
 end caption
 @enduml

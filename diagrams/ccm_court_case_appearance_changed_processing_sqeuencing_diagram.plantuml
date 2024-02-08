@@ -12,7 +12,7 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 '/
 
 boundary j_interface as "JUSTIN Interface"
-control j_adapter as "JUSTIN Adapter"
+control j_adapter as "JUSTIN Out Adapter"
 collections court_case_topic as "Court Case Events"
 collections kpis_topic as "Event KPIs"
 control notification_service as "Notification Service"
@@ -108,6 +108,6 @@ notification_service ->o kpis_topic: Publish 'processing completed' event KPI
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated February 7, 2024
 end caption
 @enduml

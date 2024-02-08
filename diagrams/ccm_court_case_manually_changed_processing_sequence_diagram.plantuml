@@ -13,9 +13,9 @@ https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.h
 '/
 
 boundary j_interface as "JUSTIN Interface"
-control j_adapter as "JUSTIN Adapter"
+control j_adapter as "JUSTIN Out Adapter"
 collections charge_assessment_cases_topic as "Charge Assessment Case Events"
-collections approved_court_cases_topic as "Court Case Events"
+collections court_cases_topic as "Court Case Events"
 collections errors_topic as "Court Case Event Errors"
 collections kpis_topic as "Event KPIs"
 control notification_service as "Notification Service"
@@ -29,7 +29,7 @@ end title
 
 autonumber
 
-approved_court_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
+court_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
 activate notification_service
 
 notification_service ->o kpis_topic: Publish 'processing started' event KPI
@@ -118,9 +118,9 @@ loop For every associated charge assessment case
     deactivate d_adapter
 end loop
 
-notification_service ->o approved_court_cases_topic: Publish crown assignment changed event 
+notification_service ->o court_cases_topic: Publish crown assignment changed event 
 notification_service ->o kpis_topic: Publish crown assignment changed 'event created' KPI
-notification_service ->o approved_court_cases_topic: Publish appearance summary changed event 
+notification_service ->o court_cases_topic: Publish appearance summary changed event 
 notification_service ->o kpis_topic: Publish appearance summary changed 'event created' KPI
 
 notification_service ->o kpis_topic: Publish 'processing completed' event KPI
@@ -128,6 +128,6 @@ notification_service ->o kpis_topic: Publish 'processing completed' event KPI
 deactivate notification_service
 
 caption
-Prepared by David Agahchen | Updated December 22, 2022
+Prepared by David Agahchen | Updated February 7, 204
 end caption
 @enduml
