@@ -23,7 +23,7 @@ autonumber
 
 activate j_adapter
 
-loop Every 5 minutes
+loop Every 30 seconds
     j_adapter-> j_interface: Retrieve a new batch of JUSTIN events from Bulk Queue
     activate j_interface
     j_interface --> j_adapter: List of JUSTIN events from Bulk Queue
