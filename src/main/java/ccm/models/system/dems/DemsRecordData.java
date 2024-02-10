@@ -240,11 +240,14 @@ public class DemsRecordData {
             fileNo = fileNo.replaceAll(" ", "");
         }
         String docId = fileNo+"."+descriptionShortForm+"_"+getTitle()+"_"+shortendStartDate;
+        System.out.println("docId :"+ docId);
         docId=docId.replaceAll("\\(", "");
         docId=docId.replaceAll("\\)", "");
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("\\+", "_");
+        docId=docId.replaceAll("\\\"", "_");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -361,6 +364,8 @@ public class DemsRecordData {
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("\\+", "_");
+        docId=docId.replaceAll("\\\"", "");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -479,6 +484,8 @@ public class DemsRecordData {
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("\\+", "_");
+        docId=docId.replaceAll("\\\"", "_");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
