@@ -33,6 +33,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.support.service.ServiceHelper;
+import org.apache.http.NoHttpResponseException;
 
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
@@ -100,7 +101,15 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(false)
-      .end();
+    .end();
+
+    onException(NoHttpResponseException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .setBody(constant("An unexpected network error occurred"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
 
      // HttpOperation Failed
     onException(HttpOperationFailedException.class)

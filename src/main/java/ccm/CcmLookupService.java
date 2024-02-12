@@ -29,6 +29,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.http.NoHttpResponseException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -67,6 +68,14 @@ public class CcmLookupService extends RouteBuilder {
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
+
+    onException(NoHttpResponseException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
     .end();
@@ -409,6 +418,10 @@ public class CcmLookupService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
     // remove the pidp token header, as it causes bad requests from JUSTIN side.
     .removeHeaders("pidp*")
+    .removeHeaders("Authorization*")
+    .removeHeaders("X-*")
+    .removeHeaders("Content-Security-Policy")
+    .removeHeaders("Referrer-Policy")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }
