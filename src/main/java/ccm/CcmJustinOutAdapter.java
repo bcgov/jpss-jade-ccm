@@ -29,6 +29,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.http.NoHttpResponseException;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
@@ -76,6 +77,14 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(false)
       .end();
+
+    onException(NoHttpResponseException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .setBody(constant("An unexpected network error occurred"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
 
      // HttpOperation Failed
     onException(HttpOperationFailedException.class)

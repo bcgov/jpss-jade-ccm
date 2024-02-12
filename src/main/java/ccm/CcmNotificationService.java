@@ -14,6 +14,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.http.NoHttpResponseException;
 
 // import org.apache.camel.component.http4.HttpOperationFailedException;
 // import org.apache.camel.component.http4.HttpMethods;
@@ -94,13 +95,21 @@ public class CcmNotificationService extends RouteBuilder {
   private void attachExceptionHandlers() {
 
    // handle network connectivity errors
-   onException(ConnectException.class, SocketTimeoutException.class)
+    onException(ConnectException.class, SocketTimeoutException.class)
      .maximumRedeliveries(10).redeliveryDelay(25000)
      .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
      .setBody(constant("An unexpected network error occurred"))
      .retryAttemptedLogLevel(LoggingLevel.ERROR)
      .handled(true)
-     .end();
+    .end();
+
+    onException(NoHttpResponseException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .setBody(constant("An unexpected network error occurred"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
 
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
@@ -699,7 +708,7 @@ public class CcmNotificationService extends RouteBuilder {
   private void processParticipantMerge() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    
+
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -710,9 +719,9 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange ex) throws HttpOperationFailedException {
         // KPI: Preserve original event properties
         ex.setProperty("kpi_event_object_orig", ex.getProperty("kpi_event_object"));
-       
+
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)ex.getProperty("kpi_event_object");
-        
+
         //log.info("fromPartId : "+ original_event.getJustin_from_part_id());
         //log.info("toPartId : "+ original_event.getJustin_to_part_id());
         String fromPartId = original_event.getJustin_from_part_id();
@@ -838,7 +847,7 @@ public class CcmNotificationService extends RouteBuilder {
         .to("http://ccm-lookup-service/getCourtCaseDetails")
         .log(LoggingLevel.DEBUG,"Update court case in DEMS.  Court case data = ${body}.")
         .setProperty("courtcase_data", simple("${bodyAs(String)}"))
-        //jade 2770 fix 
+        //jade 2770 fix
         .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
         .process(new Processor() {
           @Override
@@ -1204,7 +1213,7 @@ public class CcmNotificationService extends RouteBuilder {
             CaseUserEvent event = new CaseUserEvent();
             event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name());
             event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
-  
+
             exchange.getMessage().setBody(event, CaseUserEvent.class);
             exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
           })
