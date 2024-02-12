@@ -1,0 +1,23 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+export TITLEPREFIX="Reports Processor $ns "
+
+echo -ne "\e]0;Reports Processor $ns\a"
+kamel -n $ns log ccm-reports-processor
