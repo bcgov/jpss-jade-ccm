@@ -245,6 +245,8 @@ public class DemsRecordData {
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("[\\\\/+]", "_");
+        docId=docId.replaceAll("\"", "");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -361,6 +363,8 @@ public class DemsRecordData {
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("[\\\\/+]", "_");
+        docId=docId.replaceAll("\"", "");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
@@ -479,6 +483,8 @@ public class DemsRecordData {
         docId=docId.replaceAll(",", "");
         docId=docId.replaceAll(":", "");
         docId=docId.replaceAll(" ", "-");
+        docId=docId.replaceAll("[\\\\/+]", "_");
+        docId=docId.replaceAll("\"", "");
         setDocumentId(docId);
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
