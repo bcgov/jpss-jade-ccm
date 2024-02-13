@@ -14,6 +14,7 @@ import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.ReportDocument;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.system.dems.DemsRecordData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JustinDocumentTest {
 
@@ -36,7 +37,47 @@ public class JustinDocumentTest {
         }
         return new JustinDocumentList();
     }
-/*
+
+    private JustinDocumentList getTestJustinWitnessFile() {
+        String fileName = "json/system/justin/justin_document_witness_statement.json";
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
+             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(streamReader)) {
+
+            //create ObjectMapper instance
+            ObjectMapper objectMapper = new ObjectMapper();
+            JustinDocumentList document = objectMapper.readValue(reader, JustinDocumentList.class);
+
+            return document;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new JustinDocumentList();
+    }
+
+    private JustinDocumentList getTestJustinSynopsisFile() {
+        String fileName = "json/system/justin/justin_document_synopsis.json";
+        ClassLoader classLoader = getClass().getClassLoader();
+
+        try (InputStream inputStream = classLoader.getResourceAsStream(fileName);
+             InputStreamReader streamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(streamReader)) {
+
+            //create ObjectMapper instance
+            ObjectMapper objectMapper = new ObjectMapper();
+            JustinDocumentList document = objectMapper.readValue(reader, JustinDocumentList.class);
+
+            return document;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new JustinDocumentList();
+    }
+    /*
     private DemsChargeAssessmentCaseData getTestDemsFile() {
         String fileName = "json/system/dems/dems_agency_file.json";
         ClassLoader classLoader = getClass().getClassLoader();
@@ -58,7 +99,7 @@ public class JustinDocumentTest {
     }
 */
     @Test
-    public void testInitiatingAgency() {
+    public void testDocumentId() {
         JustinDocumentList documentList = getTestJustinFile();
         ReportDocumentList rd = new ReportDocumentList(documentList);
 
@@ -68,6 +109,7 @@ public class JustinDocumentTest {
         ChargeAssessmentDocumentData businessFile = new ChargeAssessmentDocumentData("123456", documentList.getCreate_date(), commonDocument);
         // Initiating Agency: "$MAPID8: $MAPID7" INITIATING_AGENCY_IDENTIFIER: INITIATING_AGENCY_NAME
 
+        DemsRecordData demsFile = new DemsRecordData(businessFile);
         //create ObjectMapper instance
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -86,7 +128,6 @@ public class JustinDocumentTest {
             objectMapper.writeValue(stringFile3, businessFile);
             //System.out.println("\n\nCourtCaseDocumentData JSON is\n"+stringFile3);
 
-            DemsRecordData demsFile = new DemsRecordData(businessFile);
             StringWriter stringFile4 = new StringWriter();
             objectMapper.writeValue(stringFile4, demsFile);
             //System.out.println("\n\nDemsRecordData JSON is\n"+stringFile4);
@@ -95,40 +136,87 @@ public class JustinDocumentTest {
             e.printStackTrace();
         }
 
-        //assertEquals("105: Kelowna Municipal RCMP", businessFile.getInitiating_agency());
+        assertEquals("703.23-1007.AI_SMITH-JOHNATHAN_230831", demsFile.getDocumentId());
 
-        // Investigating Officer: "$MAPID9 $MAPID10" INVESTIGATING_OFFICER_NAME INVESTIGATING_OFFICER_PIN
-        //assertEquals("Rhodes, Christopher 1001", businessFile.getInvestigating_officer());
+    }
 
-        // Proposed Crown Office: "$MAPID14: $MAPID15" and Strip " Crown Counsel" from data  CRN_DECISION_AGENCY_IDENTIFIER: CRN_DECISION_AGENCY_NAME
-        //assertEquals("C402: Kelowna", businessFile.getProposed_crown_office());
+    @Test
+    public void testWitnessStatement() {
+        JustinDocumentList documentList = getTestJustinWitnessFile();
+        ReportDocumentList rd = new ReportDocumentList(documentList);
 
-        // ??? "$MAPID24 - $MAPID23"  ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME
-        //assertEquals(businessFile., "AN - Thomasffffffffffffffffffffffff, Kenjjjjjjjjjjjjjjjjjjjjjjjjjjj Anthonyeeeeeeee Frankhhhhhhhhhhhh");
+        JustinDocument document = documentList.getDocuments().get(0);
+        ReportDocument commonDocument = new ReportDocument(document);
+        ChargeAssessmentDocumentData businessFile = new ChargeAssessmentDocumentData("123456", documentList.getCreate_date(), commonDocument);
 
-        // Earliest Offence Date Earliest: Offence date of the Accused Person array "$MAPID27" ACCUSED\OFFENCE_DATE
-        //assertEquals(agencyFile.getMin_offence_date(), businessFile.getEarliest_offence_date());
+        DemsRecordData demsFile = new DemsRecordData(businessFile);
+        //create ObjectMapper instance
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-        // Earliest Proposed Appearance Date: Earliest Proposed Appearance Date of the Accused Person array "$MAPID25" ACCUSED\PROPOSED_APPR_DATE
+        try {
 
-        // Proposed Process Type List: Roll up of $MAPID70, data elements seperated by a semi colon ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME' ACCUSED\ PROPOSED_PROCESS_TYPE - ACCUSED\ACCUSED_NAME
+            StringWriter stringFile = new StringWriter();
+            objectMapper.writeValue(stringFile, document);
+            //System.out.println("JustinDocument JSON is\n"+stringFile);
 
-        // Intimate partner violence Y/N: KFILE_YN IF Y then True, ELSE False
+            StringWriter stringFile2 = new StringWriter();
+            objectMapper.writeValue(stringFile2, commonDocument);
+            //System.out.println("\n\nReportDocument JSON is\n"+stringFile2);
 
-        // DEMS Case Name: Roll up of $MAPID23, data elements seperated by a semi colon ACCUSED\ACCUSED_NAME; ACCUSED\ACCUSED_NAME
-        // Accused Full Name: Roll up of $MAPID119 Concatenate $MAPID85, $MAPID86 $MAPID118 and $MAPID84 with a space seperator if the $MAPIDX is not null.
-        // Agency File: $MAPID8: $MAPID2 INITIATING_AGENCY_IDENTIFIER: AGENCY_FILE_NO
-        // "If $MAPID113 = ""ACT"" then ""Received"" or 
-        // $MAPID113 = ""CLS""  then  ""Close"" or
-        // $MAPID113 = ""FIN""  then  ""Finish"" or
-        // $MAPID113 = ""RET""  then  ""Return""" RCC_STATE_CD
-        
+            StringWriter stringFile3 = new StringWriter();
+            objectMapper.writeValue(stringFile3, businessFile);
+            //System.out.println("\n\nCourtCaseDocumentData JSON is\n"+stringFile3);
 
+            StringWriter stringFile4 = new StringWriter();
+            objectMapper.writeValue(stringFile4, demsFile);
+            //System.out.println("\n\nDemsRecordData JSON is\n"+stringFile4);
 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        //System.out.println("\n\nCommonChargeAssessmentCaseData JSON is\n"+stringFile2);
-        //DemsChargeAssessmentCaseData demsCaseFile = new DemsChargeAssessmentCaseData("1",businessFile);
+        assertEquals("909.23-12345.STMT-POL_SMITH-JASON-JAY-PIN123456_240203", demsFile.getDocumentId());
 
+    }
+
+    @Test
+    public void testSynopsis() {
+        JustinDocumentList documentList = getTestJustinSynopsisFile();
+        ReportDocumentList rd = new ReportDocumentList(documentList);
+
+        JustinDocument document = documentList.getDocuments().get(0);
+        ReportDocument commonDocument = new ReportDocument(document);
+        ChargeAssessmentDocumentData businessFile = new ChargeAssessmentDocumentData("123456", documentList.getCreate_date(), commonDocument);
+
+        DemsRecordData demsFile = new DemsRecordData(businessFile);
+        //create ObjectMapper instance
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+        try {
+
+            StringWriter stringFile = new StringWriter();
+            objectMapper.writeValue(stringFile, document);
+            //System.out.println("JustinDocument JSON is\n"+stringFile);
+
+            StringWriter stringFile2 = new StringWriter();
+            objectMapper.writeValue(stringFile2, commonDocument);
+            //System.out.println("\n\nReportDocument JSON is\n"+stringFile2);
+
+            StringWriter stringFile3 = new StringWriter();
+            objectMapper.writeValue(stringFile3, businessFile);
+            //System.out.println("\n\nCourtCaseDocumentData JSON is\n"+stringFile3);
+
+            StringWriter stringFile4 = new StringWriter();
+            objectMapper.writeValue(stringFile4, demsFile);
+            //System.out.println("\n\nDemsRecordData JSON is\n"+stringFile4);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        assertEquals("BURY.23-91538-3_.SYN_BURY-23-91538-3__240205", demsFile.getDocumentId());
 
     }
 
