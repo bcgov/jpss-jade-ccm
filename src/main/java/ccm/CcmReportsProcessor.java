@@ -21,6 +21,7 @@ package ccm;
 // camel-k: dependency=mvn:org.apache.camel:camel-core-languages
 // camel-k: dependency=mvn:org.apache.camel:camel-mail
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
+// camel-k:dependency=mvn:org.apache.camel:camel-jaxb
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
@@ -37,6 +38,8 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.spi.RestConfiguration;
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -515,9 +518,21 @@ public class CcmReportsProcessor extends RouteBuilder {
               String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
               if(caseRccId != null && !caseRccId.isEmpty()) {
                 exchange.getMessage().setHeader("number", caseRccId);
+
               }
+              exchange.getContext().getRestConfiguration().setBindingMode(RestConfiguration.RestBindingMode.json);
+              //exchange.getMessage().setBody(exchange.getProperty("dems_record"));
+              exchange.getMessage().setBody(new String("test"));
             }
+            
           })
+          
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .convertBodyTo(String.class)
+          .log(LoggingLevel.INFO, " converted body : ${body}")
+          .marshal().json(JsonLibrary.Jackson)
+          
           .to("http://ccm-dems-adapter/createDocumentRecord")
           .log(LoggingLevel.INFO,"End of RCC based report")
         .endChoice()

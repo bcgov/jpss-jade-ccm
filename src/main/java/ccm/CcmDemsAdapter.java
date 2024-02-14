@@ -30,6 +30,7 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel:camel-core-languages
 // camel-k: dependency=mvn:org.apache.camel:camel-mail
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
+// camel-k:dependency=mvn:org.apache.camel:camel-jaxb
 
 
 import org.apache.camel.Exchange;
@@ -811,16 +812,21 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+
   private void createDocumentRecordHttp() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("platform-http:/createDocumentRecord")
+    from("platform-http:/createDocumentRecord?httpMethodRestrict=POST")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .unmarshal()
+    .json(JsonLibrary.Jackson)
+    //.transform(simple("${body}"))
+   
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.INFO,"rcc_id = ${header[number]}")
-    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
      .to("direct:createDocumentRecord");
     
   }
