@@ -17,9 +17,7 @@ else
    ns="$ns_set-$env"
 fi
 
-echo "`basename $0` to $ns ..."
+export TITLEPREFIX="Reports Processor $ns "
 
-export TITLEPREFIX="Lookup Service $ns "
-echo -ne "\e]0;Lookup Service $ns\a"
-
-kamel -n $ns log ccm-lookup-service
+echo -ne "\e]0;Reports Processor $ns\a"
+kamel -n $ns log ccm-reports-processor

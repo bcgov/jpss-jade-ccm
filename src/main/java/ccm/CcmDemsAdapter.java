@@ -42,6 +42,7 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
+import org.apache.http.NoHttpResponseException;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -158,6 +159,14 @@ public class CcmDemsAdapter extends RouteBuilder {
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
+
+    onException(NoHttpResponseException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
     .end();
@@ -1166,7 +1175,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("maxRecordIncrements").simple("25")
       .setProperty("incrementCount").simple("0")
       .setProperty("continueLoop").simple("true")
-      // limit the number of times incremented to 10.
+      // limit the number of times incremented to 25.
       .loopDoWhile(simple("${exchangeProperty.continueLoop} == 'true' && ${exchangeProperty.id} != '' && ${exchangeProperty.id} != null && ${exchangeProperty.incrementCount} < ${exchangeProperty.maxRecordIncrements}"))
 
         .removeHeader("CamelHttpUri")
@@ -1180,7 +1189,7 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.DEBUG,"Retrieved court case data by id.")
 
         .setProperty("edtCaseStatus",jsonpath("$.status"))
-        .log(LoggingLevel.INFO, "Case Status: ${exchangeProperty.edtCaseStatus}")
+        .log(LoggingLevel.INFO, "${exchangeProperty.id} Case Status: ${exchangeProperty.edtCaseStatus}")
         .choice()
           .when(simple("${exchangeProperty.edtCaseStatus} == 'Removed'"))
             .log(LoggingLevel.WARN, "The case is removed in EDT, clear-out the returned body.")
@@ -1193,9 +1202,9 @@ private void getDemsFieldMappingsrccStatus() {
           .endChoice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
             .log(LoggingLevel.DEBUG,"${body}")
-            .log(LoggingLevel.INFO, "Case not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
+            .log(LoggingLevel.INFO, "Case ${exchangeProperty.id} not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
             .delay(10000)
-            .log(LoggingLevel.INFO, "Retry case data retrieval...")
+            .log(LoggingLevel.INFO, "Retry case data retrieval... ${exchangeProperty.id}")
           .endChoice()
           .otherwise()
             .setProperty("continueLoop").simple("false")
@@ -1521,14 +1530,14 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
         .when().simple("${exception.statusCode} >= 504")
-          .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 65 seconds to continue.")
+          .log(LoggingLevel.ERROR, "Encountered timeout for rcc: ${header.event_key}.  Wait additional 65 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(65000)
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setProperty("key", simple("${header.event_key}"))
           .to("direct:getCourtCaseIdByKey")
-          
+
           .setProperty("courtCaseId", jsonpath("$.id"))
           .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
           .to("direct:getCourtCaseDataById")
@@ -3598,7 +3607,7 @@ private void getDemsFieldMappingsrccStatus() {
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
                     .log(LoggingLevel.INFO,"Created external EDT ID. ${body}")
-                  
+
                   .endChoice()
                   .otherwise()
                     .log(LoggingLevel.INFO,"External EDT ID already exist for person ${exchangeProperty.personid}")
@@ -3608,7 +3617,7 @@ private void getDemsFieldMappingsrccStatus() {
             .endChoice()
             .otherwise()
               .log(LoggingLevel.INFO,"No data participants")
-            .end()  
+            .end()
         .end()
       .end()
     .end()
