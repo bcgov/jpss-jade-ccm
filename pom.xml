@@ -102,6 +102,10 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <!--end of newly added lib-->
         <dependency>
             <groupId>org.apache.camel</groupId>
+            <artifactId>camel-cron</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
             <artifactId>camel-mail</artifactId>
         </dependency>
         <dependency>

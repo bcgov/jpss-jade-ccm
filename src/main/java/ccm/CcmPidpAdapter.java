@@ -1,8 +1,6 @@
 package ccm;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.camel.CamelException;
@@ -17,6 +15,7 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel.camel-splunk
 // camel-k: dependency=mvn:org.apache.camel.camel-http
 // camel-k: dependency=mvn:org.apache.camel.camel-http-common
+// camel-k: dependency=mvn:org.apache.camel.camel-cron
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
 // camel-k: dependency=mvn:io.strimzi:kafka-oauth-common:0.10.0
 // camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
@@ -26,9 +25,10 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
-
+import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.camel.support.service.ServiceHelper;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
@@ -65,6 +65,9 @@ public class CcmPidpAdapter extends RouteBuilder {
     getCourtCaseAuthList();
     getKafkaToken();
     publishEventKPI();
+    stopPidpKafkaConnection();
+    startPidpKafkaConnection();
+    cronPidpReconnection();
   }
 
   private void attachExceptionHandlers() {
@@ -252,7 +255,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     // KafkaAvroDeserializer kafkaAvroDeserializer = new KafkaAvroDeserializer();
     // kafkaAvroDeserializer.configure(Collections.singletonMap("specific.avro.reader", "true"), false);
 
-    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId={{pidp.kafka.consumergroup.name}}" // +
+    from("kafka:{{pidp.kafka.topic.usercreation.name}}?groupId={{pidp.kafka.consumergroup.name}}&additionalProperties.reconnect.interval=7200000" // +
       //"&autoOffsetReset=earliest"
     )
     .routeId(routeId)
@@ -574,5 +577,69 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
+
+  private void stopPidpKafkaConnection() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Pausing PIDP Kafka pull from topic.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+        exchange.getContext().getRouteController().stopRoute("processCaseUserAccountCreated");
+      }
+    })
+    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic stopped")
+    ;
+  }
+
+  private void startPidpKafkaConnection() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Restarting PIDP Kafka pull from topic.")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        List<Route> routeList = exchange.getContext().getRoutes();
+        for (Route rte : routeList ) {
+          log.info("ROUTES: " + rte.getId());
+        }
+
+        Route mainTimer = exchange.getContext().getRoute("processCaseUserAccountCreated");
+        ServiceHelper.startService(mainTimer.getConsumer());
+      }
+    })
+    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic started")
+    ;
+  }
+
+  private void cronPidpReconnection() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")
+    from("cron:tab?schedule=0 30 2 * * ?") // run 2:30am every day
+    .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron job restart of kafka connection.")
+    .to("direct:stopPidpKafkaConnection")
+    .to("direct:startPidpKafkaConnection")
+    .log(LoggingLevel.WARN,"Cron job restart of kafka connection completed.")
+    ;
+  }
 
 }

@@ -365,6 +365,7 @@ public class CcmLookupService extends RouteBuilder {
     }).to("mock:result")
     .marshal()
     .json(JsonLibrary.Jackson, AuthUserList.class)
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }
@@ -422,6 +423,7 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeaders("X-*")
     .removeHeaders("Content-Security-Policy")
     .removeHeaders("Referrer-Policy")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }
