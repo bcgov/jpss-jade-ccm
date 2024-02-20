@@ -1,6 +1,7 @@
 package ccm;
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 
 // To run this integration use:
@@ -72,9 +73,9 @@ public class CcmLookupService extends RouteBuilder {
       .handled(true)
     .end();
 
-    onException(NoHttpResponseException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)

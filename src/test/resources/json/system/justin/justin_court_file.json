@@ -1,0 +1,36 @@
+{
+    "mdoc_justin_no": "7893251",
+    "home_court_agency_name": "Victoria Law Courts",
+    "home_court_agency_identifier": "1201",
+    "court_file_no": "180687",
+    "type_reference": null,
+    "mdoc_seq_no": "4",
+    "kfile_yn": "N",
+    "court_level_cd": "S",
+    "court_class_cd": "A",
+    "file_designation": "SPC",
+    "sworn_date": "2023-11-30",
+    "approved_charges": "CCC 512.3 Application for warrant for hearing under s.524(1)",
+    "crown_election": "SUM",
+    "approving_crown_agency_name": "Jones and Company - Victoria",
+    "approving_crown_agency_ident": "JCVI",
+    "mdocaccused": [
+        {
+            "part_id": "2956924.0007",
+            "accused_name": "Mouse, Mickey Mighty",
+            "accused_surname_nm": "Mouse",
+            "accused_given_1_nm": "Mickey",
+            "accused_given_2_nm": "Mighty",
+            "accused_given_3_nm": null,
+            "birth_date": "1988-09-16"
+        }
+    ],
+    "related_rcc": [
+        {
+            "rcc_id": "7094932.0009",
+            "agency_file_no": "SNOR: 20-37873-1",
+            "primary_yn": "Y"
+        }
+    ],
+    "related_court_file": []
+}

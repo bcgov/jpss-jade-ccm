@@ -1,6 +1,7 @@
 package ccm;
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.time.ZonedDateTime;
 import java.util.Base64;
@@ -103,9 +104,9 @@ public class CcmNotificationService extends RouteBuilder {
      .handled(true)
     .end();
 
-    onException(NoHttpResponseException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
@@ -113,6 +114,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     // HttpOperation Failed
     onException(HttpOperationFailedException.class)
+    .log(LoggingLevel.ERROR,"onException(HttpOperationFailedException) called.")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -187,6 +189,8 @@ public class CcmNotificationService extends RouteBuilder {
 
     // Camel Exception
     onException(CamelException.class)
+    .log(LoggingLevel.ERROR,"onException(CamelException) called.")
+    .maximumRedeliveries(3).redeliveryDelay(30000)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -228,6 +232,8 @@ public class CcmNotificationService extends RouteBuilder {
 
     // General Exception
      onException(Exception.class)
+     .log(LoggingLevel.ERROR,"onException(Exception) called.")
+     .maximumRedeliveries(3).redeliveryDelay(30000)
      .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {

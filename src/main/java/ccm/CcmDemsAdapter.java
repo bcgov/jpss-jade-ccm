@@ -73,6 +73,7 @@ import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -167,9 +168,9 @@ public class CcmDemsAdapter extends RouteBuilder {
       .handled(true)
     .end();
 
-    onException(NoHttpResponseException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)

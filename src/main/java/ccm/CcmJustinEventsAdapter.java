@@ -7,6 +7,7 @@ package ccm;
 //
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.util.Base64;
 import java.util.List;
@@ -103,9 +104,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .handled(false)
     .end();
 
-    onException(NoHttpResponseException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
