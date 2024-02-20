@@ -34,6 +34,7 @@ import org.apache.camel.CamelException;
 
 
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
@@ -829,6 +830,8 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/createDocumentRecord?httpMethodRestrict=POST")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setExchangePattern(ExchangePattern.InOut)
+    
     .unmarshal()
     .json(JsonLibrary.Jackson)
     //.transform(simple("${body}"))

@@ -530,7 +530,7 @@ public class CcmReportsProcessor extends RouteBuilder {
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .convertBodyTo(String.class)
-          .log(LoggingLevel.INFO, " converted body : ${body}")
+         // .log(LoggingLevel.INFO, " converted body : ${body}")
           .marshal().json(JsonLibrary.Jackson)
           
           .to("http://ccm-dems-adapter/createDocumentRecord")
