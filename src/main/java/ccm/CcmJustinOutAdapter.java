@@ -7,7 +7,9 @@ package ccm;
 //
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.Base64;
 
 import org.apache.camel.CamelException;
@@ -78,9 +80,9 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       .handled(false)
       .end();
 
-    onException(NoHttpResponseException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class, UnknownHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
@@ -310,7 +312,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseDetails request received. number = ${header[number]}")
+    .log(LoggingLevel.INFO,"getCourtCaseDetails request received. number = ${header[number]}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -341,7 +343,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId + "?httpMethodRestrict=GET")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseAuthList request received. rcc_id = ${header.number}")
+    .log(LoggingLevel.INFO,"getCourtCaseAuthList request received. rcc_id = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -371,7 +373,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.INFO,"getCourtCaseAppearanceSummaryList request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -401,7 +403,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseMetadata request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.INFO,"getCourtCaseMetadata request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -431,7 +433,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
+    .log(LoggingLevel.INFO,"getCourtCaseCrownAssignmentList request received. mdoc_no = ${header.number}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

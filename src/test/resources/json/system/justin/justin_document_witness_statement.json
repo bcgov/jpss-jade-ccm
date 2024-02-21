@@ -1,0 +1,22 @@
+{
+    "create_date": "2023-09-03 21:16:33",
+    "version": "1.0",
+    "documents": [
+        {
+            "report_type": "WITNESS_STATEMENT",
+            "report_format": "pdfa",
+            "rcc_id": "9999999.0009",
+            "document_type": "Witness Statement",
+            "agency_file_no": "909: 23-12345",
+            "submit_date": "2024-02-03",
+            "witness_name": "Smith, Jason \"Jay\"",
+            "officer_pin_number": "123456",
+            "witness_yn": "Y",
+            "expert_yn": "N",
+            "police_officer_yn": "Y",
+            "victim_yn": "N",
+            "index": "1",
+            "data": ""
+        }
+    ]
+}
