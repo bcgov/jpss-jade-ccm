@@ -3,6 +3,7 @@ package ccm;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 // To run this integration use:
 // kamel run CcmLookupService.java --property file:application.properties --profile openshift
@@ -73,7 +74,7 @@ public class CcmLookupService extends RouteBuilder {
       .handled(true)
     .end();
 
-    onException(NoHttpResponseException.class, NoRouteToHostException.class)
+    onException(NoHttpResponseException.class, NoRouteToHostException.class, UnknownHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
       .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
