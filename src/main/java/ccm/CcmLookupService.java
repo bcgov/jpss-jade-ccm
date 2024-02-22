@@ -387,6 +387,7 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-out-adapter/getCourtCaseAuthList")
@@ -425,6 +426,9 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeaders("X-*")
     .removeHeaders("Content-Security-Policy")
     .removeHeaders("Referrer-Policy")
+    .removeHeaders("set-cookie")
+    .removeHeaders("Strict-Transport-Security")
+    .removeHeaders("transfer-encoding")
     .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
