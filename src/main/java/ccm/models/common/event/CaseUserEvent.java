@@ -38,7 +38,8 @@ public class CaseUserEvent extends BaseEvent {
     ACCESS_REMOVED,
     ACCESS_REMOVED_NO_DETAILS,
     EVENT_BATCH_STARTED,
-    EVENT_BATCH_ENDED;
+    EVENT_BATCH_ENDED,
+    PROVISION_COMPLETED;
   }
 
   public CaseUserEvent() {

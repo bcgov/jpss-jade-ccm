@@ -156,12 +156,27 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
 
                     AtomicLong event_count = new AtomicLong(0);
 
+                    // grab only the rcc_id based records
                     accessdedupStore.all().forEachRemaining(keyValue -> {
-                        event_count.incrementAndGet();
-                        LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
+                        if(!keyValue.key.startsWith("PartId-")) {
+                            event_count.incrementAndGet();
+                            LOG.info("Forwarding from store: charge assessment {}.", keyValue.key);
 
-                        context.forward(keyValue.key, keyValue.value, 
-                            CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
+                            context.forward(keyValue.key, keyValue.value, 
+                                CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
+
+                        }
+                    });
+
+                    // grab only the part_id based records
+                    accessdedupStore.all().forEachRemaining(keyValue -> {
+                        if(keyValue.key.startsWith("PartId-")) {
+                            event_count.incrementAndGet();
+                            LOG.info("Forwarding from store: part id charge assessment {}.", keyValue.key);
+
+                            context.forward(keyValue.key, keyValue.value, 
+                                CaseUserEventHandler.util_getToplogySinkName(bulkChargeAssessmentsTopicName));
+                        }
                     });
 
                     accessdedupStore.all().forEachRemaining(keyValue -> {
@@ -169,6 +184,22 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                     });
 
                     LOG.info("Store cleared and {} event{} forwarded.", event_count.get(), event_count.get() == 1 ? "" : "s");
+                }
+            } else if (caseUserEvent.getJustin_rcc_id().equalsIgnoreCase("0")) {
+                // This is an indication that it is the end of a batch for a part_id.  Create a new charge assessment event and store it.
+
+                String partIdKey = "PartId-"+caseUserEvent.getJustin_part_id();
+                if (accessdedupStore.get(partIdKey) == null) {
+                    ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM,caseUserEvent);
+                    chargeAssessmentEvent.setEvent_key(caseUserEvent.getJustin_part_id());
+                    chargeAssessmentEvent.setEvent_status(ChargeAssessmentEvent.STATUS.INFERRED_PART_ID_PROVISIONED.name());
+
+                    String derivedEventValue = mapper.writeValueAsString(chargeAssessmentEvent);
+
+                    JsonObject json = new JsonObject(value);
+                    LOG.info("Storing the new part id charge assessment event message for {}, derived from case user event for {}.", chargeAssessmentEvent.getEvent_key(), key);
+
+                    accessdedupStore.put(partIdKey, derivedEventValue);
                 }
             } else if (accessdedupStore.get(caseUserEvent.getJustin_rcc_id()) == null) {
                 // This is for a new charge assessment.  Create a new charge assessment event and store it.

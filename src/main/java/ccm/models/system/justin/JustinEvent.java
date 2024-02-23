@@ -25,8 +25,8 @@ public class JustinEvent {
     USER_DPROV,
     REPORT,
     DOCM,
-    INFO_DOCM,PART_MERGE;
-
+    INFO_DOCM,
+    PART_MERGE;
   }
 
   public boolean isAgenFileEvent() {

@@ -65,6 +65,7 @@ public class CcmNotificationService extends RouteBuilder {
 
     processChargeAssessmentEvents();
     processBulkChargeAssessmentEvents();
+    createPartIdProvisionCompleted();
     processCourtCaseEvents();
     processChargeAssessmentChanged();
     processManualChargeAssessmentChanged();
@@ -398,6 +399,15 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.INFERRED_PART_ID_PROVISIONED))
+        .setProperty("kpi_component_route_name", simple("createPartIdProvisionCompleted"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:createPartIdProvisionCompleted")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
       .otherwise()
         .to("direct:processUnknownStatus")
         .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
@@ -405,6 +415,42 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .end();
+    ;
+  }
+
+  private void createPartIdProvisionCompleted() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setHeader("event_key")
+    .jsonpath("$.justin_part_id")
+    // generate the batch-ended event
+    .log(LoggingLevel.INFO,"Creating case user 'provision completed' event")
+    .process(exchange -> {
+        CaseUserEvent event = new CaseUserEvent();
+        event.setEvent_status(CaseUserEvent.STATUS.PROVISION_COMPLETED.name());
+        event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+        String eventKey = (String)exchange.getMessage().getHeader("event_key");
+        event.setJustin_part_id(eventKey);
+
+        exchange.getMessage().setBody(event, CaseUserEvent.class);
+        exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
+      })
+    .setProperty("kpi_event_object", body())
+    .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
+    .setProperty("business_event", body())
+    .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+    .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
+
+    // generate event-created KPI
+    .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
+    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+    .to("direct:publishEventKPI")
     ;
   }
 
