@@ -518,7 +518,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
         // generate batch-ended event
         .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
-        .to("direct:processBulkBatchEndedEvent")
+        .wireTap("direct:processBulkBatchEndedEvent")
       .endChoice()
     .end()
     ;
@@ -1109,6 +1109,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("kpi_component_route_name", simple(routeId))
+    .delay(10000)
     .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
     .doTry()
       .process(exchange -> {

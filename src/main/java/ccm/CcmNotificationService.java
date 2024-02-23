@@ -434,6 +434,7 @@ public class CcmNotificationService extends RouteBuilder {
         event.setEvent_status(CaseUserEvent.STATUS.PROVISION_COMPLETED.name());
         event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
         String eventKey = (String)exchange.getMessage().getHeader("event_key");
+        event.setEvent_key(eventKey);
         event.setJustin_part_id(eventKey);
 
         exchange.getMessage().setBody(event, CaseUserEvent.class);
