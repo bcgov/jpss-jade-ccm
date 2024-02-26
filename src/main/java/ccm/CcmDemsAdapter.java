@@ -443,7 +443,7 @@ private void getDemsFieldMappingsrccStatus() {
   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
   .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
   .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/fields")
-  .log(LoggingLevel.INFO,"Retrieved dems field mappings.")
+  .log(LoggingLevel.DEBUG,"Retrieved dems field mappings.")
   .setProperty("DemsFieldMappings", simple("${bodyAs(String)}"))
     .process(new Processor() {
       @Override
@@ -1466,7 +1466,7 @@ private void getDemsFieldMappingsrccStatus() {
               JsonNode node = JsonParseUtils.getJsonArrayElement(demsFieldMappingsJson, "", "/name", fieldName, "/listItems");
               String name = JsonParseUtils.readJsonElementKeyValue(node, "", "/id", fieldListId, "/name");
               exchange.setProperty("fieldListName", name);
-              log.info("fieldListId: " + fieldListId + " fieldListName:" + name);
+              log.debug("fieldListId: " + fieldListId + " fieldListName:" + name);
             }
 
           })
