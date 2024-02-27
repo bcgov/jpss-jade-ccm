@@ -518,7 +518,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .when(simple("${exchangeProperty.totalNumOfEvents} > 0"))
         // generate batch-ended event
         .log(LoggingLevel.INFO,"Processed ${exchangeProperty.totalNumOfEvents} bulk event(s) from JUSTIN.")
-        .to("direct:processBulkBatchEndedEvent")
+        .wireTap("direct:processBulkBatchEndedEvent")
       .endChoice()
     .end()
     ;
@@ -743,73 +743,6 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           .to("direct:processUnknownEvent")
           .endChoice()
         .end()
-    ;
-  }
-
-  private void processNewJUSTINEvents() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //.to("direct:processOneJUSTINEvent");
-    // https://github.com/json-path/JsonPath
-    //JustinEventBatchProcessor jp = new JustinEventBatchProcessor();
-
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
-    .process(new Processor() {
-      // example: https://github.com/apache/camel-examples/tree/main/examples/transformer-demo/src/main/java/org/apache/camel/example/transformer/demo
-      // example: https://www.baeldung.com/java-camel-jackson-json-array
-      //   Unmarshalling a JSON Array using camel-jackson
-
-      // example: https://www.programcreek.com/java-api-examples/?api=org.apache.camel.component.jackson.JacksonDataFormat
-      //   Marshalling and unmarshalling Json and Pojo
-
-      // example: https://developers.redhat.com/articles/2021/11/24/normalize-web-services-camel-k-and-atlasmap-part-1#camel_k_implementation_overview
-      //   Normalize web services with Camel K and AtlasMap, Part 1
-      // example: https://developers.redhat.com/articles/2021/11/26/normalize-web-services-camel-k-and-atlasmap-part-2
-      //   Normalize web services with Camel K and AtlasMap, Part 2
-
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        // Insert code that gets executed *before* delegating
-        // to the next processor in the chain.
-
-        String exchangeId = exchange.getExchangeId();
-        String messageId = exchange.getIn().getMessageId();
-
-        JustinEventBatch jeb = exchange.getIn().getBody(JustinEventBatch.class);
-
-        int batchSize = jeb.getEvents().size();
-        System.out.println("Retrieved " + batchSize + (batchSize == 1 ? " record " : " records ") + "from JUSTIN Interface.  JADE-CCM Exchange Id = " + exchangeId + "; JADE-CCM Message Id = " + messageId);
-        System.out.println("Total number of JUSTIN events retrieved: " + jeb.getEvents().size());
-
-        if (jeb.getEvents().size() > 0) {
-          for (JustinEvent e: jeb.getEvents()) {
-            System.out.print("Processing JUSTIN event " + e.getEvent_message_id() + " (" + e.getMessage_event_type_cd() + ").");
-
-            if (e.isAgenFileEvent()) {
-              // court case changed.  generate new business event.
-              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
-              System.out.println(" Generating 'Court Case Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
-            } else if (e.isAuthListEvent()) {
-              // auth list changed.  Generate new business event.
-              ChargeAssessmentEvent bce = new ChargeAssessmentEvent(e);
-              System.out.println(" Generating 'Court Case Auth List Changed' event (RCC_ID = '" + bce.getJustin_rcc_id() + "')..");
-            } else if (e.isCourtFileEvent()) {
-              // court file changed.  Generate new business event.
-              CourtCaseEvent bcme = new CourtCaseEvent(e);
-              System.out.println(" Generating 'Court Case Metadata Changed' event (MDOC_NO = '" + bcme.getJustin_mdoc_no() + "')..");
-            } else {
-              System.out.println(" Unknown JUSTIN event type; Do nothing.");
-            }
-          }
-        }
-        exchange.getMessage().setBody("OK");
-      }
-    })
-    .log(LoggingLevel.DEBUG,"Getting ready to send to Kafka: ${body}")
     ;
   }
 
@@ -1176,6 +1109,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("kpi_component_route_name", simple(routeId))
+    .delay(10000)
     .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
     .doTry()
       .process(exchange -> {

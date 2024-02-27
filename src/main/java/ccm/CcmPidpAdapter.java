@@ -363,7 +363,7 @@ public class CcmPidpAdapter extends RouteBuilder {
       .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .choice()
-        .when(header("justin_rcc_id").isEqualTo("0"))
+        .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.PROVISION_COMPLETED))
           .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
             "    on the topic ${headers[kafka.TOPIC]}\n" +
             "    on the partition ${headers[kafka.PARTITION]}\n" +

@@ -30,9 +30,11 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:org.apache.camel:camel-core-languages
 // camel-k: dependency=mvn:org.apache.camel:camel-mail
 // camel-k: dependency=mvn:org.apache.camel:camel-attachments
+// camel-k:dependency=mvn:org.apache.camel:camel-jaxb
 
 
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
@@ -65,9 +67,7 @@ import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.data.document.ImageDocumentData;
 import ccm.models.common.data.document.ReportDocument;
-import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.Error;
-import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
@@ -125,7 +125,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     prepareDemsCaseGroupMembersSyncHelperList();
     syncCaseGroupMembers();
     getCaseListByUserKey();
-    processReportEvents();
     processDocumentRecord();
     processNonStaticDocuments();
     checkIncrementRecordDocId();
@@ -444,7 +443,7 @@ private void getDemsFieldMappingsrccStatus() {
   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
   .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
   .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/fields")
-  .log(LoggingLevel.INFO,"Retrieved dems field mappings.")
+  .log(LoggingLevel.DEBUG,"Retrieved dems field mappings.")
   .setProperty("DemsFieldMappings", simple("${bodyAs(String)}"))
     .process(new Processor() {
       @Override
@@ -563,76 +562,6 @@ private void getDemsFieldMappingsrccStatus() {
   ;
   }
 
-  private void processReportEvents() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=1&maxPollIntervalMs=4800000")
-    .routeId(routeId)
-    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
-      "    on the topic ${headers[kafka.TOPIC]}\n" +
-      "    on the partition ${headers[kafka.PARTITION]}\n" +
-      "    with the offset ${headers[kafka.OFFSET]}\n" +
-      "    with the key ${headers[kafka.KEY]}")
-    .setHeader("event_key")
-      .jsonpath("$.event_key")
-    .setHeader("event_status")
-      .jsonpath("$.event_status")
-    .setHeader("rcc_id")
-      .jsonpath("$.justin_rcc_id") // image data get does not return this value, so save in headers
-    .setHeader("mdoc_justin_no")
-      .jsonpath("$.mdoc_justin_no") // image data get does not return this value, so save in headers
-    .setHeader("rcc_ids")
-      .jsonpath("$.rcc_ids") // image data get does not return this value, so save in headers
-    .setHeader("image_id")
-      .jsonpath("$.image_id") // image data get does not return this value, so save in headers
-    .setHeader("filtered_yn")
-      .jsonpath("$.filtered_yn") // image data get does not return this value, so save in headers
-    .setHeader("force_update")
-      .jsonpath("$.force_update") // force_update to force static rcc reports to update.
-    .setHeader("event_message_id")
-      .jsonpath("$.justin_event_message_id")
-    .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
-    .setHeader("event").simple("${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-    .setProperty("kpi_event_object", body())
-    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
-    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
-    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]} part_id = ${header[part_id]} mdoc_justin_no = ${header[mdoc_justin_no]} rcc_ids = ${header[rcc_ids]} image_id = ${header[image_id]} filtered_yn = ${header[filtered_yn]}")
-    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-    .choice()
-      .when(header("event_status").isNotNull())
-        .setProperty("kpi_component_route_name", simple("processReportEvents"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-        .to("direct:publishEventKPI")
-        .setBody(header("event"))
-
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-        .to("direct:processDocumentRecord")
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .otherwise()
-        .to("direct:processUnknownStatus")
-        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
-        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-        .to("direct:publishEventKPI")
-        .endChoice()
-      .end();
-    ;
-  }
-
   private void processDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -640,7 +569,7 @@ private void getDemsFieldMappingsrccStatus() {
     // IN
     // property: event_object
     // property: caseFound
-    from("direct:" + routeId)
+    from("platform-http:/" + routeId )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // need to look-up rcc_id if it exists in the body.
@@ -1211,7 +1140,6 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
-
   private void createDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1248,6 +1176,7 @@ private void getDemsFieldMappingsrccStatus() {
         DemsRecordData demsRecord = (DemsRecordData)ex.getIn().getBody(DemsRecordData.class);
 
         ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+        log.info("DocId: " + demsRecord.getDocumentId());
       }
 
     })
@@ -1325,7 +1254,6 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
     ;
   }
-
 
   private void updateDocumentRecord() throws HttpOperationFailedException {
     // use method name as route id
@@ -1538,7 +1466,7 @@ private void getDemsFieldMappingsrccStatus() {
               JsonNode node = JsonParseUtils.getJsonArrayElement(demsFieldMappingsJson, "", "/name", fieldName, "/listItems");
               String name = JsonParseUtils.readJsonElementKeyValue(node, "", "/id", fieldListId, "/name");
               exchange.setProperty("fieldListName", name);
-              log.info("fieldListId: " + fieldListId + " fieldListName:" + name);
+              log.debug("fieldListId: " + fieldListId + " fieldListName:" + name);
             }
 
           })
@@ -2820,6 +2748,7 @@ private void getDemsFieldMappingsrccStatus() {
     .to("direct:addParticipantToCase")
     ;
   }
+
   //jade 1750 ... search if both FROM and TO part ids exist in the DEMS system
   private void checkPersonExist() {
     // use method name as route id
@@ -2833,6 +2762,7 @@ private void getDemsFieldMappingsrccStatus() {
       .to("direct:getPersonByKey")
     ;
   }
+
   private void getPersonExists() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3382,6 +3312,7 @@ private void getDemsFieldMappingsrccStatus() {
 
     ;
   }
+
   //as part of jade 1750
   private void reassignParticipantCases() {
     // use method name as route id
@@ -3414,7 +3345,6 @@ private void getDemsFieldMappingsrccStatus() {
 
     //IN: header.number
     //IN: header.documentId
-
     from("direct:" + routeId)
       .routeId(routeId)
       .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html

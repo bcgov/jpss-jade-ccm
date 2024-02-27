@@ -42,14 +42,14 @@ echo "`basename $0` to $ns ..."
  
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
-    camel run  --properties=ccmDemsAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmDemsAdapter.java --port 4414 local/local.properties
+    camel run  --properties=ccmReportsProcessor.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmReportsProcessor.java --port 4414 local/local.properties
     
 else
-kamel -n $ns delete ccm-dems-adapter
+kamel -n $ns delete ccm-reports-processor
 kamel -n $ns run \
-  CcmDemsAdapter.java \
+  CcmReportsProcessor.java \
   --resource file:../../../../target/classes/ccm-models.jar \
-  --property file:ccmDemsAdapter.properties \
+  --property file:ccmReportsProcessor.properties \
   --label deployer="$deployer" \
   --label version="$version" \
   --config configmap:ccm-configs \
@@ -83,7 +83,6 @@ fi
   ## https://www.youtube.com/watch?v=Wmg7-PZgQJI
   #--trait quarkus.package-type=native
 
-#kubectl -n $ns patch integration ccm-dems-adapter --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 3}]'
 popd
 
 # kamel -n cef5dd-test log ccm-dems-adapter
