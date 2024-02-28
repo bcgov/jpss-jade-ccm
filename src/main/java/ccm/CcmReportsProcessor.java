@@ -349,8 +349,6 @@ public class CcmReportsProcessor extends RouteBuilder {
         .removeHeader("kafka.HEADERS")
         .removeHeader("Accept-Encoding")
         .removeHeader("Content-Encoding")
-        /*.removeHeaders("x-amz*")
-        .removeHeaders("Accept*")*/
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .log(LoggingLevel.INFO, "headers: ${headers}")
