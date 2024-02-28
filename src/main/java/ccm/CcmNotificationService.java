@@ -542,7 +542,7 @@ public class CcmNotificationService extends RouteBuilder {
                 if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
                   ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
                   log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
-                  log.debug("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
+                  log.info("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
                   // If no submit date, then don't create!
                   ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
                   ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
@@ -550,9 +550,11 @@ public class CcmNotificationService extends RouteBuilder {
                   // jade 2770 fix
                   if(chargeAssessmentdata.getAccused_persons().size() == 0) {
                     ex.setProperty("allowCreateCase", "false");
+                    log.info("No accused associated with the rcc.");
                   }
                   if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
                     ex.setProperty("allowCreateCase", "false");
+                    log.info("Submit date is beyond "+autoCreateMaxDays+" days ago.");
                   }
                 }
               } catch(Exception error) {
