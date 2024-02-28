@@ -46,7 +46,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
 
   private void retryExceptionHandler() {
     onException(ConnectException.class, SocketTimeoutException.class, NoHttpResponseException.class, HttpOperationFailedException.class)
-    .maximumRedeliveries(5).redeliveryDelay(10000)
+    .maximumRedeliveries(10).redeliveryDelay(45000)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {

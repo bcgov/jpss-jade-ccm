@@ -66,7 +66,7 @@ public class CcmLookupService extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(5).redeliveryDelay(20000)
+      .maximumRedeliveries(10).redeliveryDelay(45000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
@@ -322,6 +322,8 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
     .process(new Processor(){
       public void process(Exchange exchange) throws Exception {
         AuthUserList userAuthList = new AuthUserList();
