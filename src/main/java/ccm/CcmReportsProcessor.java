@@ -347,10 +347,9 @@ public class CcmReportsProcessor extends RouteBuilder {
         .log(LoggingLevel.INFO, "Pre-headers: ${headers}")
         //.removeHeaders("CamelHttp*")
         .removeHeader("kafka.HEADERS")
+        .removeHeader("Accept-Encoding")
+        .removeHeader("Content-Encoding")
         /*.removeHeaders("x-amz*")
-        .removeHeaders("Strict-Transport-Security")
-        .removeHeaders("set-cookie")
-        .removeHeaders("Content-Encoding")
         .removeHeaders("Accept*")*/
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
