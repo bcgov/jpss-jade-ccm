@@ -52,6 +52,7 @@ public class CcmReportsProcessor extends RouteBuilder {
   public void configure() throws Exception {
     attachExceptionHandlers(); 
     processReportEvents();
+    createRccStaticReportsEvent();
     publishEventKPI();
     processUnknownStatus();
       
@@ -344,14 +345,14 @@ public class CcmReportsProcessor extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.INFO, "Pre-headers: ${headers}")
+        .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
         //.removeHeaders("CamelHttp*")
         .removeHeader("kafka.HEADERS")
         .removeHeader("Accept-Encoding")
         .removeHeader("Content-Encoding")
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .log(LoggingLevel.INFO, "headers: ${headers}")
+        .log(LoggingLevel.DEBUG, "headers: ${headers}")
         .log(LoggingLevel.INFO,"Lookup message: '${body}'")
         .to("http://ccm-dems-adapter/processDocumentRecord")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
@@ -364,6 +365,59 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .end();
+    ;
+  }
+
+  private void createRccStaticReportsEvent() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Re-queueing static reports event: rcc_id = ${header.rcc_id} ...")
+    .setProperty("rcc_id", header("rcc_id"))
+    .choice()
+      .when(simple("${exchangeProperty.rcc_id} != null"))
+        .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
+        // create Report Event for static type reports.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            String rcc_id = exchange.getMessage().getHeader("rcc_id", String.class);
+            StringBuilder reportTypesSb = new StringBuilder("");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+
+            ReportEvent re = new ReportEvent();
+            re.setJustin_rcc_id(rcc_id);
+            re.setEvent_status(ReportEvent.STATUS.REPORT.name());
+            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
+            re.setReport_type(reportTypesSb.toString());
+            exchange.getMessage().setBody(re, ReportEvent.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+        .to("kafka:{{kafka.topic.reports.name}}")
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
+        .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+        .setProperty("kpi_component_route_name", simple(routeId))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+        .to("direct:publishEventKPI")
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "No rcc_id provided.")
+      .endChoice()
+    .end()
     ;
   }
 
