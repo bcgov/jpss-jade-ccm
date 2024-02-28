@@ -31,6 +31,7 @@ import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Base64;
+import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
@@ -406,10 +407,40 @@ public class CcmReportsProcessor extends RouteBuilder {
             exchange.getMessage().setBody(re, ReportEvent.class);
           }
         })
+        .setProperty("kpi_event_object", body())
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
         .to("kafka:{{kafka.topic.reports.name}}")
         .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            // extract the offset from response header.  Example format: "[some-topic-0@301]"
+            String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
+
+            try {
+              // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
+              Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
+              String recordMetadata = o.toString();
+
+              StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
+
+              if (tokenizer.countTokens() == 2) {
+                // get first token
+                String topicAndPartition = tokenizer.nextToken();
+
+                if (topicAndPartition.startsWith(expectedTopicName)) {
+                  // this is the metadata we are looking for
+                  Long offset = Long.parseLong(tokenizer.nextToken());
+                  exchange.setProperty("kpi_event_topic_offset", offset);
+                }
+              }
+            } catch (Exception e) {
+              // failed to retrieve offset. Do nothing.
+            }
+          }
+        })
         .setProperty("kpi_component_route_name", simple(routeId))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
         .to("direct:publishEventKPI")
