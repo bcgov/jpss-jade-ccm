@@ -97,7 +97,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(10).redeliveryDelay(25000)
+      .maximumRedeliveries(10).redeliveryDelay(45000)
       .backOffMultiplier(2)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
