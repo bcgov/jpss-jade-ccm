@@ -1109,7 +1109,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("kpi_component_route_name", simple(routeId))
-    .delay(10000)
+    .delay(65000)
     .log(LoggingLevel.DEBUG,"Creating case user 'batch-ended' event")
     .doTry()
       .process(exchange -> {
