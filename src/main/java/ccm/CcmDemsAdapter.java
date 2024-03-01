@@ -575,6 +575,7 @@ private void getDemsFieldMappingsrccStatus() {
     // need to look-up rcc_id if it exists in the body.
     .log(LoggingLevel.DEBUG,"event_key = ${header[event_key]}")
     .setProperty("justin_request").body()
+    .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
     .log(LoggingLevel.INFO,"Lookup message: '${body}'")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
