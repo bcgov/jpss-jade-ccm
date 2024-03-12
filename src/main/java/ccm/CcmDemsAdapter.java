@@ -151,6 +151,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     checkPersonExist();
     createEdtExternalIdExistingParticipant();
     updateEdtExternalIdExistingParticipant();
+    syncAccusedPersons();
   }
 
 
@@ -4126,5 +4127,179 @@ private void getDemsFieldMappingsrccStatus() {
     .end()//split
     .log(LoggingLevel.INFO,"end of updateEdtExternalIdExistingParticipant.")
     ;
+  }
+  private void syncAccusedPersons() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+   
+    //IN: property =number - primary rcc_id
+    //IN: property =accused - List<CaseAccused>
+   
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .setProperty("AccusedPersons", simple("${bodyAs(String)}"))
+    .choice()
+    .when(simple("${header.number} != null"))
+      .log(LoggingLevel.INFO,"RCC based report")
+      // get the primary rcc, based on the dems primary agency file id
+
+      //.setHeader("number", simple("${header[rcc_id]}"))
+      // look for current status of the dems case.
+      // and set the rcc to the primary rcc
+      .to("direct:getCourtCaseStatusByKey")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .setProperty("caseStatus").simple("${body[status]}")
+      .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+      .choice()
+      // if there is a case, delete participants
+      .when(simple("${exchangeProperty.caseRccId} != ''"))
+      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+          .setProperty("ParticipantTypeFilter", simple("Accused"))
+          .setProperty("Participants",simple(""))
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+          .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
+          .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+             // ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+             
+              List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
+              // go through each accused person and make sure it is not already in the existing list.
+              //if(bcm.getRelated_charge_assessments() != null) {
+               /* for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+                  List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+                  for(CaseAccused relatedAccused: relatedAccusedPersons) {
+                    boolean unique = true;
+                    for(CaseAccused listedAccused : accusedPersons) {
+                      if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                        unique = false;
+                        break;
+                      }
+                    }
+                    if(unique) {
+                      accusedPersons.add(relatedAccused);
+                    }
+                  }
+                }
+              //}*/
+              exchange.getMessage().setBody(accusedPersons);
+            }
+          })
+    
+          .marshal().json()
+          .split()
+            .jsonpathWriteAsString("$.*")
+            .setHeader("key", jsonpath("$.identifier"))
+            .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
+            .log(LoggingLevel.INFO,"Updating accused participant ...")
+            .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
+            .to("direct:processAccusedPerson")
+            .log(LoggingLevel.INFO,"Accused participant updated.")
+          .end()
+        .endDoTry()
+        .doCatch(HttpOperationFailedException.class)
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+          .choice()
+            .when().simple("${exception.statusCode} >= 504")
+              .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
+               // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
+              .delay(30000)
+    
+              //jade 1747
+              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.dems_case_id}")
+              .setProperty("ParticipantTypeFilter", simple("Accused"))
+              .setProperty("Participants",simple(""))
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+              .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
+              .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+              // Merge the accused persons from all related agency files into a unique list
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
+                  /*ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
+                  List<CaseAccused> accusedPersons = bcm.getAccused_persons();
+                  // go through each accused person and make sure it is not already in the existing list.
+                  if(bcm.getRelated_charge_assessments() != null) {
+                    for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
+                      List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
+                      for(CaseAccused relatedAccused: relatedAccusedPersons) {
+                        boolean unique = true;
+                        for(CaseAccused listedAccused : accusedPersons) {
+                          if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
+                            unique = false;
+                            break;
+                          }
+                        }
+                        if(unique) {
+                          accusedPersons.add(relatedAccused);
+                        }
+                      }
+                    }
+                  } */
+                  exchange.getMessage().setBody(accusedPersons);
+                }
+              })
+    
+              .marshal().json()
+              .split()
+                .jsonpathWriteAsString("$.*")
+                .setHeader("key", jsonpath("$.identifier"))
+                .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
+                .log(LoggingLevel.INFO,"Updating accused participant ...")
+                .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
+                .to("direct:processAccusedPerson")
+                .log(LoggingLevel.INFO,"Accused participant updated.")
+              .end()
+    
+            .endChoice()
+            .when().simple("${exception.statusCode} >= 400")
+              .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
+              .log(LoggingLevel.ERROR, "Body: '${exception}'")
+              .log(LoggingLevel.ERROR, "${exception.message}")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  try {
+                    HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+    
+                    exchange.getMessage().setBody(cause.getResponseBody());
+                    log.info("Returned body : " + cause.getResponseBody());
+                  } catch(Exception ex) {
+                    ex.printStackTrace();
+                  }
+                }
+              })
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+              //.transform(exceptionMessage())
+              .stop()
+            .endChoice()
+          .end()
+        .end() 
+        
+          .endChoice()
+
+          .end();
+   
   }
 }
