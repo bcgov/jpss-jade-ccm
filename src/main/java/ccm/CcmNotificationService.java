@@ -2116,9 +2116,14 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_status_orig", ex.getProperty("kpi_status"));
             ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
+            String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
+            String rcc_id = (String)ex.getProperty("rcc_id");
             ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
             derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
             derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
+            derived_event.setEvent_key(rcc_id);
+            derived_event.setJustin_rcc_id(rcc_id);
+            derived_event.setJustin_event_message_id(Integer.parseInt(event_message_id));
 
             ex.getMessage().setBody(derived_event);
 

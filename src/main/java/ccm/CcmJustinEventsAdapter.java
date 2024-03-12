@@ -366,6 +366,23 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         ServiceHelper.startService(bulkTimer.getConsumer());
       }
     })
+    .delay(5000)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsBulkTimer");
+      }
+    })
+    .delay(5000)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsBulkTimer");
+      }
+    })
+
     .log(LoggingLevel.INFO,"Justin adapter queue started")
     ;
   }

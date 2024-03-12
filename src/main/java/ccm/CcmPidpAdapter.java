@@ -622,6 +622,8 @@ public class CcmPidpAdapter extends RouteBuilder {
 
         Route mainTimer = exchange.getContext().getRoute("processCaseUserAccountCreated");
         ServiceHelper.startService(mainTimer.getConsumer());
+        exchange.getContext().getRouteController().suspendRoute("processCaseUserAccountCreated");
+        exchange.getContext().getRouteController().resumeRoute("processCaseUserAccountCreated");
       }
     })
     .log(LoggingLevel.INFO,"PIDP Kafka pull from topic started")
@@ -638,6 +640,21 @@ public class CcmPidpAdapter extends RouteBuilder {
     .log(LoggingLevel.WARN,"Cron job restart of kafka connection.")
     .to("direct:stopPidpKafkaConnection")
     .to("direct:startPidpKafkaConnection")
+    .delay(5000)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.getContext().getRouteController().suspendRoute("processCaseUserAccountCreated");
+      }
+    })
+    .delay(5000)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.getContext().getRouteController().resumeRoute("processCaseUserAccountCreated");
+      }
+    })
+
     .log(LoggingLevel.WARN,"Cron job restart of kafka connection completed.")
     ;
   }
