@@ -20,7 +20,7 @@ public class ChargeAssessmentEvent extends BaseEvent {
 
   public enum SOURCE {
     JUSTIN,
-    JADE_CCM
+    ISL_CCM
   }
   
   public enum STATUS {

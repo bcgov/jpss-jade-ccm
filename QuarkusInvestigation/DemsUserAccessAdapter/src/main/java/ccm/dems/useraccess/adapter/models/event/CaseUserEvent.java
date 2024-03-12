@@ -24,7 +24,7 @@ public class CaseUserEvent extends BaseEvent {
     public static final String JUSTIN_RCC_ID = "RCC_ID";
 
     public enum SOURCE {
-        JUSTIN, PIDP, JADE_CCM
+        JUSTIN, PIDP, ISL_CCM
     }
 
     public enum STATUS {

@@ -147,7 +147,7 @@ if [ "$env" = "local" ]; then
 
     echo "Deploying $app to $env ..."
 
-    docker run --name $app --network jade-events_default -d $app
+    docker run --name $app --network isl-events_default -d $app
 
     echo "Deployment complete."
 else

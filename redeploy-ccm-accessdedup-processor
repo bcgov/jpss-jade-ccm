@@ -1,4 +1,4 @@
-pushd scripts/jade-ccm
+pushd scripts/isl-ccm
 
 . ./redeploy-ccm-accessdedup-processor $1
 

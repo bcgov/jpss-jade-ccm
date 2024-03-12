@@ -400,7 +400,7 @@ public class CcmReportsProcessor extends RouteBuilder {
             ReportEvent re = new ReportEvent();
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setEvent_source(ReportEvent.SOURCE.ISL_CCM.name());
             re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
             re.setReport_type(reportTypesSb.toString());
             exchange.getMessage().setBody(re, ReportEvent.class);

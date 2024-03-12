@@ -190,7 +190,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
 
                 String partIdKey = "PartId-"+caseUserEvent.getJustin_part_id();
                 if (accessdedupStore.get(partIdKey) == null) {
-                    ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM,caseUserEvent);
+                    ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.ISL_CCM,caseUserEvent);
                     chargeAssessmentEvent.setEvent_key(caseUserEvent.getJustin_part_id());
                     chargeAssessmentEvent.setEvent_status(ChargeAssessmentEvent.STATUS.INFERRED_PART_ID_PROVISIONED.name());
 
@@ -206,7 +206,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
 
                 String rcc_id = caseUserEvent.getJustin_rcc_id();
 
-                ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM,caseUserEvent);
+                ChargeAssessmentEvent chargeAssessmentEvent = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.ISL_CCM,caseUserEvent);
                 chargeAssessmentEvent.setEvent_key(rcc_id);
 
                 String derivedEventValue = mapper.writeValueAsString(chargeAssessmentEvent);

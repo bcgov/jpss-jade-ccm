@@ -29,7 +29,7 @@ public class CaseUserEvent extends BaseEvent {
   public enum SOURCE {
     JUSTIN,
     PIDP,
-    JADE_CCM
+    ISL_CCM
   }
 
   public enum STATUS {

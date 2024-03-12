@@ -16,7 +16,7 @@ fi
 echo "`basename $0` to $ns ..."
 
 # Stop existing JADE Events instance
-docker compose -f scripts/jade-events/docker-compose.yml down
+docker compose -f scripts/isl-events/docker-compose.yml down
 
 # Start JADE Events instance
-docker compose -f scripts/jade-events/docker-compose.yml up -d
+docker compose -f scripts/isl-events/docker-compose.yml up -d

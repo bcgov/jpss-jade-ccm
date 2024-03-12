@@ -4,7 +4,7 @@
     "event_version": "0.36.1",
     "event_type": "CaseUserEvent",
     "event_status": "EVENT_BATCH_ENDED",
-    "event_source": "JADE-CCM",
+    "event_source": "ISL-CCM",
     "justin_event_message_id": 0,
     "justin_message_event_type_cd": "",
     "justin_event_dtm": "",

@@ -1070,7 +1070,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .process(exchange -> {
           CaseUserEvent event = new CaseUserEvent();
           event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name());
-          event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+          event.setEvent_source(CaseUserEvent.SOURCE.ISL_CCM.name());
 
           exchange.getMessage().setBody(event, CaseUserEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
@@ -1115,7 +1115,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .process(exchange -> {
           CaseUserEvent event = new CaseUserEvent();
           event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
-          event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+          event.setEvent_source(CaseUserEvent.SOURCE.ISL_CCM.name());
 
           exchange.getMessage().setBody(event, CaseUserEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());

@@ -432,7 +432,7 @@ public class CcmNotificationService extends RouteBuilder {
     .process(exchange -> {
         CaseUserEvent event = new CaseUserEvent();
         event.setEvent_status(CaseUserEvent.STATUS.PROVISION_COMPLETED.name());
-        event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+        event.setEvent_source(CaseUserEvent.SOURCE.ISL_CCM.name());
         String eventKey = (String)exchange.getMessage().getHeader("event_key");
         event.setEvent_key(eventKey);
         event.setJustin_part_id(eventKey);
@@ -599,7 +599,7 @@ public class CcmNotificationService extends RouteBuilder {
             ReportEvent re = new ReportEvent();
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setEvent_source(ReportEvent.SOURCE.ISL_CCM.name());
             re.setJustin_event_message_id(Integer.parseInt(event_message_id));
             re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
             re.setReport_type(reportTypesSb.toString());
@@ -720,7 +720,7 @@ public class CcmNotificationService extends RouteBuilder {
             ex.setProperty("kpi_component_route_name_orig", ex.getProperty("kpi_component_route_name"));
 
             ChargeAssessmentEvent original_event = (ChargeAssessmentEvent)ex.getProperty("kpi_event_object");
-            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.JADE_CCM, original_event);
+            ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent(ChargeAssessmentEvent.SOURCE.ISL_CCM, original_event);
 
 
             boolean court_case_exists = ex.getProperty("caseFound").toString().length() > 0;
@@ -1023,7 +1023,7 @@ public class CcmNotificationService extends RouteBuilder {
             ReportEvent re = new ReportEvent();
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
-            re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+            re.setEvent_source(ReportEvent.SOURCE.ISL_CCM.name());
             re.setJustin_event_message_id(Integer.parseInt(event_message_id));
             re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
             re.setForce_update(true);
@@ -1268,7 +1268,7 @@ public class CcmNotificationService extends RouteBuilder {
         .process(exchange -> {
             CaseUserEvent event = new CaseUserEvent();
             event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name());
-            event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+            event.setEvent_source(CaseUserEvent.SOURCE.ISL_CCM.name());
 
             exchange.getMessage().setBody(event, CaseUserEvent.class);
             exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
@@ -1307,7 +1307,7 @@ public class CcmNotificationService extends RouteBuilder {
                   // Insert code that gets executed *before* delegating
                   // to the next processor in the chain.
                   CaseUserEvent originalEvent = (CaseUserEvent)exchange.getProperty("caseEvent", CaseUserEvent.class);
-                  CaseUserEvent event = new CaseUserEvent(CaseUserEvent.SOURCE.JADE_CCM, originalEvent);
+                  CaseUserEvent event = new CaseUserEvent(CaseUserEvent.SOURCE.ISL_CCM, originalEvent);
                   event.setEvent_status(CaseUserEvent.STATUS.ACCESS_REMOVED.toString());
 
                   String rccId = (String)exchange.getProperty("rcc_id", String.class);
@@ -1384,7 +1384,7 @@ public class CcmNotificationService extends RouteBuilder {
     .process(exchange -> {
         CaseUserEvent event = new CaseUserEvent();
         event.setEvent_status(CaseUserEvent.STATUS.EVENT_BATCH_ENDED.name());
-        event.setEvent_source(CaseUserEvent.SOURCE.JADE_CCM.name());
+        event.setEvent_source(CaseUserEvent.SOURCE.ISL_CCM.name());
 
         exchange.getMessage().setBody(event, CaseUserEvent.class);
         exchange.getMessage().setHeader("kafka.KEY", event.getEvent_key());
@@ -1937,7 +1937,7 @@ public class CcmNotificationService extends RouteBuilder {
             @Override
             public void process(Exchange exchange) throws Exception {
               CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
-              CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+              CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.ISL_CCM.toString(), origbe);
               be.setEvent_status(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
 
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
@@ -1983,7 +1983,7 @@ public class CcmNotificationService extends RouteBuilder {
             @Override
             public void process(Exchange exchange) throws Exception {
               CourtCaseEvent origbe = (CourtCaseEvent)exchange.getProperty("kpi_event_object");
-              CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.JADE_CCM.toString(), origbe);
+              CourtCaseEvent be = new CourtCaseEvent(CourtCaseEvent.SOURCE.ISL_CCM.toString(), origbe);
               be.setEvent_status(CourtCaseEvent.STATUS.APPEARANCE_CHANGED.toString());
 
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
@@ -2054,7 +2054,7 @@ public class CcmNotificationService extends RouteBuilder {
         ReportEvent re = new ReportEvent();
         re.setEvent_status(ReportEvent.STATUS.REPORT.name());
         re.setEvent_key(bcm.getCourt_file_id());
-        re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
+        re.setEvent_source(ReportEvent.SOURCE.ISL_CCM.name());
         re.setJustin_event_message_id(Integer.parseInt(event_message_id));
         re.setJustin_message_event_type_cd(ReportEvent.STATUS.REPORT.name());
         re.setMdoc_justin_no(bcm.getCourt_file_id());
@@ -2118,7 +2118,7 @@ public class CcmNotificationService extends RouteBuilder {
 
             ChargeAssessmentEvent derived_event = new ChargeAssessmentEvent();
             derived_event.setEvent_status(ChargeAssessmentEvent.STATUS.CREATED.toString());
-            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.JADE_CCM.name());
+            derived_event.setEvent_source(ChargeAssessmentEvent.SOURCE.ISL_CCM.name());
 
             ex.getMessage().setBody(derived_event);
 
