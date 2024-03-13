@@ -1,0 +1,116 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Out Adapter"
+collections court_case_topic as "Court Case Events"
+control notification_service as "Notification Service"
+control lookup_service as "Case Lookup Service"
+control d_adapter as "DEMS Adapter"
+boundary d_interface as "DEMS Interface"
+
+title
+CCM Court Case CHANGED Event Processing Sequence Diagram
+end title
+
+autonumber
+
+court_case_topic o-> notification_service: Process Court Case CHANGED event
+activate notification_service
+
+notification_service -> lookup_service: Retrieve Court Case details
+activate lookup_service
+lookup_service -> j_adapter: Retrieve Court Case details from JUSTIN
+
+activate j_adapter
+j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
+j_adapter -> j_interface: Call getCourtFile()
+activate j_interface
+j_interface --> j_adapter: Court file details
+deactivate j_interface
+j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+j_adapter --> lookup_service: Court Case details
+deactivate j_adapter
+
+lookup_service --> notification_service: Court Case details
+deactivate lookup_service
+
+loop For every associated charge assessment case
+
+    notification_service -> lookup_service: Check case exists
+    activate lookup_service
+    note over lookup_service, d_adapter
+    Integration assumption: DEMS is the system-of-record
+    for whether a court case already exists or not
+    end note
+    lookup_service -> d_adapter: Check case existence in DEMS
+    activate d_adapter
+    d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+    d_adapter -> d_interface: Check case existence in DEMS
+    activate d_interface
+
+    break Case not found - end processing
+    d_interface --> d_adapter: Case not found
+    deactivate d_interface
+    d_adapter --> lookup_service: Case not found
+    lookup_service --> notification_service: Case not found
+    deactivate lookup_service
+    deactivate d_adapter
+    end break
+
+    notification_service -> lookup_service: Retrieve Charge Assessment details (case flags)
+    activate lookup_service
+    looking_service --> notification_service: Charge Assessment details
+    deactivate lookup_service
+
+    notification_service -> d_adapter: Update court case
+    activate d_adapter
+    d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+    d_adapter -> d_interface: Update case in DEMS
+    activate d_interface
+    d_interface --> d_adapter: Updated
+    deactivate d_interface
+
+    loop For every accused partipant
+        d_adapter -> d_interface: Check if participant exists
+        activate d_interface
+        d_interface --> d_adapter: participant id if exists
+        deactivate d_interface
+        alt New participant
+            d_adapter -> d_interface: Create new participant
+            activate d_interface
+            d_interface --> d_adapter: Created
+            deactivate d_interface
+        else Existing participant
+            d_adapter -> d_interface: Update existing participant
+            activate d_interface
+            d_interface --> d_adapter: Updated
+            deactivate d_interface
+        end
+        d_adapter -> d_interface: Add participant to case
+        activate d_interface
+        d_interface --> d_adapter: Acknowledged
+        deactivate d_interface
+    end
+
+    d_adapter --> notification_service: Updated
+end loop
+
+deactivate d_adapter
+
+deactivate notification_service
+
+caption
+Prepared by David Agahchen | Updated February 7, 2024
+end caption
+@enduml

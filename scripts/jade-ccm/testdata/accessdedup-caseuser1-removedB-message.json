@@ -1,0 +1,15 @@
+{
+    "event_key": "1",
+    "event_dtm": "2023-11-16 11:13",
+    "event_version": "0.36.1",
+    "event_type": "CaseUserEvent",
+    "event_status": "ACCESS_REMOVED",
+    "event_source": "JUSTIN",
+    "justin_event_message_id": 1,
+    "justin_message_event_type_cd": "USER_DPROV",
+    "justin_event_dtm": "2023-11-16 11:12",
+    "justin_fetched_date": "2023-11-16 11:12",
+    "justin_guid": "123-456-7891",
+    "justin_part_id": "1",
+    "justin_rcc_id": "B"
+}

@@ -3,7 +3,6 @@ package ccm.models.common.event;
 import java.util.Iterator;
 import ccm.models.system.justin.JustinEvent;
 import ccm.models.system.justin.JustinEventDataElement;
-import ccm.utils.DateTimeUtils;
 
 public class ChargeAssessmentEvent extends BaseEvent {
   private int justin_event_message_id;
@@ -12,10 +11,12 @@ public class ChargeAssessmentEvent extends BaseEvent {
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_rcc_id;
+  private String justin_part_id;
 
   public static final String JUSTIN_FETCHED_DATE = "FETCHED_DATE";
   public static final String JUSTIN_GUID = "GUID";
   public static final String JUSTIN_RCC_ID = "RCC_ID";
+  public static final String JUSTIN_PART_ID = "PART_ID";
 
   public enum SOURCE {
     JUSTIN,
@@ -28,7 +29,8 @@ public class ChargeAssessmentEvent extends BaseEvent {
     UPDATED,
     MANUALLY_CHANGED,
     AUTH_LIST_CHANGED,
-    INFERRED_AUTH_LIST_CHANGED
+    INFERRED_AUTH_LIST_CHANGED,
+    INFERRED_PART_ID_PROVISIONED
   }
 
   public ChargeAssessmentEvent() {
@@ -102,6 +104,7 @@ public class ChargeAssessmentEvent extends BaseEvent {
     this.setJustin_guid(caseUserEvent.getJustin_guid());
     this.setJustin_message_event_type_cd(caseUserEvent.getJustin_message_event_type_cd());
     this.setJustin_rcc_id(caseUserEvent.getJustin_rcc_id());
+    this.setJustin_part_id(caseUserEvent.getJustin_part_id());
   }
 
   public int getJustin_event_message_id() {
@@ -151,4 +154,13 @@ public class ChargeAssessmentEvent extends BaseEvent {
   public void setJustin_rcc_id(String justin_rcc_id) {
     this.justin_rcc_id = justin_rcc_id;
   }
+
+  public String getJustin_part_id() {
+    return justin_part_id;
+  }
+
+  public void setJustin_part_id(String justin_part_id) {
+    this.justin_part_id = justin_part_id;
+  }
+
 }

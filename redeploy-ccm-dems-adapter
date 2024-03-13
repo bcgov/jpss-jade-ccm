@@ -83,6 +83,7 @@ fi
   ## https://www.youtube.com/watch?v=Wmg7-PZgQJI
   #--trait quarkus.package-type=native
 
+#kubectl -n $ns patch integration ccm-dems-adapter --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 3}]'
 popd
 
 # kamel -n cef5dd-test log ccm-dems-adapter

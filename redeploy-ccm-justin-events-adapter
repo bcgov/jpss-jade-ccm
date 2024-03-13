@@ -1,0 +1,77 @@
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1\n"
+   return 1
+else
+   ns="$ns_set-$env"
+fi
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        ns=""
+        return 1
+    fi
+else
+    #logging_level="DEBUG"
+    logging_level="INFO"
+fi
+
+deployer="`oc whoami | cut -d "@" -f 1`"
+version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0 | cut -d'"' -f2`
+
+echo "`basename $0` to $ns ..."
+
+pushd src/main/java/ccm
+if [ "$env" = "local" ]; then 
+    camel run  --properties=ccmJustinEventsAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmJustinEventsAdapter.java --port 4415 local/local.properties
+    
+else
+kamel -n $ns delete ccm-justin-events-adapter
+kamel -n $ns run \
+  CcmJustinEventsAdapter.java \
+  --resource file:../../../../target/classes/ccm-models.jar \
+  --property file:ccmJustinEventsAdapter.properties \
+  --label deployer="$deployer" \
+  --label version="$version" \
+  --config configmap:ccm-configs \
+  --config secret:ccm-secrets \
+  --profile openshift \
+  --trait logging.level=$logging_level \
+  --trait environment.vars=TZ="Canada/Pacific" \
+  --trait container.request-cpu=5m \
+  --trait container.request-memory=500mi \
+  --trait container.limit-cpu=200m \
+  --trait container.limit-memory=1000mi \
+  --trait dependencies.enabled=true \
+  --trait route.enabled=false \
+  --trait service.enabled=true \
+  --trait service.node-port=false
+  # --dev
+  # --dependency file://./models.jar \
+  # --dependency github:agahchen/jpss-jade-ccm-models \
+  # --dependency file://../../mapping/system/justin/agencyFile.json:path/etc/camel/resources/models/system/justin/agencyFile.json \
+  # --resource file:../../mapping/justin2businessCourtCaseData.adm \
+  # --trait logging.level=DEBUG
+fi
+
+popd
+
+# kamel -n cef5dd-test log ccm-justin-events-adapter

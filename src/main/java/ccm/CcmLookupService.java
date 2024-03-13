@@ -1,7 +1,9 @@
 package ccm;
 
 import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 // To run this integration use:
 // kamel run CcmLookupService.java --property file:application.properties --profile openshift
@@ -29,6 +31,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.http.NoHttpResponseException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -63,10 +66,18 @@ public class CcmLookupService extends RouteBuilder {
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class)
-      .maximumRedeliveries(5).redeliveryDelay(20000)
+      .maximumRedeliveries(10).redeliveryDelay(45000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+      .retryAttemptedLogLevel(LoggingLevel.ERROR)
+      .handled(true)
+    .end();
+
+    onException(NoHttpResponseException.class, NoRouteToHostException.class, UnknownHostException.class)
+      .maximumRedeliveries(10).redeliveryDelay(60000)
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
+      .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
     .end();
@@ -296,12 +307,12 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseDetails")
+    .to("http://ccm-justin-out-adapter/getCourtCaseDetails")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
 
-  private void getCourtCaseAuthList() {
+  private void deprecated_getCourtCaseAuthList() {
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -311,6 +322,8 @@ public class CcmLookupService extends RouteBuilder {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
     .process(new Processor(){
       public void process(Exchange exchange) throws Exception {
         AuthUserList userAuthList = new AuthUserList();
@@ -337,7 +350,7 @@ public class CcmLookupService extends RouteBuilder {
 
         ProducerTemplate justinTemplate = getContext().createProducerTemplate();
         String justinResponse = justinTemplate.requestBodyAndHeaders(
-                                   "http://ccm-justin-adapter/getCourtCaseAuthList",
+                                   "http://ccm-justin-out-adapter/getCourtCaseAuthList",
                                    null, headers, String.class);
 
         AuthUserList justinUserList = null;
@@ -356,6 +369,69 @@ public class CcmLookupService extends RouteBuilder {
     }).to("mock:result")
     .marshal()
     .json(JsonLibrary.Jackson, AuthUserList.class)
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    .end();
+  }
+
+  private void getCourtCaseAuthList() {
+
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header[number]}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-out-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("justinauthlist", body())
+
+    .log(LoggingLevel.DEBUG, "Retreiving list from PIDP...")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("pidpauthlist", body())
+
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+        AuthUserList userAuthList = new AuthUserList();
+        String rccId = (String)exchange.getProperty("key", String.class);
+        userAuthList.setRcc_id(rccId);
+        AuthUserList justinUserList = (AuthUserList)exchange.getProperty("justinauthlist", AuthUserList.class);
+        AuthUserList pdipAuthUserList = (AuthUserList)exchange.getProperty("pidpauthlist", AuthUserList.class);
+
+        userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+        userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+
+        exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    // remove the pidp token header, as it causes bad requests from JUSTIN side.
+    .removeHeaders("pidp*")
+    .removeHeaders("Authorization*")
+    .removeHeaders("X-*")
+    .removeHeaders("Content-Security-Policy")
+    .removeHeaders("Referrer-Policy")
+    .removeHeaders("set-cookie")
+    .removeHeaders("Strict-Transport-Security")
+    .removeHeaders("transfer-encoding")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
     .log(LoggingLevel.DEBUG, "Body: ${body}")
     .end();
   }
@@ -373,7 +449,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseMetadata")
+    .to("http://ccm-justin-out-adapter/getCourtCaseMetadata")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -391,7 +467,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseAppearanceSummaryList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseAppearanceSummaryList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -409,7 +485,7 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getCourtCaseCrownAssignmentList")
+    .to("http://ccm-justin-out-adapter/getCourtCaseCrownAssignmentList")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }
@@ -428,7 +504,7 @@ public class CcmLookupService extends RouteBuilder {
     .setProperty("image_request", body())
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-justin-adapter/getImageData")
+    .to("http://ccm-justin-out-adapter/getImageData")
     .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
     ;
   }

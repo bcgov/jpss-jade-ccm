@@ -62,6 +62,9 @@ kamel -n $ns run \
   --trait service.node-port=false \
   --trait route.enabled=false
 fi
+
+kubectl -n $ns patch integration ccm-lookup-service --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 3}]'
+
 popd
 
 #  --config configmap:ccm-configs \

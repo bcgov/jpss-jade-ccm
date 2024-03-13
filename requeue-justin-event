@@ -46,11 +46,11 @@ fi
 echo "`basename $0` to $ns ..."
 
 if [ "$idEnd" = "" ]; then
-    oc -n $ns exec service/ccm-justin-adapter -- curl \
+    oc -n $ns exec service/ccm-justin-events-adapter -- curl \
     -X PUT \
-    "http://ccm-justin-adapter/requeueJustinEvent?id=$id"
+    "http://ccm-justin-events-adapter/requeueJustinEvent?id=$id"
 else
-    oc -n $ns exec service/ccm-justin-adapter -- curl \
+    oc -n $ns exec service/ccm-justin-events-adapter -- curl \
     -X PUT \
-    "http://ccm-justin-adapter/requeueJustinEventRange?id=$id&idEnd=$idEnd"
+    "http://ccm-justin-events-adapter/requeueJustinEventRange?id=$id&idEnd=$idEnd"
 fi

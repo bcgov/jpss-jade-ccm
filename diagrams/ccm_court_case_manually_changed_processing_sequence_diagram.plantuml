@@ -1,0 +1,133 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Out Adapter"
+collections charge_assessment_cases_topic as "Charge Assessment Case Events"
+collections court_cases_topic as "Court Case Events"
+collections errors_topic as "Court Case Event Errors"
+collections kpis_topic as "Event KPIs"
+control notification_service as "Notification Service"
+control lookup_service as "Lookup Service"
+control d_adapter as "DEMS Adapter"
+boundary d_interface as "DEMS Interface"
+
+title
+Court Case MANUALLY_CHANGED (AM) Sequence Diagram
+end title
+
+autonumber
+
+court_cases_topic o-> notification_service: Process court case MANUALLY_CHANGED event
+activate notification_service
+
+notification_service ->o kpis_topic: Publish 'processing started' event KPI
+
+notification_service -> lookup_service: Retrieve Approved Court Case details
+activate lookup_service
+lookup_service -> j_adapter: Retrieve Approved Court Case details from JUSTIN
+
+activate j_adapter
+j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
+j_adapter -> j_interface: Call getCourtFile()
+activate j_interface
+j_interface --> j_adapter: Court file details
+deactivate j_interface
+j_adapter -> j_adapter: Convert data from System (JUSTIN) to Business model
+j_adapter --> lookup_service: Approved Court Case details
+deactivate j_adapter
+
+lookup_service --> notification_service: Approved Court Case details
+deactivate lookup_service
+
+loop For every associated charge assessment case
+    notification_service -> lookup_service: Check case exists
+    activate lookup_service
+
+    lookup_service -> d_adapter: Check case existence in DEMS
+    activate d_adapter
+    d_adapter -> d_adapter: Convert data from Business to System (DEMS) model
+
+
+    break#LightCoral Data error
+        notification_service ->o errors_topic: Publish event with error
+        notification_service ->o kpis_topic: Publish 'processing failed' event KPI
+    end break
+
+    d_adapter -> d_interface: Check case existence in DEMS
+    activate d_interface
+
+    break#LightCoral HTTP Client Side Error (400 series)
+        d_interface --> d_adapter: HTTP Client Side Error (400 series)
+        d_adapter --> notification_service: HTTP Client Side Error (400 series)
+        notification_service ->o errors_topic: Publish event with error
+        notification_service ->o kpis_topic: Publish 'processing failed' event KPI
+    end break
+
+    group#Khaki warning [HTTP Server Side Error (500 series)]
+        d_interface --> d_adapter: HTTP Server Side Error (500 series)
+        d_adapter --> notification_service: HTTP Server Side Error (500 series)
+        alt Short term retries
+            notification_service -> notification_service: Connection retry
+        else Restart event processing
+            notification_service ->o kpis_topic: Publish 'processing warning' event KPI
+            notification_service -> notification_service: Re-process event
+        end
+    end group
+
+    d_interface --> d_adapter: Response
+    deactivate d_interface
+    d_adapter --> lookup_service: Response
+    deactivate d_adapter
+    lookup_service --> notification_service: Response
+    deactivate lookup_service
+
+
+    notification_service -> lookup_service: Retrieve charge assessment details
+    activate lookup_service
+    lookup_service -> j_adapter: Retrieve charge assessment details
+    activate j_adapter
+    j_adapter -> j_interface: Retrieve JUSTIN agency file
+    activate j_interface
+    j_interface --> j_adapter: JUSTIN agency file
+    deactivate j_interface
+    j_adapter -> j_adapter: Convert data from Business to System (JUSTIN) model
+    j_adapter --> lookup_service: Charge assessment details
+    deactivate j_adapter
+    lookup_service --> notification_service: Charge assessment details
+    deactivate lookup_service
+
+    notification_service -> d_adapter: Create / update DEMS case
+    activate d_adapter
+    d_adapter -> d_interface: Create / update DEMS case
+    activate d_interface
+    d_interface --> d_adapter: Created / Updated
+    deactivate d_interface
+    d_adapter --> notification_service: Created / Updated
+    deactivate d_adapter
+end loop
+
+notification_service ->o court_cases_topic: Publish crown assignment changed event 
+notification_service ->o kpis_topic: Publish crown assignment changed 'event created' KPI
+notification_service ->o court_cases_topic: Publish appearance summary changed event 
+notification_service ->o kpis_topic: Publish appearance summary changed 'event created' KPI
+
+notification_service ->o kpis_topic: Publish 'processing completed' event KPI
+
+deactivate notification_service
+
+caption
+Prepared by David Agahchen | Updated February 7, 204
+end caption
+@enduml
