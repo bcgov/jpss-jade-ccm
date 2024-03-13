@@ -334,8 +334,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsBulkTimer");
+
+        /*exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");*/
       }
     })
     .log(LoggingLevel.INFO,"Justin adapter queue stopped")
@@ -359,27 +362,13 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-
-        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
-        Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
-        ServiceHelper.startService(mainTimer.getConsumer());
-        ServiceHelper.startService(bulkTimer.getConsumer());
-      }
-    })
-    .delay(5000)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        exchange.getContext().getRouteController().suspendRoute("processJustinEventsMainTimer");
-        exchange.getContext().getRouteController().suspendRoute("processJustinEventsBulkTimer");
-      }
-    })
-    .delay(5000)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
         exchange.getContext().getRouteController().resumeRoute("processJustinEventsMainTimer");
         exchange.getContext().getRouteController().resumeRoute("processJustinEventsBulkTimer");
+
+        /*Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
+        ServiceHelper.startService(mainTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());*/
       }
     })
 
