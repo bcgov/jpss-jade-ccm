@@ -1451,7 +1451,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter")
+    from("kafka:{{kafka.topic.caseusers.name}}?groupId=ccm-justin-adapter&maxPollRecords=1&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
     "    on the topic ${headers[kafka.TOPIC]}\n" +
