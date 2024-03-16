@@ -1,4 +1,4 @@
-# JADE-CCM ConfigMap Object Definition (ccm-configs)
+# ISL-CCM ConfigMap Object Definition (ccm-configs)
 
 | Key | Description | Type | 
 | - | - | - |
@@ -17,12 +17,12 @@
 | pidp-kafka-oauth-token-endpoint-url | PIDP OAuth Token Endpoint URI | Host URI (with HTTP prefix) |
 | pidp-kafka-bootstrapservers-url | PIDP Kafka Boostrap Servers URI | Host URI (without HTTP prefix) |
 | pidp-kafka-apicurioregistry-url | PIDP Kafka Apicurio Registry URI | Host URI (with HTTP prefix) |
-| kafka-broker-url | JADE Events Kafka Broker URI | string |
+| kafka-broker-url | ISL Events Kafka Broker URI | string |
 | pidp-kafka-oauth-client-id | PIDP Oauth Client Id | string |
 | pidp-api-oauth-token-endpoint-url | PIDP API Oauth Token URI | Host URI (with HTTP prefix) |
 | pidp-api-oauth-client-id | PIDP API OAuth client id | string |
 
-# JADE-CCM Secret Object Definition (ccm-secrets)
+# ISL-CCM Secret Object Definition (ccm-secrets)
 
 | Key | Description | Type | Source |
 | - | - | - | - |

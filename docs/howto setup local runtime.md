@@ -1,21 +1,21 @@
 # How-to setup local runtime
 
-This document provides instructions around how to run JADE-CCM locally.
+This document provides instructions around how to run ISL-CCM locally.
 
-## Deploloy JADE-Events (Kafka) locally
+## Deploloy ISL-Events (Kafka) locally
 
 1. Install Docker Desktop locally
 2. Run 'redeploy-events' script from repo base directory
-    - You should see docker compose (jade-events) started with the following two containers:
+    - You should see docker compose (isl-events) started with the following two containers:
         - zookeepr
         - broker
 
-## Deploy JADE-CCM locally
-Before attempting to run locally, the JADE-Events instructions above will have to be carried out for a local Kafka server to be established. 
+## Deploy ISL-CCM locally
+Before attempting to run locally, the ISL-Events instructions above will have to be carried out for a local Kafka server to be established. 
 
 1. Follow the instructions here https://camel.apache.org/manual/camel-jbang.html to install JBang and Camel JBang.
 
-2. After making your changes to the Jade CCM classes, you will have to run the jpss-jade-ccm/build-install-ccm-models script which will:
+2. After making your changes to the isl CCM classes, you will have to run the jpss-jade-ccm/build-install-ccm-models script which will:
     a) rebuild ccm-models.jar file
     b) install in the local Maven repository
 

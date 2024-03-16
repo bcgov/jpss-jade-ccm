@@ -53,15 +53,15 @@ mvn test
 
 ### 6. Local Docker Deployment <a name="local-deploy"></a>
 
-1. Make sure JADE-Events are already running
+1. Make sure ISL-Events are already running
    ```
-   cd scripts/jade-events
+   cd scripts/isl-events
    docker-compose up
    ```
 
 2. Navigate to the scripts directory
    ```
-   cd scripts/jade-ccm
+   cd scripts/isl-ccm
    ```
 
 3. Execute the build and deploy script, specifying local deployment

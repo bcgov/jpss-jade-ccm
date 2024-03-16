@@ -1,6 +1,6 @@
 # Known JUSTIN API Endpoints
 
-## Endpoints used, or ready for use, by ISL (JADE-CCM)
+## Endpoints used, or ready for use, by ISL (ISL-CCM)
 
 | API Name | HTTP Operation | HTTP Endpoint |
 |---|---|---|

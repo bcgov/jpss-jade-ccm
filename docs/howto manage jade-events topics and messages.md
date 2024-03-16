@@ -1,4 +1,4 @@
-# How-to manage jade-events topics and messages
+# How-to manage isl-events topics and messages
 
 This document lists the how-to's around accessing and managing Kafka topics and messages via command line.
 

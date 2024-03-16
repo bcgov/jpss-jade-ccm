@@ -1,14 +1,14 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![Lifecycle:Maturing](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](<Redirect-URL>)
 
-# JPSS Agile-integrated Digital Ecosystem - Court Case Management (JADE-CCM) Integration Solution
+# JPSS Agile-integrated Digital Ecosystem - Court Case Management (ISL-CCM) Integration Solution
 
 BC Prosecution Services (BCPS) is implementing a Digital Evidence & Disclosure Management Solution (DEMS) which will house police evidence and disclosure, electronically. BCPS is working in partnership with the Cascadia and EDT company who are providing the overall evidence management application.
 
 The ISB Integration Delivery Services Team is responsible for providing the integration solution between EDT DEMS application and Ministry applications needed in the overall solution called JUSTIN and CORNET.
 
-For the ISB Integration Delivery Services Team to successfully deliver a working solution (JADE-CCM), they will need to work in partnership with the DEMS project other service providers, the EDT Team responsible for the DEMS product and NTT Data responsible for JUSTIN and CORNET application changes.
+For the ISB Integration Delivery Services Team to successfully deliver a working solution (ISL-CCM), they will need to work in partnership with the DEMS project other service providers, the EDT Team responsible for the DEMS product and NTT Data responsible for JUSTIN and CORNET application changes.
 
-To learn more about JADE and the Justice and Public Sector Integration Delivery Service, please visit: https://integrations.justice.gov.bc.ca/
+To learn more about ISL and the Justice and Public Sector Integration Delivery Service, please visit: https://integrations.justice.gov.bc.ca/
 
 
 ## Directory Structure
@@ -36,7 +36,7 @@ LICENSE                    - License
 
 
 ## Running Tests Locally
-* Run mvn compile quarkus:test in the  /jpss-jade-ccm/ directory
+* Run mvn compile quarkus:test in the  /jpss-isl-ccm/ directory
 
 ## License
 

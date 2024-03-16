@@ -1,6 +1,6 @@
-# How-to manage the jpss-jade-ccm repo
+# How-to manage the jpss-isl-ccm repo
 
-This document lists the how-to's around developing and maintaining jpss-jade-ccm.
+This document lists the how-to's around developing and maintaining jpss-isl-ccm.
 
 ## How to list local tags
 

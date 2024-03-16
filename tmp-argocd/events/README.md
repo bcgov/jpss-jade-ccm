@@ -1,4 +1,4 @@
-# Create the 'events' cluster in JADE Dev Silver Cluster
+# Create the 'events' cluster in ISL Dev Silver Cluster
 
     1. Log in to the [Silver cluster console](https://console.apps.silver.devops.gov.bc.ca/k8s/cluster/projects) (Red Hat Integration POC Lab Environment).
     2. Access the [Red Hat Integration - AMQ Streams](https://console.apps.silver.devops.gov.bc.ca/k8s/ns/cef5dd-dev/operators.coreos.com~v1alpha1~ClusterServiceVersion/amqstreams.v2.0.1-1 ) operator.
