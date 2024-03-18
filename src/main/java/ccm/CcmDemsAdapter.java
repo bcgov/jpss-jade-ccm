@@ -1867,8 +1867,9 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-
+        
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
+        exchange.setProperty("accusedPersons", b.getAccused_persons());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1887,9 +1888,20 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("courtCaseId", jsonpath("$.id"))
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
-      .to("direct:getCourtCaseDataById")
-
+      .setHeader("number",simple("${exchangeProperty.courtCaseId}"))
+      
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
+            exchange.getMessage().setBody(accuseds);
+        }
+      })
+     // .to("direct:getCourtCaseDataById")
+     .to("direct:syncAccusedPersons")
+      
       //jade 1747
+      /*
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
       .setProperty("ParticipantTypeFilter", simple("Accused"))
       .setProperty("Participants",simple(""))
@@ -2000,8 +2012,9 @@ private void getDemsFieldMappingsrccStatus() {
             .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
             .to("direct:processAccusedPerson")
           .end()
-
-        .endChoice()
+          */
+        //.endChoice()
+        .choice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.ERROR, "Body: '${exception}'")
@@ -2070,6 +2083,7 @@ private void getDemsFieldMappingsrccStatus() {
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         d.setWaitForCaseCompletion(true);
+        exchange.setProperty("accusedPersons", b.getAccused_persons());
         exchange.getMessage().setBody(d);
       }
     })
@@ -2098,7 +2112,16 @@ private void getDemsFieldMappingsrccStatus() {
 
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-      .setProperty("ParticipantTypeFilter", simple("Accused"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
+            exchange.getMessage().setBody(accuseds);
+        }
+      })
+      .setHeader("number",simple("${exchangeProperty.dems_case_id}"))
+      .to("direct:syncAccusedPersons")
+      /*.setProperty("ParticipantTypeFilter", simple("Accused"))
       .setProperty("Participants",simple(""))
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
@@ -2149,6 +2172,7 @@ private void getDemsFieldMappingsrccStatus() {
         .to("direct:processAccusedPerson")
         .log(LoggingLevel.INFO,"Accused participant updated.")
       .end()
+      */
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
@@ -2161,6 +2185,7 @@ private void getDemsFieldMappingsrccStatus() {
 
           //jade 1747
           .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.dems_case_id}")
+          /*
           .setProperty("ParticipantTypeFilter", simple("Accused"))
           .setProperty("Participants",simple(""))
           .removeHeader("CamelHttpUri")
@@ -2212,7 +2237,7 @@ private void getDemsFieldMappingsrccStatus() {
             .to("direct:processAccusedPerson")
             .log(LoggingLevel.INFO,"Accused participant updated.")
           .end()
-
+          */
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -4169,6 +4194,7 @@ private void getDemsFieldMappingsrccStatus() {
           .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
           .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
           .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+          .doTry()
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
