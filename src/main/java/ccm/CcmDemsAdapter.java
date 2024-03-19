@@ -2307,6 +2307,7 @@ private void getDemsFieldMappingsrccStatus() {
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
         DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags,bcm.getRelated_court_cases());
         exchange.getMessage().setBody(d);
+        exchange.setProperty("accusedPersons", bcm.getAccused_persons());
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsApprovedCourtCaseData.class)
@@ -2330,8 +2331,18 @@ private void getDemsFieldMappingsrccStatus() {
       //.toD("http://httpstat.us:443/504")
 
       //jade 1747
-      .log(LoggingLevel.INFO,"Create participants")
+      //.log(LoggingLevel.INFO,"Create participants")
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
+            exchange.getMessage().setBody(accuseds);
+        }
+      })
+      .setHeader("number",simple("${exchangeProperty.dems_case_id}"))
+      .to("direct:syncAccusedPersons")
+      /*
       .setProperty("ParticipantTypeFilter", simple("Accused"))
       .setProperty("Participants",simple(""))
       .removeHeader("CamelHttpUri")
@@ -2381,7 +2392,7 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
         .to("direct:processAccusedPerson")
       .end()
-
+      */
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
@@ -2395,6 +2406,7 @@ private void getDemsFieldMappingsrccStatus() {
           //jade 1747
           .log(LoggingLevel.INFO,"Create participants")
           .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants")
+          /*
           .setProperty("ParticipantTypeFilter", simple("Accused"))
           .setProperty("Participants",simple(""))
           .removeHeader("CamelHttpUri")
@@ -2444,7 +2456,7 @@ private void getDemsFieldMappingsrccStatus() {
             .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
             .to("direct:processAccusedPerson")
           .end()
-
+            */
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
