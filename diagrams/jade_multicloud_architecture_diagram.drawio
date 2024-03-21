@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e" scale="1" border="10">
     <diagram id="QoLD5kz-Y4Mxiifhqx73" name="Page-1">
-        <mxGraphModel dx="1350" dy="903" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#FFFFFF" math="0" shadow="0">
+        <mxGraphModel dx="1354" dy="755" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="#FFFFFF" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -16,13 +16,13 @@
                 <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-74" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=25;arcSize=0;" parent="1" vertex="1">
                     <mxGeometry x="125" y="121" width="861" height="558" as="geometry"/>
                 </mxCell>
-                <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-38" value="&lt;span style=&quot;font-weight: 400 ; font-size: 29px&quot;&gt;Proposed JADE Multi-Cloud Architecture Diagram&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=29;fontStyle=1;verticalAlign=middle;align=center;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="mLAZWL-NmnEjI0Y1Mdo3-38" value="&lt;span style=&quot;font-weight: 400 ; font-size: 29px&quot;&gt;Proposed ISL Multi-Cloud Architecture Diagram&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=29;fontStyle=1;verticalAlign=middle;align=center;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="288.91" y="14" width="530" height="42" as="geometry"/>
                 </mxCell>
                 <mxCell id="31" value="&lt;div&gt;&lt;span style=&quot;font-size: 18px ; font-weight: 400&quot;&gt;Prepared By David Agahchen&amp;nbsp; |&amp;nbsp; Updated March 16, 2023&lt;/span&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=right;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="479" y="737" width="526" height="45" as="geometry"/>
                 </mxCell>
-                <mxCell id="34_q3-L0RDgU0ZmPiXIm-36" value="&lt;span style=&quot;font-weight: 400; font-size: 22px;&quot;&gt;JPSS Agile Integrated Digital Ecosystem (JADE)&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=22;fontStyle=1;verticalAlign=middle;align=left;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
+                <mxCell id="34_q3-L0RDgU0ZmPiXIm-36" value="&lt;span style=&quot;font-weight: 400; font-size: 22px;&quot;&gt;JPSS Agile Integrated Digital Ecosystem (ISL)&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=22;fontStyle=1;verticalAlign=middle;align=left;rounded=1;labelBackgroundColor=none;fontColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="136" y="118" width="525" height="45" as="geometry"/>
                 </mxCell>
                 <mxCell id="34_q3-L0RDgU0ZmPiXIm-37" value="Courts" style="rounded=1;whiteSpace=wrap;html=1;fontSize=19;arcSize=9;horizontal=1;verticalAlign=middle;fillColor=#002878;fontColor=#ffffff;strokeColor=#001DBC;" parent="1" vertex="1">

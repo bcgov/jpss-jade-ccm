@@ -91,6 +91,6 @@ git push origin :refs/tags/s17.1
 
 Example output
 ```
-To https://github.com/bcgov/jpss-jade-ccm.git
+To https://github.com/bcgov/jpss-isl-ccm.git
  - [deleted]         s17.1
 ```

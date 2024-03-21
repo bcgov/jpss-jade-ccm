@@ -18,7 +18,7 @@ ISL-CCM is an integration solution within the newly created Justice sector digit
 ISL-CCM integrates between a court case managmeent system (JUSTIN), a digital edvidence management system (DEMS), and a corrections managemnt system (CORNET.)
 
 
-<img src="../diagrams/img/ccm_architecture_diagram.png" alt="ISL-CCM Architecture Diagram" style="border: 1px solid grey;">
+<img src="../diagrams/img/ccm_architecture_diagram_1.png" alt="ISL-CCM Architecture Diagram" style="border: 1px solid grey;">
 
 This technical architecture diagram is created using the Draw.io diagramming tool (source here located <a href="../diagrams/ccm_architecture_diagram.drawio">here</a>).
 

@@ -15,7 +15,7 @@ Before attempting to run locally, the ISL-Events instructions above will have to
 
 1. Follow the instructions here https://camel.apache.org/manual/camel-jbang.html to install JBang and Camel JBang.
 
-2. After making your changes to the isl CCM classes, you will have to run the jpss-jade-ccm/build-install-ccm-models script which will:
+2. After making your changes to the isl CCM classes, you will have to run the jpss-isl-ccm/build-install-ccm-models script which will:
     a) rebuild ccm-models.jar file
     b) install in the local Maven repository
 
