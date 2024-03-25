@@ -59,7 +59,7 @@ kamel -n $ns run \
   --trait container.request-cpu=5m \
   --trait dependencies.enabled=true \
   --trait route.enabled=true \
-  --trait route.host=jade-ccm-justin-adapter-$env.apps.silver.devops.gov.bc.ca \
+  --trait route.host=isl-ccm-justin-adapter-$env.apps.silver.devops.gov.bc.ca \
   --trait route.tls-termination=edge \
   --trait route.tls-insecure-edge-termination-policy=Redirect \
   --trait service.enabled=true \

@@ -16,12 +16,12 @@ objects:
   spec:
     selector:
       matchLabels:
-        app: jade-ccm
+        app: isl-ccm
     replicas: 1
     template:
       metadata:
         labels:
-          app: jade-ccm
+          app: isl-ccm
       spec:
         containers:
           - name: container

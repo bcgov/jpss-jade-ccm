@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "cb5adfea-0002-4e6d-8bec-0a9474afca00",
-		"name": "JADE-CCM-JUSTIN-In",
+		"name": "ISL-CCM-JUSTIN-In",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -11,10 +11,10 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://jade-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca/justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
+					"raw": "https://isl-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca/justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
 					"protocol": "https",
 					"host": [
-						"jade-ccm-justin-adapter-dev",
+						"isl-ccm-justin-adapter-dev",
 						"apps",
 						"silver",
 						"devops",
@@ -44,7 +44,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://zb-rp.dev.ag.gov.bc.ca/jade-ccm-justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
+					"raw": "https://zb-rp.dev.ag.gov.bc.ca/isl-ccm-justin/api/v1/getCaseHyperlink?rcc_id=50468.0734",
 					"protocol": "https",
 					"host": [
 						"zb-rp",
@@ -55,7 +55,7 @@
 						"ca"
 					],
 					"path": [
-						"jade-ccm-justin",
+						"isl-ccm-justin",
 						"api",
 						"v1",
 						"getCaseHyperlink"

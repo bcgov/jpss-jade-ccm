@@ -1,5 +1,5 @@
 akhq:
   connections:
-    jade-events:
+    isl-events:
       properties:
         bootstrap.servers: "events_broker:9093"
