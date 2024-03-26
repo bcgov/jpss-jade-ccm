@@ -34,7 +34,6 @@ import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.service.ServiceHelper;
 import org.apache.http.NoHttpResponseException;
 
 import ccm.models.common.event.BaseEvent;
@@ -47,7 +46,6 @@ import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinEvent;
-import ccm.models.system.justin.JustinEventBatch;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinEventsAdapter extends RouteBuilder {

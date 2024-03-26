@@ -425,6 +425,12 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("kpi_event_object_orig", simple("${exchangeProperty.kpi_event_object}"))
+    .setProperty("kpi_event_topic_offset_orig", simple("${exchangeProperty.kpi_event_topic_offset}"))
+    .setProperty("kpi_event_topic_name_orig", simple("${exchangeProperty.kpi_event_topic_name}"))
+    .setProperty("kpi_status_orig", simple("${exchangeProperty.kpi_status}"))
+    .setProperty("kpi_component_route_name_orig", simple("${exchangeProperty.kpi_component_route_name}"))
+
     .setHeader("event_key")
     .jsonpath("$.justin_part_id")
     // generate the batch-ended event
@@ -451,7 +457,14 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-    .to("direct:publishEventKPI")
+    .to("direct:preprocessAndPublishEventCreatedKPI")
+
+    // KPI: restore previous values
+    .setProperty("kpi_event_object", simple("${exchangeProperty.kpi_event_object_orig}"))
+    .setProperty("kpi_event_topic_offset", simple("${exchangeProperty.kpi_event_topic_offset_orig}"))
+    .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kpi_event_topic_name_orig}"))
+    .setProperty("kpi_status", simple("${exchangeProperty.kpi_status_orig}"))
+    .setProperty("kpi_component_route_name", simple("${exchangeProperty.kpi_component_route_name_orig}"))
     ;
   }
 
@@ -598,6 +611,7 @@ public class CcmNotificationService extends RouteBuilder {
 
             ReportEvent re = new ReportEvent();
             re.setJustin_rcc_id(rcc_id);
+            re.setEvent_key(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
             re.setJustin_event_message_id(Integer.parseInt(event_message_id));
@@ -1022,6 +1036,7 @@ public class CcmNotificationService extends RouteBuilder {
 
             ReportEvent re = new ReportEvent();
             re.setJustin_rcc_id(rcc_id);
+            re.setEvent_key(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
             re.setJustin_event_message_id(Integer.parseInt(event_message_id));

@@ -74,7 +74,8 @@ public class ChargeAssessmentEventHandler extends AbstractProcessor<String, Stri
             LOG.debug("Recevied ChargeAssessmentEvent message for {}.", key);
 
             // If the event is an inferr, then we need to produce a EVENT_CREATED KPI.
-            if (ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED.name().equals(chargeAssessmentEvent.getEvent_status())) {
+            if (ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED.name().equals(chargeAssessmentEvent.getEvent_status())
+             || ChargeAssessmentEvent.STATUS.INFERRED_PART_ID_PROVISIONED.name().equals(chargeAssessmentEvent.getEvent_status())) {
                 LOG.debug("Post-processing ChargeAssessmentEvent message for {} ...", key);
 
                 String topicName = this.context.topic();
