@@ -2448,7 +2448,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"Case group sync processing completed.")
     ;
   }
-
+ 
   private void processAccusedPerson() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3885,7 +3885,7 @@ private void getDemsFieldMappingsrccStatus() {
         ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
         exchange.setProperty("AccusedPersons", bodyInput);
       }})
-    //.setProperty("AccusedPersons", simple("${bodyAs(String)}"))
+    
     .choice()
     .when(simple("${header.number}!= '' && ${body} != '' "))
       .log(LoggingLevel.INFO,"in syncAccusedpersons line 3884")
@@ -3912,31 +3912,28 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-          .log(LoggingLevel.INFO,"SyncAccussedPersons body before call to Dems participants/sync: ${body}")
+          //.log(LoggingLevel.INFO,"SyncAccussedPersons body before call to Dems participants/sync: ${body}")
           .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
           .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-          .log(LoggingLevel.INFO,"SyncAccussedPersons body after call to Dems participants/sync: ${body}")
+         // .log(LoggingLevel.INFO,"SyncAccussedPersons body after call to Dems participants/sync: ${body}")
           .doTry()
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
-             // ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-             
               
               List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("AccusedPersons");
-              log.info("get accused persons from exchange : size : " + accusedPersons.size());
+             // log.info("get accused persons from exchange : size : " + accusedPersons.size());
               exchange.getMessage().setBody(accusedPersons);
-              log.info("set exchange body to accussed persons");
+             // log.info("set exchange body to accussed persons");
             }
           })
-          
           .marshal().json()
           .split()
             .jsonpathWriteAsString("$.*")
             .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${header.number}")
+            .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
             .log(LoggingLevel.INFO,"Updating accused participant ...")
-            .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
+            .log(LoggingLevel.DEBUG,"Case Id key = ${exchangeProperty.caseId}")
             .to("direct:processAccusedPerson")
             .log(LoggingLevel.INFO,"Accused participant updated.")
           .end()
@@ -3951,7 +3948,7 @@ private void getDemsFieldMappingsrccStatus() {
               .delay(30000)
     
               //jade 1747
-              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${header.number}")
+              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.caseId}")
               .setProperty("ParticipantTypeFilter", simple("Accused"))
               .setProperty("Participants",simple(""))
               .removeHeader("CamelHttpUri")
@@ -3970,7 +3967,6 @@ private void getDemsFieldMappingsrccStatus() {
                 @Override
                 public void process(Exchange exchange) {
                   List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
-                 
                   exchange.getMessage().setBody(accusedPersons);
                 }
               })
@@ -3979,9 +3975,9 @@ private void getDemsFieldMappingsrccStatus() {
               .split()
                 .jsonpathWriteAsString("$.*")
                 .setHeader("key", jsonpath("$.identifier"))
-                .setHeader("courtCaseId").simple("${header.number}}")
+                .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
                 .log(LoggingLevel.INFO,"Updating accused participant ...")
-                .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
+                .log(LoggingLevel.DEBUG,"Court case  id = ${exchangeProperty.caseId}")
                 .to("direct:processAccusedPerson")
                 .log(LoggingLevel.INFO,"Accused participant updated.")
               .end()
@@ -4010,10 +4006,7 @@ private void getDemsFieldMappingsrccStatus() {
             .endChoice()
           .end()
         .end() 
-        
-          .endChoice()
-
-          .end();
-   
+      .endChoice()
+    .end();
   }
 }
