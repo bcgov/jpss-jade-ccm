@@ -1901,118 +1901,7 @@ private void getDemsFieldMappingsrccStatus() {
      .to("direct:syncAccusedPersons")
       
       //jade 1747
-      /*
-      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-      .setProperty("ParticipantTypeFilter", simple("Accused"))
-      .setProperty("Participants",simple(""))
-      .removeHeader("CamelHttpUri")
-      .removeHeader("CamelHttpBaseUri")
-      .removeHeaders("CamelHttp*")
-      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-      .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
-      .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-      // Merge the accused persons from all related agency files into a unique list
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-          // go through each accused person and make sure it is not already in the existing list.
-          if(bcm.getRelated_charge_assessments() != null) {
-            for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-              for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                boolean unique = true;
-                for(CaseAccused listedAccused : accusedPersons) {
-                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                    unique = false;
-                    break;
-                  }
-                }
-                if(unique) {
-                  accusedPersons.add(relatedAccused);
-                }
-              }
-            }
-
-          }
-          exchange.getMessage().setBody(accusedPersons);
-        }
-      })
-
-      .marshal().json()
-      .split()
-        .jsonpathWriteAsString("$.*")
-        .setHeader("key", jsonpath("$.identifier"))
-        .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
-        .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.key}")
-        .to("direct:processAccusedPerson")
-      .end()
-    .endDoTry()
-    .doCatch(HttpOperationFailedException.class)
-      .log(LoggingLevel.ERROR,"Exception: ${exception}")
-      .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
-      .choice()
-        .when().simple("${exception.statusCode} >= 504")
-          .log(LoggingLevel.ERROR, "Encountered timeout for rcc: ${header.event_key}.  Wait additional 65 seconds to continue.")
-           // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
-          .delay(65000)
-          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .setProperty("key", simple("${header.event_key}"))
-          .to("direct:getCourtCaseIdByKey")
-
-          .setProperty("courtCaseId", jsonpath("$.id"))
-          .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
-          .to("direct:getCourtCaseDataById")
-
-          //jade 1747
-          .log(LoggingLevel.INFO,"Retry Participants for case ${exchangePreoperty.courtCaseId}")
-          .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-          // Merge the accused persons from all related agency files into a unique list
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-              List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-              // go through each accused person and make sure it is not already in the existing list.
-              if(bcm.getRelated_charge_assessments() != null) {
-                for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-                  List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-                  for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                    boolean unique = true;
-                    for(CaseAccused listedAccused : accusedPersons) {
-                      if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                        unique = false;
-                        break;
-                      }
-                    }
-                    if(unique) {
-                      accusedPersons.add(relatedAccused);
-                    }
-                  }
-                }
-
-              }
-              exchange.getMessage().setBody(accusedPersons);
-            }
-          })
-
-          .marshal().json()
-          .split()
-            .jsonpathWriteAsString("$.*")
-            .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${exchangeProperty.courtCaseId}")
-            .log(LoggingLevel.DEBUG,"Found accused participant. Key: ${header.number}")
-            .to("direct:processAccusedPerson")
-          .end()
-          */
+      
         //.endChoice()
         .choice()
         .when().simple("${exception.statusCode} >= 400")
@@ -2065,6 +1954,7 @@ private void getDemsFieldMappingsrccStatus() {
         String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
         String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
+        
         if(doesCourtFileUniqueIdExist != null && !doesCourtFileUniqueIdExist.isEmpty()) {
           // this is an approved court case.
           if(doesKFilePreExist != null && !doesKFilePreExist.isEmpty()) {
@@ -2105,7 +1995,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .log(LoggingLevel.DEBUG,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
+      .log(LoggingLevel.INFO,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"DEMS case updated.")
       //.toD("http://httpstat.us:443/504")
@@ -2117,62 +2007,16 @@ private void getDemsFieldMappingsrccStatus() {
         public void process(Exchange exchange) {
             List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
             exchange.getMessage().setBody(accuseds);
+            log.info("accused persons size : " + (accuseds != null ? accuseds.size() : "0"));
+            log.info("dems_case_id : " + exchange.getProperty("key"));
         }
       })
-      .setHeader("number",simple("${exchangeProperty.dems_case_id}"))
+      .setHeader("number",simple("${exchangeProperty.key}"))
+      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+      .log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
+      .setBody(simple("${body}"))
       .to("direct:syncAccusedPersons")
-      /*.setProperty("ParticipantTypeFilter", simple("Accused"))
-      .setProperty("Participants",simple(""))
-      .removeHeader("CamelHttpUri")
-      .removeHeader("CamelHttpBaseUri")
-      .removeHeaders("CamelHttp*")
-      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-      .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
-      .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-      .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-      // Merge the accused persons from all related agency files into a unique list
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-          // go through each accused person and make sure it is not already in the existing list.
-          if(bcm.getRelated_charge_assessments() != null) {
-            for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-              for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                boolean unique = true;
-                for(CaseAccused listedAccused : accusedPersons) {
-                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                    unique = false;
-                    break;
-                  }
-                }
-                if(unique) {
-                  accusedPersons.add(relatedAccused);
-                }
-              }
-            }
-          }
-          exchange.getMessage().setBody(accusedPersons);
-        }
-      })
-
-      .marshal().json()
-      .split()
-        .jsonpathWriteAsString("$.*")
-        .setHeader("key", jsonpath("$.identifier"))
-        .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-        .log(LoggingLevel.INFO,"Updating accused participant ...")
-        .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
-        .to("direct:processAccusedPerson")
-        .log(LoggingLevel.INFO,"Accused participant updated.")
-      .end()
-      */
+   
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
@@ -2185,59 +2029,7 @@ private void getDemsFieldMappingsrccStatus() {
 
           //jade 1747
           .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.dems_case_id}")
-          /*
-          .setProperty("ParticipantTypeFilter", simple("Accused"))
-          .setProperty("Participants",simple(""))
-          .removeHeader("CamelHttpUri")
-          .removeHeader("CamelHttpBaseUri")
-          .removeHeaders("CamelHttp*")
-          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-          .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-          .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
-          .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-          .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-          // Merge the accused persons from all related agency files into a unique list
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-              List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-              // go through each accused person and make sure it is not already in the existing list.
-              if(bcm.getRelated_charge_assessments() != null) {
-                for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-                  List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-                  for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                    boolean unique = true;
-                    for(CaseAccused listedAccused : accusedPersons) {
-                      if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                        unique = false;
-                        break;
-                      }
-                    }
-                    if(unique) {
-                      accusedPersons.add(relatedAccused);
-                    }
-                  }
-                }
-              }
-              exchange.getMessage().setBody(accusedPersons);
-            }
-          })
-
-          .marshal().json()
-          .split()
-            .jsonpathWriteAsString("$.*")
-            .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-            .log(LoggingLevel.INFO,"Updating accused participant ...")
-            .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
-            .to("direct:processAccusedPerson")
-            .log(LoggingLevel.INFO,"Accused participant updated.")
-          .end()
-          */
+          
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -2340,59 +2132,9 @@ private void getDemsFieldMappingsrccStatus() {
             exchange.getMessage().setBody(accuseds);
         }
       })
-      .setHeader("number",simple("${exchangeProperty.dems_case_id}"))
+      .setHeader("number",simple("${exchangeProperty.key}"))
       .to("direct:syncAccusedPersons")
-      /*
-      .setProperty("ParticipantTypeFilter", simple("Accused"))
-      .setProperty("Participants",simple(""))
-      .removeHeader("CamelHttpUri")
-      .removeHeader("CamelHttpBaseUri")
-      .removeHeaders("CamelHttp*")
-      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-      .log(LoggingLevel.DEBUG,"${body}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
-      .setBody(simple("${exchangeProperty.metadata_data}"))
-      // Merge the accused persons from all related court files into a unique list
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-          List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-          // go through each accused person and make sure it is not already in the existing list.
-          if(bcm.getRelated_court_cases() != null) {
-            for(CourtCaseData bcmRelated : bcm.getRelated_court_cases()) {
-              List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-              for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                boolean unique = true;
-                for(CaseAccused listedAccused : accusedPersons) {
-                  if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                    unique = false;
-                    break;
-                  }
-                }
-                if(unique) {
-                  accusedPersons.add(relatedAccused);
-                }
-              }
-            }
-
-          }
-          exchange.getMessage().setBody(accusedPersons);
-        }
-      })
-      .marshal().json()
-      .log(LoggingLevel.DEBUG, "Unprocessed accused list: ${body}")
-      .split()
-        .jsonpathWriteAsString("$.*")
-        .setHeader("key", jsonpath("$.identifier"))
-        .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-        .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
-        .to("direct:processAccusedPerson")
-      .end()
-      */
+      
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
@@ -2406,57 +2148,17 @@ private void getDemsFieldMappingsrccStatus() {
           //jade 1747
           .log(LoggingLevel.INFO,"Create participants")
           .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants")
-          /*
-          .setProperty("ParticipantTypeFilter", simple("Accused"))
-          .setProperty("Participants",simple(""))
-          .removeHeader("CamelHttpUri")
-          .removeHeader("CamelHttpBaseUri")
-          .removeHeaders("CamelHttp*")
-          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-          .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-          .log(LoggingLevel.DEBUG,"${body}")
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
-          .setBody(simple("${exchangeProperty.metadata_data}"))
-          // Merge the accused persons from all related court files into a unique list
+          .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
-              CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
-              List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-              // go through each accused person and make sure it is not already in the existing list.
-              if(bcm.getRelated_court_cases() != null) {
-                for(CourtCaseData bcmRelated : bcm.getRelated_court_cases()) {
-                  List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-                  for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                    boolean unique = true;
-                    for(CaseAccused listedAccused : accusedPersons) {
-                      if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                        unique = false;
-                        break;
-                      }
-                    }
-                    if(unique) {
-                      accusedPersons.add(relatedAccused);
-                    }
-                  }
-                }
-
-              }
-              exchange.getMessage().setBody(accusedPersons);
+                List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
+                exchange.getMessage().setBody(accuseds);
             }
           })
-          .marshal().json()
-          .log(LoggingLevel.DEBUG, "Unprocessed accused list: ${body}")
-          .split()
-            .jsonpathWriteAsString("$.*")
-            .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
-            .log(LoggingLevel.INFO,"Found accused participant. Key: ${header.key} Case Id: ${header.courtCaseId}")
-            .to("direct:processAccusedPerson")
-          .end()
-            */
+          .setHeader("number",simple("${exchangeProperty.key}"))
+          .to("direct:syncAccusedPersons")
+          
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -2756,9 +2458,9 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"processAccusedPerson.  key = ${header[key]}")
+    .log(LoggingLevel.INFO,"processAccusedPerson.  key = ${header[key]}")
     .setProperty("person_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.DEBUG,"Accused Person data = ${body}.")
+    .log(LoggingLevel.INFO,"Accused Person data = ${body}.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
@@ -2776,7 +2478,7 @@ private void getDemsFieldMappingsrccStatus() {
         .to("direct:createPerson")
       .endChoice()
       .otherwise()
-        .log(LoggingLevel.DEBUG,"PersonId: ${exchangeProperty.personFound}")
+        .log(LoggingLevel.INFO,"PersonId: ${exchangeProperty.personFound}")
         .setHeader("personId").simple("${exchangeProperty.personFound}")
         .log(LoggingLevel.DEBUG,"OrganizationId: ${header.organizationId}")
         .to("direct:updatePerson")
@@ -4175,11 +3877,18 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
-    .setProperty("AccusedPersons", simple("${bodyAs(String)}"))
+    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
+        exchange.setProperty("AccusedPersons", bodyInput);
+      }})
+    //.setProperty("AccusedPersons", simple("${bodyAs(String)}"))
     .choice()
-    .when(simple("${header.number} != null"))
-      .log(LoggingLevel.INFO,"RCC based report")
+    .when(simple("${header.number}!= '' && ${body} != '' "))
+      .log(LoggingLevel.INFO,"in syncAccusedpersons line 3884")
       // get the primary rcc, based on the dems primary agency file id
 
       //.setHeader("number", simple("${header[rcc_id]}"))
@@ -4192,7 +3901,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
       .choice()
       // if there is a case, delete participants
-      .when(simple("${exchangeProperty.caseRccId} != ''"))
+      .when(simple("${exchangeProperty.caseId} != ''"))
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
           .setProperty("ParticipantTypeFilter", simple("Accused"))
           .setProperty("Participants",simple(""))
@@ -4203,43 +3912,29 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-          .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/participants/sync")
+          .log(LoggingLevel.INFO,"SyncAccussedPersons body before call to Dems participants/sync: ${body}")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
           .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+          .log(LoggingLevel.INFO,"SyncAccussedPersons body after call to Dems participants/sync: ${body}")
           .doTry()
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
              // ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
              
-              List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
-              // go through each accused person and make sure it is not already in the existing list.
-              //if(bcm.getRelated_charge_assessments() != null) {
-               /* for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-                  List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-                  for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                    boolean unique = true;
-                    for(CaseAccused listedAccused : accusedPersons) {
-                      if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                        unique = false;
-                        break;
-                      }
-                    }
-                    if(unique) {
-                      accusedPersons.add(relatedAccused);
-                    }
-                  }
-                }
-              //}*/
+              
+              List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("AccusedPersons");
+              log.info("get accused persons from exchange : size : " + accusedPersons.size());
               exchange.getMessage().setBody(accusedPersons);
+              log.info("set exchange body to accussed persons");
             }
           })
-    
+          
           .marshal().json()
           .split()
             .jsonpathWriteAsString("$.*")
             .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
+            .setHeader("courtCaseId").simple("${header.number}")
             .log(LoggingLevel.INFO,"Updating accused participant ...")
             .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
             .to("direct:processAccusedPerson")
@@ -4256,7 +3951,7 @@ private void getDemsFieldMappingsrccStatus() {
               .delay(30000)
     
               //jade 1747
-              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.dems_case_id}")
+              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${header.number}")
               .setProperty("ParticipantTypeFilter", simple("Accused"))
               .setProperty("Participants",simple(""))
               .removeHeader("CamelHttpUri")
@@ -4267,7 +3962,7 @@ private void getDemsFieldMappingsrccStatus() {
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
               .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
               .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/participants/sync")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
               .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
               // Merge the accused persons from all related agency files into a unique list
@@ -4275,26 +3970,7 @@ private void getDemsFieldMappingsrccStatus() {
                 @Override
                 public void process(Exchange exchange) {
                   List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
-                  /*ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
-                  List<CaseAccused> accusedPersons = bcm.getAccused_persons();
-                  // go through each accused person and make sure it is not already in the existing list.
-                  if(bcm.getRelated_charge_assessments() != null) {
-                    for(ChargeAssessmentData bcmRelated : bcm.getRelated_charge_assessments()) {
-                      List<CaseAccused> relatedAccusedPersons = bcmRelated.getAccused_persons();
-                      for(CaseAccused relatedAccused: relatedAccusedPersons) {
-                        boolean unique = true;
-                        for(CaseAccused listedAccused : accusedPersons) {
-                          if(relatedAccused.getIdentifier() == listedAccused.getIdentifier()) {
-                            unique = false;
-                            break;
-                          }
-                        }
-                        if(unique) {
-                          accusedPersons.add(relatedAccused);
-                        }
-                      }
-                    }
-                  } */
+                 
                   exchange.getMessage().setBody(accusedPersons);
                 }
               })
@@ -4303,7 +3979,7 @@ private void getDemsFieldMappingsrccStatus() {
               .split()
                 .jsonpathWriteAsString("$.*")
                 .setHeader("key", jsonpath("$.identifier"))
-                .setHeader("courtCaseId").simple("${exchangeProperty.dems_case_id}")
+                .setHeader("courtCaseId").simple("${header.number}}")
                 .log(LoggingLevel.INFO,"Updating accused participant ...")
                 .log(LoggingLevel.DEBUG,"Participant key = ${header.key}")
                 .to("direct:processAccusedPerson")
