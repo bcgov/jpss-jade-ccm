@@ -90,6 +90,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
      // HttpOperation Failed
     onException(HttpOperationFailedException.class)
+    .maximumRedeliveries(3).redeliveryDelay(20000)
     .choice()
       .when(simple("${exchangeProperty.kpi_event_object} != null"))
         .process(new Processor() {
