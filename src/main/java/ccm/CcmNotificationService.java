@@ -7,6 +7,9 @@ import java.net.UnknownHostException;
 import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.StringTokenizer;
+
+
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -573,29 +576,21 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.WARN, "RCC: ${header.event_key} already exists in DEMS.")
       .setProperty("allowCreateCase").simple("false")
     .end()
-
+    
+    .doTry()
     .choice()
+    
       .when(simple("${exchangeProperty.allowCreateCase} == 'true'"))
+      
         .setBody(simple("${exchangeProperty.courtcase_data}"))
         .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .doTry()
+       
         .to("http://ccm-dems-adapter/createCourtCase")
         .log(LoggingLevel.DEBUG,"Update court case auth list.")
-        .doCatch(Exception.class)
-        .process(new Processor(){
-          @Override
-          public void process(Exchange exchange){
-              log.error("Exception in createCourtCase call");
-          }
-        })
-        .endDoCatch()
-        .endDoTry()
-        .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-        .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-        .setBody(simple("${exchangePropery.accusedList}"))
-        .to("direct:processAccusedPersons")
+       
+       
 
         .to("direct:processCourtCaseAuthListChanged")
         .log(LoggingLevel.INFO, "Create ReportEvent for Static reports")
@@ -630,11 +625,16 @@ public class CcmNotificationService extends RouteBuilder {
         .delay(30000)
         .to("kafka:{{kafka.topic.reports.name}}")
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
-      .endChoice()
+     .endChoice()
     .otherwise()
       .log(LoggingLevel.WARN, "Skipping creation of DEMS Case: ${header.event_key}")
-    .end();
-    ;
+    .endDoTry()
+     .setHeader("number",simple("${exchangeProperty.courtNumber}"))
+     .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+     .setBody(simple("${exchangePropery.accusedList}"))
+     .to("direct:processAccusedPersons")
+    
+   .end();
   }
 
   private void processCourtCaseEvents() {
@@ -951,6 +951,8 @@ public class CcmNotificationService extends RouteBuilder {
               .doTry()
               .to("http://ccm-dems-adapter/updateCourtCase")
               .log(LoggingLevel.INFO,"Update court case auth list.")
+            
+              .endDoTry()
               .doCatch(Exception.class)
               .process(new Processor(){
                 @Override
@@ -959,7 +961,6 @@ public class CcmNotificationService extends RouteBuilder {
                 }
               })
               .endDoCatch()
-              .endDoTry()
               .setHeader("number",simple("${exchangeProperty.courtNumber}"))
               .marshal().json(JsonLibrary.Jackson, ArrayList.class)
               .setBody(simple("${exchangePropery.accusedList}"))
@@ -2318,10 +2319,11 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .doTry()
         .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+       
+        .endDoTry()
         .doCatch(Exception.class)
         .log(LoggingLevel.INFO, "updateCourtCaseWithMetaData threw exception")
         .endDoCatch()
-        .endDoTry()
         .setHeader("number",simple("${exchangeProperty.courtNumber}"))
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
         .setBody(simple("${exchangePropery.accusedList}"))
@@ -2967,7 +2969,8 @@ public class CcmNotificationService extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
     .log(LoggingLevel.INFO,"Processing request: ${body}")
-    
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/syncAccusedPersonsHttp")
     .end();
   }

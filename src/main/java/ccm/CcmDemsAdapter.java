@@ -4016,14 +4016,14 @@ private void getDemsFieldMappingsrccStatus() {
     //IN: property =number - primary rcc_id
     //IN: property =accused - List<CaseAccused>
    
-    from("platform-http:/" + routeId)
+    from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
     .log(LoggingLevel.INFO,"Processing request: ${body}")
     
-      .to("direct:syncAccusedPersons")
-      .end();
+    .to("direct:syncAccusedPersons")
+    .end();
     
   }
 }
