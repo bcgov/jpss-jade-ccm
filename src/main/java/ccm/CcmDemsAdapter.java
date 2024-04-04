@@ -152,6 +152,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     createEdtExternalIdExistingParticipant();
     updateEdtExternalIdExistingParticipant();
     syncAccusedPersons();
+    syncAccusedPersonsHttp();
   }
 
 
@@ -3920,7 +3921,7 @@ private void getDemsFieldMappingsrccStatus() {
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
-              
+
               List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("AccusedPersons");
              // log.info("get accused persons from exchange : size : " + accusedPersons.size());
               exchange.getMessage().setBody(accusedPersons);
@@ -4008,5 +4009,21 @@ private void getDemsFieldMappingsrccStatus() {
         .end() 
       .endChoice()
     .end();
+  }
+  private void syncAccusedPersonsHttp() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+   
+    //IN: property =number - primary rcc_id
+    //IN: property =accused - List<CaseAccused>
+   
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
+    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    
+      .to("direct:syncAccusedPersons")
+      .end();
+    
   }
 }
