@@ -58,6 +58,7 @@ kamel -n $ns run \
   --trait service.node-port=false \
   --trait route.enabled=false
 fi
+kubectl -n $ns patch integration ccm-notification-service --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 5}]'
 popd
 
 # kamel -n cef5dd-test log ccm-notification-service
