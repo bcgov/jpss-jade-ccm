@@ -2196,6 +2196,7 @@ public class CcmNotificationService extends RouteBuilder {
     // agencyFileId will have a ";" delimited list of rccs to parse through.
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
+      .doTry()
         .setHeader("number", simple("${exchangeProperty.rcc_id}"))
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -2248,6 +2249,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
         .split().jsonpathWriteAsString("$.*")
+       
           .setProperty("agencyFileId", simple("${body}"))
           .log(LoggingLevel.DEBUG, "agency file: ${exchangeProperty.agencyFileId}")
           .process(new Processor() {
@@ -2261,6 +2263,7 @@ public class CcmNotificationService extends RouteBuilder {
 
           .choice()
             .when(simple("${exchangeProperty.agencyFileId} != ''"))
+            
               .log(LoggingLevel.DEBUG, "agency file id updated: ${exchangeProperty.agencyFileId}")
               .setHeader("number").simple("${exchangeProperty.agencyFileId}")
               .setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -2307,7 +2310,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         .log(LoggingLevel.INFO, "Case Flags: ${exchangeProperty.caseFlags}")
 
-
+        
         // reset the original values and add the JUSTIN derived list of case flags to the header.
         .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
@@ -2318,18 +2321,20 @@ public class CcmNotificationService extends RouteBuilder {
         .setBody(simple("${exchangeProperty.metadata_data}"))
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .doTry()
+        //.doTry()
         .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-       
-       .end()
-        /*.doCatch(Exception.class)
-        .log(LoggingLevel.INFO, "updateCourtCaseWithMetaData threw exception")
-        .endDoCatch() */
         .setHeader("number",simple("${exchangeProperty.courtNumber}"))
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
         .setBody(simple("${exchangePropery.accusedList}"))
         .to("direct:processAccusedPersons")
-      
+        .end()
+       
+      // .end()
+        /*.doCatch(Exception.class)
+        .log(LoggingLevel.INFO, "updateCourtCaseWithMetaData threw exception")
+        .endDoCatch() */
+       
+      .endChoice()
       .otherwise()
         .log(LoggingLevel.WARN,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
       .endChoice()
