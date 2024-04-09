@@ -939,6 +939,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Body: ${exchangeProperty.courtcase_data}")
         .choice()
           .when(simple("${exchangeProperty.accused_person} != '0'"))
+          .doTry()
               // add-on any additional rccs from the dems side.
               //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
               .to("direct:compileRelatedChargeAssessments")
@@ -948,11 +949,11 @@ public class CcmNotificationService extends RouteBuilder {
               .setBody(simple("${exchangeProperty.courtcase_data}"))
               .setHeader(Exchange.HTTP_METHOD, simple("POST"))
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-              .doTry()
+            
               .to("http://ccm-dems-adapter/updateCourtCase")
               .log(LoggingLevel.INFO,"Update court case auth list.")
             
-              .endDoTry()
+          
               .doCatch(Exception.class)
               .process(new Processor(){
                 @Override
@@ -960,7 +961,7 @@ public class CcmNotificationService extends RouteBuilder {
                     log.error("Exception in updateCourtCase call");
                 }
               })
-              .endDoCatch()
+              .end()
               .setHeader("number",simple("${exchangeProperty.courtNumber}"))
               .marshal().json(JsonLibrary.Jackson, ArrayList.class)
               .setBody(simple("${exchangePropery.accusedList}"))
@@ -2320,15 +2321,15 @@ public class CcmNotificationService extends RouteBuilder {
         .doTry()
         .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
        
-        .endDoTry()
-        .doCatch(Exception.class)
+       .end()
+        /*.doCatch(Exception.class)
         .log(LoggingLevel.INFO, "updateCourtCaseWithMetaData threw exception")
-        .endDoCatch()
+        .endDoCatch() */
         .setHeader("number",simple("${exchangeProperty.courtNumber}"))
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
         .setBody(simple("${exchangePropery.accusedList}"))
         .to("direct:processAccusedPersons")
-      .endChoice()
+      
       .otherwise()
         .log(LoggingLevel.WARN,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
       .endChoice()
