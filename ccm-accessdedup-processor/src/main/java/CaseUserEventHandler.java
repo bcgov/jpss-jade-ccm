@@ -111,7 +111,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                 (key != null && key.length() > 0) ? " for " + key : "");
 
             // Produce a KPI event for the case user event.
-            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.offset());
+            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.partition(), context.offset());
 
             if (CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name().equals(caseUserEvent.getEvent_status())) {
                 // Start of the batch is detected; update batch count in the store.
@@ -221,7 +221,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
             }
             
             // Produce a KPI event for the case user event.
-            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.offset());
+            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.partition(), context.offset());
         } catch (JsonProcessingException jpe) {
             String errorDetails = "Error processing case user event message for " + key + ". Error message: " + jpe;
             LOG.error(errorDetails);
@@ -231,7 +231,7 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
             error.setError_summary("Event processing failed");
             error.setError_details(errorDetails);
 
-            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
+            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.partition(), context.offset());
 
             context.forward(key, value, CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName));
         } catch (Exception e) {
@@ -243,17 +243,18 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
             error.setError_summary("General error");
             error.setError_details(errorDetails);
 
-            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.offset());
+            produceEventKpi(key, value, error, EventKPI.STATUS.EVENT_PROCESSING_FAILED, context.topic(), context.partition(), context.offset());
 
             context.forward(key, value, CaseUserEventHandler.util_getToplogySinkName(caseUserErrorsTopicName));
         }
     }
 
-    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicOffset) {
+    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long partition, long topicOffset) {
         EventKPI eventKPI = new EventKPI(status);
 
         eventKPI.setEvent_topic_name(topicName);
         eventKPI.setEvent_topic_offset(Long.toString(topicOffset));
+        eventKPI.setEvent_topic_partition(Long.toString(partition));
 
         eventKPI.setIntegration_component_name(appNameProperCase);
         eventKPI.setComponent_route_name(this.getClass().getSimpleName());

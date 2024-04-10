@@ -119,6 +119,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
              EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
              kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
              kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+             kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
              kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
              kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
              kpi.setError(error);
@@ -182,6 +183,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
           kpi.setError(error);
@@ -229,6 +231,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
           kpi.setError(error);
