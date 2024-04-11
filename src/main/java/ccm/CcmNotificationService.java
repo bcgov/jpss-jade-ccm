@@ -1944,9 +1944,8 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:processCaseMerge")
       .endChoice()
     .end()
-
     .choice()
-      .when(simple(" ${exchangeProperty.createCase} == 'true'"))
+      .when(simple(" ${exchangeProperty.createCase} == 'true' || ${exchangeProperty.createOverrideFlag} == 'true'") )
         .doTry()
           .log(LoggingLevel.INFO,"Create new crown assignment changed event.")
           .process(new Processor() {
