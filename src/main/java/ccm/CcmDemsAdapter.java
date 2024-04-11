@@ -1890,7 +1890,9 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
       .setHeader("number",simple("${exchangeProperty.courtCaseId}"))
-      
+      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+      //.log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
+      //.setBody(simple("${body}"))
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
@@ -2133,6 +2135,9 @@ private void getDemsFieldMappingsrccStatus() {
             exchange.getMessage().setBody(accuseds);
         }
       })
+      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+      //.log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
+      //.setBody(simple("${body}"))
       .setHeader("number",simple("${exchangeProperty.key}"))
       .to("direct:syncAccusedPersons")
       
@@ -2157,6 +2162,9 @@ private void getDemsFieldMappingsrccStatus() {
                 exchange.getMessage().setBody(accuseds);
             }
           })
+          .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+         // .log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
+         // .setBody(simple("${body}"))
           .setHeader("number",simple("${exchangeProperty.key}"))
           .to("direct:syncAccusedPersons")
           
