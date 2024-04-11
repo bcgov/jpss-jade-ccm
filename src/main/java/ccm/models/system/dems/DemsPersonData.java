@@ -29,7 +29,7 @@ public class DemsPersonData {
         
         // BCPSDEMS-602 - workaround to not provide the field data if date is null
         if (ca.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(ca.getBirth_date()));
+            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
             fieldData.add(dob);
         }
         
