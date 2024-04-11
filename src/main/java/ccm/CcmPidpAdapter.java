@@ -125,6 +125,7 @@ public class CcmPidpAdapter extends RouteBuilder {
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         kpi.setError(error);
@@ -160,6 +161,7 @@ public class CcmPidpAdapter extends RouteBuilder {
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         kpi.setError(error);
@@ -228,14 +230,14 @@ public class CcmPidpAdapter extends RouteBuilder {
         CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
         EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_CREATED);
         String event_topic = exchange.getProperty("event_topic", String.class);
-        String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-          exchange.getProperty("event_recordmetadata")
-        );
+        String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(exchange.getProperty("event_recordmetadata"));
+        String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(exchange.getProperty("event_recordmetadata"));
 
         kpi.setComponent_route_name(routeId);
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setEvent_topic_name(event_topic);
         kpi.setEvent_topic_offset(event_offset);
+        kpi.setEvent_topic_partition(event_partition);
         exchange.getMessage().setBody(kpi);
       }
     })
@@ -296,14 +298,14 @@ public class CcmPidpAdapter extends RouteBuilder {
           CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
           EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_CREATED);
           String event_topic = exchange.getProperty("event_topic", String.class);
-          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-            exchange.getProperty("event_recordmetadata")
-          );
+          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(exchange.getProperty("event_recordmetadata"));
+          String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(exchange.getProperty("event_recordmetadata"));
 
           kpi.setComponent_route_name(routeId);
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setEvent_topic_name(event_topic);
           kpi.setEvent_topic_offset(event_offset);
+          kpi.setEvent_topic_partition(event_partition);
           exchange.getMessage().setBody(kpi);
         }
       })
@@ -361,6 +363,7 @@ public class CcmPidpAdapter extends RouteBuilder {
       .setProperty("kpi_event_object", body())
       .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
       .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+      .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
       .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
       .choice()
         .when(header("event_status").isEqualTo(CaseUserEvent.STATUS.PROVISION_COMPLETED))
@@ -549,6 +552,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     //IN: property = kpi_event_object
     //IN: property = kpi_event_topic_name
     //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_event_topic_partition
     //IN: property = kpi_status
     //IN: property = kpi_component_route_name
     from("direct:" + routeId)
@@ -565,6 +569,7 @@ public class CcmPidpAdapter extends RouteBuilder {
 
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
