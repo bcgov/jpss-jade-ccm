@@ -290,7 +290,7 @@ public class CcmNotificationService extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
-    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&consumersCount=5&maxPollRecords=3&maxPollIntervalMs=4800000")
+    from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&consumersCount={{kafka.topic.chargeassessment.consumer.count}}&maxPollRecords=3&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -373,7 +373,7 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.bulk-chargeassessments.name}}?groupId=ccm-notification-service&consumersCount=5&maxPollRecords=5&maxPollIntervalMs=2400000")
+    from("kafka:{{kafka.topic.bulk-chargeassessments.name}}?groupId=ccm-notification-service&consumersCount={{kafka.topic.bulk.chargeassessment.consumer.count}}&maxPollRecords=5&maxPollIntervalMs=2400000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -659,7 +659,7 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&maxPollRecords=3&maxPollIntervalMs=4800000")
+    from("kafka:{{kafka.topic.courtcases.name}}?groupId=ccm-notification-service&consumersCount={{kafka.topic.courtcase.consumer.count}}&maxPollRecords=3&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +
@@ -1972,8 +1972,8 @@ public class CcmNotificationService extends RouteBuilder {
 
               // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
               // extract the offset from response header.  Example format: "[some-topic-0@301]"
-              String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-                exchange.getProperty("derived_event_recordmetadata"));
+              String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(exchange.getProperty("derived_event_recordmetadata"));
+              String derived_event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(exchange.getProperty("derived_event_recordmetadata"));
 
               String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
 
@@ -1983,6 +1983,7 @@ public class CcmNotificationService extends RouteBuilder {
               derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
               derived_event_kpi.setEvent_topic_name(derived_event_topic);
               derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+              derived_event_kpi.setEvent_topic_partition(derived_event_partition);
 
               exchange.getMessage().setBody(derived_event_kpi);
             }
@@ -2018,8 +2019,8 @@ public class CcmNotificationService extends RouteBuilder {
 
               // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
               // extract the offset from response header.  Example format: "[some-topic-0@301]"
-              String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(
-                exchange.getProperty("derived_event_recordmetadata"));
+              String derived_event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(exchange.getProperty("derived_event_recordmetadata"));
+              String derived_event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(exchange.getProperty("derived_event_recordmetadata"));
 
               String derived_event_topic = (String)exchange.getProperty("derived_event_topic");
 
@@ -2031,6 +2032,7 @@ public class CcmNotificationService extends RouteBuilder {
               derived_event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
               derived_event_kpi.setEvent_topic_name(derived_event_topic);
               derived_event_kpi.setEvent_topic_offset(derived_event_offset);
+              derived_event_kpi.setEvent_topic_partition(derived_event_partition);
 
               exchange.getMessage().setBody(derived_event_kpi);
             }
@@ -2777,29 +2779,22 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // extract kpi_event_topic_offset
+    // extract kpi_event_topic_partition
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
 
         try {
           // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
           Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
           String recordMetadata = o.toString();
 
-          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
+          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(recordMetadata);
+          String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(recordMetadata);
 
-          if (tokenizer.countTokens() == 2) {
-            // get first token
-            String topicAndPartition = tokenizer.nextToken();
-
-            if (topicAndPartition.startsWith(expectedTopicName)) {
-              // this is the metadata we are looking for
-              Long offset = Long.parseLong(tokenizer.nextToken());
-              exchange.setProperty("kpi_event_topic_offset", offset);
-            }
-          }
+          exchange.setProperty("kpi_event_topic_offset", event_offset);
+          exchange.setProperty("kpi_event_topic_partition", event_partition);
         } catch (Exception e) {
           // failed to retrieve offset. Do nothing.
         }
@@ -2859,82 +2854,5 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Event KPI published.")
     ;
   }
-
-
-  private void publishChargeAssessmentCaseKPIError() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //IN: property = kpi_object
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setBody(simple("${exchangeProperty.error_event_object}"))
-    .unmarshal().json(JsonLibrary.Jackson)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        Object je = (Object)exchange.getIn().getBody();
-        Error error = new Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_summary("Unable to process JUSTIN event.");
-        error.setError_details(je);
-
-        // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
-        kpi.setError(error);
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        exchange.getMessage().setBody(kpi, EventKPI.class);
-      }})
-
-    .setProperty("kpi_object", body())
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.DEBUG,"Generate kpi event: ${body}")
-    // send to the chargeassessmentcase errors topic
-    .to("kafka:{{kafka.topic.chargeassessment-errors.name}}")
-    .log(LoggingLevel.INFO,"kpi event added to chargeassessmentcase errors topic")
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setBody(simple("${exchangeProperty.kpi_object}"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        EventKPI kpi = exchange.getIn().getBody(EventKPI.class);
-        // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
-        System.out.println(expectedTopicName);
-
-        try {
-          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
-          Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
-          String recordMetadata = o.toString();
-          System.out.println("recordMetadata:"+recordMetadata);
-
-          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
-
-          if (tokenizer.countTokens() == 2) {
-            // get first token
-            String topicAndPartition = tokenizer.nextToken();
-
-            if (topicAndPartition.startsWith(expectedTopicName)) {
-              // this is the metadata we are looking for
-              Long offset = Long.parseLong(tokenizer.nextToken());
-              exchange.setProperty("kpi_event_topic_offset", offset);
-              kpi.setEvent_topic_offset(offset);
-              kpi.setEvent_topic_name(expectedTopicName);
-            }
-          }
-        } catch (Exception e) {
-          // failed to retrieve offset. Do nothing.
-        }
-        exchange.getMessage().setBody(kpi, EventKPI.class);
-      }})
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}")
-    ;
-  }
-
 
 }

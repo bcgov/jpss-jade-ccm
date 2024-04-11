@@ -4178,12 +4178,12 @@ private void getDemsFieldMappingsrccStatus() {
             outputStringBuffer.append("Inactive");
             outputStringBuffer.append("\", \"fields\": [");
 
-            outputStringBuffer.append("{ \"id\": 6, \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"id\": 7, \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"id\": 15, \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"id\": 16, \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"id\": 45, \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"id\": 46, \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
+            outputStringBuffer.append("{ \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
             outputStringBuffer.append("]}");
 
             exchange.getMessage().setBody(outputStringBuffer.toString());
