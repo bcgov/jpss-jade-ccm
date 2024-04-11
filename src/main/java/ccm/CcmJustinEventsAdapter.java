@@ -34,7 +34,6 @@ import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.service.ServiceHelper;
 import org.apache.http.NoHttpResponseException;
 
 import ccm.models.common.event.BaseEvent;
@@ -337,8 +336,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsBulkTimer");
+
+        /*exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");*/
       }
     })
     .log(LoggingLevel.INFO,"Justin adapter queue stopped")
@@ -362,13 +364,16 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsBulkTimer");
 
-        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        /*Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
         Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
         ServiceHelper.startService(mainTimer.getConsumer());
-        ServiceHelper.startService(bulkTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());*/
       }
     })
+
     .log(LoggingLevel.INFO,"Justin adapter queue started")
     ;
   }

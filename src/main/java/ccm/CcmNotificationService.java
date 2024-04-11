@@ -604,6 +604,7 @@ public class CcmNotificationService extends RouteBuilder {
         // wireTap makes an call and immediate return without waiting for the process to complete
         // the direct call will wait for a certain time before creating the Report End event.
         .wireTap("direct:generateStaticReportEvent")
+
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
       .endChoice()
     .otherwise()
@@ -1046,6 +1047,7 @@ public class CcmNotificationService extends RouteBuilder {
         // wireTap makes an call and immediate return without waiting for the process to complete
         // the direct call will wait for a certain time before creating the Batch End event.
         .wireTap("direct:generateStaticReportEvent")
+
     .end()
     ;
   }
