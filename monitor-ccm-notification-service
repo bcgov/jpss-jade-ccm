@@ -22,4 +22,4 @@ echo "`basename $0` to $ns ..."
 export TITLEPREFIX="Notification Service $ns "
 echo -ne "\e]0;Notification Service $ns\a"
 
-kubectl -n $ns logs -f deployment/ccm-notification-service --all-containers=true
+kamel -n $ns log ccm-notification-service

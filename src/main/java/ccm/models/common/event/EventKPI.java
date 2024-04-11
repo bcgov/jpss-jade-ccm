@@ -21,6 +21,7 @@ public class EventKPI {
   private Object event_details;
   private String event_topic_name;
   private String event_topic_offset;
+  private String event_topic_partition;
   private Error error;
 
   private String integration_component_name;
@@ -139,6 +140,18 @@ public class EventKPI {
     this.event_topic_offset = (o == null) ? null : o.toString();
   }
 
+  public String getEvent_topic_partition() {
+    return event_topic_partition;
+  }
+
+  public void setEvent_topic_partition(String event_topic_partition) {
+    this.event_topic_partition = event_topic_partition;
+  }
+
+  public void setEvent_topic_partition(Object o) {
+    this.event_topic_partition = (o == null) ? null : o.toString();
+  }
+
   public Error getError() {
     return error;
   }
@@ -146,4 +159,5 @@ public class EventKPI {
   public void setError(Error error) {
     this.error = error;
   }
+
 }
