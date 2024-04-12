@@ -632,6 +632,7 @@ public class CcmNotificationService extends RouteBuilder {
      .setHeader("number",simple("${exchangeProperty.courtNumber}"))
      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
      .setBody(simple("${exchangePropery.accusedList}"))
+     .log(LoggingLevel.DEBUG, "calling processAccussed persons 3")
      .to("direct:processAccusedPersons")
     
    .end();
@@ -965,6 +966,7 @@ public class CcmNotificationService extends RouteBuilder {
               .setHeader("number",simple("${exchangeProperty.courtNumber}"))
               .marshal().json(JsonLibrary.Jackson, ArrayList.class)
               .setBody(simple("${exchangePropery.accusedList}"))
+              .log(LoggingLevel.INFO, "calling processAccussed persons 2")
               .to("direct:processAccusedPersons")
               .to("direct:processCourtCaseAuthListChanged")
               .process(new Processor() {
@@ -2271,7 +2273,7 @@ public class CcmNotificationService extends RouteBuilder {
               .removeHeader(Exchange.CONTENT_ENCODING)
               .to("http://ccm-lookup-service/getCourtCaseDetails")
 
-              .log(LoggingLevel.DEBUG,"Retrieved related Court Case from JUSTIN: ${body}")
+              .log(LoggingLevel.INFO,"Retrieved related Court Case from JUSTIN: ${body}")
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
               .process(new Processor() {
                 @Override
@@ -2279,10 +2281,10 @@ public class CcmNotificationService extends RouteBuilder {
                   ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
                   // go through list of existing case flags and add any which aren't already existing.
                   List<String> existingCaseFlags = (List<String>)exchange.getProperty("caseFlagsObject", List.class);
-                  //log.info("Printing flags:" + exchange.getProperty("caseFlags", String.class));
+                  log.info("Printing flags:" + exchange.getProperty("caseFlags", String.class));
 
-                  //log.info("Initial case flag list size: "+existingCaseFlags.size());
-                  //log.info("Initial case flag list: "+existingCaseFlags);
+                  log.info("Initial case flag list size: "+existingCaseFlags.size());
+                  log.info("Initial case flag list: "+existingCaseFlags);
                   for(String flag : bcm.getCase_flags()) {
                     //log.info("Check On: " + flag);
                     if(!existingCaseFlags.contains(flag)) {
@@ -2326,6 +2328,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader("number",simple("${exchangeProperty.courtNumber}"))
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
         .setBody(simple("${exchangePropery.accusedList}"))
+        .log(LoggingLevel.DEBUG, "calling processAccussed persons 1")
         .to("direct:processAccusedPersons")
         .end()
        
