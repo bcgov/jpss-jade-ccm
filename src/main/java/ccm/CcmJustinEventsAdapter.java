@@ -34,7 +34,6 @@ import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.service.ServiceHelper;
 import org.apache.http.NoHttpResponseException;
 
 import ccm.models.common.event.BaseEvent;
@@ -47,8 +46,8 @@ import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinEvent;
-import ccm.models.system.justin.JustinEventBatch;
 import ccm.utils.DateTimeUtils;
+import ccm.utils.KafkaComponentUtils;
 
 public class CcmJustinEventsAdapter extends RouteBuilder {
   @Override
@@ -143,6 +142,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
              EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
              kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
              kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+             kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
              kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
              kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
              kpi.setError(error);
@@ -206,6 +206,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
           kpi.setError(error);
@@ -253,6 +254,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
           kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
           kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+          kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
           kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
           kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
           kpi.setError(error);
@@ -1464,6 +1466,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setProperty("event_object", body())
     .setProperty("event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("event_topic_partition", simple("${headers[kafka.PARTITION]}"))
     .setProperty("event_key", simple("${headers[kafka.KEY]}"))
     .log(LoggingLevel.DEBUG,"event_key=${exchangeProperty.event_key}.")
     .marshal().json(JsonLibrary.Jackson, CaseUserEvent.class)
@@ -1486,6 +1489,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     //     event_key: case user event key (aka PART_ID)
     //     event_topic_name: event topic name
     //     event_topic_offset: event topic offset
+    //     event_topic_partition: event topic partition
 
     from("direct:" + routeId)
     .routeId(routeId)
@@ -1496,6 +1500,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         CaseUserEvent event = exchange.getProperty("event_object", CaseUserEvent.class);
         String event_topic_name = exchange.getProperty("event_topic_name", String.class);
         String event_topic_offset = exchange.getProperty("event_topic_offset", String.class);
+        String event_topic_partition = exchange.getProperty("event_topic_partition", String.class);
 
         EventKPI event_kpi = new EventKPI(
           event,
@@ -1506,6 +1511,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         event_kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         event_kpi.setEvent_topic_name(event_topic_name);
         event_kpi.setEvent_topic_offset(event_topic_offset);
+        event_kpi.setEvent_topic_partition(event_topic_partition);
 
         exchange.setProperty("event_kpi_object", event_kpi);
         exchange.getMessage().setBody(event_kpi);
@@ -1558,29 +1564,21 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     // extract kpi_event_topic_offset
+    // extract kpi_event_topic_partition
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
 
         try {
           // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
           Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
           String recordMetadata = o.toString();
 
-          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
-
-          if (tokenizer.countTokens() == 2) {
-            // get first token
-            String topicAndPartition = tokenizer.nextToken();
-
-            if (topicAndPartition.startsWith(expectedTopicName)) {
-              // this is the metadata we are looking for
-              Long offset = Long.parseLong(tokenizer.nextToken());
-              exchange.setProperty("kpi_event_topic_offset", offset);
-            }
-          }
+          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(recordMetadata);
+          String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(recordMetadata);
+          exchange.setProperty("kpi_event_topic_offset", event_offset);
+          exchange.setProperty("kpi_event_topic_partition", event_partition);
         } catch (Exception e) {
           // failed to retrieve offset. Do nothing.
         }
@@ -1596,6 +1594,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     //IN: property = kpi_event_object
     //IN: property = kpi_event_topic_name
     //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_event_topic_partition
     //IN: property = kpi_status
     //IN: property = kpi_component_route_name
     from("direct:" + routeId)
@@ -1611,6 +1610,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         EventKPI kpi = new EventKPI(event, kpi_status);
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);
@@ -1700,21 +1700,13 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
           String recordMetadata = o.toString();
           System.out.println("recordMetadata:"+recordMetadata);
-
-          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
-
-          if (tokenizer.countTokens() == 2) {
-            // get first token
-            String topicAndPartition = tokenizer.nextToken();
-
-            if (topicAndPartition.startsWith(expectedTopicName)) {
-              // this is the metadata we are looking for
-              Long offset = Long.parseLong(tokenizer.nextToken());
-              exchange.setProperty("kpi_event_topic_offset", offset);
-              kpi.setEvent_topic_offset(offset);
-              kpi.setEvent_topic_name(expectedTopicName);
-            }
-          }
+          String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(recordMetadata);
+          String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(recordMetadata);
+          exchange.setProperty("kpi_event_topic_offset", event_offset);
+          exchange.setProperty("kpi_event_topic_partition", event_partition);
+          kpi.setEvent_topic_offset(event_offset);
+          kpi.setEvent_topic_partition(event_partition);
+          kpi.setEvent_topic_name(expectedTopicName);
         } catch (Exception e) {
           // failed to retrieve offset. Do nothing.
         }

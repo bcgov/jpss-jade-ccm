@@ -120,6 +120,7 @@ public class CcmReportsProcessor extends RouteBuilder {
             EventKPI kpi = new EventKPI(event, EventKPI.STATUS.EVENT_PROCESSING_FAILED);
             kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
             kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
             kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
             kpi.setError(error);
@@ -208,6 +209,7 @@ public class CcmReportsProcessor extends RouteBuilder {
 
             kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
             kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
             kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
             kpi.setError(error);
@@ -261,6 +263,7 @@ public class CcmReportsProcessor extends RouteBuilder {
 
             kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
             kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+            kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
             kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
             kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
             kpi.setError(error);
@@ -326,6 +329,7 @@ public class CcmReportsProcessor extends RouteBuilder {
     .setProperty("kpi_event_object", body())
     .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
     .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]} part_id = ${header[part_id]} mdoc_justin_no = ${header[mdoc_justin_no]} rcc_ids = ${header[rcc_ids]} image_id = ${header[image_id]} filtered_yn = ${header[filtered_yn]}")
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .choice()
@@ -470,6 +474,7 @@ public class CcmReportsProcessor extends RouteBuilder {
     //IN: property = kpi_event_object
     //IN: property = kpi_event_topic_name
     //IN: property = kpi_event_topic_offset
+    //IN: property = kpi_event_topic_partition
     //IN: property = kpi_status
     //IN: property = kpi_component_route_name
     from("direct:" + routeId)
@@ -486,6 +491,7 @@ public class CcmReportsProcessor extends RouteBuilder {
 
         kpi.setEvent_topic_name((String)exchange.getProperty("kpi_event_topic_name"));
         kpi.setEvent_topic_offset(exchange.getProperty("kpi_event_topic_offset"));
+        kpi.setEvent_topic_partition(exchange.getProperty("kpi_event_topic_partition"));
         kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
         kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
         exchange.getMessage().setBody(kpi);

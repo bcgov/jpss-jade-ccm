@@ -74,12 +74,14 @@ public class ChargeAssessmentEventHandler extends AbstractProcessor<String, Stri
             LOG.debug("Recevied ChargeAssessmentEvent message for {}.", key);
 
             // If the event is an inferr, then we need to produce a EVENT_CREATED KPI.
-            if (ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED.name().equals(chargeAssessmentEvent.getEvent_status())) {
+            if (ChargeAssessmentEvent.STATUS.INFERRED_AUTH_LIST_CHANGED.name().equals(chargeAssessmentEvent.getEvent_status())
+             || ChargeAssessmentEvent.STATUS.INFERRED_PART_ID_PROVISIONED.name().equals(chargeAssessmentEvent.getEvent_status())) {
                 LOG.debug("Post-processing ChargeAssessmentEvent message for {} ...", key);
 
                 String topicName = this.context.topic();
                 long topicOffset = this.context.offset();
-                produceEventKpiForCaseUserEventHandler(key, value, null, EventKPI.STATUS.EVENT_CREATED, topicName, topicOffset);
+                long topicPartition = this.context.partition();
+                produceEventKpiForCaseUserEventHandler(key, value, null, EventKPI.STATUS.EVENT_CREATED, topicName, topicPartition, topicOffset);
 
                 LOG.debug("Produced KPI for newly created ChargeAssessmentEvent message.", key);
             }
@@ -94,19 +96,20 @@ public class ChargeAssessmentEventHandler extends AbstractProcessor<String, Stri
         // Cleanup logic as needed.
     }
 
-    void produceEventKpiForCaseUserEventHandler(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicOffset) {
-        produceEventKpi(eventKey, eventValue, eventError, status, CaseUserEventHandler.class.getSimpleName(), topicName, topicOffset);
+    void produceEventKpiForCaseUserEventHandler(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicPartition, long topicOffset) {
+        produceEventKpi(eventKey, eventValue, eventError, status, CaseUserEventHandler.class.getSimpleName(), topicName, topicPartition, topicOffset);
     }
 
-    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicOffset) {
-        produceEventKpi(eventKey, eventValue, eventError, status, this.getClass().getSimpleName(), topicName, topicOffset);
+    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String topicName, long topicPartition, long topicOffset) {
+        produceEventKpi(eventKey, eventValue, eventError, status, this.getClass().getSimpleName(), topicName, topicPartition, topicOffset);
     }
 
-    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String routeName, String topicName, long topicOffset) {
+    void produceEventKpi(String eventKey, String eventValue, Error eventError, EventKPI.STATUS status, String routeName, String topicName, long topicPartition, long topicOffset) {
         EventKPI eventKPI = new EventKPI(status);
 
         eventKPI.setEvent_topic_name(topicName);
         eventKPI.setEvent_topic_offset(Long.toString(topicOffset));
+        eventKPI.setEvent_topic_partition(Long.toString(topicPartition));
 
         eventKPI.setIntegration_component_name(appNameProperCase);
         eventKPI.setComponent_route_name(routeName);
