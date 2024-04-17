@@ -153,7 +153,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateEdtExternalIdExistingParticipant();
 
     syncAccusedPersons();
-    syncAccusedPersonsHttp();
+    http_syncAccusedPersons();
 
     deleteExistingCase();
 
@@ -1907,13 +1907,9 @@ private void getDemsFieldMappingsrccStatus() {
             exchange.getMessage().setBody(accuseds);
         }
       })
-     // .to("direct:getCourtCaseDataById")
-     .to("direct:syncAccusedPersons")
+      .to("direct:getCourtCaseDataById")
       
-      //jade 1747
-      
-        //.endChoice()
-        .choice()
+      .choice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.ERROR, "Body: '${exception}'")
@@ -2025,7 +2021,6 @@ private void getDemsFieldMappingsrccStatus() {
       .marshal().json(JsonLibrary.Jackson, ArrayList.class)
       .log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
       .setBody(simple("${body}"))
-      .to("direct:syncAccusedPersons")
    
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -2130,23 +2125,6 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"Court case updated.")
-      //.toD("http://httpstat.us:443/504")
-
-      //jade 1747
-      //.log(LoggingLevel.INFO,"Create participants")
-      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
-            exchange.getMessage().setBody(accuseds);
-        }
-      })
-      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-      //.log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
-      //.setBody(simple("${body}"))
-      .setHeader("number",simple("${exchangeProperty.key}"))
-      .to("direct:syncAccusedPersons")
       
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -2157,24 +2135,6 @@ private void getDemsFieldMappingsrccStatus() {
           .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(15000)
-
-          //jade 1747
-          .log(LoggingLevel.INFO,"Create participants")
-          .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants")
-          .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-                List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
-                exchange.getMessage().setBody(accuseds);
-            }
-          })
-          .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-         // .log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
-         // .setBody(simple("${body}"))
-          .setHeader("number",simple("${exchangeProperty.key}"))
-          .to("direct:syncAccusedPersons")
-          
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -4028,13 +3988,13 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
     .end();
   }
-  private void syncAccusedPersonsHttp() {
+  private void http_syncAccusedPersons() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
    
     //IN: property =number - primary rcc_id
     //IN: property =accused - List<CaseAccused>
    
-    from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
+    from("platform-http:/syncAccusedPersons?httpMethodRestrict=POST")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")

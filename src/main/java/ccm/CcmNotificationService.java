@@ -6,9 +6,6 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.ZonedDateTime;
 import java.util.Base64;
-import java.util.StringTokenizer;
-
-
 
 import java.util.List;
 import java.util.ArrayList;
@@ -57,7 +54,6 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
-import ccm.models.system.dems.DemsRecordData;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -558,22 +554,22 @@ public class CcmNotificationService extends RouteBuilder {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) throws HttpOperationFailedException {
+            ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
+            log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
+            ex.setProperty("accusedList", chargeAssessmentdata.getAccused_persons());
+            ex.setProperty("courtNumber", chargeAssessmentdata.getRcc_id());
+
+            log.info("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
             // based on the autoCreateMaxDays value, and the rcc's submit date and
             // whether or not it is a manu_file or manu_cfile
             String event_message_type = (String)ex.getMessage().getHeader("event_message_type");
             if(event_message_type != null
-            && !event_message_type.equalsIgnoreCase("MANU_CFILE")
-            && !event_message_type.equalsIgnoreCase("MANU_FILE")) {
+              && !event_message_type.equalsIgnoreCase("MANU_CFILE")
+              && !event_message_type.equalsIgnoreCase("MANU_FILE")) {
               // Make sure that the message type isn't a manual creation first.
               try {
                 Integer autoCreateMaxDays = (Integer)ex.getProperty("autoCreateMaxDays", Integer.class);
                 if(autoCreateMaxDays != null && autoCreateMaxDays >= 1) {
-                  ChargeAssessmentData chargeAssessmentdata = (ChargeAssessmentData)ex.getProperty("courtcase_object", ChargeAssessmentData.class);
-                  log.info("rcc submit date: "+chargeAssessmentdata.getRcc_submit_date());
-                  ex.setProperty("accusedList", chargeAssessmentdata.getAccused_persons());
-                  ex.setProperty("courtNumber", chargeAssessmentdata.getRcc_id());
-
-                  log.info("accused_persons: "+chargeAssessmentdata.getAccused_persons().size());
                   // If no submit date, then don't create!
                   ZonedDateTime submitDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(chargeAssessmentdata.getRcc_submit_date());
                   ZonedDateTime currentDateTime = DateTimeUtils.convertToZonedDateTimeFromBCDateTimeString(DateTimeUtils.generateCurrentDtm());
@@ -600,37 +596,56 @@ public class CcmNotificationService extends RouteBuilder {
       .setProperty("allowCreateCase").simple("false")
     .end()
     
-    .doTry()
     .choice()
     
       .when(simple("${exchangeProperty.allowCreateCase} == 'true'"))
-      
-        .setBody(simple("${exchangeProperty.courtcase_data}"))
-        .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-       
-        .to("http://ccm-dems-adapter/createCourtCase")
-        .log(LoggingLevel.DEBUG,"Update court case auth list.")
-       
-       
 
+        .doTry()
+          .setBody(simple("${exchangeProperty.courtcase_data}"))
+          .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        
+          .to("http://ccm-dems-adapter/createCourtCase")
+
+        .endDoTry()
+        .doCatch(Exception.class)
+          .process(new Processor(){
+            @Override
+            public void process(Exchange exchange){
+              log.error("Exception in createCourtCase call");
+            }
+          })
+        .end()
+
+        .log(LoggingLevel.WARN, "Created DEMS Case: ${header.event_key}")
+
+        .setHeader("number",simple("${exchangeProperty.courtNumber}"))
+        .log(LoggingLevel.DEBUG, "Number value: ${exchangeProperty.courtNumber}")
+
+        // set the updated accusedList object to be the body to use it to retrieve all the accused
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ArrayList<String> accusedList = (ArrayList<String>)exchange.getProperty("accusedList", ArrayList.class);
+
+            exchange.getMessage().setBody(accusedList, ArrayList.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+        .log(LoggingLevel.INFO, "calling processAccused ${body}")
+        .log(LoggingLevel.DEBUG, "Accused List value: ${exchangeProperty.courtNumber}")
+        .to("direct:processAccusedPersons")
+
+        .log(LoggingLevel.DEBUG,"Update court case auth list.")
         .to("direct:processCourtCaseAuthListChanged")
+
         // wireTap makes an call and immediate return without waiting for the process to complete
         // the direct call will wait for a certain time before creating the Report End event.
         .wireTap("direct:generateStaticReportEvent")
 
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
-     .endChoice()
-    .otherwise()
-      .log(LoggingLevel.WARN, "Skipping creation of DEMS Case: ${header.event_key}")
-    .endDoTry()
-     .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-     .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-     .setBody(simple("${exchangePropery.accusedList}"))
-     .log(LoggingLevel.DEBUG, "calling processAccussed persons 3")
-     .to("direct:processAccusedPersons")
-    
+      .endChoice()
    .end();
   }
 
@@ -982,7 +997,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.DEBUG,"Body: ${exchangeProperty.courtcase_data}")
         .choice()
           .when(simple("${exchangeProperty.accused_person} != '0'"))
-          .doTry()
+            .doTry()
               // add-on any additional rccs from the dems side.
               //.setProperty("courtcase_data", simple("${bodyAs(String)}"))
               .to("direct:compileRelatedChargeAssessments")
@@ -995,42 +1010,51 @@ public class CcmNotificationService extends RouteBuilder {
             
               .to("http://ccm-dems-adapter/updateCourtCase")
               .log(LoggingLevel.INFO,"Update court case auth list.")
-            
-          
-              .doCatch(Exception.class)
+
+            .doCatch(Exception.class)
               .process(new Processor(){
                 @Override
                 public void process(Exchange exchange){
-                    log.error("Exception in updateCourtCase call");
+                  log.error("Exception in updateCourtCase call");
                 }
               })
-              .end()
-              .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-              .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-              .setBody(simple("${exchangePropery.accusedList}"))
-              .log(LoggingLevel.INFO, "calling processAccussed persons 2")
-              .to("direct:processAccusedPersons")
-              .to("direct:processCourtCaseAuthListChanged")
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) {
-                  ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
-                  exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
-                }}
-              )
-              //BCPSDEMS-1518, JADE-1751
-              .choice()
-                .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
-                .setHeader("case_id").simple("${exchangeProperty.caseId}")
-                .to("http://ccm-dems-adapter/inactivateCase")
-                .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
-                .endChoice()
-              .log(LoggingLevel.INFO, "Court case updated")
+            .end()
+
+            // set the updated accusedList object to be the body to use it to retrieve all the accused
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                ArrayList<String> accusedList = (ArrayList<String>)exchange.getProperty("accusedList", ArrayList.class);
+
+                exchange.getMessage().setBody(accusedList, ArrayList.class);
+              }
+            })
+            .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+            .setHeader("number",simple("${exchangeProperty.courtNumber}"))
+            .log(LoggingLevel.INFO, "calling processAccused persons ${body}")
+            .to("direct:processAccusedPersons")
+
+            .to("direct:processCourtCaseAuthListChanged")
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                ChargeAssessmentData courtfiledata = (ChargeAssessmentData)exchange.getProperty("courtcase_object", ChargeAssessmentData.class);
+                exchange.setProperty("justinCourtCaseStatus", courtfiledata.getRcc_status_code());
+              }}
+            )
+            //BCPSDEMS-1518, JADE-1751
+            .choice()
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+              .setHeader("case_id").simple("${exchangeProperty.caseId}")
+              .to("http://ccm-dems-adapter/inactivateCase")
+              .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
               .endChoice()
+            .log(LoggingLevel.INFO, "Court case updated")
             .endChoice()
-            .otherwise()
-              .log(LoggingLevel.WARN,"There is no accused person")
-            .endChoice()
+          .endChoice()
+          .otherwise()
+            .log(LoggingLevel.WARN,"There is no accused person")
+          .endChoice()
       .endChoice()
       // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
       // check if this is a scenario of an rcc being re-submitted.
@@ -2311,10 +2335,10 @@ public class CcmNotificationService extends RouteBuilder {
                   ChargeAssessmentData bcm = exchange.getIn().getBody(ChargeAssessmentData.class);
                   // go through list of existing case flags and add any which aren't already existing.
                   List<String> existingCaseFlags = (List<String>)exchange.getProperty("caseFlagsObject", List.class);
-                  log.info("Printing flags:" + exchange.getProperty("caseFlags", String.class));
+                  //log.info("Printing flags:" + exchange.getProperty("caseFlags", String.class));
 
-                  log.info("Initial case flag list size: "+existingCaseFlags.size());
-                  log.info("Initial case flag list: "+existingCaseFlags);
+                  //log.info("Initial case flag list size: "+existingCaseFlags.size());
+                  //log.info("Initial case flag list: "+existingCaseFlags);
                   for(String flag : bcm.getCase_flags()) {
                     //log.info("Check On: " + flag);
                     if(!existingCaseFlags.contains(flag)) {
@@ -2342,31 +2366,47 @@ public class CcmNotificationService extends RouteBuilder {
 
         .log(LoggingLevel.INFO, "Case Flags: ${exchangeProperty.caseFlags}")
 
-        
-        // reset the original values and add the JUSTIN derived list of case flags to the header.
-        .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
-        .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-        .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-        .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
-        .setHeader("caseFlags", simple("${exchangeProperty.caseFlags}"))
-        .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
-        .setBody(simple("${exchangeProperty.metadata_data}"))
-        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        //.doTry()
-        .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-        .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-        .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-        .setBody(simple("${exchangePropery.accusedList}"))
-        .log(LoggingLevel.DEBUG, "calling processAccussed persons 1")
-        .to("direct:processAccusedPersons")
+        .doTry()
+          // reset the original values and add the JUSTIN derived list of case flags to the header.
+          .setHeader("number", simple("${exchangeProperty.event_key_orig}"))
+          .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
+          .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+          .setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
+          .setHeader("caseFlags", simple("${exchangeProperty.caseFlags}"))
+          .log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+
+          .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+
+          //.log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+        .endDoTry()
+        .doCatch(Exception.class)
+          .process(new Processor(){
+            @Override
+            public void process(Exchange exchange){
+              log.error("Exception in updateMetadataCourtCase call");
+            }
+          })
         .end()
-       
-      // .end()
-        /*.doCatch(Exception.class)
-        .log(LoggingLevel.INFO, "updateCourtCaseWithMetaData threw exception")
-        .endDoCatch() */
-       
+
+        .log(LoggingLevel.DEBUG,"Get accused list from court case.")
+        // set the updated accusedList object to be the body to use it to retrieve all the accused
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ArrayList<String> accusedList = (ArrayList<String>)exchange.getProperty("accusedList", ArrayList.class);
+
+            exchange.getMessage().setBody(accusedList, ArrayList.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+        .log(LoggingLevel.DEBUG,"Get accused list from court case.2")
+        .setHeader("number",simple("${exchangeProperty.courtNumber}"))
+        .log(LoggingLevel.INFO, "calling processAccused persons ${body}")
+        .to("direct:processAccusedPersons")
+
       .endChoice()
       .otherwise()
         .log(LoggingLevel.WARN,"Case (rcc_id ${exchangeProperty.rcc_id}) not found; do nothing.")
@@ -2915,82 +2955,6 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
-
-
-  private void publishChargeAssessmentCaseKPIError() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //IN: property = kpi_object
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .setBody(simple("${exchangeProperty.error_event_object}"))
-    .unmarshal().json(JsonLibrary.Jackson)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        Object je = (Object)exchange.getIn().getBody();
-        Error error = new Error();
-        error.setError_dtm(DateTimeUtils.generateCurrentDtm());
-        error.setError_summary("Unable to process JUSTIN event.");
-        error.setError_details(je);
-
-        // KPI
-        EventKPI kpi = new EventKPI(EventKPI.STATUS.EVENT_UNKNOWN);
-        kpi.setError(error);
-        kpi.setIntegration_component_name(this.getClass().getEnclosingClass().getSimpleName());
-        kpi.setComponent_route_name((String)exchange.getProperty("kpi_component_route_name"));
-        exchange.getMessage().setBody(kpi, EventKPI.class);
-      }})
-
-    .setProperty("kpi_object", body())
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.DEBUG,"Generate kpi event: ${body}")
-    // send to the chargeassessmentcase errors topic
-    .to("kafka:{{kafka.topic.chargeassessment-errors.name}}")
-    .log(LoggingLevel.INFO,"kpi event added to chargeassessmentcase errors topic")
-    .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-    .setBody(simple("${exchangeProperty.kpi_object}"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        EventKPI kpi = exchange.getIn().getBody(EventKPI.class);
-        // extract the offset from response header.  Example format: "[some-topic-0@301]"
-        String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
-        System.out.println(expectedTopicName);
-
-        try {
-          // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
-          Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
-          String recordMetadata = o.toString();
-          System.out.println("recordMetadata:"+recordMetadata);
-
-          StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
-
-          if (tokenizer.countTokens() == 2) {
-            // get first token
-            String topicAndPartition = tokenizer.nextToken();
-
-            if (topicAndPartition.startsWith(expectedTopicName)) {
-              // this is the metadata we are looking for
-              Long offset = Long.parseLong(tokenizer.nextToken());
-              exchange.setProperty("kpi_event_topic_offset", offset);
-              kpi.setEvent_topic_offset(offset);
-              kpi.setEvent_topic_name(expectedTopicName);
-            }
-          }
-        } catch (Exception e) {
-          // failed to retrieve offset. Do nothing.
-        }
-        exchange.getMessage().setBody(kpi, EventKPI.class);
-      }})
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-    .marshal().json(JsonLibrary.Jackson, EventKPI.class)
-    .log(LoggingLevel.DEBUG,"Event kpi: ${body}")
-    .to("kafka:{{kafka.topic.kpis.name}}")
-    ;
-  }
   private void processAccusedPersons() {
     // input params:
     // List<CaseAccused>, rcc_id
@@ -3006,7 +2970,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO,"Processing request: ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .to("http://ccm-dems-adapter/syncAccusedPersonsHttp")
+    .to("http://ccm-dems-adapter/syncAccusedPersons")
     .end();
   }
 
