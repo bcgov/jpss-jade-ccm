@@ -1646,6 +1646,17 @@ private void getDemsFieldMappingsrccStatus() {
         })
 
       .end() // end loop
+
+      .choice()
+        .when(simple("${exchangeProperty.edtCaseStatus} == 'Queued'"))
+          .log(LoggingLevel.ERROR, "Court case... ${exchangeProperty.id} possibly stuck in queue.")
+
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+          .setHeader("CCMException", simple("{\"error\": \"Case possibly stuck in queued state.\"}"))
+          .stop()
+        .endChoice()
+      .end()
+
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       // sometimes, if events come in a little too fast for the same case, it may cause an error
@@ -1875,9 +1886,8 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         String caseTemplateId = exchange.getContext().resolvePropertyPlaceholders("{{dems.casetemplate.id}}");
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        
+
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
-        exchange.setProperty("accusedPersons", b.getAccused_persons());
         exchange.getMessage().setBody(d);
       }
     })
@@ -1896,20 +1906,27 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("courtCaseId", jsonpath("$.id"))
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
-      .setHeader("number",simple("${exchangeProperty.courtCaseId}"))
-      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-      //.log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
-      //.setBody(simple("${body}"))
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
-            exchange.getMessage().setBody(accuseds);
-        }
-      })
       .to("direct:getCourtCaseDataById")
-      
+
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
+        .when().simple("${exception.statusCode} >= 504")
+          .log(LoggingLevel.ERROR, "Encountered timeout for rcc: ${header.event_key}.  Wait additional 65 seconds to continue.")
+           // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
+          .delay(65000)
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setProperty("key", simple("${header.event_key}"))
+          .to("direct:getCourtCaseIdByKey")
+
+          .setProperty("courtCaseId", jsonpath("$.id"))
+          .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
+          .to("direct:getCourtCaseDataById")
+
+        .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.ERROR, "Body: '${exception}'")
@@ -2006,28 +2023,12 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO,"DEMS case updated.")
       //.toD("http://httpstat.us:443/504")
 
-      //jade 1747
-      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-            List<CaseAccused> accuseds = (List<CaseAccused>)exchange.getProperty("accusedPersons");
-            exchange.getMessage().setBody(accuseds);
-            log.info("accused persons size : " + (accuseds != null ? accuseds.size() : "0"));
-            log.info("dems_case_id : " + exchange.getProperty("key"));
-        }
-      })
-      .setHeader("number",simple("${exchangeProperty.key}"))
-      .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-      .log(LoggingLevel.INFO,"updateCourtCase body set as string = ${bodyAs(String)}.")
-      .setBody(simple("${body}"))
-   
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
-        .when().simple("${exception.statusCode} >= 504")
+        .when().simple("${exception.statusCode} == 504")
           .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(30000)
@@ -2125,13 +2126,14 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"Court case updated.")
-      
+      //.toD("http://httpstat.us:443/504")
+
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
-        .when().simple("${exception.statusCode} >= 504")
+        .when().simple("${exception.statusCode} == 504")
           .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 15 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(15000)
@@ -3921,7 +3923,7 @@ private void getDemsFieldMappingsrccStatus() {
           .log(LoggingLevel.ERROR,"Exception: ${exception}")
           .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
           .choice()
-            .when().simple("${exception.statusCode} >= 504")
+            .when().simple("${exception.statusCode} == 504")
               .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
                // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
               .delay(30000)
@@ -3988,6 +3990,7 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
     .end();
   }
+
   private void http_syncAccusedPersons() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
    
@@ -4005,8 +4008,6 @@ private void getDemsFieldMappingsrccStatus() {
     
   }
 
-
-  
   private void deleteExistingCase() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

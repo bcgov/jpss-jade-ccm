@@ -597,7 +597,6 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
     
     .choice()
-    
       .when(simple("${exchangeProperty.allowCreateCase} == 'true'"))
 
         .doTry()
@@ -609,11 +608,14 @@ public class CcmNotificationService extends RouteBuilder {
           .to("http://ccm-dems-adapter/createCourtCase")
 
         .endDoTry()
-        .doCatch(Exception.class)
+        .doCatch(HttpOperationFailedException.class)
+          .log(LoggingLevel.ERROR,"Exception in createCourtCase call")
+          .log(LoggingLevel.ERROR,"HttpOperationFailedException Exception thrown.")
+          .log(LoggingLevel.ERROR,"Thrown exception: ${exception}")
           .process(new Processor(){
             @Override
             public void process(Exchange exchange){
-              log.error("Exception in createCourtCase call");
+              exchange.setProperty("exception", exchange.getException());
             }
           })
         .end()
@@ -633,8 +635,7 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-        .log(LoggingLevel.INFO, "calling processAccused ${body}")
-        .log(LoggingLevel.DEBUG, "Accused List value: ${exchangeProperty.courtNumber}")
+        .log(LoggingLevel.DEBUG, "calling processAccused ${body}")
         .to("direct:processAccusedPersons")
 
         .log(LoggingLevel.DEBUG,"Update court case auth list.")
@@ -644,7 +645,21 @@ public class CcmNotificationService extends RouteBuilder {
         // the direct call will wait for a certain time before creating the Report End event.
         .wireTap("direct:generateStaticReportEvent")
 
+        .choice()
+          .when(simple("${exchangeProperty.exception} != null"))
+
+            .process(new Processor() {
+              public void process(Exchange exchange) throws Exception {
+
+                Exception ex = (Exception)exchange.getProperty("exception");
+                throw ex;
+              }
+            })
+
+        .end()
+
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
+
       .endChoice()
    .end();
   }
@@ -1010,12 +1025,14 @@ public class CcmNotificationService extends RouteBuilder {
             
               .to("http://ccm-dems-adapter/updateCourtCase")
               .log(LoggingLevel.INFO,"Update court case auth list.")
-
-            .doCatch(Exception.class)
+            .doCatch(HttpOperationFailedException.class)
+              .log(LoggingLevel.ERROR,"Exception in updateCourtCase call")
+              .log(LoggingLevel.ERROR,"HttpOperationFailedException Exception thrown.")
+              .log(LoggingLevel.ERROR,"Thrown exception: ${exception}")
               .process(new Processor(){
                 @Override
                 public void process(Exchange exchange){
-                  log.error("Exception in updateCourtCase call");
+                  exchange.setProperty("exception", exchange.getException());
                 }
               })
             .end()
@@ -1031,7 +1048,7 @@ public class CcmNotificationService extends RouteBuilder {
             })
             .marshal().json(JsonLibrary.Jackson, ArrayList.class)
             .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-            .log(LoggingLevel.INFO, "calling processAccused persons ${body}")
+            .log(LoggingLevel.DEBUG, "calling processAccused persons ${body}")
             .to("direct:processAccusedPersons")
 
             .to("direct:processCourtCaseAuthListChanged")
@@ -1113,6 +1130,19 @@ public class CcmNotificationService extends RouteBuilder {
         .wireTap("direct:generateStaticReportEvent")
 
     .end()
+
+    .choice()
+      .when(simple("${exchangeProperty.exception} != null"))
+
+        .process(new Processor() {
+          public void process(Exchange exchange) throws Exception {
+
+            Exception ex = (Exception)exchange.getProperty("exception");
+            throw ex;
+          }
+        })
+    .end()
+    .log(LoggingLevel.INFO, "Completed processChargeAssessmentUpdated")
     ;
   }
 
@@ -2111,8 +2141,6 @@ public class CcmNotificationService extends RouteBuilder {
           .log(LoggingLevel.ERROR,"General Exception thrown.")
           .log(LoggingLevel.ERROR,"${exception}")
           .setProperty("error_event_object", body())
-          .setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
-          .to("direct:publishJustinEventKPIError")
           .process(new Processor() {
             public void process(Exchange exchange) throws Exception {
 
@@ -2126,6 +2154,20 @@ public class CcmNotificationService extends RouteBuilder {
     // wireTap makes an call and immediate return without waiting for the process to complete
     // the direct call will wait for a certain time before creating the Report End event.
     .wireTap("direct:generateInformationReportEvent")
+
+    .choice()
+      .when(simple("${exchangeProperty.exception} != null"))
+
+        .process(new Processor() {
+          public void process(Exchange exchange) throws Exception {
+
+            Exception ex = (Exception)exchange.getProperty("exception");
+            throw ex;
+          }
+        })
+
+    .end()
+
     .log(LoggingLevel.INFO, "Completed processCourtCaseChanged")
     ;
   }
@@ -2382,11 +2424,14 @@ public class CcmNotificationService extends RouteBuilder {
 
           //.log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
         .endDoTry()
-        .doCatch(Exception.class)
+        .doCatch(HttpOperationFailedException.class)
+          .log(LoggingLevel.ERROR,"Exception in updateMetadataCourtCase call")
+          .log(LoggingLevel.ERROR,"HttpOperationFailedException Exception thrown.")
+          .log(LoggingLevel.ERROR,"Thrown exception: ${exception}")
           .process(new Processor(){
             @Override
             public void process(Exchange exchange){
-              log.error("Exception in updateMetadataCourtCase call");
+              exchange.setProperty("exception", exchange.getException());
             }
           })
         .end()
@@ -2402,9 +2447,8 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
         .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-        .log(LoggingLevel.DEBUG,"Get accused list from court case.2")
         .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-        .log(LoggingLevel.INFO, "calling processAccused persons ${body}")
+        .log(LoggingLevel.DEBUG, "calling processAccused persons ${body}")
         .to("direct:processAccusedPersons")
 
       .endChoice()
