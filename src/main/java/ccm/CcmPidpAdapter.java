@@ -541,7 +541,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
-  
+
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -595,10 +595,11 @@ public class CcmPidpAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        exchange.getContext().getRouteController().stopRoute("processCaseUserAccountCreated");
+        exchange.getContext().getRouteController().suspendRoute("processCaseUserAccountCreated");
+
       }
     })
-    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic stopped")
+    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic suspended")
     ;
   }
 
@@ -619,12 +620,11 @@ public class CcmPidpAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
+        exchange.getContext().getRouteController().resumeRoute("processCaseUserAccountCreated");
 
-        Route mainTimer = exchange.getContext().getRoute("processCaseUserAccountCreated");
-        ServiceHelper.startService(mainTimer.getConsumer());
       }
     })
-    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic started")
+    .log(LoggingLevel.INFO,"PIDP Kafka pull from topic resumed")
     ;
   }
 
@@ -637,7 +637,9 @@ public class CcmPidpAdapter extends RouteBuilder {
     .routeId(routeId)
     .log(LoggingLevel.WARN,"Cron job restart of kafka connection.")
     .to("direct:stopPidpKafkaConnection")
+    .delay(5000)
     .to("direct:startPidpKafkaConnection")
+
     .log(LoggingLevel.WARN,"Cron job restart of kafka connection completed.")
     ;
   }

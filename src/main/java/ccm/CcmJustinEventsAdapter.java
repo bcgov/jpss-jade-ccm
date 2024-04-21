@@ -334,8 +334,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
-        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().suspendRoute("processJustinEventsBulkTimer");
+
+        /*exchange.getContext().getRouteController().stopRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().stopRoute("processJustinEventsBulkTimer");*/
       }
     })
     .log(LoggingLevel.INFO,"Justin adapter queue stopped")
@@ -359,13 +362,16 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         for (Route rte : routeList ) {
           log.info("ROUTES: " + rte.getId());
         }
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsMainTimer");
+        exchange.getContext().getRouteController().resumeRoute("processJustinEventsBulkTimer");
 
-        Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
+        /*Route mainTimer = exchange.getContext().getRoute("processJustinEventsMainTimer");
         Route bulkTimer = exchange.getContext().getRoute("processJustinEventsBulkTimer");
         ServiceHelper.startService(mainTimer.getConsumer());
-        ServiceHelper.startService(bulkTimer.getConsumer());
+        ServiceHelper.startService(bulkTimer.getConsumer());*/
       }
     })
+
     .log(LoggingLevel.INFO,"Justin adapter queue started")
     ;
   }
