@@ -1,6 +1,7 @@
 package ccm.models.system.dems;
 
 import java.util.List;
+import java.util.Random;
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
@@ -32,7 +33,21 @@ public class DemsPersonData {
             DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
             fieldData.add(dob);
         }
-        
+        //added as part of jade - 2859
+        //System.out.println("Random Pin number genration" + ca.getOtc_pin());
+        //if(ca.getOtc_pin() != null && !ca.getOtc_pin().isEmpty()){
+         //   DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),ca.getOtc_pin());
+          //  fieldData.add(otc);
+        //}else{
+          /*  Random r = new Random();
+            int low = 0000;
+            int high = 999999;
+            int random = r.nextInt(high-low) + low;
+            System.out.println("Random Pin number genration" + random);
+
+            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+            fieldData.add(otc);*/
+        //}
         
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ca.getGiven_2_name());
         fieldData.add(given2);
@@ -129,5 +144,65 @@ public class DemsPersonData {
             " " + accused.getSurname();
 
         return concatenated_name_string;
+    }
+    /*public DemsFieldData test(){
+        Random r = new Random();
+            int low = 0000;
+            int high = 999999;
+            int random = r.nextInt(high-low) + low;
+            System.out.println("Random Pin number genration" + random);
+
+           // DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+           // fieldData.setValue(otc);
+           boolean gf=false;
+
+        for(DemsFieldData fd : getFields()) {
+          if(fd.getName().equalsIgnoreCase(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel())) {
+            gf=true;
+            break;
+          }
+        }
+          if(gf){
+            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+           
+          }  
+          //return otc;
+        return otc;
+    }*/
+
+
+    public void test(String value, DemsPersonData d ) {
+        /*Random r = new Random();
+        int low = 0000;
+        int high = 999999;
+        int random = r.nextInt(high-low) + low;
+        System.out.println("Random Pin number genration" + random);
+        boolean gf=false;
+
+        // Now need to go through the field records, and find the "Document Id"
+        for(DemsFieldData fd : getFields()) {
+          if(fd.getName().equalsIgnoreCase("OTC")) {
+            System.out.println("OTC" + fd.getValue());
+            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),value);
+          }
+        }*/
+        List<DemsFieldData> fieldData = d.getFields();
+        if(!value.isEmpty()){
+            System.out.println("OTC " + value);
+            //DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),value);
+            //fieldData.add(otc);
+        }
+    }
+    public void generateOTC(DemsPersonData d ) {
+        Random r = new Random();
+        int low = 0000;
+        int high = 999999;
+        int random = r.nextInt(high-low) + low;
+        System.out.println("Random Pin number generation" + random);
+
+        List<DemsFieldData> fieldData = d.getFields();
+        DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+        fieldData.add(otc);
+        
     }
 }

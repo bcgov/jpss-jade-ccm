@@ -2724,14 +2724,15 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"processAccusedPerson.  key = ${header[key]}")
     .setProperty("person_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.DEBUG,"Accused Person data = ${body}.")
+    .log(LoggingLevel.INFO,"Accused Person data = ${body}.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
     .log(LoggingLevel.DEBUG,"Check whether person exists in DEMS")
     .to("direct:getPersonExists")
-    .log(LoggingLevel.DEBUG,"${body}")
+    .log(LoggingLevel.DEBUG,"Person exist : ${body}")
     .unmarshal().json()
+    .setProperty("field_data").jsonpath("$.fields")
     .setProperty("personFound").simple("${body[id]}")
     .setHeader("organizationId").jsonpath("$.orgs[0].organisationId", true)
     .setHeader("key").simple("${header.key}")
@@ -2742,9 +2743,12 @@ private void getDemsFieldMappingsrccStatus() {
         .to("direct:createPerson")
       .endChoice()
       .otherwise()
-        .log(LoggingLevel.DEBUG,"PersonId: ${exchangeProperty.personFound}")
+        .log(LoggingLevel.INFO,"PersonId: ${exchangeProperty.personFound}")
         .setHeader("personId").simple("${exchangeProperty.personFound}")
         .log(LoggingLevel.DEBUG,"OrganizationId: ${header.organizationId}")
+        .log(LoggingLevel.INFO,"${body}")
+        .log(LoggingLevel.INFO,"field_data : ${exchangeProperty.field_data}")
+        .setHeader("field_data").simple("${exchangeProperty.field_data}")
         .to("direct:updatePerson")
       .endChoice()
       .end()
@@ -2829,6 +2833,7 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         CaseAccused b = exchange.getIn().getBody(CaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
+        d.generateOTC(d);
         exchange.getMessage().setBody(d);
       }
     })
@@ -2857,10 +2862,12 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO, "Updating person in DEMS ...")
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .log(LoggingLevel.INFO,"Processing request: ${body}")
     .setProperty("PersonData").body()
     .setProperty("personId").simple("${header[personId]}")
     .setProperty("organizationId").simple("${header[organizationId]}")
+    .setProperty("field_data").simple("${header[field_data]}")
+    .log(LoggingLevel.INFO,"updatePerson field_data : ${exchangeProperty.field_data}")
     .unmarshal().json(JsonLibrary.Jackson, CaseAccused.class)
     .process(new Processor() {
       @Override
@@ -2870,6 +2877,48 @@ private void getDemsFieldMappingsrccStatus() {
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);
         d.setId(personId);
+       /*String field_data = exchange.getProperty("field_data", String.class);
+        String caseFlags ;
+        if(field_data != null && field_data.length() > 2) {
+          if(field_data.startsWith("{")) {
+            caseFlags = field_data.substring(1, field_data.length() - 1);
+            System.out.println("caseFlags : "+ caseFlags);
+            String[] fileList = caseFlags.split(",");
+            if(fileList.length>1){
+              System.out.println("fileList[1] : "+ fileList[1]+ "fileList[2] : "+ fileList[2]);
+              String name1 = fileList[1];
+              String values = fileList[2];
+              System.out.println("name1 : " + name1 + "values : "+values);
+              String[] name = name1.split("=");
+              String[] valuesss =values.split("=");
+              System.out.println("name[0] : " + name[0] + "name[1] : "+name[1]);
+              System.out.println("valuesss[0] : " + valuesss[0] + "valuesss[1] : "+valuesss[1]);
+              if(name[1].equals("OTC") && !valuesss[1].isEmpty()){
+                d.test(valuesss[1], d);
+              }
+            }
+          }}*/
+        String field_data = exchange.getProperty("field_data", String.class);
+        String caseFlags ;
+        if(field_data != null && field_data.length() > 2) {
+          if(field_data.startsWith("[")) {
+            caseFlags = field_data.substring(1, field_data.length() - 1);
+            System.out.println("caseFlags : "+ caseFlags);
+            String[] fileList = caseFlags.split(",");
+            if(fileList.length>1){
+              System.out.println("fileList[1] : "+ fileList[1]+ "fileList[2] : "+ fileList[2]);
+              String name1 = fileList[1];
+              String values = fileList[2];
+              System.out.println("name1 : " + name1 + "values : "+values);
+              String[] name = name1.split("=");
+              String[] valuesss =values.split("=");
+              System.out.println("name[0] : " + name[0] + "name[1] : "+name[1]);
+              System.out.println("valuesss[0] : " + valuesss[0] + "valuesss[1] : "+valuesss[1]);
+              if(name[1].equals("OTC") && !valuesss[1].isEmpty()){
+               // d.test(valuesss[1], d);
+              }
+            }
+          }}
         DemsOrganisationData o = new DemsOrganisationData(organizationId);
         d.setOrgs(new ArrayList<DemsOrganisationData>());
         d.getOrgs().add(o);
@@ -2877,7 +2926,7 @@ private void getDemsFieldMappingsrccStatus() {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
-    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // update case
     .setBody(simple("${exchangeProperty.update_data}"))
