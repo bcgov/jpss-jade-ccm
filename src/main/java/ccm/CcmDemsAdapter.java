@@ -2877,27 +2877,7 @@ private void getDemsFieldMappingsrccStatus() {
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);
         d.setId(personId);
-       /*String field_data = exchange.getProperty("field_data", String.class);
-        String caseFlags ;
-        if(field_data != null && field_data.length() > 2) {
-          if(field_data.startsWith("{")) {
-            caseFlags = field_data.substring(1, field_data.length() - 1);
-            System.out.println("caseFlags : "+ caseFlags);
-            String[] fileList = caseFlags.split(",");
-            if(fileList.length>1){
-              System.out.println("fileList[1] : "+ fileList[1]+ "fileList[2] : "+ fileList[2]);
-              String name1 = fileList[1];
-              String values = fileList[2];
-              System.out.println("name1 : " + name1 + "values : "+values);
-              String[] name = name1.split("=");
-              String[] valuesss =values.split("=");
-              System.out.println("name[0] : " + name[0] + "name[1] : "+name[1]);
-              System.out.println("valuesss[0] : " + valuesss[0] + "valuesss[1] : "+valuesss[1]);
-              if(name[1].equals("OTC") && !valuesss[1].isEmpty()){
-                d.test(valuesss[1], d);
-              }
-            }
-          }}*/
+        //added as part of jade - 2859
         String field_data = exchange.getProperty("field_data", String.class);
         String caseFlags ;
         if(field_data != null && field_data.length() > 2) {
@@ -2906,19 +2886,20 @@ private void getDemsFieldMappingsrccStatus() {
             System.out.println("caseFlags : "+ caseFlags);
             String[] fileList = caseFlags.split(",");
             if(fileList.length>1){
-              System.out.println("fileList[1] : "+ fileList[1]+ "fileList[2] : "+ fileList[2]);
+              System.out.println("fileList[1] : "+ fileList[1]+ " fileList[2] : "+ fileList[2].replace("}", ""));
               String name1 = fileList[1];
-              String values = fileList[2];
-              System.out.println("name1 : " + name1 + "values : "+values);
+              String values = fileList[2].replace("}", "");
+              System.out.println("name1 : " + name1 + " values : "+values);
               String[] name = name1.split("=");
               String[] valuesss =values.split("=");
-              System.out.println("name[0] : " + name[0] + "name[1] : "+name[1]);
-              System.out.println("valuesss[0] : " + valuesss[0] + "valuesss[1] : "+valuesss[1]);
+              System.out.println("name[0] : " + name[0] + " name[1] : "+name[1]);
+              System.out.println("valuesss[0] : " + valuesss[0] + " valuesss[1] : "+valuesss[1]);
               if(name[1].equals("OTC") && !valuesss[1].isEmpty()){
-               // d.test(valuesss[1], d);
+                d.test(valuesss[1], d);
               }
             }
-          }}
+          }
+        }
         DemsOrganisationData o = new DemsOrganisationData(organizationId);
         d.setOrgs(new ArrayList<DemsOrganisationData>());
         d.getOrgs().add(o);
