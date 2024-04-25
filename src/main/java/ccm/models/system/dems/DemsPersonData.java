@@ -131,7 +131,7 @@ public class DemsPersonData {
         return concatenated_name_string;
     }
 
-    public void test(String value, DemsPersonData d ) {
+    public void setotcpin(String value, DemsPersonData d ) {
         List<DemsFieldData> fieldData = d.getFields();
         if(!value.isEmpty()){
             System.out.println("OTC :" + value);

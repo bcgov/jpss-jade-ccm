@@ -82,6 +82,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 
@@ -2879,25 +2881,51 @@ private void getDemsFieldMappingsrccStatus() {
         d.setId(personId);
         //added as part of jade - 2859
         String field_data = exchange.getProperty("field_data", String.class);
-        String caseFlags ;
         if(field_data != null && field_data.length() > 2) {
-          if(field_data.startsWith("[")) {
-            caseFlags = field_data.substring(1, field_data.length() - 1);
-            System.out.println("caseFlags : "+ caseFlags);
-            String[] fileList = caseFlags.split(",");
-            if(fileList.length>1){
-              System.out.println("fileList[1] : "+ fileList[1]+ " fileList[2] : "+ fileList[2].replace("}", ""));
-              String name1 = fileList[1];
-              String values = fileList[2].replace("}", "");
-              System.out.println("name1 : " + name1 + " values : "+values);
-              String[] name = name1.split("=");
-              String[] valuesss =values.split("=");
-              System.out.println("name[0] : " + name[0] + " name[1] : "+name[1]);
-              System.out.println("valuesss[0] : " + valuesss[0] + " valuesss[1] : "+valuesss[1]);
-              if(name[1].equals("OTC") && !valuesss[1].isEmpty()){
-                d.test(valuesss[1], d);
+          Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
+          // Matcher to find all matches in the input string
+          Matcher matcher = pattern.matcher(field_data);
+          // Array to store extracted key-value pairs
+          String[] pairs = new String[3]; //  3 pairs id , name, value
+          // Index for storing pairs in the array
+          int index = 0;
+          // Iterate over each match (key-value pair)
+          while (matcher.find()) {
+              // Extract the key-value pair from the match
+              String pair = matcher.group(1).trim();
+              // Store the pair in the array
+              pairs[index] = pair;
+              // Increment the index
+              index++;
+          }
+          // Search for the row where name is "Date" and get its value
+          String value = null;
+          for (String pair : pairs) {
+           // System.out.println("pair :"+ pair);
+              // Split the pair into key and value
+              String[] keyValue = pair.split(",\\s*");
+  
+              // Check if the name is "Date"
+              for (String kv : keyValue) {
+                  String[] entry = kv.split("=");
+                  if (entry[0].trim().equals("name") && entry[1].trim().equals("OTC")) {
+                      // Get the value corresponding to the name "Date"
+                      for (String kv2 : keyValue) {
+                          String[] entry2 = kv2.split("=");
+                          if (entry2[0].trim().equals("value")) {
+                            value = entry2[1].trim();
+                              //System.out.println("Value :"+ value);
+                              d.setotcpin(value, d);
+                              break;
+                          }
+                      }
+                      break;
+                  }
               }
-            }
+              // Break if dateValue found
+              if (value != null) {
+                  break;
+              }
           }
         }
         DemsOrganisationData o = new DemsOrganisationData(organizationId);
