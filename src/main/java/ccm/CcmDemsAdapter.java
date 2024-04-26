@@ -2726,7 +2726,6 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"processAccusedPerson.  key = ${header[key]}")
     .setProperty("person_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.INFO,"Accused Person data = ${body}.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
@@ -2745,11 +2744,11 @@ private void getDemsFieldMappingsrccStatus() {
         .to("direct:createPerson")
       .endChoice()
       .otherwise()
-        .log(LoggingLevel.INFO,"PersonId: ${exchangeProperty.personFound}")
+        .log(LoggingLevel.DEBUG,"PersonId: ${exchangeProperty.personFound}")
         .setHeader("personId").simple("${exchangeProperty.personFound}")
         .log(LoggingLevel.DEBUG,"OrganizationId: ${header.organizationId}")
-        .log(LoggingLevel.INFO,"${body}")
-        .log(LoggingLevel.INFO,"field_data : ${exchangeProperty.field_data}")
+        .log(LoggingLevel.DEBUG,"${body}")
+        .log(LoggingLevel.DEBUG,"field_data : ${exchangeProperty.field_data}")
         .setHeader("field_data").simple("${exchangeProperty.field_data}")
         .to("direct:updatePerson")
       .endChoice()
@@ -2864,12 +2863,12 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO, "Updating person in DEMS ...")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setProperty("PersonData").body()
     .setProperty("personId").simple("${header[personId]}")
     .setProperty("organizationId").simple("${header[organizationId]}")
     .setProperty("field_data").simple("${header[field_data]}")
-    .log(LoggingLevel.INFO,"updatePerson field_data : ${exchangeProperty.field_data}")
+    .log(LoggingLevel.DEBUG,"updatePerson field_data : ${exchangeProperty.field_data}")
     .unmarshal().json(JsonLibrary.Jackson, CaseAccused.class)
     .process(new Processor() {
       @Override
@@ -2898,18 +2897,18 @@ private void getDemsFieldMappingsrccStatus() {
               // Increment the index
               index++;
           }
-          // Search for the row where name is "Date" and get its value
+          // Search for the row where name is "OTC" and get its value
           String value = null;
           for (String pair : pairs) {
            // System.out.println("pair :"+ pair);
               // Split the pair into key and value
               String[] keyValue = pair.split(",\\s*");
   
-              // Check if the name is "Date"
+              // Check if the name is "OTC"
               for (String kv : keyValue) {
                   String[] entry = kv.split("=");
                   if (entry[0].trim().equals("name") && entry[1].trim().equals("OTC")) {
-                      // Get the value corresponding to the name "Date"
+                      // Get the value corresponding to the name "OTC"
                       for (String kv2 : keyValue) {
                           String[] entry2 = kv2.split("=");
                           if (entry2[0].trim().equals("value")) {
@@ -2922,7 +2921,6 @@ private void getDemsFieldMappingsrccStatus() {
                       break;
                   }
               }
-              // Break if dateValue found
               if (value != null) {
                   break;
               }
@@ -4306,5 +4304,4 @@ private void getDemsFieldMappingsrccStatus() {
     .end()
     ;
   }
-
 }
