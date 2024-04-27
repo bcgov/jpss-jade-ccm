@@ -1522,16 +1522,14 @@ private void getDemsFieldMappingsrccStatus() {
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
     .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    //.log(LoggingLevel.INFO, "headers: ${headers}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    //.toD("http://httpstat.us:443/500") // --> testing code, remove later
-    //.toD("rest:get:org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false&host={{dems.host}}&bindingMode=json&ssl=true")
-    //.toD("netty-http:https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
-    .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
     .doTry()
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      //.log(LoggingLevel.INFO, "headers: ${headers}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/${exchangeProperty.key}/id?throwExceptionOnFailure=false")
+      //.toD("http://httpstat.us/500") // --> testing code, remove later
+      .log(LoggingLevel.DEBUG, "Returned case id: '${body}'")
       //.log(LoggingLevel.INFO, "headers: ${headers}")
       .setProperty("length",jsonpath("$.length()"))
       .choice()
@@ -1572,8 +1570,9 @@ private void getDemsFieldMappingsrccStatus() {
       .end()
     .endDoTry()
     .doCatch(Exception.class)
-      .log(LoggingLevel.INFO,"General Exception thrown.")
-      .log(LoggingLevel.INFO,"${exception}")
+      .log(LoggingLevel.ERROR,"General Exception thrown.")
+      .log(LoggingLevel.ERROR,"${exception}")
+      .log(LoggingLevel.ERROR,"${body}")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
 
@@ -1902,7 +1901,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases")
       .log(LoggingLevel.INFO,"Court case was created.")
-      //.toD("http://httpstat.us:443/504")
+      //.toD("http://httpstat.us/504")
       .setProperty("courtCaseId", jsonpath("$.id"))
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
@@ -1913,7 +1912,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
       .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
       .choice()
-        .when().simple("${exception.statusCode} >= 504")
+        .when().simple("${exception.statusCode} == 504")
           .log(LoggingLevel.ERROR, "Encountered timeout for rcc: ${header.event_key}.  Wait additional 65 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(65000)
@@ -1925,7 +1924,6 @@ private void getDemsFieldMappingsrccStatus() {
           .setProperty("courtCaseId", jsonpath("$.id"))
           .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
           .to("direct:getCourtCaseDataById")
-
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -1938,7 +1936,7 @@ private void getDemsFieldMappingsrccStatus() {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
                 exchange.getMessage().setBody(cause.getResponseBody());
-                log.info("Returned body : " + cause.getResponseBody());
+                log.info("Returned response body : " + cause.getResponseBody());
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
@@ -1996,7 +1994,6 @@ private void getDemsFieldMappingsrccStatus() {
 
         DemsChargeAssessmentCaseData d = new DemsChargeAssessmentCaseData(caseTemplateId,b,b.getRelated_charge_assessments());
         d.setWaitForCaseCompletion(true);
-        exchange.setProperty("accusedPersons", b.getAccused_persons());
         exchange.getMessage().setBody(d);
       }
     })
@@ -2021,7 +2018,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO,"Updating DEMS case (key = ${exchangeProperty.key}) ...")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"DEMS case updated.")
-      //.toD("http://httpstat.us:443/504")
+      //.toD("http://httpstat.us/500")
 
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -2032,10 +2029,6 @@ private void getDemsFieldMappingsrccStatus() {
           .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
            // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
           .delay(30000)
-
-          //jade 1747
-          .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.dems_case_id}")
-          
         .endChoice()
         .when().simple("${exception.statusCode} >= 400")
           .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -2048,7 +2041,7 @@ private void getDemsFieldMappingsrccStatus() {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
                 exchange.getMessage().setBody(cause.getResponseBody());
-                log.info("Returned body : " + cause.getResponseBody());
+                log.info("Returned response body : " + cause.getResponseBody());
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
@@ -2105,7 +2098,6 @@ private void getDemsFieldMappingsrccStatus() {
         CourtCaseData bcm = exchange.getProperty("CourtCaseMetadata", CourtCaseData.class);
         DemsApprovedCourtCaseData d = new DemsApprovedCourtCaseData(key, courtCaseName, bcm, existingCaseFlags,bcm.getRelated_court_cases());
         exchange.getMessage().setBody(d);
-        exchange.setProperty("accusedPersons", bcm.getAccused_persons());
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsApprovedCourtCaseData.class)
@@ -2126,7 +2118,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
       .log(LoggingLevel.INFO,"Court case updated.")
-      //.toD("http://httpstat.us:443/504")
+      //.toD("http://httpstat.us/504")
 
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -2149,7 +2141,7 @@ private void getDemsFieldMappingsrccStatus() {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
                 exchange.getMessage().setBody(cause.getResponseBody());
-                log.info("Returned body : " + cause.getResponseBody());
+                log.info("Returned response body : " + cause.getResponseBody());
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
@@ -2438,7 +2430,7 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"processAccusedPerson.  key = ${header[key]}")
     .setProperty("person_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.INFO,"Accused Person data = ${body}.")
+    .log(LoggingLevel.DEBUG,"Accused Person data = ${body}.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
@@ -3864,12 +3856,11 @@ private void getDemsFieldMappingsrccStatus() {
       @Override
       public void process(Exchange exchange) {
         ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
-        exchange.setProperty("AccusedPersons", bodyInput);
+        exchange.setProperty("accusedPersons", bodyInput);
       }})
     
     .choice()
     .when(simple("${header.number}!= '' && ${body} != '' "))
-      .log(LoggingLevel.INFO,"in syncAccusedpersons line 3884")
       // get the primary rcc, based on the dems primary agency file id
 
       //.setHeader("number", simple("${header[rcc_id]}"))
@@ -3902,7 +3893,7 @@ private void getDemsFieldMappingsrccStatus() {
             @Override
             public void process(Exchange exchange) {
 
-              List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("AccusedPersons");
+              List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("accusedPersons");
              // log.info("get accused persons from exchange : size : " + accusedPersons.size());
               exchange.getMessage().setBody(accusedPersons);
              // log.info("set exchange body to accussed persons");
@@ -4032,22 +4023,27 @@ private void getDemsFieldMappingsrccStatus() {
             DemsCaseStatus demsCaseStatus = (DemsCaseStatus)exchange.getIn().getBody(DemsCaseStatus.class);
             exchange.setProperty("dems_case_id", demsCaseStatus.getId());
 
-            Random r = new Random();
-            int low = 1;
-            int high = 9999;
-            int random = r.nextInt(high-low) + low;
+            //Random r = new Random();
+            //int low = 1;
+            //int high = 9999;
+            //int random = r.nextInt(high-low) + low;
             StringBuffer outputStringBuffer = new StringBuffer();
 
             outputStringBuffer.append("{\"id\": \"");
             outputStringBuffer.append(demsCaseStatus.getId());
             outputStringBuffer.append("\", \"name\": \"");
             outputStringBuffer.append(demsCaseStatus.getName());
-            outputStringBuffer.append("\", \"key\": \"");
+
+            /*outputStringBuffer.append("\", \"key\": \"");
             outputStringBuffer.append("AUTO-DELETE-");
             outputStringBuffer.append(random);
             outputStringBuffer.append("-");
             outputStringBuffer.append(demsCaseStatus.getKey());
-            outputStringBuffer.append("\", \"status\": \"");
+            outputStringBuffer.append("\", \"status\": \"");*/
+
+            outputStringBuffer.append("\", \"key\": null");
+            outputStringBuffer.append(", \"status\": \"");
+
             outputStringBuffer.append("Inactive");
             outputStringBuffer.append("\", \"fields\": [");
 
