@@ -84,7 +84,6 @@ import java.util.Map;
 import java.util.Random;
 
 
-
 //import org.apache.camel.http.common.HttpOperationFailedException;
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -2724,13 +2723,12 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"processAccusedPerson.  key = ${header[key]}")
     .setProperty("person_data", simple("${bodyAs(String)}"))
-    .log(LoggingLevel.DEBUG,"Accused Person data = ${body}.")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("key").simple("${header.key}")
     .log(LoggingLevel.DEBUG,"Check whether person exists in DEMS")
     .to("direct:getPersonExists")
-    .log(LoggingLevel.DEBUG,"${body}")
+    .log(LoggingLevel.DEBUG,"Person exist : ${body}")
     .unmarshal().json()
     .setProperty("personFound").simple("${body[id]}")
     .setHeader("organizationId").jsonpath("$.orgs[0].organisationId", true)
@@ -2745,6 +2743,7 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.DEBUG,"PersonId: ${exchangeProperty.personFound}")
         .setHeader("personId").simple("${exchangeProperty.personFound}")
         .log(LoggingLevel.DEBUG,"OrganizationId: ${header.organizationId}")
+        .log(LoggingLevel.DEBUG,"${body}")
         .to("direct:updatePerson")
       .endChoice()
       .end()
@@ -2829,6 +2828,7 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         CaseAccused b = exchange.getIn().getBody(CaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
+        d.generateOTC(d);
         exchange.getMessage().setBody(d);
       }
     })
@@ -4248,5 +4248,4 @@ private void getDemsFieldMappingsrccStatus() {
     .end()
     ;
   }
-
 }

@@ -19,6 +19,8 @@ public class JustinAccused {
   private String do_lto_yn;
   //fix for JADE-2559
   private String rvo_yn;
+  //added as part of jade - 2859
+  //private String otc_pin;
 
   public String getPart_id() {
     return part_id;
@@ -111,4 +113,10 @@ public class JustinAccused {
   public void setRvo_yn(String rvo_yn) {
     this.rvo_yn = rvo_yn;
   }
+  /*public String getOtc_pin() {
+    return otc_pin;
+  }
+  public void setOtc_pin(String otc_pin) {
+    this.otc_pin = otc_pin;
+  }*/
 }

@@ -38,7 +38,6 @@ public class CaseAccused {
         setCrown_decision_code(ja.getCrown_decision());
         setOffence_date(ja.getOffence_date());
         setBirth_date(ja.getBirth_date());
-
         // Map 78
         setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
 
@@ -180,4 +179,5 @@ public class CaseAccused {
     public void setRvo_yn(Boolean rvo_yn) {
         this.rvo_yn = rvo_yn;
     }
+
 }
