@@ -2733,7 +2733,6 @@ private void getDemsFieldMappingsrccStatus() {
     .to("direct:getPersonExists")
     .log(LoggingLevel.DEBUG,"Person exist : ${body}")
     .unmarshal().json()
-    .setProperty("field_data").jsonpath("$.fields")
     .setProperty("personFound").simple("${body[id]}")
     .setHeader("organizationId").jsonpath("$.orgs[0].organisationId", true)
     .setHeader("key").simple("${header.key}")
@@ -2748,8 +2747,6 @@ private void getDemsFieldMappingsrccStatus() {
         .setHeader("personId").simple("${exchangeProperty.personFound}")
         .log(LoggingLevel.DEBUG,"OrganizationId: ${header.organizationId}")
         .log(LoggingLevel.DEBUG,"${body}")
-        .log(LoggingLevel.DEBUG,"field_data : ${exchangeProperty.field_data}")
-        .setHeader("field_data").simple("${exchangeProperty.field_data}")
         .to("direct:updatePerson")
       .endChoice()
       .end()
@@ -2867,8 +2864,6 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("PersonData").body()
     .setProperty("personId").simple("${header[personId]}")
     .setProperty("organizationId").simple("${header[organizationId]}")
-    .setProperty("field_data").simple("${header[field_data]}")
-    .log(LoggingLevel.DEBUG,"updatePerson field_data : ${exchangeProperty.field_data}")
     .unmarshal().json(JsonLibrary.Jackson, CaseAccused.class)
     .process(new Processor() {
       @Override
@@ -2878,54 +2873,6 @@ private void getDemsFieldMappingsrccStatus() {
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);
         d.setId(personId);
-        //added as part of jade - 2859
-        String field_data = exchange.getProperty("field_data", String.class);
-        if(field_data != null && field_data.length() > 2) {
-          Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
-          // Matcher to find all matches in the input string
-          Matcher matcher = pattern.matcher(field_data);
-          // Array to store extracted key-value pairs
-          String[] pairs = new String[3]; //  3 pairs id , name, value
-          // Index for storing pairs in the array
-          int index = 0;
-          // Iterate over each match (key-value pair)
-          while (matcher.find()) {
-              // Extract the key-value pair from the match
-              String pair = matcher.group(1).trim();
-              // Store the pair in the array
-              pairs[index] = pair;
-              // Increment the index
-              index++;
-          }
-          // Search for the row where name is "OTC" and get its value
-          String value = null;
-          for (String pair : pairs) {
-           // System.out.println("pair :"+ pair);
-              // Split the pair into key and value
-              String[] keyValue = pair.split(",\\s*");
-  
-              // Check if the name is "OTC"
-              for (String kv : keyValue) {
-                  String[] entry = kv.split("=");
-                  if (entry[0].trim().equals("name") && entry[1].trim().equals("OTC")) {
-                      // Get the value corresponding to the name "OTC"
-                      for (String kv2 : keyValue) {
-                          String[] entry2 = kv2.split("=");
-                          if (entry2[0].trim().equals("value")) {
-                            value = entry2[1].trim();
-                              //System.out.println("Value :"+ value);
-                              d.setotcpin(value, d);
-                              break;
-                          }
-                      }
-                      break;
-                  }
-              }
-              if (value != null) {
-                  break;
-              }
-          }
-        }
         DemsOrganisationData o = new DemsOrganisationData(organizationId);
         d.setOrgs(new ArrayList<DemsOrganisationData>());
         d.getOrgs().add(o);
