@@ -82,9 +82,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -2880,7 +2877,7 @@ private void getDemsFieldMappingsrccStatus() {
       }
     })
     .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
-    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+    .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // update case
     .setBody(simple("${exchangeProperty.update_data}"))

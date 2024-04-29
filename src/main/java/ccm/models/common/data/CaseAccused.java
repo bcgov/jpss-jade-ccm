@@ -22,8 +22,6 @@ public class CaseAccused {
     private Boolean do_lto_yn;
     //fix for JADE-2559
     private Boolean rvo_yn;
-    //added as part of jade - 2859
-    //private String otc_pin;
 
     public CaseAccused() {
     }
@@ -40,10 +38,6 @@ public class CaseAccused {
         setCrown_decision_code(ja.getCrown_decision());
         setOffence_date(ja.getOffence_date());
         setBirth_date(ja.getBirth_date());
-        //added as part of jade - 2859
-        /*if(ja.getOtc_pin() != null){
-            setOtc_pin(ja.getOtc_pin());
-        }*/
         // Map 78
         setIndigenous_accused_yn(ja.getIndigenous_yn() != null && "Y".equalsIgnoreCase(ja.getIndigenous_yn()));
 
@@ -186,11 +180,4 @@ public class CaseAccused {
         this.rvo_yn = rvo_yn;
     }
 
-    /*public String getOtc_pin() {
-        return otc_pin;
-    }
-
-    public void setOtc_pin(String otc_pin) {
-        this.otc_pin = otc_pin;
-    }*/
 }

@@ -5,7 +5,6 @@ import java.util.Random;
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
-import ccm.utils.DateTimeUtils;
 
 public class DemsPersonData {
 
