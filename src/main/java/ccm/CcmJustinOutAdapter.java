@@ -32,6 +32,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+
+import ccm.models.common.FileCloseData;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
@@ -48,6 +50,7 @@ import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinFileClose;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -65,6 +68,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getImageData();
+    justinFileClose();
 
   }
 
@@ -491,5 +495,37 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     ;
   }
 
+  private void justinFileClose() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"file close request received.")
+    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+
+    .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, FileCloseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        FileCloseData j = exchange.getIn().getBody(FileCloseData.class);
+        JustinFileClose jtFileClose = new JustinFileClose();
+        jtFileClose.setFile_close_data(j);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinFileClose.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+  }
 
 }
