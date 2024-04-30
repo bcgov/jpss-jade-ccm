@@ -1,10 +1,10 @@
 package ccm.models.system.dems;
 
 import java.util.List;
+import java.util.Random;
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
-import ccm.utils.DateTimeUtils;
 
 public class DemsPersonData {
 
@@ -32,8 +32,7 @@ public class DemsPersonData {
             DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
             fieldData.add(dob);
         }
-        
-        
+
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ca.getGiven_2_name());
         fieldData.add(given2);
 
@@ -129,5 +128,26 @@ public class DemsPersonData {
             " " + accused.getSurname();
 
         return concatenated_name_string;
+    }
+
+    public void setotcpin(String value, DemsPersonData d ) {
+        List<DemsFieldData> fieldData = d.getFields();
+        if(!value.isEmpty()){
+            System.out.println("OTC :" + value);
+            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),value);
+            fieldData.add(otc);
+        }
+    }
+    public void generateOTC(DemsPersonData d ) {
+        Random r = new Random();
+        int low = 0000;
+        int high = 999999;
+        int random = r.nextInt(high-low) + low;
+        System.out.println("Random Pin number generation" + random);
+
+        List<DemsFieldData> fieldData = d.getFields();
+        DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+        fieldData.add(otc);
+        
     }
 }
