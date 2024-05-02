@@ -513,16 +513,16 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
     .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, FileCloseData.class)
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        FileCloseData j = exchange.getIn().getBody(FileCloseData.class);
-        JustinFileClose jtFileClose = new JustinFileClose();
-        jtFileClose.setFile_close_data(j);
+        JustinFileClose j = exchange.getIn().getBody(JustinFileClose.class);
+        FileCloseData fileCloseData = new FileCloseData(j.getMdoc_justin_no(),j.getRms_event_type(), j.getRms_event_date());
+       exchange.getMessage().setBody(fileCloseData);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, JustinFileClose.class)
+    .marshal().json(JsonLibrary.Jackson, FileCloseData.class)
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
