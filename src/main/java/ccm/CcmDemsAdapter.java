@@ -79,9 +79,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -151,6 +154,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     createEdtExternalIdExistingParticipant();
     updateEdtExternalIdExistingParticipant();
     deleteExistingCase();
+    updateExistingParticipantwithOTC();
   }
 
 
@@ -4246,6 +4250,219 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.ERROR, "No rcc_id provided.")
       .endChoice()
     .end()
+    ;
+  }
+  private void updateExistingParticipantwithOTC() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+        // IN: header = id
+        from("platform-http:/" + routeId )
+        .routeId(routeId)
+        .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+        .log(LoggingLevel.INFO,"updateExistingParticipantwithOTC...")
+        //.setProperty("id", header("id"))
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        //traverse through all cases in DEMS
+        .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/list")
+        .log(LoggingLevel.INFO,"Case list: '${body}'")
+        .split()
+        .jsonpathWriteAsString("$.items")
+          .setProperty("id",jsonpath("$.id"))
+          .setProperty("status",jsonpath("$.status"))
+          .log(LoggingLevel.INFO,"Case Id: ${exchangeProperty.id}, status: ${exchangeProperty.status}")
+          .choice()
+            .when().simple("${exchangeProperty.status} == 'Active'")
+              //look-up list of accused participants of each case
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              //traverse through all cases in DEMS
+              //.toD("https://{{dems.host}}/cases/${exchangeProperty.id}/participants?participantType=Accused")
+              .toD("https://{{dems.host}}/cases/144/participants?participantType=Accused")
+              .log(LoggingLevel.DEBUG,"List of accused participant of each case: '${body}'")
+              .unmarshal().json()
+              .setProperty("length",jsonpath("$.participants.length()"))
+              .log(LoggingLevel.INFO, "Participant length: ${exchangeProperty.length}")
+              .choice()
+                .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+                  .split()
+                    .jsonpathWriteAsString("$.participants")
+                    .setProperty("personid",jsonpath("$.personId"))
+                    .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.personid}")
+                    //check if there already exists an edtexternalid for the person
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/89")
+                    .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
+                    .setBody(simple("${body}"))
+                    .setProperty("demspersondata").simple("${bodyAs(String)}")
+                    .setProperty("otcfieldexist").simple("false")
+                    .unmarshal().json()
+                    .setProperty("fieldslength", jsonpath("$.fields.length()"))
+                    .log(LoggingLevel.INFO,"field length = ${exchangeProperty.fieldslength}")
+                    .setProperty("fields", jsonpath("$.fields"))
+                    .log(LoggingLevel.INFO,"fields = ${exchangeProperty.fields}")
+                    .process(new Processor() {
+                      @Override
+                      public void process(Exchange exchange) throws Exception {
+                        //DemsPersonData persondata= (DemsPersonData) exchange.getIn().getBody();
+                        //System.out.println("Inside process field: "+persondata);
+                       /*  List<DemsFieldData> fieldData = (List<DemsFieldData>)exchange.getProperty("fields", List.class);
+                        Boolean present =  false;
+                        System.out.println("Inside process field: "+fieldData);
+                        for(DemsFieldData data: fieldData){
+                          if(data.getName().equals("OTC")){
+                            present = true;
+                            break;
+                          }
+                        }*/
+                        List<Map<String, Object>> fieldData = exchange.getProperty("fields", List.class);
+                        Boolean present =  false;
+                        System.out.println("Inside process field: "+fieldData);
+                        String field_data = exchange.getProperty("fields", String.class);
+                          System.out.println("field_data : "+ field_data);
+                          if(field_data != null && field_data.length() > 2) {
+                            Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
+                            Matcher matcher = pattern.matcher(field_data);
+                            String[] pairs = new String[3]; 
+                            int index = 0;
+                            while (matcher.find()) {
+                                String pair = matcher.group(1).trim();
+                                pairs[index] = pair;
+                                index++;
+                            }System.out.println("pairs length: "+ pairs.length);
+                            String value = null;
+                            for (String pair : pairs) {
+                              if(pair!=null){
+                              System.out.println("pair :"+ pair);
+                                String[] keyValue = pair.split(",\\s*");
+                                for (String kv : keyValue) {
+                                    String[] entry = kv.split("=");
+                                    if (entry[0].trim().equals("name") && entry[1].trim().equals("OTC")) {
+                                        for (String kv2 : keyValue) {
+                                            String[] entry2 = kv2.split("=");
+                                            if (entry2[0].trim().equals("value")) {
+                                              value = entry2[1].trim();System.out.println("value : "+ value);
+                                                break;
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                                if (value != null) {
+                                  System.out.println("value not equal null : "+ value);
+                                    break;
+                                }
+                            }}
+                          }
+                      }
+                    })
+                    //.marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                        .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+                    /* .choice()
+                      .when(simple("${exchangeProperty.fieldslength} > 0"))
+                      .split()
+                        .jsonpathWriteAsString("$.fields")
+                        .setProperty("idValue", jsonpath("$.id"))
+                        .log(LoggingLevel.INFO,"id value = ${exchangeProperty.idValue}")
+                          /* .choice()
+                            .when().simple("${exchangeProperty.idValue} == 113")
+                              .setProperty("otcfieldexist").simple("true")
+                              .log(LoggingLevel.INFO,"otcfieldexist = ${exchangeProperty.otcfieldexist}")
+                            .endChoice()
+                            .otherwise()
+
+                            .endChoice()
+                            .end()
+                            .log(LoggingLevel.INFO,"out of loop otcfieldexist = ${exchangeProperty.otcfieldexist}")
+                        .end()
+                        .end()
+                        .endChoice()*/
+                      /* .process(new Processor() {
+                        @Override
+                        public void process(Exchange exchange) throws Exception {
+                           LinkedHashMap<String, Object> bodyMap = (LinkedHashMap<String, Object>) exchange.getIn().getBody();
+                          // Convert the LinkedHashMap to JSON String
+                          ObjectMapper objectMapper = new ObjectMapper();
+                          String json = objectMapper.writeValueAsString(bodyMap);
+                          //System.out.println(  "bodyMap: "+bodyMap);
+                          System.out.println(  "json: "+json);
+                          // Deserialize JSON String into Test object
+                          //DemsPersonData test = objectMapper.readValue(json, DemsPersonData.class);
+                          
+                          DemsPersonData d = new DemsPersonData(json);
+
+                          System.out.println(  "dempersondata: "+d.getFields());
+                          DemsFieldData ff = new DemsFieldData();
+                         
+                          //String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), "/value");
+                          String otcvalue = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(), "/value");
+                          //String otcvalueghghj = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "", "", "");
+                          String prefix = "";String suffix = "";
+                          ObjectMapper mapper = new ObjectMapper();
+                          JsonNode rootNode = mapper.readTree(json);
+                  
+                          // Navigate to the desired JSON path
+                          JsonNode node = rootNode.at("/fields");
+                          //System.out.println("node :"+node);
+                          // Convert the node to a string
+                          String value = node.toString();
+                         // System.out.println("value :"+value);
+                          
+                          // Add prefix and suffix if provided
+                          if (!prefix.isEmpty()) {
+                              value = prefix + value;
+                          }
+                          if (!suffix.isEmpty()) {
+                              value = value + suffix;
+                          }
+                          List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+                          DemsFieldData t = new DemsFieldData("",value);
+                          //System.out.println("t :"+t);
+                          fieldData.add(t);
+                          System.out.println("fieldData :"+fieldData);
+                          System.out.println("field :"+value +" otc: "+otcvalue);
+                          if(otcvalue.isEmpty()){
+                            Random r = new Random();
+                            int low = 0000;
+                            int high = 999999;
+                            int random = r.nextInt(high-low) + low;
+                            System.out.println("Random Pin number generation " + random);
+                            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+                            fieldData.add(otc);
+                          }
+                          d.setFields(fieldData);
+                          
+                          exchange.getMessage().setBody(bodyMap);
+                          //DemsPersonData d = exchange.getIn().getBody(DemsPersonData.class);
+                          //System.out.println("d: "+ d);
+                          }
+                      })
+                      .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                        .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")*/
+                        
+                  .end()
+                .endChoice()
+                .otherwise()
+                  .log(LoggingLevel.INFO,"No data participants")
+                .end()
+            .end()
+          .end()
+        .end()
+    .log(LoggingLevel.INFO,"end of updateExistingParticipantwithOTC.")
     ;
   }
 }
