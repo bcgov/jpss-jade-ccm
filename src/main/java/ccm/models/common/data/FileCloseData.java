@@ -1,4 +1,4 @@
-package ccm.models.common;
+package ccm.models.common.data;
 
 public class FileCloseData {
     
