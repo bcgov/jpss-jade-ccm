@@ -4308,70 +4308,42 @@ private void getDemsFieldMappingsrccStatus() {
                     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/89")
                     .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
                     .setBody(simple("${body}"))
-                    .setProperty("demspersondata").simple("${bodyAs(String)}")
+                    //.setProperty("demspersondata").simple("${bodyAs(String)}")
                     .setProperty("otcfieldexist").simple("false")
+                    .setProperty("demspersondata", simple("${body}"))
                     .unmarshal().json()
-                    .setProperty("fieldslength", jsonpath("$.fields.length()"))
-                    .log(LoggingLevel.INFO,"field length = ${exchangeProperty.fieldslength}")
-                    .setProperty("fields", jsonpath("$.fields"))
-                    .log(LoggingLevel.INFO,"fields = ${exchangeProperty.fields}")
+                    //.setProperty("fieldslength", jsonpath("$.fields.length()"))
+                    //.log(LoggingLevel.INFO,"field length = ${exchangeProperty.fieldslength}")
+                    //.setProperty("fields", jsonpath("$.fields"))
+                    //.log(LoggingLevel.INFO,"fields = ${exchangeProperty.fields}")
                     .process(new Processor() {
                       @Override
                       public void process(Exchange exchange) throws Exception {
-                        //DemsPersonData persondata= (DemsPersonData) exchange.getIn().getBody();
-                        //System.out.println("Inside process field: "+persondata);
-                       /*  List<DemsFieldData> fieldData = (List<DemsFieldData>)exchange.getProperty("fields", List.class);
-                        Boolean present =  false;
-                        System.out.println("Inside process field: "+fieldData);
-                        for(DemsFieldData data: fieldData){
-                          if(data.getName().equals("OTC")){
-                            present = true;
-                            break;
-                          }
-                        }*/
-                        List<Map<String, Object>> fieldData = exchange.getProperty("fields", List.class);
-                        Boolean present =  false;
-                        System.out.println("Inside process field: "+fieldData);
-                        String field_data = exchange.getProperty("fields", String.class);
-                          System.out.println("field_data : "+ field_data);
-                          if(field_data != null && field_data.length() > 2) {
-                            Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
-                            Matcher matcher = pattern.matcher(field_data);
-                            String[] pairs = new String[3]; 
-                            int index = 0;
-                            while (matcher.find()) {
-                                String pair = matcher.group(1).trim();
-                                pairs[index] = pair;
-                                index++;
-                            }System.out.println("pairs length: "+ pairs.length);
-                            String value = null;
-                            for (String pair : pairs) {
-                              if(pair!=null){
-                              System.out.println("pair :"+ pair);
-                                String[] keyValue = pair.split(",\\s*");
-                                for (String kv : keyValue) {
-                                    String[] entry = kv.split("=");
-                                    if (entry[0].trim().equals("name") && entry[1].trim().equals("OTC")) {
-                                        for (String kv2 : keyValue) {
-                                            String[] entry2 = kv2.split("=");
-                                            if (entry2[0].trim().equals("value")) {
-                                              value = entry2[1].trim();System.out.println("value : "+ value);
-                                                break;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-                                if (value != null) {
-                                  System.out.println("value not equal null : "+ value);
-                                    break;
-                                }
-                            }}
+                        Object d =(Object)exchange.getIn().getBody();
+                          exchange.getMessage().setBody(d);
+                          if (d instanceof DemsPersonData) {
+                            DemsPersonData personData = (DemsPersonData) d;
+                            // Now you can use 'personData' as a PersonData instance
+                            System.out.println("dgg: " + personData);
+                          }else{
+                            LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+                              
+                              // Create a new instance of PersonData
+                              DemsPersonData personData = new DemsPersonData();
+                              List<DemsFieldData> dfd=  new ArrayList<DemsFieldData>(); 
+                              // Assuming the keys in the LinkedHashMap correspond to the fields of PersonData
+                              // Map the properties from 'dataMap' to 'personData'
+                              personData.setId(dataMap.get("id").toString());
+                              personData.setKey(dataMap.get("key").toString());
+                              personData.setName(dataMap.get("name").toString());
+
+                              System.out.println("dffff: " + personData);
                           }
                       }
                     })
-                    //.marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                    .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
                         .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+                        
                     /* .choice()
                       .when(simple("${exchangeProperty.fieldslength} > 0"))
                       .split()

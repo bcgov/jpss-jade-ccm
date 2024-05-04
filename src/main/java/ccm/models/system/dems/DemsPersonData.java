@@ -4,13 +4,8 @@ import java.util.List;
 import java.util.Random;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 
 import ccm.models.common.data.CaseAccused;
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -24,7 +19,6 @@ public class DemsPersonData {
     private List<DemsFieldData> fields;
     private DemsAddressData address;
     private List<DemsOrganisationData> orgs;
-    private String title;
 
     public DemsPersonData() {
     }
@@ -64,27 +58,6 @@ public class DemsPersonData {
         setName(fullGivenNamesAndLastNameString);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
-    }
-
-    public DemsPersonData(String json) throws JsonMappingException, JsonProcessingException {
-        String prefix = "";String suffix = "";
-                          ObjectMapper mapper = new ObjectMapper();
-                          JsonNode rootNode = mapper.readTree(json);
-                  
-                          // Navigate to the desired JSON path
-                          JsonNode node = rootNode.at("");
-                          System.out.println("node :"+node);
-                          // Convert the node to a string
-                          String value = node.toString();
-                          System.out.println("value :"+value);
-                          
-                          // Add prefix and suffix if provided
-                          if (!prefix.isEmpty()) {
-                              value = prefix + value;
-                          }
-                          if (!suffix.isEmpty()) {
-                              value = value + suffix;
-                          }
     }
 
     public String getId() {
@@ -180,13 +153,4 @@ public class DemsPersonData {
         fieldData.add(otc);
         
     }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
 }
