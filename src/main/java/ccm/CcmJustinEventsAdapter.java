@@ -1743,9 +1743,10 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
 
           CourtCaseEvent be = new CourtCaseEvent(je);
-
+          
           exchange.getMessage().setBody(be, CourtCaseEvent.class);
           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+
         }})
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)

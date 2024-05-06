@@ -510,9 +510,10 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-
+    .log(LoggingLevel.INFO, "LookupService calling Justin file close")
     .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+    
     .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
     .process(new Processor() {
       @Override
