@@ -47,6 +47,7 @@ import org.apache.http.NoHttpResponseException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.event.BaseEvent;
@@ -85,6 +86,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 
 //import org.apache.camel.http.common.HttpOperationFailedException;
@@ -4305,17 +4307,13 @@ private void getDemsFieldMappingsrccStatus() {
                     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                     //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
-                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/89")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/23")
                     .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
                     .setBody(simple("${body}"))
                     //.setProperty("demspersondata").simple("${bodyAs(String)}")
                     .setProperty("otcfieldexist").simple("false")
                     .setProperty("demspersondata", simple("${body}"))
                     .unmarshal().json()
-                    //.setProperty("fieldslength", jsonpath("$.fields.length()"))
-                    //.log(LoggingLevel.INFO,"field length = ${exchangeProperty.fieldslength}")
-                    //.setProperty("fields", jsonpath("$.fields"))
-                    //.log(LoggingLevel.INFO,"fields = ${exchangeProperty.fields}")
                     .process(new Processor() {
                       @Override
                       public void process(Exchange exchange) throws Exception {
@@ -4328,104 +4326,108 @@ private void getDemsFieldMappingsrccStatus() {
                           }else{
                             LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
                               
-                              // Create a new instance of PersonData
-                              DemsPersonData personData = new DemsPersonData();
-                              List<DemsFieldData> dfd=  new ArrayList<DemsFieldData>(); 
-                              // Assuming the keys in the LinkedHashMap correspond to the fields of PersonData
-                              // Map the properties from 'dataMap' to 'personData'
-                              personData.setId(dataMap.get("id").toString());
-                              personData.setKey(dataMap.get("key").toString());
-                              personData.setName(dataMap.get("name").toString());
+                              ObjectMapper objectMapper = new ObjectMapper();
+                              String json = objectMapper.writeValueAsString(dataMap);
+                              //System.out.println(  "bodyMap: "+dataMap);
+                              String prefix = "";String suffix = "";
+                              ObjectMapper mapper = new ObjectMapper();
+                              JsonNode rootNode = mapper.readTree(json);
+                              System.out.println(  "rootNode: "+rootNode);
 
-                              System.out.println("dffff: " + personData);
+                              JsonNode node = rootNode.at("/fields");
+                              System.out.println("node :"+node);
+                              // Convert the node to a string
+                              String value1 = node.toString();
+                              System.out.println("value :"+value1);
+                              if (!prefix.isEmpty()) {
+                                value1 = prefix + value1;
+                            }
+                            if (!suffix.isEmpty()) {
+                                value1 = value1 + suffix;
+                            }
+                            Boolean present =false;
+                            if(value1 != null && value1.length() > 2) {
+                              Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
+                              Matcher matcher = pattern.matcher(value1);
+                              String[] pairs = new String[3]; 
+                              int index = 0;
+                              while (matcher.find()) {
+                                  String pair = matcher.group(1).trim();
+                                  pairs[index] = pair;
+                                  index++;
+                              }
+                              String value = null;
+                              for (String pair : pairs) {
+                                if(pair != null){
+                                System.out.println("pair :"+ pair);
+                                  String[] keyValue = pair.split(",\\s*");
+                                  for (String kv : keyValue) {System.out.println("keyValue :"+ kv);
+                                      String[] entry = kv.split(":");System.out.println("entry :"+ entry[0].replace("\"", "").trim());
+                                      if (entry[0].replace("\"", "").trim().equals("name") && entry[1].replace("\"", "").trim().equals("OTC")) {
+                                         /*  for (String kv2 : keyValue) {
+                                              String[] entry2 = kv2.split("=");
+                                              if (entry2[0].trim().equals("value")) {
+                                                value = entry2[1].trim();
+                                                  break;
+                                              }
+                                          }*/
+                                          System.out.println("inside most inner loop :"+ kv);present= true;
+                                          break;
+                                      }
+                                  }
+                                  // Break if dateValue found
+                                  if (present) {
+                                    System.out.println("inside Break if value :"+ value);
+                                      break;
+                                  }
+                                }
+                              }
+                              if(!present){
+                                System.out.println("inside present :"+ value);
+                                  Random r = new Random();
+                                  int low = 0000;
+                                  int high = 999999;
+                                  int random = r.nextInt(high-low) + low;
+                                  System.out.println("Random Pin number generation" + random);
+                                
+                                // Create new JSON object
+                                ObjectNode newNode = mapper.createObjectNode();
+                                newNode.put("id", 113);
+                                newNode.put("name", "OTC");
+                                newNode.put("value", random);
+
+                                // Convert new JSON object to String
+                                String newNodeString = mapper.writeValueAsString(newNode);
+
+                                // Parse new JSON object string to JsonNode
+                                JsonNode newNodeJson = mapper.readTree(newNodeString);
+
+                                // Check if node is an ArrayNode
+                                if (node.isArray()) {
+                                    // Append new node to existing array node
+                                    ((ArrayNode) node).add(newNodeJson);
+                                }
+                                System.out.println("final node  :"+node);
+                              }
+                            }
+                            System.out.println("value here :"+value1);
+                            exchange.getMessage().setBody(rootNode,DemsPersonData.class);
                           }
                       }
                     })
                     .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
-                        .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
-                        
-                    /* .choice()
-                      .when(simple("${exchangeProperty.fieldslength} > 0"))
-                      .split()
-                        .jsonpathWriteAsString("$.fields")
-                        .setProperty("idValue", jsonpath("$.id"))
-                        .log(LoggingLevel.INFO,"id value = ${exchangeProperty.idValue}")
-                          /* .choice()
-                            .when().simple("${exchangeProperty.idValue} == 113")
-                              .setProperty("otcfieldexist").simple("true")
-                              .log(LoggingLevel.INFO,"otcfieldexist = ${exchangeProperty.otcfieldexist}")
-                            .endChoice()
-                            .otherwise()
-
-                            .endChoice()
-                            .end()
-                            .log(LoggingLevel.INFO,"out of loop otcfieldexist = ${exchangeProperty.otcfieldexist}")
-                        .end()
-                        .end()
-                        .endChoice()*/
-                      /* .process(new Processor() {
-                        @Override
-                        public void process(Exchange exchange) throws Exception {
-                           LinkedHashMap<String, Object> bodyMap = (LinkedHashMap<String, Object>) exchange.getIn().getBody();
-                          // Convert the LinkedHashMap to JSON String
-                          ObjectMapper objectMapper = new ObjectMapper();
-                          String json = objectMapper.writeValueAsString(bodyMap);
-                          //System.out.println(  "bodyMap: "+bodyMap);
-                          System.out.println(  "json: "+json);
-                          // Deserialize JSON String into Test object
-                          //DemsPersonData test = objectMapper.readValue(json, DemsPersonData.class);
-                          
-                          DemsPersonData d = new DemsPersonData(json);
-
-                          System.out.println(  "dempersondata: "+d.getFields());
-                          DemsFieldData ff = new DemsFieldData();
-                         
-                          //String courtFileUniqueId = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.PERSON_FULL_NAME.getLabel(), "/value");
-                          String otcvalue = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "/name", DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(), "/value");
-                          //String otcvalueghghj = JsonParseUtils.getJsonArrayElementValue(json, "/fields", "", "", "");
-                          String prefix = "";String suffix = "";
-                          ObjectMapper mapper = new ObjectMapper();
-                          JsonNode rootNode = mapper.readTree(json);
-                  
-                          // Navigate to the desired JSON path
-                          JsonNode node = rootNode.at("/fields");
-                          //System.out.println("node :"+node);
-                          // Convert the node to a string
-                          String value = node.toString();
-                         // System.out.println("value :"+value);
-                          
-                          // Add prefix and suffix if provided
-                          if (!prefix.isEmpty()) {
-                              value = prefix + value;
-                          }
-                          if (!suffix.isEmpty()) {
-                              value = value + suffix;
-                          }
-                          List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-                          DemsFieldData t = new DemsFieldData("",value);
-                          //System.out.println("t :"+t);
-                          fieldData.add(t);
-                          System.out.println("fieldData :"+fieldData);
-                          System.out.println("field :"+value +" otc: "+otcvalue);
-                          if(otcvalue.isEmpty()){
-                            Random r = new Random();
-                            int low = 0000;
-                            int high = 999999;
-                            int random = r.nextInt(high-low) + low;
-                            System.out.println("Random Pin number generation " + random);
-                            DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
-                            fieldData.add(otc);
-                          }
-                          d.setFields(fieldData);
-                          
-                          exchange.getMessage().setBody(bodyMap);
-                          //DemsPersonData d = exchange.getIn().getBody(DemsPersonData.class);
-                          //System.out.println("d: "+ d);
-                          }
-                      })
-                      .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
-                        .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")*/
-                        
+                    .log(LoggingLevel.INFO,"DEMS-bound request data: '${body}'")
+                    .setProperty("update_data", simple("${body}"))
+                    // update case
+                    .setBody(simple("${exchangeProperty.update_data}"))
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
+                    .log(LoggingLevel.INFO,"Person updated.")   
                   .end()
                 .endChoice()
                 .otherwise()
