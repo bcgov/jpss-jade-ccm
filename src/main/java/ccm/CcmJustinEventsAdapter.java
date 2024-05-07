@@ -845,7 +845,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_FILE))
-          .to("kafka:{{kafka.topic.chargeassessments-priority.name}}")    // ---- > Error produced here -TWuolle
+          .to("kafka:{{kafka.topic.chargeassessments-priority.name}}") // -> JADE-2896-MANU events get a priority topic
           .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments-priority.name}}"))
         .endChoice()
         .otherwise()
@@ -1193,7 +1193,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.MANU_CFILE))
-          .to("kafka:{{kafka.topic.courtcases-priority.name}}")
+          .to("kafka:{{kafka.topic.courtcases-priority.name}}") // -> JADE-2896-MANU events get a priority topic
           .setProperty("kpi_event_topic_name", simple("{{kafka.topic.courtcases-priority.name}}"))
         .endChoice()
         .otherwise()

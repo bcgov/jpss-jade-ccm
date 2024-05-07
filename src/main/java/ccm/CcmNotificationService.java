@@ -878,6 +878,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
     .log(LoggingLevel.DEBUG,"createOverrideFlag = ${exchangeProperty.createOverrideFlag}")
 
+    // -> JADE-2896-MANU events get a priority topic
     .choice()
       .when(simple("${exchangeProperty.createOverrideFlag} == 'true'"))
         .setProperty("kafka-topic-chargeassessments").simple("{{kafka.topic.chargeassessments-priority.name}}")
@@ -886,7 +887,6 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kafka-topic-chargeassessments").simple("{{kafka.topic.chargeassessments.name}}")
       .endChoice()
     .end()
-
 
     .choice()
       .when(simple("${exchangeProperty.autoCreateFlag} == 'true' || ${exchangeProperty.caseFound} != '' || ${exchangeProperty.createOverrideFlag} == 'true'"))
@@ -2011,6 +2011,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
     // get list of associated rcc_ids?
 
+    // -> JADE-2896-MANU events get a priority topic
     .choice()
       .when(simple("${exchangeProperty.createOverrideFlag} == 'true'"))
         .setProperty("kafka-topic-courtcases").simple("{{kafka.topic.courtcases-priority.name}}")
