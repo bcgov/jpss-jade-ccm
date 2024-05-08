@@ -4287,8 +4287,8 @@ private void getDemsFieldMappingsrccStatus() {
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
               //traverse through all cases in DEMS
-              //.toD("https://{{dems.host}}/cases/${exchangeProperty.id}/participants?participantType=Accused")
-              .toD("https://{{dems.host}}/cases/144/participants?participantType=Accused")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.id}/participants?participantType=Accused")
+              //.toD("https://{{dems.host}}/cases/144/participants?participantType=Accused")
               .log(LoggingLevel.DEBUG,"List of accused participant of each case: '${body}'")
               .unmarshal().json()
               .setProperty("length",jsonpath("$.participants.length()"))
@@ -4306,8 +4306,8 @@ private void getDemsFieldMappingsrccStatus() {
                     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
                     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-                    //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
-                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/23")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
+                    //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/89")
                     .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
                     .setBody(simple("${body}"))
                     //.setProperty("demspersondata").simple("${bodyAs(String)}")
@@ -4322,7 +4322,7 @@ private void getDemsFieldMappingsrccStatus() {
                           if (d instanceof DemsPersonData) {
                             DemsPersonData personData = (DemsPersonData) d;
                             // Now you can use 'personData' as a PersonData instance
-                            System.out.println("dgg: " + personData);
+                            //System.out.println("dgg: " + personData);
                           }else{
                             LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
                               
@@ -4332,13 +4332,13 @@ private void getDemsFieldMappingsrccStatus() {
                               String prefix = "";String suffix = "";
                               ObjectMapper mapper = new ObjectMapper();
                               JsonNode rootNode = mapper.readTree(json);
-                              System.out.println(  "rootNode: "+rootNode);
+                              //System.out.println(  "rootNode: "+rootNode);
 
                               JsonNode node = rootNode.at("/fields");
-                              System.out.println("node :"+node);
+                              //System.out.println("node :"+node);
                               // Convert the node to a string
                               String value1 = node.toString();
-                              System.out.println("value :"+value1);
+                              //System.out.println("value :"+value1);
                               if (!prefix.isEmpty()) {
                                 value1 = prefix + value1;
                             }
@@ -4361,34 +4361,28 @@ private void getDemsFieldMappingsrccStatus() {
                                 if(pair != null){
                                 System.out.println("pair :"+ pair);
                                   String[] keyValue = pair.split(",\\s*");
-                                  for (String kv : keyValue) {System.out.println("keyValue :"+ kv);
-                                      String[] entry = kv.split(":");System.out.println("entry :"+ entry[0].replace("\"", "").trim());
+                                  for (String kv : keyValue) {//System.out.println("keyValue :"+ kv);
+                                      String[] entry = kv.split(":");//System.out.println("entry :"+ entry[0].replace("\"", "").trim());
                                       if (entry[0].replace("\"", "").trim().equals("name") && entry[1].replace("\"", "").trim().equals("OTC")) {
-                                         /*  for (String kv2 : keyValue) {
-                                              String[] entry2 = kv2.split("=");
-                                              if (entry2[0].trim().equals("value")) {
-                                                value = entry2[1].trim();
-                                                  break;
-                                              }
-                                          }*/
-                                          System.out.println("inside most inner loop :"+ kv);present= true;
+                                          //System.out.println("inside most inner loop :"+ kv);
+                                          present= true;
                                           break;
                                       }
                                   }
                                   // Break if dateValue found
                                   if (present) {
-                                    System.out.println("inside Break if value :"+ value);
+                                    //System.out.println("inside Break if value :"+ value);
                                       break;
                                   }
                                 }
                               }
                               if(!present){
-                                System.out.println("inside present :"+ value);
+                                //System.out.println("inside not present :"+ value);
                                   Random r = new Random();
                                   int low = 0000;
                                   int high = 999999;
                                   int random = r.nextInt(high-low) + low;
-                                  System.out.println("Random Pin number generation" + random);
+                                  //System.out.println("Random Pin number generation" + random);
                                 
                                 // Create new JSON object
                                 ObjectNode newNode = mapper.createObjectNode();
@@ -4407,10 +4401,9 @@ private void getDemsFieldMappingsrccStatus() {
                                     // Append new node to existing array node
                                     ((ArrayNode) node).add(newNodeJson);
                                 }
-                                System.out.println("final node  :"+node);
+                                //System.out.println("final node  :"+node);
                               }
                             }
-                            System.out.println("value here :"+value1);
                             exchange.getMessage().setBody(rootNode,DemsPersonData.class);
                           }
                       }
@@ -4420,14 +4413,14 @@ private void getDemsFieldMappingsrccStatus() {
                     .setProperty("update_data", simple("${body}"))
                     // update case
                     .setBody(simple("${exchangeProperty.update_data}"))
-                    .removeHeader("CamelHttpUri")
+                    /*.removeHeader("CamelHttpUri")
                     .removeHeader("CamelHttpBaseUri")
                     .removeHeaders("CamelHttp*")
                     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
                     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
-                    .log(LoggingLevel.INFO,"Person updated.")   
+                    .log(LoggingLevel.INFO,"Person updated.")   */
                   .end()
                 .endChoice()
                 .otherwise()
