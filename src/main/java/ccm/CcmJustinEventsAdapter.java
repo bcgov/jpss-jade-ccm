@@ -667,7 +667,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.PART_MERGE))
           .to("direct:processPartMergeEvents")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
         .otherwise()
