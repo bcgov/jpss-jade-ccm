@@ -4271,12 +4271,12 @@ private void getDemsFieldMappingsrccStatus() {
         .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
         //traverse through all cases in DEMS
         .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/list")
-        .log(LoggingLevel.INFO,"Case list: '${body}'")
+        .log(LoggingLevel.DEBUG,"Case list: '${body}'")
         .split()
         .jsonpathWriteAsString("$.items")
           .setProperty("id",jsonpath("$.id"))
           .setProperty("status",jsonpath("$.status"))
-          .log(LoggingLevel.INFO,"Case Id: ${exchangeProperty.id}, status: ${exchangeProperty.status}")
+          .log(LoggingLevel.DEBUG,"Case Id: ${exchangeProperty.id}, status: ${exchangeProperty.status}")
           .choice()
             .when().simple("${exchangeProperty.status} == 'Active'")
               //look-up list of accused participants of each case
@@ -4292,14 +4292,13 @@ private void getDemsFieldMappingsrccStatus() {
               .log(LoggingLevel.DEBUG,"List of accused participant of each case: '${body}'")
               .unmarshal().json()
               .setProperty("length",jsonpath("$.participants.length()"))
-              .log(LoggingLevel.INFO, "Participant length: ${exchangeProperty.length}")
+              .log(LoggingLevel.DEBUG, "Participant length: ${exchangeProperty.length}")
               .choice()
                 .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
                   .split()
                     .jsonpathWriteAsString("$.participants")
                     .setProperty("personid",jsonpath("$.personId"))
                     .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.personid}")
-                    //check if there already exists an edtexternalid for the person
                     .removeHeader("CamelHttpUri")
                     .removeHeader("CamelHttpBaseUri")
                     .removeHeaders("CamelHttp*")
@@ -4308,9 +4307,8 @@ private void getDemsFieldMappingsrccStatus() {
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
                     //.toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/89")
-                    .log(LoggingLevel.INFO,"check if there already exist an extid for person: '${body}'")
+                    .log(LoggingLevel.DEBUG,"check if there already exist an extid for person: '${body}'")
                     .setBody(simple("${body}"))
-                    //.setProperty("demspersondata").simple("${bodyAs(String)}")
                     .setProperty("otcfieldexist").simple("false")
                     .setProperty("demspersondata", simple("${body}"))
                     .unmarshal().json()
@@ -4328,11 +4326,9 @@ private void getDemsFieldMappingsrccStatus() {
                               
                               ObjectMapper objectMapper = new ObjectMapper();
                               String json = objectMapper.writeValueAsString(dataMap);
-                              //System.out.println(  "bodyMap: "+dataMap);
                               String prefix = "";String suffix = "";
                               ObjectMapper mapper = new ObjectMapper();
                               JsonNode rootNode = mapper.readTree(json);
-                              //System.out.println(  "rootNode: "+rootNode);
 
                               JsonNode node = rootNode.at("/fields");
                               //System.out.println("node :"+node);
@@ -4359,7 +4355,7 @@ private void getDemsFieldMappingsrccStatus() {
                               String value = null;
                               for (String pair : pairs) {
                                 if(pair != null){
-                                System.out.println("pair :"+ pair);
+                                //System.out.println("pair :"+ pair);
                                   String[] keyValue = pair.split(",\\s*");
                                   for (String kv : keyValue) {//System.out.println("keyValue :"+ kv);
                                       String[] entry = kv.split(":");//System.out.println("entry :"+ entry[0].replace("\"", "").trim());
@@ -4369,7 +4365,6 @@ private void getDemsFieldMappingsrccStatus() {
                                           break;
                                       }
                                   }
-                                  // Break if dateValue found
                                   if (present) {
                                     //System.out.println("inside Break if value :"+ value);
                                       break;
@@ -4377,7 +4372,6 @@ private void getDemsFieldMappingsrccStatus() {
                                 }
                               }
                               if(!present){
-                                //System.out.println("inside not present :"+ value);
                                   Random r = new Random();
                                   int low = 0000;
                                   int high = 999999;
@@ -4389,13 +4383,10 @@ private void getDemsFieldMappingsrccStatus() {
                                 newNode.put("id", 113);
                                 newNode.put("name", "OTC");
                                 newNode.put("value", random);
-
                                 // Convert new JSON object to String
                                 String newNodeString = mapper.writeValueAsString(newNode);
-
                                 // Parse new JSON object string to JsonNode
                                 JsonNode newNodeJson = mapper.readTree(newNodeString);
-
                                 // Check if node is an ArrayNode
                                 if (node.isArray()) {
                                     // Append new node to existing array node
@@ -4413,14 +4404,17 @@ private void getDemsFieldMappingsrccStatus() {
                     .setProperty("update_data", simple("${body}"))
                     // update case
                     .setBody(simple("${exchangeProperty.update_data}"))
-                    /*.removeHeader("CamelHttpUri")
+                    .setHeader("key", jsonpath("$.key"))
+                    //.log(LoggingLevel.INFO,"DEMS-bound request data: '${header[key]}'")
+                    .setHeader("key").simple("${header.key}")
+                    .removeHeader("CamelHttpUri")
                     .removeHeader("CamelHttpBaseUri")
                     .removeHeaders("CamelHttp*")
                     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
                     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
                     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
-                    .log(LoggingLevel.INFO,"Person updated.")   */
+                    .log(LoggingLevel.INFO,"Person updated.")
                   .end()
                 .endChoice()
                 .otherwise()
