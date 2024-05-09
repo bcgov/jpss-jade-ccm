@@ -6,7 +6,6 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.ZonedDateTime;
 import java.util.Base64;
-import java.util.StringTokenizer;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,9 +63,11 @@ public class CcmNotificationService extends RouteBuilder {
     attachExceptionHandlers();
 
     processChargeAssessmentEvents();
+    processChargeAssessmentPriorityEvents();
     processBulkChargeAssessmentEvents();
     createPartIdProvisionCompleted();
     processCourtCaseEvents();
+    processCourtCasePriorityEvents();
     processChargeAssessmentChanged();
     processManualChargeAssessmentChanged();
     processChargeAssessmentCreated();
@@ -289,7 +290,6 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service&consumersCount={{kafka.topic.chargeassessment.consumer.count}}&maxPollRecords=3&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
@@ -356,6 +356,71 @@ public class CcmNotificationService extends RouteBuilder {
         .to("direct:publishEventKPI")
         .setBody(header("event"))
         .to("direct:processCourtCaseAuthListChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processChargeAssessmentPriorityEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.chargeassessments-priority.name}}?groupId=ccm-notification-service&maxPollRecords=3&maxPollIntervalMs=4800000")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.chargeassessments-priority.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.MANUALLY_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processManualChargeAssessmentChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processManualChargeAssessmentChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CREATED))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentCreated"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processChargeAssessmentCreated")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.UPDATED))
+        .setProperty("kpi_component_route_name", simple("processChargeAssessmentUpdated"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processChargeAssessmentUpdated")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -652,7 +717,7 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .delay(30000)
-    .to("kafka:{{kafka.topic.reports.name}}")
+    .to("kafka:{{kafka.topic.reports-priority.name}}")
     ;
   }
 
@@ -730,6 +795,71 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
+  private void processCourtCasePriorityEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.courtcases-priority.name}}?groupId=ccm-notification-service&maxPollRecords=3&maxPollIntervalMs=4800000")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.courtcases-priority.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
+    .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.MANUALLY_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processManualCourtCaseChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processManualCourtCaseChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.APPEARANCE_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseAppearanceChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCourtCaseAppearanceChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.CROWN_ASSIGNMENT_CHANGED))
+        .setProperty("kpi_component_route_name", simple("processCourtCaseCrownAssignmentChanged"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processCourtCaseCrownAssignmentChanged")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end()
+    ;
+  }
+
   private void processChargeAssessmentChanged() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -747,6 +877,17 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
     .log(LoggingLevel.DEBUG,"createOverrideFlag = ${exchangeProperty.createOverrideFlag}")
+
+    // -> JADE-2896-MANU events get a priority topic
+    .choice()
+      .when(simple("${exchangeProperty.createOverrideFlag} == 'true'"))
+        .setProperty("kafka-topic-chargeassessments").simple("{{kafka.topic.chargeassessments-priority.name}}")
+      .endChoice()
+      .otherwise()
+        .setProperty("kafka-topic-chargeassessments").simple("{{kafka.topic.chargeassessments.name}}")
+      .endChoice()
+    .end()
+
     .choice()
       .when(simple("${exchangeProperty.autoCreateFlag} == 'true' || ${exchangeProperty.caseFound} != '' || ${exchangeProperty.createOverrideFlag} == 'true'"))
         .process(new Processor() {
@@ -780,9 +921,9 @@ public class CcmNotificationService extends RouteBuilder {
         })
         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
         .log(LoggingLevel.DEBUG,"Generating derived court case event: ${body}")
-        .to("kafka:{{kafka.topic.chargeassessments.name}}") // only push on topic, if auto creation is true
+        .toD("kafka:${exchangeProperty.kafka-topic-chargeassessments}") // only push on topic, if auto creation is true
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.chargeassessments.name}}"))
+        .setProperty("kpi_event_topic_name", simple("${exchangeProperty.kafka-topic-chargeassessments}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
         .setProperty("kpi_component_route_name", simple(routeId))
         .to("direct:preprocessAndPublishEventCreatedKPI")
@@ -1224,7 +1365,6 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //from("kafka:{{kafka.topic.chargeassessments.name}}?groupId=ccm-notification-service")
     from("kafka:{{kafka.topic.bulk-caseusers.name}}?groupId=ccm-notification-service&maxPollRecords=1&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.bulk-caseusers.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
@@ -1871,6 +2011,16 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
     // get list of associated rcc_ids?
 
+    // -> JADE-2896-MANU events get a priority topic
+    .choice()
+      .when(simple("${exchangeProperty.createOverrideFlag} == 'true'"))
+        .setProperty("kafka-topic-courtcases").simple("{{kafka.topic.courtcases-priority.name}}")
+      .endChoice()
+      .otherwise()
+        .setProperty("kafka-topic-courtcases").simple("{{kafka.topic.courtcases.name}}")
+      .endChoice()
+    .end()
+
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
@@ -1946,7 +2096,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .choice()
-      .when(simple(" ${exchangeProperty.createCase} == 'true'"))
+      .when(simple(" ${exchangeProperty.createCase} == 'true' || ${exchangeProperty.createOverrideFlag} == 'true'"))
         .doTry()
           .log(LoggingLevel.INFO,"Create new crown assignment changed event.")
           .process(new Processor() {
@@ -1962,10 +2112,10 @@ public class CcmNotificationService extends RouteBuilder {
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-          .to("kafka:{{kafka.topic.courtcases.name}}")
+          .toD("kafka:${exchangeProperty.kafka-topic-courtcases}")
 
           .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-          .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
+          .setProperty("derived_event_topic", simple("${exchangeProperty.kafka-topic-courtcases}"))
           .log(LoggingLevel.INFO,"Derived event published.")
           .process(new Processor() {
             @Override
@@ -2009,10 +2159,10 @@ public class CcmNotificationService extends RouteBuilder {
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
-          .to("kafka:{{kafka.topic.courtcases.name}}")
+          .toD("kafka:${exchangeProperty.kafka-topic-courtcases}")
 
           .setProperty("derived_event_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
-          .setProperty("derived_event_topic", simple("{{kafka.topic.courtcases.name}}"))
+          .setProperty("derived_event_topic", simple("${exchangeProperty.kafka-topic-courtcases}"))
           .log(LoggingLevel.INFO,"Derived event published.")
           .process(new Processor() {
             @Override
@@ -2094,7 +2244,14 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .delay(60000)
-    .to("kafka:{{kafka.topic.reports.name}}")
+    .choice()
+      .when(simple("${exchangeProperty.createOverrideFlag} == 'true'"))
+        .to("kafka:{{kafka.topic.reports-priority.name}}")
+      .endChoice()
+      .otherwise()
+        .to("kafka:{{kafka.topic.reports.name}}")
+      .endChoice()
+    .end()
     ;
   }
 
