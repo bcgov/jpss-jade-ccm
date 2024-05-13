@@ -2237,7 +2237,6 @@ public class CcmNotificationService extends RouteBuilder {
       .endChoice()
     .end()
     .choice()
-
       .when(simple(" ${exchangeProperty.createCase} == 'true' || ${exchangeProperty.createOverrideFlag} == 'true'"))
         .doTry()
           .log(LoggingLevel.INFO,"Create new crown assignment changed event.")
