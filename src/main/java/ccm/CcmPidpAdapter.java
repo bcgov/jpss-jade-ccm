@@ -543,7 +543,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
-  
+
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
