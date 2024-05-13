@@ -717,6 +717,7 @@ public class CcmNotificationService extends RouteBuilder {
         .choice()
           .when(simple("${exchangeProperty.exception} != null"))
             .log(LoggingLevel.INFO, "There is an exception")
+            .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
     
             .process(new Processor() {
               public void process(Exchange exchange) throws Exception {
@@ -727,7 +728,6 @@ public class CcmNotificationService extends RouteBuilder {
             })
           .otherwise()
             .log(LoggingLevel.INFO, "No exception")
-            .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
         .end()
 
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
@@ -1288,6 +1288,7 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.exception} != null"))
         .log(LoggingLevel.INFO, "There is an exception")
+        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
 
         .process(new Processor() {
           public void process(Exchange exchange) throws Exception {
@@ -1297,8 +1298,7 @@ public class CcmNotificationService extends RouteBuilder {
           }
         })
       .otherwise()
-        .log(LoggingLevel.INFO, "No exception")
-        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
+        .log(LoggingLevel.INFO, "No exceptions")
     .end()
     .log(LoggingLevel.INFO, "Completed processChargeAssessmentUpdated")
     ;
@@ -2145,7 +2145,6 @@ public class CcmNotificationService extends RouteBuilder {
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
     .setBody(simple("${bodyAs(String)}"))
 
-
     .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
     .setProperty("rcc_id", jsonpath("$.rcc_id"))
     .setProperty("primary_yn", jsonpath("$.primary_yn"))
@@ -2322,11 +2321,11 @@ public class CcmNotificationService extends RouteBuilder {
     // the direct call will wait for a certain time before creating the Report End event.
     .wireTap("direct:generateInformationReportEvent")
 
-
     .log(LoggingLevel.INFO, "Checking for exceptions")
     .choice()
       .when(simple("${exchangeProperty.exception} != null"))
         .log(LoggingLevel.INFO, "There is an exception")
+        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
 
         .process(new Processor() {
           public void process(Exchange exchange) throws Exception {
@@ -2337,7 +2336,6 @@ public class CcmNotificationService extends RouteBuilder {
         })
       .otherwise()
         .log(LoggingLevel.INFO, "No exception")
-        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
     .end()
 
     .log(LoggingLevel.INFO, "Completed processCourtCaseChanged")
@@ -2632,21 +2630,6 @@ public class CcmNotificationService extends RouteBuilder {
           .log(LoggingLevel.WARN, "Failed Case Court File Update: ${exchangeProperty.exception}")
           .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
         .end()
-
-        .log(LoggingLevel.DEBUG,"Get accused list from court case.")
-        // set the updated accusedList object to be the body to use it to retrieve all the accused
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            ArrayList<String> accusedList = (ArrayList<String>)exchange.getProperty("accusedList", ArrayList.class);
-
-            exchange.getMessage().setBody(accusedList, ArrayList.class);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, ArrayList.class)
-        .setHeader("number",simple("${exchangeProperty.courtNumber}"))
-        .log(LoggingLevel.DEBUG, "calling processAccused persons ${body}")
-        .to("direct:processAccusedPersons")
 
       .endChoice()
       .otherwise()
