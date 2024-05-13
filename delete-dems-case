@@ -1,0 +1,18 @@
+ns_set="cef5dd-test"
+
+id="$1"
+
+ns="$ns_set"
+
+if [ "$id" = "" ]; then
+   echo "Error.  Rcc id not specified.\n"
+   echo "$0 rcc_id"
+   echo "E.g., $0 100\n"
+   return 1
+fi
+
+echo "`basename $0` to $ns ..."
+
+oc -n $ns exec service/ccm-dems-adapter -- curl \
+    -X PUT \
+    "http://ccm-dems-adapter/deleteExistingCase?rcc_id=$id"
