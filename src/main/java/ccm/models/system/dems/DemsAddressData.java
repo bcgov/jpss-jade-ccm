@@ -1,8 +1,5 @@
 package ccm.models.system.dems;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class DemsAddressData {
 
     private String email;
