@@ -4355,7 +4355,7 @@ private void getDemsFieldMappingsrccStatus() {
                   .choice()
                     .when(simple("${exchangeProperty.otcfieldexist} == 'false'"))
                       // update case
-                      /*.setBody(simple("${exchangeProperty.update_data}"))
+                      .setBody(simple("${exchangeProperty.update_data}"))
                       .setHeader("key", jsonpath("$.key"))
                       .log(LoggingLevel.INFO,"DEMS-bound person key: '${header[key]}'")
                       .setHeader("key").simple("${header.key}")
@@ -4365,7 +4365,7 @@ private void getDemsFieldMappingsrccStatus() {
                       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
                       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")*/
+                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
                       .log(LoggingLevel.INFO,"Person updated.")
                     .endChoice()
                     .otherwise()
