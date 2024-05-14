@@ -2743,7 +2743,6 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG,"Person exist : ${body}")
     .unmarshal().json()
     .setProperty("personFound").simple("${body[id]}")
-    .setProperty("existingOtc",jsonpath("$.fields[?(@.name == 'OTC')]"))
     .setHeader("organizationId").jsonpath("$.orgs[0].organisationId", true)
     .setHeader("key").simple("${header.key}")
     .setHeader("courtCaseId").simple("${header.courtCaseId}")
@@ -2882,15 +2881,10 @@ private void getDemsFieldMappingsrccStatus() {
         DemsPersonData d = new DemsPersonData(b);
         String personId = exchange.getProperty("personId", String.class);
         String organizationId = exchange.getProperty("organizationId", String.class);
-        String existingOtc = exchange.getProperty("existingOtc", String.class);
         d.setId(personId);
         DemsOrganisationData o = new DemsOrganisationData(organizationId);
         d.setOrgs(new ArrayList<DemsOrganisationData>());
         d.getOrgs().add(o);
-        if(existingOtc == null || existingOtc.length() < 4) {
-          log.info("generate otc for existing person");
-          d.generateOTC(d);
-        }
         exchange.getMessage().setBody(d);
       }
     })
