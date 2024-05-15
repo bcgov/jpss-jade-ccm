@@ -3673,7 +3673,7 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
     .process(new Processor() {
       @Override
@@ -3815,7 +3815,7 @@ private void getDemsFieldMappingsrccStatus() {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     
     .to("direct:syncAccusedPersons")
     .end();

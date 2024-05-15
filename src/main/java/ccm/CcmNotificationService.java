@@ -3288,7 +3288,7 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-dems-adapter/syncAccusedPersons")
