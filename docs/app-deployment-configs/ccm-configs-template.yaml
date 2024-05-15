@@ -24,3 +24,7 @@ data:
   pidp-api-host: tbd
 
   pidp-api-oauth-token-endpoint-url: tbd
+
+  topic-chargeassessment-consumer-count: tbd
+  topic-courtcase-consumer-count: tbd
+  topic-bulk-chargeassessment-consumer-count: tbd

@@ -22,4 +22,4 @@ echo "`basename $0` to $ns ..."
 export TITLEPREFIX="JUSTIN Adapter $ns "
 echo -ne "\e]0;JUSTIN Out Adapter $ns\a"
 
-kamel -n $ns log ccm-justin-out-adapter
+kubectl -n $ns logs -f deployment/ccm-justin-out-adapter --all-containers=true
