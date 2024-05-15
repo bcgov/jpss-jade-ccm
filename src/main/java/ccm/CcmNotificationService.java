@@ -669,6 +669,7 @@ public class CcmNotificationService extends RouteBuilder {
         .choice()
           .when(simple("${exchangeProperty.exception} != null"))
             .log(LoggingLevel.INFO, "There is an exception")
+            .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
     
             .process(new Processor() {
               public void process(Exchange exchange) throws Exception {
@@ -679,7 +680,6 @@ public class CcmNotificationService extends RouteBuilder {
             })
           .otherwise()
             .log(LoggingLevel.INFO, "No exception")
-            .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
         .end()
 
         .log(LoggingLevel.INFO, "Completed processChargeAssessmentCreated")
@@ -1033,8 +1033,10 @@ public class CcmNotificationService extends RouteBuilder {
           }}
         ).marshal().json()
         .log(LoggingLevel.DEBUG,"Accused_person : ${exchangeProperty.accused_person}" )
+        
         .to("direct:updateChargeAssessment")
         .log(LoggingLevel.DEBUG,"Returned body: ${body}")
+  
       .endChoice()
       .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} == ${body[key]}"))
         // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
@@ -1101,6 +1103,7 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.exception} != null"))
         .log(LoggingLevel.INFO, "There is an exception")
+        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
 
         .process(new Processor() {
           public void process(Exchange exchange) throws Exception {
@@ -2060,17 +2063,19 @@ public class CcmNotificationService extends RouteBuilder {
 
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
+    .log(LoggingLevel.INFO, "metadata_data: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
+
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
         exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+    .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
     .setBody(simple("${bodyAs(String)}"))
-
 
     .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
     .setProperty("rcc_id", jsonpath("$.rcc_id"))
@@ -2253,6 +2258,7 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.exception} != null"))
         .log(LoggingLevel.INFO, "There is an exception")
+        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
 
         .process(new Processor() {
           public void process(Exchange exchange) throws Exception {
@@ -2263,7 +2269,6 @@ public class CcmNotificationService extends RouteBuilder {
         })
       .otherwise()
         .log(LoggingLevel.INFO, "No exception")
-        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
     .end()
 
     .log(LoggingLevel.INFO, "Completed processCourtCaseChanged")
