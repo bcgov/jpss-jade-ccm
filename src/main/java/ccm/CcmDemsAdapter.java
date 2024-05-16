@@ -44,7 +44,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
 import org.apache.http.NoHttpResponseException;
 
-
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -79,12 +79,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
-
-//import org.apache.camel.http.common.HttpOperationFailedException;
 
 public class CcmDemsAdapter extends RouteBuilder {
   @Override
@@ -148,14 +146,13 @@ public class CcmDemsAdapter extends RouteBuilder {
     getCaseListHyperlink();
     reassignParticipantCases();
     checkPersonExist();
-    createEdtExternalIdExistingParticipant();
-    updateEdtExternalIdExistingParticipant();
-
     syncAccusedPersons();
     http_syncAccusedPersons();
-
     deleteExistingCase();
-
+    createEdtExternalIdExistingParticipant();
+    updateEdtExternalIdExistingParticipant();
+    updateExistingParticipantwithOTC();
+    updateExistingParticipantwithOTCOrig();
   }
 
 
@@ -2452,7 +2449,7 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.DEBUG,"${body}")
         .to("direct:updatePerson")
       .endChoice()
-      .end()
+    .end()
     .setHeader("key").simple("${header.key}")
     .setHeader("courtCaseId").simple("${header.courtCaseId}")
     .to("direct:addParticipantToCase")
@@ -2890,7 +2887,7 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
-          .log(LoggingLevel.INFO, "Export report response: '${body}'")
+          .log(LoggingLevel.DEBUG, "Export report response: '${body}'")
         .endChoice()
       .end()
 
@@ -3666,6 +3663,283 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void syncAccusedPersons() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+   
+    //IN: property =number - primary rcc_id
+    //IN: property =accused - List<CaseAccused>
+   
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
+        exchange.setProperty("accusedPersons", bodyInput);
+      }})
+    
+    .choice()
+    .when(simple("${header.number}!= '' && ${body} != '' "))
+      // get the primary rcc, based on the dems primary agency file id
+
+      //.setHeader("number", simple("${header[rcc_id]}"))
+      // look for current status of the dems case.
+      // and set the rcc to the primary rcc
+      .to("direct:getCourtCaseStatusByKey")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .setProperty("caseStatus").simple("${body[status]}")
+      .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+      .choice()
+      // if there is a case, delete participants
+      .when(simple("${exchangeProperty.caseId} != ''"))
+      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
+          .setProperty("ParticipantTypeFilter", simple("Accused"))
+          .setProperty("Participants",simple(""))
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+          //.log(LoggingLevel.INFO,"SyncAccussedPersons body before call to Dems participants/sync: ${body}")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
+          .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+         // .log(LoggingLevel.INFO,"SyncAccussedPersons body after call to Dems participants/sync: ${body}")
+          .doTry()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+
+              List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("accusedPersons");
+             // log.info("get accused persons from exchange : size : " + accusedPersons.size());
+              exchange.getMessage().setBody(accusedPersons);
+             // log.info("set exchange body to accussed persons");
+            }
+          })
+          .marshal().json()
+          .split()
+            .jsonpathWriteAsString("$.*")
+            .setHeader("key", jsonpath("$.identifier"))
+            .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
+            .log(LoggingLevel.INFO,"Updating accused participant ...")
+            .log(LoggingLevel.DEBUG,"Case Id key = ${exchangeProperty.caseId}")
+            .to("direct:processAccusedPerson")
+            .log(LoggingLevel.INFO,"Accused participant updated.")
+          .end()
+        .endDoTry()
+        .doCatch(HttpOperationFailedException.class)
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+          .choice()
+            .when().simple("${exception.statusCode} == 504")
+              .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
+               // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
+              .delay(30000)
+    
+              //jade 1747
+              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.caseId}")
+              .setProperty("ParticipantTypeFilter", simple("Accused"))
+              .setProperty("Participants",simple(""))
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
+              .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
+              .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
+              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+              // Merge the accused persons from all related agency files into a unique list
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
+                  exchange.getMessage().setBody(accusedPersons);
+                }
+              })
+    
+              .marshal().json()
+              .split()
+                .jsonpathWriteAsString("$.*")
+                .setHeader("key", jsonpath("$.identifier"))
+                .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
+                .log(LoggingLevel.INFO,"Updating accused participant ...")
+                .log(LoggingLevel.DEBUG,"Court case  id = ${exchangeProperty.caseId}")
+                .to("direct:processAccusedPerson")
+                .log(LoggingLevel.INFO,"Accused participant updated.")
+              .end()
+    
+            .endChoice()
+            .when().simple("${exception.statusCode} >= 400")
+              .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
+              .log(LoggingLevel.ERROR, "Body: '${exception}'")
+              .log(LoggingLevel.ERROR, "${exception.message}")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  try {
+                    HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+    
+                    exchange.getMessage().setBody(cause.getResponseBody());
+                    log.info("Returned body : " + cause.getResponseBody());
+                  } catch(Exception ex) {
+                    ex.printStackTrace();
+                  }
+                }
+              })
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+              //.transform(exceptionMessage())
+              .stop()
+            .endChoice()
+          .end()
+        .end() 
+      .endChoice()
+    .end();
+  }
+
+  private void http_syncAccusedPersons() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+   
+    //IN: property =number - primary rcc_id
+    //IN: property =accused - List<CaseAccused>
+   
+    from("platform-http:/syncAccusedPersons?httpMethodRestrict=POST")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
+    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    
+    .to("direct:syncAccusedPersons")
+    .end();
+  }
+
+  private void deleteExistingCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Searching for case with: rcc_id = ${header.rcc_id} ...")
+    .setProperty("rcc_id", header("rcc_id"))
+    .choice()
+      .when(simple("${exchangeProperty.rcc_id} != null"))
+        .log(LoggingLevel.INFO, "Look-up caseId.")
+        .setHeader("number", simple("${header[rcc_id]}"))
+
+        .to("direct:getCourtCaseStatusByKey")
+        .unmarshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
+
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            DemsCaseStatus demsCaseStatus = (DemsCaseStatus)exchange.getIn().getBody(DemsCaseStatus.class);
+            exchange.setProperty("dems_case_id", demsCaseStatus.getId());
+
+            //Random r = new Random();
+            //int low = 1;
+            //int high = 9999;
+            //int random = r.nextInt(high-low) + low;
+            StringBuffer outputStringBuffer = new StringBuffer();
+
+            outputStringBuffer.append("{\"id\": \"");
+            outputStringBuffer.append(demsCaseStatus.getId());
+            outputStringBuffer.append("\", \"name\": \"");
+            outputStringBuffer.append(demsCaseStatus.getName());
+
+            /*outputStringBuffer.append("\", \"key\": \"");
+            outputStringBuffer.append("AUTO-DELETE-");
+            outputStringBuffer.append(random);
+            outputStringBuffer.append("-");
+            outputStringBuffer.append(demsCaseStatus.getKey());
+            outputStringBuffer.append("\", \"status\": \"");*/
+
+            outputStringBuffer.append("\", \"key\": null");
+            outputStringBuffer.append(", \"status\": \"");
+
+            outputStringBuffer.append("Inactive");
+            outputStringBuffer.append("\", \"fields\": [");
+
+            outputStringBuffer.append("{ \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
+            outputStringBuffer.append("]}");
+
+            exchange.getMessage().setBody(outputStringBuffer.toString());
+          }
+        })
+
+        .doTry()
+          .choice()
+            .when(simple("${exchangeProperty.dems_case_id} != ''"))
+              // delete case
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .log(LoggingLevel.INFO,"Deleting DEMS case (key = ${header.rcc_id} id = ${exchangeProperty.dems_case_id})... ${body}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+              .log(LoggingLevel.INFO,"DEMS case deleted.")
+              .log(LoggingLevel.INFO,"Removing users")
+
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  StringBuffer outputStringBuffer = new StringBuffer();
+      
+                  outputStringBuffer.append("{\"userIds\": [");
+                  outputStringBuffer.append("]}");
+      
+                  exchange.getMessage().setBody(outputStringBuffer.toString());
+                }
+              })
+
+              // sync case users
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
+              .log(LoggingLevel.INFO,"Synchronizing case users ...")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/users/sync")
+
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.caseNotFound}"))
+              .setHeader("CamelHttpResponseCode", simple("200"))
+              .log(LoggingLevel.INFO,"Case not found.")
+            .endChoice()
+          .end() // choice end
+        .endDoTry()
+        .doCatch(Exception.class)
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+          .setBody(simple("${exchangeProperty.caseNotFound}"))
+          .setHeader("CamelHttpResponseCode", simple("200"))
+        .end()
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "No rcc_id provided.")
+      .endChoice()
+    .end()
+    ;
+  }
+
   private void createEdtExternalIdExistingParticipant() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3840,281 +4114,320 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
-  private void syncAccusedPersons() {
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-   
-    //IN: property =number - primary rcc_id
-    //IN: property =accused - List<CaseAccused>
-   
-    from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
-        exchange.setProperty("accusedPersons", bodyInput);
-      }})
-    
-    .choice()
-    .when(simple("${header.number}!= '' && ${body} != '' "))
-      // get the primary rcc, based on the dems primary agency file id
-
-      //.setHeader("number", simple("${header[rcc_id]}"))
-      // look for current status of the dems case.
-      // and set the rcc to the primary rcc
-      .to("direct:getCourtCaseStatusByKey")
-      .unmarshal().json()
-      .setProperty("caseId").simple("${body[id]}")
-      .setProperty("caseStatus").simple("${body[status]}")
-      .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-      .choice()
-      // if there is a case, delete participants
-      .when(simple("${exchangeProperty.caseId} != ''"))
-      .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
-          .setProperty("ParticipantTypeFilter", simple("Accused"))
-          .setProperty("Participants",simple(""))
-          .removeHeader("CamelHttpUri")
-          .removeHeader("CamelHttpBaseUri")
-          .removeHeaders("CamelHttp*")
-          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-          .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-          //.log(LoggingLevel.INFO,"SyncAccussedPersons body before call to Dems participants/sync: ${body}")
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
-          .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-         // .log(LoggingLevel.INFO,"SyncAccussedPersons body after call to Dems participants/sync: ${body}")
-          .doTry()
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-
-              List<CaseAccused> accusedPersons = (ArrayList<CaseAccused>) exchange.getProperty("accusedPersons");
-             // log.info("get accused persons from exchange : size : " + accusedPersons.size());
-              exchange.getMessage().setBody(accusedPersons);
-             // log.info("set exchange body to accussed persons");
-            }
-          })
-          .marshal().json()
-          .split()
-            .jsonpathWriteAsString("$.*")
-            .setHeader("key", jsonpath("$.identifier"))
-            .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
-            .log(LoggingLevel.INFO,"Updating accused participant ...")
-            .log(LoggingLevel.DEBUG,"Case Id key = ${exchangeProperty.caseId}")
-            .to("direct:processAccusedPerson")
-            .log(LoggingLevel.INFO,"Accused participant updated.")
-          .end()
-        .endDoTry()
-        .doCatch(HttpOperationFailedException.class)
-          .log(LoggingLevel.ERROR,"Exception: ${exception}")
-          .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
-          .choice()
-            .when().simple("${exception.statusCode} == 504")
-              .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
-               // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
-              .delay(30000)
-    
-              //jade 1747
-              .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.caseId}")
-              .setProperty("ParticipantTypeFilter", simple("Accused"))
-              .setProperty("Participants",simple(""))
-              .removeHeader("CamelHttpUri")
-              .removeHeader("CamelHttpBaseUri")
-              .removeHeaders("CamelHttp*")
-              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-              .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-              .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
-              .setBody(simple("${exchangeProperty.CourtCaseMetadata}"))
-              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
-              // Merge the accused persons from all related agency files into a unique list
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) {
-                  List<CaseAccused> accusedPersons = exchange.getIn().getBody(ArrayList.class);
-                  exchange.getMessage().setBody(accusedPersons);
-                }
-              })
-    
-              .marshal().json()
-              .split()
-                .jsonpathWriteAsString("$.*")
-                .setHeader("key", jsonpath("$.identifier"))
-                .setHeader("courtCaseId").simple("${exchangeProperty.caseId}")
-                .log(LoggingLevel.INFO,"Updating accused participant ...")
-                .log(LoggingLevel.DEBUG,"Court case  id = ${exchangeProperty.caseId}")
-                .to("direct:processAccusedPerson")
-                .log(LoggingLevel.INFO,"Accused participant updated.")
-              .end()
-    
-            .endChoice()
-            .when().simple("${exception.statusCode} >= 400")
-              .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
-              .log(LoggingLevel.ERROR, "Body: '${exception}'")
-              .log(LoggingLevel.ERROR, "${exception.message}")
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) throws Exception {
-                  try {
-                    HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-    
-                    exchange.getMessage().setBody(cause.getResponseBody());
-                    log.info("Returned body : " + cause.getResponseBody());
-                  } catch(Exception ex) {
-                    ex.printStackTrace();
-                  }
-                }
-              })
-              .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
-              //.transform(exceptionMessage())
-              .stop()
-            .endChoice()
-          .end()
-        .end() 
-      .endChoice()
-    .end();
-  }
-
-  private void http_syncAccusedPersons() {
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-   
-    //IN: property =number - primary rcc_id
-    //IN: property =accused - List<CaseAccused>
-   
-    from("platform-http:/syncAccusedPersons?httpMethodRestrict=POST")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
-    .log(LoggingLevel.INFO,"Processing request: ${body}")
-    
-    .to("direct:syncAccusedPersons")
-    .end();
-    
-  }
-
-  private void deleteExistingCase() {
+  private void updateExistingParticipantwithOTC() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Searching for case with: rcc_id = ${header.rcc_id} ...")
-    .setProperty("rcc_id", header("rcc_id"))
-    .choice()
-      .when(simple("${exchangeProperty.rcc_id} != null"))
-        .log(LoggingLevel.INFO, "Look-up caseId.")
-        .setHeader("number", simple("${header[rcc_id]}"))
-
-        .to("direct:getCourtCaseStatusByKey")
-        .unmarshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
-
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseStatus demsCaseStatus = (DemsCaseStatus)exchange.getIn().getBody(DemsCaseStatus.class);
-            exchange.setProperty("dems_case_id", demsCaseStatus.getId());
-
-            //Random r = new Random();
-            //int low = 1;
-            //int high = 9999;
-            //int random = r.nextInt(high-low) + low;
-            StringBuffer outputStringBuffer = new StringBuffer();
-
-            outputStringBuffer.append("{\"id\": \"");
-            outputStringBuffer.append(demsCaseStatus.getId());
-            outputStringBuffer.append("\", \"name\": \"");
-            outputStringBuffer.append(demsCaseStatus.getName());
-
-            /*outputStringBuffer.append("\", \"key\": \"");
-            outputStringBuffer.append("AUTO-DELETE-");
-            outputStringBuffer.append(random);
-            outputStringBuffer.append("-");
-            outputStringBuffer.append(demsCaseStatus.getKey());
-            outputStringBuffer.append("\", \"status\": \"");*/
-
-            outputStringBuffer.append("\", \"key\": null");
-            outputStringBuffer.append(", \"status\": \"");
-
-            outputStringBuffer.append("Inactive");
-            outputStringBuffer.append("\", \"fields\": [");
-
-            outputStringBuffer.append("{ \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
-            outputStringBuffer.append("]}");
-
-            exchange.getMessage().setBody(outputStringBuffer.toString());
-          }
-        })
-
-        .doTry()
+        // IN: header = id
+        from("platform-http:/" + routeId )
+        .routeId(routeId)
+        .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+        .log(LoggingLevel.INFO,"updateExistingParticipantwithOTC...")
+        //.setProperty("id", header("id"))
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        //traverse through all cases in DEMS
+        .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/")
+        //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+        .setProperty("length",jsonpath("$.length()"))
+        .log(LoggingLevel.DEBUG,"Person count: ${exchangeProperty.length}")
+        .split()
+          .jsonpathWriteAsString("$.*")
+          .setProperty("personId",jsonpath("$.id"))
+          .setProperty("personKey",jsonpath("$.key"))
+          .setProperty("status",jsonpath("$.status"))
+          .log(LoggingLevel.DEBUG,"Person Id: ${exchangeProperty.personId}, status: ${exchangeProperty.status}")
           .choice()
-            .when(simple("${exchangeProperty.dems_case_id} != ''"))
-              // delete case
+            .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.personKey} != null")
+              //look-up list of accused participants of each case
               .removeHeader("CamelHttpUri")
               .removeHeader("CamelHttpBaseUri")
               .removeHeaders("CamelHttp*")
-              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-              .log(LoggingLevel.INFO,"Deleting DEMS case (key = ${header.rcc_id} id = ${exchangeProperty.dems_case_id})... ${body}")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-              .log(LoggingLevel.INFO,"DEMS case deleted.")
-              .log(LoggingLevel.INFO,"Removing users")
+              //traverse through all cases in DEMS
+              .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personId}")
+              //.log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+              .setProperty("otcfieldexist").simple("false")
+              .setProperty("demspersondata", simple("${body}"))
+              .setProperty("caselength",jsonpath("$.cases.length()"))
+              .setProperty("existingOtc",jsonpath("$.fields[?(@.name == 'OTC')]"))
+              .unmarshal().json()
+              .log(LoggingLevel.DEBUG, "Participant case length: ${exchangeProperty.caselength}")
 
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) {
-                  StringBuffer outputStringBuffer = new StringBuffer();
-      
-                  outputStringBuffer.append("{\"userIds\": [");
-                  outputStringBuffer.append("]}");
-      
-                  exchange.getMessage().setBody(outputStringBuffer.toString());
-                }
-              })
+              .choice()
+                .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.caselength} > 0"))
+                  .log(LoggingLevel.INFO, "existingOtc: ${exchangeProperty.existingOtc}")
+                  .process(new Processor() {
+                    @Override
+                    public void process(Exchange exchange) throws Exception {
+                      Object d =(Object)exchange.getIn().getBody();
+                      exchange.getMessage().setBody(d);
+                      if (d instanceof DemsPersonData) {
+                        DemsPersonData personData = (DemsPersonData) d;
+                        // Now you can use 'personData' as a PersonData instance
+                        log.info("dgg: " + personData);
+                      }else{
+                        LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+                        
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        String json = objectMapper.writeValueAsString(dataMap);
 
-              // sync case users
+                        Boolean present =false;
+                        ObjectMapper personDataMapper = new ObjectMapper();
+                        personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                        DemsPersonData personData = personDataMapper.readValue(json, DemsPersonData.class);
+                        for(DemsFieldData fieldData : personData.getFields()) {
+                          log.info("Field Name: " + fieldData.getName());
+                          log.info("Field Value: " + fieldData.getValue());
+                          if(fieldData.getName().equalsIgnoreCase("OTC")) {
+                            present = true;
+                            exchange.setProperty("otcfieldexist", "true");
+                            break;
+                          }
+                        }
+                        if(!present) {
+                          personData.generateOTC(personData);
+                        }
+
+                        exchange.getMessage().setBody(personData, DemsPersonData.class);
+                      }
+                    }
+                  })
+                  .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                  .log(LoggingLevel.INFO,"DEMS-bound person data: '${body}'")
+                  .setProperty("update_data", simple("${body}"))
+                  .choice()
+                    .when(simple("${exchangeProperty.otcfieldexist} == 'false'"))
+                      // update case
+                      .setBody(simple("${exchangeProperty.update_data}"))
+                      .setHeader("key", jsonpath("$.key"))
+                      .log(LoggingLevel.INFO,"DEMS-bound person key: '${header[key]}'")
+                      .setHeader("key").simple("${header.key}")
+                      .removeHeader("CamelHttpUri")
+                      .removeHeader("CamelHttpBaseUri")
+                      .removeHeaders("CamelHttp*")
+                      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
+                      .log(LoggingLevel.INFO,"Person updated.")
+                    .endChoice()
+                    .otherwise()
+                      .log(LoggingLevel.INFO,"Person OTC exists already.")
+                    .endChoice()
+                  .log(LoggingLevel.INFO, "There are cases with the person.")
+                .endChoice()
+                .otherwise()
+                  .log(LoggingLevel.INFO, "No cases associated to person.")
+                .end()
+            .end()
+          .end()
+        .end()
+    .log(LoggingLevel.INFO,"end of updateExistingParticipantwithOTC.")
+    ;
+  }
+
+  private void updateExistingParticipantwithOTCOrig() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+        // IN: header = id
+        from("platform-http:/" + routeId )
+        .routeId(routeId)
+        .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+        .log(LoggingLevel.INFO,"updateExistingParticipantwithOTC...")
+        //.setProperty("id", header("id"))
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        //traverse through all cases in DEMS
+        .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/list")
+        .log(LoggingLevel.DEBUG,"Case list: '${body}'")
+        .split()
+        .jsonpathWriteAsString("$.items")
+          .setProperty("id",jsonpath("$.id"))
+          .setProperty("status",jsonpath("$.status"))
+          .log(LoggingLevel.DEBUG,"Case Id: ${exchangeProperty.id}, status: ${exchangeProperty.status}")
+          .choice()
+            .when().simple("${exchangeProperty.status} == 'Active'")
+              //look-up list of accused participants of each case
               .removeHeader("CamelHttpUri")
               .removeHeader("CamelHttpBaseUri")
               .removeHeaders("CamelHttp*")
-              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-              .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
-              .log(LoggingLevel.INFO,"Synchronizing case users ...")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/users/sync")
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              //traverse through all cases in DEMS
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.id}/participants?participantType=Accused")
+              .log(LoggingLevel.DEBUG,"List of accused participant of each case: '${body}'")
+              .unmarshal().json()
+              .setProperty("length",jsonpath("$.participants.length()"))
+              .log(LoggingLevel.DEBUG, "Participant length: ${exchangeProperty.length}")
+              .choice()
+                .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+                  .split()
+                    .jsonpathWriteAsString("$.participants")
+                    .setProperty("personid",jsonpath("$.personId"))
+                    .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.personid}")
+                    .removeHeader("CamelHttpUri")
+                    .removeHeader("CamelHttpBaseUri")
+                    .removeHeaders("CamelHttp*")
+                    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+                    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personid}")
+                    .log(LoggingLevel.DEBUG,"check if there already exist an extid for person: '${body}'")
+                    .setBody(simple("${body}"))
+                    .setProperty("otcfieldexist").simple("false")
+                    .setProperty("demspersondata", simple("${body}"))
+                    .unmarshal().json()
+                    .process(new Processor() {
+                      @Override
+                      public void process(Exchange exchange) throws Exception {
+                        Object d =(Object)exchange.getIn().getBody();
+                        exchange.getMessage().setBody(d);
+                        if (d instanceof DemsPersonData) {
+                          DemsPersonData personData = (DemsPersonData) d;
+                          // Now you can use 'personData' as a PersonData instance
+                          log.info("dgg: " + personData);
+                        }else{
+                          LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+                          
+                          ObjectMapper objectMapper = new ObjectMapper();
+                          String json = objectMapper.writeValueAsString(dataMap);
+                          String prefix = "";String suffix = "";
+                          
+                          Boolean present =false;
+                          ObjectMapper personDataMapper = new ObjectMapper();
+                          personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                          DemsPersonData personData = personDataMapper.readValue(json, DemsPersonData.class);
+                          for(DemsFieldData fieldData : personData.getFields()) {
+                            log.info("Field Name: " + fieldData.getName());
+                            log.info("Field Value: " + fieldData.getValue());
+                            if(fieldData.getName().equalsIgnoreCase("OTC")) {
+                              present = true;
+                              exchange.setProperty("otcfieldexist", "true");
+                              break;
+                            }
+                          }
+                          if(!present) {
+                            personData.generateOTC(personData);
+                          }
 
-            .endChoice()
-            .otherwise()
-              .setBody(simple("${exchangeProperty.caseNotFound}"))
-              .setHeader("CamelHttpResponseCode", simple("200"))
-              .log(LoggingLevel.INFO,"Case not found.")
-            .endChoice()
-          .end() // choice end
-        .endDoTry()
-        .doCatch(Exception.class)
-          .log(LoggingLevel.ERROR,"Exception: ${exception}")
-          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
-          .setBody(simple("${exchangeProperty.caseNotFound}"))
-          .setHeader("CamelHttpResponseCode", simple("200"))
+                          /*
+                          ObjectMapper mapper = new ObjectMapper();
+                          JsonNode rootNode = mapper.readTree(json);
+
+                          JsonNode node = rootNode.at("/fields");
+                          log.info("node :"+node);
+                          // Convert the node to a string
+                          String value1 = node.toString();
+                          log.info("value :"+value1);
+                          if (!prefix.isEmpty()) {
+                            value1 = prefix + value1;
+                          }
+                          if (!suffix.isEmpty()) {
+                              value1 = value1 + suffix;
+                          }
+                          Boolean present =false;
+                          if(value1 != null && value1.length() > 2) {
+                            Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
+                            Matcher matcher = pattern.matcher(value1);
+                            String[] pairs = new String[3]; 
+                            int index = 0;
+                            while (matcher.find()) {
+                                String pair = matcher.group(1).trim();
+                                pairs[index] = pair;
+                                index++;
+                            }
+                            String value = null;
+                            for (String pair : pairs) {
+                              if(pair != null){
+                                log.info("pair :"+ pair);
+                                String[] keyValue = pair.split(",\\s*");
+                                for (String kv : keyValue) {
+                                  log.info("keyValue :"+ kv);
+                                  String[] entry = kv.split(":");
+                                  log.info("entry :"+ entry[0].replace("\"", "").trim());
+                                  if (entry[0].replace("\"", "").trim().equals("name") && entry[1].replace("\"", "").trim().equals("OTC")) {
+                                    log.info("inside most inner loop :"+ kv);
+                                    present= true;
+                                    exchange.setProperty("otcfieldexist", "true");
+                                    break;
+                                  }
+                                }
+                                if (present) {
+                                  log.info("inside Break if value :"+ value);
+                                  break;
+                                }
+                              }
+                            }
+                            if(!present){
+                                Random r = new Random();
+                                int low = 0000;
+                                int high = 999999;
+                                int random = r.nextInt(high-low) + low;
+                                log.info("Random Pin number generation" + random);
+                              
+                              // Create new JSON object
+                              ObjectNode newNode = mapper.createObjectNode();
+                              newNode.put("id", 113);
+                              newNode.put("name", "OTC");
+                              newNode.put("value", random);
+                              // Convert new JSON object to String
+                              String newNodeString = mapper.writeValueAsString(newNode);
+                              // Parse new JSON object string to JsonNode
+                              JsonNode newNodeJson = mapper.readTree(newNodeString);
+                              // Check if node is an ArrayNode
+                              if (node.isArray()) {
+                                  // Append new node to existing array node
+                                  ((ArrayNode) node).add(newNodeJson);
+                              }
+                              log.info("final node  :"+node);
+                            }
+                          }*/
+                          exchange.getMessage().setBody(personData, DemsPersonData.class);
+                        }
+                      }
+                    })
+                    .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                    .log(LoggingLevel.INFO,"DEMS-bound person data: '${body}'")
+                    .setProperty("update_data", simple("${body}"))
+                    .choice()
+                      .when(simple("${exchangeProperty.otcfieldexist} == 'false'"))
+                        // update case
+                        .setBody(simple("${exchangeProperty.update_data}"))
+                        .setHeader("key", jsonpath("$.key"))
+                        .log(LoggingLevel.INFO,"DEMS-bound person key: '${header[key]}'")
+                        .setHeader("key").simple("${header.key}")
+                        .removeHeader("CamelHttpUri")
+                        .removeHeader("CamelHttpBaseUri")
+                        .removeHeaders("CamelHttp*")
+                        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                        .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
+                        .log(LoggingLevel.INFO,"Person updated.")
+                      .endChoice()
+                      .otherwise()
+                        .log(LoggingLevel.INFO,"Person OTC exists already.")
+                      .endChoice()
+                  .end()
+                .endChoice()
+                .otherwise()
+                  .log(LoggingLevel.INFO,"No data participants")
+                .end()
+            .end()
+          .end()
         .end()
-      .endChoice()
-      .otherwise()
-        .log(LoggingLevel.ERROR, "No rcc_id provided.")
-      .endChoice()
-    .end()
+    .log(LoggingLevel.INFO,"end of updateExistingParticipantwithOTC.")
     ;
   }
 

@@ -54,10 +54,11 @@ public class CcmReportsProcessor extends RouteBuilder {
     attachExceptionHandlers(); 
     processReportEvents();
     processReportPriorityEvents();
+    processDocumentRecord();
     createRccStaticReportsEvent();
     publishEventKPI();
     processUnknownStatus();
-      
+
   }
 
   private void attachExceptionHandlers() {
@@ -340,27 +341,7 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .setBody(header("event"))
 
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
-        //.removeHeaders("CamelHttp*")
-        .removeHeader("kafka.HEADERS")
-        .removeHeader("Accept-Encoding")
-        .removeHeader("Content-Encoding")
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .log(LoggingLevel.DEBUG, "headers: ${headers}")
-        .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-        .to("http://ccm-dems-adapter/processDocumentRecord")
+        .to("direct:processDocumentRecord")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -419,27 +400,7 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .setBody(header("event"))
 
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
-        //.removeHeaders("CamelHttp*")
-        .removeHeader("kafka.HEADERS")
-        .removeHeader("Accept-Encoding")
-        .removeHeader("Content-Encoding")
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .log(LoggingLevel.DEBUG, "headers: ${headers}")
-        .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-        .to("http://ccm-dems-adapter/processDocumentRecord")
+        .to("direct:processDocumentRecord")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -450,6 +411,42 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .end();
+    ;
+  }
+
+  private void processDocumentRecord() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    // property: caseFound
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+        JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+
+        ex.getMessage().setBody(keyList);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
+    //.removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeader("Accept-Encoding")
+    .removeHeader("Content-Encoding")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+    .to("http://ccm-dems-adapter/processDocumentRecord")
+    .log(LoggingLevel.INFO, "Completed reports processing.")
     ;
   }
 

@@ -2,6 +2,7 @@ package ccm.models.system.dems;
 
 import java.util.List;
 import java.util.Random;
+
 import java.util.ArrayList;
 
 import ccm.models.common.data.CaseAccused;
@@ -143,7 +144,7 @@ public class DemsPersonData {
         int low = 0000;
         int high = 999999;
         int random = r.nextInt(high-low) + low;
-        System.out.println("Random Pin number generation" + random);
+        //System.out.println("Random Pin number generation" + random);
 
         List<DemsFieldData> fieldData = d.getFields();
         DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
