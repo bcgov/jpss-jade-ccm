@@ -671,7 +671,7 @@ public class CcmNotificationService extends RouteBuilder {
           .log(LoggingLevel.DEBUG,"Create court case in DEMS.  Court case data = ${body}.")
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        
+
           .to("http://ccm-dems-adapter/createCourtCase")
 
         .endDoTry()
@@ -735,10 +735,10 @@ public class CcmNotificationService extends RouteBuilder {
           .when(simple("${exchangeProperty.exception} != null"))
             .log(LoggingLevel.INFO, "There is an exception")
             .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
-    
+
             .process(new Processor() {
               public void process(Exchange exchange) throws Exception {
-    
+
                 Exception ex = (Exception)exchange.getProperty("exception");
                 throw ex;
               }
@@ -2518,7 +2518,7 @@ public class CcmNotificationService extends RouteBuilder {
             derived_event.setEvent_key(rcc_id);
             derived_event.setJustin_rcc_id(rcc_id);
             derived_event.setJustin_event_message_id(Integer.parseInt(event_message_id));
-           
+
             ex.getMessage().setBody(derived_event);
 
             // KPI: Set new event object
@@ -2573,7 +2573,7 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("caseFlagsObject", b.getCase_flags());
             exchange.setProperty("courtNumber", b.getRcc_id());
             exchange.setProperty("accusedList", b.getAccused_persons());
-           
+
           }
         })
 
@@ -2606,7 +2606,7 @@ public class CcmNotificationService extends RouteBuilder {
 
         .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
         .split().jsonpathWriteAsString("$.*")
-       
+
           .setProperty("agencyFileId", simple("${body}"))
           .log(LoggingLevel.DEBUG, "agency file: ${exchangeProperty.agencyFileId}")
           .process(new Processor() {
@@ -2620,7 +2620,7 @@ public class CcmNotificationService extends RouteBuilder {
 
           .choice()
             .when(simple("${exchangeProperty.agencyFileId} != ''"))
-            
+
               .log(LoggingLevel.DEBUG, "agency file id updated: ${exchangeProperty.agencyFileId}")
               .setHeader("number").simple("${exchangeProperty.agencyFileId}")
               .setHeader(Exchange.HTTP_METHOD, simple("GET"))
