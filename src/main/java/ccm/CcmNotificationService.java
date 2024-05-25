@@ -3371,7 +3371,7 @@ public class CcmNotificationService extends RouteBuilder {
           if (!fileCloseObjs.isEmpty()) {
             for (JustinFileClose justinFileClose : fileCloseObjs) {
               // grab court case file
-              if (ccd.getCourt_file_id().equals(justinFileClose.))
+             
               if (justinFileClose.getRms_event_type().isBlank()) {
                 // court case file is considered Active
 
