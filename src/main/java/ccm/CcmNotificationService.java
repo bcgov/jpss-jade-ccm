@@ -7,7 +7,9 @@ import java.net.UnknownHostException;
 import java.time.ZonedDateTime;
 
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -15,8 +17,11 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
+import org.apache.camel.ProducerTemplate;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.http.NoHttpResponseException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 // import org.apache.camel.component.http4.HttpOperationFailedException;
 // import org.apache.camel.component.http4.HttpMethods;
@@ -54,6 +59,7 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
+import ccm.models.system.justin.JustinFileClose;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -99,6 +105,7 @@ public class CcmNotificationService extends RouteBuilder {
     processParticipantMerge();
     processParticipantMergeEvents();
     processAccusedPersons();
+    processFileClose();
   }
 
   private void attachExceptionHandlers() {
@@ -3304,4 +3311,122 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
   }
 
+  private void processFileClose() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: property = kpi_object
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .setHeader("number", simple("${header[event_key]}"))
+    .to("direct:compileRelatedCourtFiles")
+
+    .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
+    .log(LoggingLevel.DEBUG, "metadata: ${body}")
+    // re-set body to the metadata_data json.
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .log(LoggingLevel.INFO, "metadata_data: ${body}")
+    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+
+        CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+        List<CourtCaseData> relatedCourtCases =  ccd.getRelated_court_cases();
+        if (ccd.getCourt_file_id() != null && !ccd.getCourt_file_id().isBlank()) {
+          exchange.getMessage().setHeader(Exchange.HTTP_METHOD, simple("GET"));
+          exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
+          exchange.getMessage().setHeader("number", ccd.getCourt_file_id());
+           Map<String,Object> headers = new HashMap<String,Object>();
+          headers.put("number", ccd.getCourt_file_id());
+
+          ProducerTemplate prodTemplate = getContext().createProducerTemplate();
+          String responseString = prodTemplate.requestBodyAndHeaders(
+                                    "http://ccm-lookup-service/getFileCloseData",
+                                    null, headers, String.class);
+          List<JustinFileClose> fileCloseObjs  = new ArrayList<JustinFileClose>();
+                                    
+          if (responseString != null) {
+          
+
+          fileCloseObjs.add( new ObjectMapper().readValue(responseString, JustinFileClose.class));
+          }
+          prodTemplate.close();
+          ProducerTemplate relatedFiles = getContext().createProducerTemplate();
+          if (relatedCourtCases != null && !relatedCourtCases.isEmpty()) {
+            headers = new HashMap<String,Object>();
+            for (CourtCaseData relatedCourtData : ccd.getRelated_court_cases()) {
+              headers.put("number", relatedCourtData.getCourt_file_id());
+              responseString = relatedFiles.requestBodyAndHeaders(
+                "http://ccm-lookup-service/getFileCloseData",
+                null, headers, String.class);
+                if (responseString != null) {
+          
+                  fileCloseObjs.add( new ObjectMapper().readValue(responseString, JustinFileClose.class));
+                }
+            }
+          }
+          if (!fileCloseObjs.isEmpty()) {
+            for (JustinFileClose justinFileClose : fileCloseObjs) {
+              // grab court case file
+              if (ccd.getCourt_file_id().equals(justinFileClose.))
+              if (justinFileClose.getRms_event_type().isBlank()) {
+                // court case file is considered Active
+
+                
+              }
+              else {
+                switch (justinFileClose.getRms_event_type()) {
+                  case JustinFileClose.SEMA:{
+
+                    break;
+                  }
+                  case JustinFileClose.PEND:{
+                    break;
+                  }
+                  case JustinFileClose.DEST:{
+                    break;
+
+                  }
+                  case JustinFileClose.RETN:{
+                    break;
+
+                  }
+                  case JustinFileClose.NPRQ:{
+                    break;
+
+                  }
+                
+                  default:
+                    break;
+                }
+              }
+            }
+          }
+
+        // logic
+        // need court_file_id to pass into file_close, get the one from the array of related court cases
+        // call file_close, go through returned data and do logic in BCPSDEMS-1761
+        // look at rms status code --> new to court case object
+      }
+    }
+    });
+   // .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+    //.log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+    //.setBody(simple("${bodyAs(String)}"))
+
+    
+
+    /*// grab assignments from other related court files and add to assignment_list_object
+    .split()
+      .jsonpathWriteAsString("$.related_court_cases")
+      .setHeader("number", jsonpath("$.primary_court_id"))
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
+      .log(LoggingLevel.DEBUG, "JUSTIN Case Crown Assignment for cf ${header.number}: ${body}");
+    */
+  }
 }

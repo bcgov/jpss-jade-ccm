@@ -58,7 +58,7 @@ public class CcmLookupService extends RouteBuilder {
     getCaseListByUserKey();
     getCaseHyperlink();
     getCaseListHyperlink();
-    getJustinFileClose();
+    getFileCloseData();
   }
 
 
@@ -622,7 +622,7 @@ public class CcmLookupService extends RouteBuilder {
    .end()
    ;
  }
- private void getJustinFileClose() {
+ private void getFileCloseData() {
    // use method name as route id
    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 

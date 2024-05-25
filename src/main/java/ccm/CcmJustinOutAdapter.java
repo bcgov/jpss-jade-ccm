@@ -68,7 +68,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getImageData();
-    justinFileClose();
+    getFileCloseData();
 
   }
 
@@ -495,7 +495,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     ;
   }
 
-  private void justinFileClose() {
+  private void getFileCloseData() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
