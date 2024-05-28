@@ -3398,21 +3398,32 @@ public class CcmNotificationService extends RouteBuilder {
             }
           }
         }
-        int activeFileCount = closeFileResults.get("ACTIVE").intValue();
+        int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
 
         if (activeFileCount >0 && fileCloseObjs.size() == activeFileCount ) {
           // only active files
           ccd.setRms_processing_status(routeId);
         }
         else{
-            if (closeFileResults.get(JustinFileClose.DEST).intValue() == fileCloseObjs.size()) {
-
-            }
-            else if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == fileCloseObjs.size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
+           
+           if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == fileCloseObjs.size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
               // Destroyed except NPRQ
+              ccd.setRms_processing_status(JustinFileClose.DEST);
             }
             else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+              if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
+                ccd.setRms_processing_status(JustinFileClose.PEND);
+              }
+              else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
+                ccd.setRms_processing_status(JustinFileClose.SEMA);
+              }
               
+            }
+            else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
+              ccd.setRms_processing_status(JustinFileClose.PEND);
+            }
+            else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
+              ccd.setRms_processing_status(JustinFileClose.RETN);
             }
         }
 
