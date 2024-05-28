@@ -3334,32 +3334,44 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange exchange) throws Exception {
 
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+        Map<String,Object> headers = new HashMap<String,Object>();
+        HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
+        closeFileResults.put(JustinFileClose.DEST, 0);
+        closeFileResults.put(JustinFileClose.NPRQ, 0);
+        closeFileResults.put(JustinFileClose.PEND, 0);
+        closeFileResults.put(JustinFileClose.RETN, 0);
+        closeFileResults.put(JustinFileClose.SEMA, 0);
+        closeFileResults.put(JustinFileClose.ACTIVE, 0);
+
+        List<JustinFileClose> fileCloseObjs  = new ArrayList<JustinFileClose>();
+        JustinFileClose primaryFileCloseData = null;         
+
         List<CourtCaseData> relatedCourtCases =  ccd.getRelated_court_cases();
         if (ccd.getCourt_file_id() != null && !ccd.getCourt_file_id().isBlank()) {
           exchange.getMessage().setHeader(Exchange.HTTP_METHOD, simple("GET"));
           exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
           exchange.getMessage().setHeader("number", ccd.getCourt_file_id());
-           Map<String,Object> headers = new HashMap<String,Object>();
+          
           headers.put("number", ccd.getCourt_file_id());
 
           ProducerTemplate prodTemplate = getContext().createProducerTemplate();
           String responseString = prodTemplate.requestBodyAndHeaders(
                                     "http://ccm-lookup-service/getFileCloseData",
                                     null, headers, String.class);
-          List<JustinFileClose> fileCloseObjs  = new ArrayList<JustinFileClose>();
-                                    
+         
           if (responseString != null) {
           
-
-          fileCloseObjs.add( new ObjectMapper().readValue(responseString, JustinFileClose.class));
+            primaryFileCloseData =  new ObjectMapper().readValue(responseString, JustinFileClose.class);
+            fileCloseObjs.add(primaryFileCloseData);
           }
           prodTemplate.close();
+        }
           ProducerTemplate relatedFiles = getContext().createProducerTemplate();
           if (relatedCourtCases != null && !relatedCourtCases.isEmpty()) {
             headers = new HashMap<String,Object>();
             for (CourtCaseData relatedCourtData : ccd.getRelated_court_cases()) {
               headers.put("number", relatedCourtData.getCourt_file_id());
-              responseString = relatedFiles.requestBodyAndHeaders(
+              String responseString = relatedFiles.requestBodyAndHeaders(
                 "http://ccm-lookup-service/getFileCloseData",
                 null, headers, String.class);
                 if (responseString != null) {
@@ -3368,65 +3380,51 @@ public class CcmNotificationService extends RouteBuilder {
                 }
             }
           }
-          if (!fileCloseObjs.isEmpty()) {
+        if (!fileCloseObjs.isEmpty()) {
             for (JustinFileClose justinFileClose : fileCloseObjs) {
               // grab court case file
              
-              if (justinFileClose.getRms_event_type().isBlank()) {
+              if (justinFileClose.getRms_event_type().isBlank() ) {
                 // court case file is considered Active
-
-                
+                ccd.setRms_processing_status(JustinFileClose.ACTIVE);
+               
+                var activeValue = closeFileResults.get(JustinFileClose.ACTIVE);
+                activeValue++;
               }
+              
               else {
-                switch (justinFileClose.getRms_event_type()) {
-                  case JustinFileClose.SEMA:{
-
-                    break;
-                  }
-                  case JustinFileClose.PEND:{
-                    break;
-                  }
-                  case JustinFileClose.DEST:{
-                    break;
-
-                  }
-                  case JustinFileClose.RETN:{
-                    break;
-
-                  }
-                  case JustinFileClose.NPRQ:{
-                    break;
-
-                  }
-                
-                  default:
-                    break;
-                }
-              }
+                var closeFileResult = closeFileResults.get(justinFileClose.getRms_event_type());
+                closeFileResult++;
             }
           }
+        }
+        int activeFileCount = closeFileResults.get("ACTIVE").intValue();
+
+        if (activeFileCount >0 && fileCloseObjs.size() == activeFileCount ) {
+          // only active files
+          ccd.setRms_processing_status(routeId);
+        }
+        else{
+            if (closeFileResults.get(JustinFileClose.DEST).intValue() == fileCloseObjs.size()) {
+
+            }
+            else if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == fileCloseObjs.size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
+              // Destroyed except NPRQ
+            }
+            else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+              
+            }
+        }
 
         // logic
         // need court_file_id to pass into file_close, get the one from the array of related court cases
         // call file_close, go through returned data and do logic in BCPSDEMS-1761
         // look at rms status code --> new to court case object
+      
       }
-    }
     });
+  }
    // .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
     //.log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
     //.setBody(simple("${bodyAs(String)}"))
-
-    
-
-    /*// grab assignments from other related court files and add to assignment_list_object
-    .split()
-      .jsonpathWriteAsString("$.related_court_cases")
-      .setHeader("number", jsonpath("$.primary_court_id"))
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-lookup-service/getCourtCaseCrownAssignmentList")
-      .log(LoggingLevel.DEBUG, "JUSTIN Case Crown Assignment for cf ${header.number}: ${body}");
-    */
-  }
 }

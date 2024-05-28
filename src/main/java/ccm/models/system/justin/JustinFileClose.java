@@ -7,6 +7,7 @@ public class JustinFileClose {
     public static final  String  NPRQ = "NPRQ";  // No Process Required
     public static final  String  DEST = "DEST";  // Destroyed
     public static final  String  RETN = "RETN";  // Returned
+    public static final  String  ACTIVE = "ACTIVE";
 
     
     
