@@ -869,8 +869,10 @@ public class CcmNotificationService extends RouteBuilder {
         .endChoice()
         .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.FILE_CLOSE))
         .setProperty("kpi_component_route_name", simple("processFileClose"))
+
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
+        .to("direct:processFileClose")
         //.setBody(header("event"))
         //.to("direct:processCourtCaseAuthListChanged")
         //.setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
@@ -3324,7 +3326,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:compileRelatedCourtFiles")
 
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
-    .log(LoggingLevel.DEBUG, "metadata: ${body}")
+    .log(LoggingLevel.INFO, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
     .log(LoggingLevel.INFO, "metadata_data: ${body}")
@@ -3353,7 +3355,7 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.getMessage().setHeader("number", ccd.getCourt_file_id());
           
           headers.put("number", ccd.getCourt_file_id());
-
+          headers.put(Exchange.HTTP_METHOD, "GET");
           ProducerTemplate prodTemplate = getContext().createProducerTemplate();
           String responseString = prodTemplate.requestBodyAndHeaders(
                                     "http://ccm-lookup-service/getFileCloseData",
@@ -3371,6 +3373,7 @@ public class CcmNotificationService extends RouteBuilder {
             headers = new HashMap<String,Object>();
             for (CourtCaseData relatedCourtData : ccd.getRelated_court_cases()) {
               headers.put("number", relatedCourtData.getCourt_file_id());
+              headers.put(Exchange.HTTP_METHOD, "GET");
               String responseString = relatedFiles.requestBodyAndHeaders(
                 "http://ccm-lookup-service/getFileCloseData",
                 null, headers, String.class);
@@ -3431,9 +3434,32 @@ public class CcmNotificationService extends RouteBuilder {
         // need court_file_id to pass into file_close, get the one from the array of related court cases
         // call file_close, go through returned data and do logic in BCPSDEMS-1761
         // look at rms status code --> new to court case object
-      
+       exchange.setProperty("metadata_data", ccd);
       }
-    });
+    })
+    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    .log(LoggingLevel.INFO, "Updating court case data")
+    .doTry()
+    // reset the original values and add the JUSTIN derived list of case flags to the header.
+    //.setHeader("number", simple("${exchangeProperty.event_key_orig}"))
+    //.setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
+    //.setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+    //.setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
+    //.setHeader("caseFlags", simple("${exchangeProperty.caseFlags}"))
+    //.log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
+    .setBody(simple("${exchangeProperty.metadata_data}"))
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+
+    .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+
+    //.log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+    .endDoTry()
+  .doCatch(HttpOperationFailedException.class)
+  .log(LoggingLevel.ERROR,"Exception: ${exception}")
+  .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+  .end();
+    
   }
    // .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
     //.log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
