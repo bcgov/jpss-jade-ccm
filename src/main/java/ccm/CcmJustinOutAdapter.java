@@ -503,7 +503,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"file close request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    //.log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

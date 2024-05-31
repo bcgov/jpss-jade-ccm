@@ -3317,12 +3317,26 @@ public class CcmNotificationService extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+   
+        HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
+        closeFileResults.put(JustinFileClose.DEST, 0);
+        closeFileResults.put(JustinFileClose.NPRQ, 0);
+        closeFileResults.put(JustinFileClose.PEND, 0);
+        closeFileResults.put(JustinFileClose.RETN, 0);
+        closeFileResults.put(JustinFileClose.SEMA, 0);
+        closeFileResults.put(JustinFileClose.ACTIVE, 0);
+
     //IN: property = kpi_object
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
     .to("direct:compileRelatedCourtFiles")
 
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
@@ -3336,7 +3350,12 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange exchange) throws Exception {
 
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
-        Map<String,Object> headers = new HashMap<String,Object>();
+        
+        exchange.setProperty("courtCaseData", ccd);
+        exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
+        exchange.setProperty("number", ccd.getCourt_file_id());
+
+        /*Map<String,Object> headers = new HashMap<String,Object>();
         HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
         closeFileResults.put(JustinFileClose.DEST, 0);
         closeFileResults.put(JustinFileClose.NPRQ, 0);
@@ -3434,34 +3453,117 @@ public class CcmNotificationService extends RouteBuilder {
         // need court_file_id to pass into file_close, get the one from the array of related court cases
         // call file_close, go through returned data and do logic in BCPSDEMS-1761
         // look at rms status code --> new to court case object
+        */
        exchange.setProperty("metadata_data", ccd);
       }
     })
+    //.setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number",simple("${exchangeProperty.number}"))
+    .to("http://ccm-lookup-service/getFileCloseData")
+    .unmarshal().json(JsonLibrary.Jackson,JustinFileClose.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        JustinFileClose primaryFileClose = exchange.getIn().getBody(JustinFileClose.class);
+        if (primaryFileClose.getRms_event_type().isEmpty()){
+          var activeResult = closeFileResults.get(JustinFileClose.ACTIVE);
+          activeResult++;
+        }
+        else {
+          Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
+          result++;
+        }
+
+      }
+    })
+
+    .setProperty("primaryJustinFileClose",body())
+    .split().exchangeProperty("courtFileData")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
+        exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
+      }})
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    
+    .to("http://ccm-lookup-service/getFileCloseData")
+    .unmarshal().json(JsonLibrary.Jackson,JustinFileClose.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
+        if (!fileCloseData.getRms_event_type().isBlank()) {
+          var closeFileResult = closeFileResults.get(fileCloseData.getRms_event_type());
+          closeFileResult++;
+        }
+        else{
+          var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
+          closeFileResult++;
+        }
+      }})
+      .end() // end split
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
+          CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
+          if (primaryFileClose.getRms_event_type().isBlank()) {
+            var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
+            closeFileResult++;
+          }
+          else{
+            var closeFileResult = closeFileResults.get(primaryFileClose.getRms_event_type());
+            closeFileResult++;
+          }
+          int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
+
+          if (activeFileCount >0 && closeFileResults.size() == activeFileCount ) {
+            // only active files
+            ccd.setRms_processing_status(JustinFileClose.ACTIVE);
+          }
+          else{
+             
+             if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
+                // Destroyed except NPRQ
+                ccd.setRms_processing_status(JustinFileClose.DEST);
+              }
+              else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+                if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
+                  ccd.setRms_processing_status(JustinFileClose.PEND);
+                }
+                else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
+                  ccd.setRms_processing_status(JustinFileClose.SEMA);
+                }
+                
+              }
+              else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
+                ccd.setRms_processing_status(JustinFileClose.PEND);
+              }
+              else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
+                ccd.setRms_processing_status(JustinFileClose.RETN);
+              }
+          }
+        
+            exchange.getMessage().setBody(ccd,CourtCaseData.class);
+        }})
     .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .log(LoggingLevel.INFO, "Updating court case data")
-    .doTry()
-    // reset the original values and add the JUSTIN derived list of case flags to the header.
-    //.setHeader("number", simple("${exchangeProperty.event_key_orig}"))
-    //.setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
-    //.setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-    //.setHeader("caseFound", simple("${exchangeProperty.caseFound}"))
-    //.setHeader("caseFlags", simple("${exchangeProperty.caseFlags}"))
-    //.log(LoggingLevel.DEBUG,"Found related court case. Rcc_id: ${header.rcc_id}")
-    .setBody(simple("${exchangeProperty.metadata_data}"))
+   .doTry()
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
 
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
-    //.log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+    .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
     .endDoTry()
   .doCatch(HttpOperationFailedException.class)
   .log(LoggingLevel.ERROR,"Exception: ${exception}")
-  .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+   .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+    
   .end();
     
   }
-   // .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-    //.log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
-    //.setBody(simple("${bodyAs(String)}"))
+   
 }
