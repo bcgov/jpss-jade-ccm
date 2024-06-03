@@ -2546,7 +2546,7 @@ public class CcmNotificationService extends RouteBuilder {
               .removeHeader(Exchange.CONTENT_ENCODING)
               .to("http://ccm-lookup-service/getCourtCaseDetails")
 
-              .log(LoggingLevel.INFO,"Retrieved related Court Case from JUSTIN: ${body}")
+              .log(LoggingLevel.DEBUG,"Retrieved related Court Case from JUSTIN: ${body}")
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
               .process(new Processor() {
                 @Override
