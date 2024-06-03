@@ -51,13 +51,13 @@ public class CcmReportsProcessor extends RouteBuilder {
 
   @Override
   public void configure() throws Exception {
-    attachExceptionHandlers(); 
+    attachExceptionHandlers();
     processReportEvents();
     processReportPriorityEvents();
     createRccStaticReportsEvent();
     publishEventKPI();
     processUnknownStatus();
-      
+
   }
 
   private void attachExceptionHandlers() {
@@ -483,6 +483,7 @@ public class CcmReportsProcessor extends RouteBuilder {
             reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
             ReportEvent re = new ReportEvent();
+            re.setEvent_key(rcc_id);
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
