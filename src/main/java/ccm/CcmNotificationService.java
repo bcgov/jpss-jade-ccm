@@ -3351,110 +3351,11 @@ public class CcmNotificationService extends RouteBuilder {
 
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
         
+        ccd.setRms_processing_status(new ArrayList<String>());
         exchange.setProperty("courtCaseData", ccd);
         exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
         exchange.setProperty("number", ccd.getCourt_file_id());
-
-        /*Map<String,Object> headers = new HashMap<String,Object>();
-        HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
-        closeFileResults.put(JustinFileClose.DEST, 0);
-        closeFileResults.put(JustinFileClose.NPRQ, 0);
-        closeFileResults.put(JustinFileClose.PEND, 0);
-        closeFileResults.put(JustinFileClose.RETN, 0);
-        closeFileResults.put(JustinFileClose.SEMA, 0);
-        closeFileResults.put(JustinFileClose.ACTIVE, 0);
-
-        List<JustinFileClose> fileCloseObjs  = new ArrayList<JustinFileClose>();
-        JustinFileClose primaryFileCloseData = null;         
-
-        List<CourtCaseData> relatedCourtCases =  ccd.getRelated_court_cases();
-        if (ccd.getCourt_file_id() != null && !ccd.getCourt_file_id().isBlank()) {
-          exchange.getMessage().setHeader(Exchange.HTTP_METHOD, simple("GET"));
-          exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, constant("application/json"));
-          exchange.getMessage().setHeader("number", ccd.getCourt_file_id());
-          
-          headers.put("number", ccd.getCourt_file_id());
-          headers.put(Exchange.HTTP_METHOD, "GET");
-          ProducerTemplate prodTemplate = getContext().createProducerTemplate();
-          String responseString = prodTemplate.requestBodyAndHeaders(
-                                    "http://ccm-lookup-service/getFileCloseData",
-                                    null, headers, String.class);
-         
-          if (responseString != null) {
-          
-            primaryFileCloseData =  new ObjectMapper().readValue(responseString, JustinFileClose.class);
-            fileCloseObjs.add(primaryFileCloseData);
-          }
-          prodTemplate.close();
-        }
-          ProducerTemplate relatedFiles = getContext().createProducerTemplate();
-          if (relatedCourtCases != null && !relatedCourtCases.isEmpty()) {
-            headers = new HashMap<String,Object>();
-            for (CourtCaseData relatedCourtData : ccd.getRelated_court_cases()) {
-              headers.put("number", relatedCourtData.getCourt_file_id());
-              headers.put(Exchange.HTTP_METHOD, "GET");
-              String responseString = relatedFiles.requestBodyAndHeaders(
-                "http://ccm-lookup-service/getFileCloseData",
-                null, headers, String.class);
-                if (responseString != null) {
-          
-                  fileCloseObjs.add( new ObjectMapper().readValue(responseString, JustinFileClose.class));
-                }
-            }
-          }
-        if (!fileCloseObjs.isEmpty()) {
-            for (JustinFileClose justinFileClose : fileCloseObjs) {
-              // grab court case file
-             
-              if (justinFileClose.getRms_event_type().isBlank() ) {
-                // court case file is considered Active
-                ccd.setRms_processing_status(JustinFileClose.ACTIVE);
-               
-                var activeValue = closeFileResults.get(JustinFileClose.ACTIVE);
-                activeValue++;
-              }
-              
-              else {
-                var closeFileResult = closeFileResults.get(justinFileClose.getRms_event_type());
-                closeFileResult++;
-            }
-          }
-        }
-        int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
-
-        if (activeFileCount >0 && fileCloseObjs.size() == activeFileCount ) {
-          // only active files
-          ccd.setRms_processing_status(routeId);
-        }
-        else{
-           
-           if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == fileCloseObjs.size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
-              // Destroyed except NPRQ
-              ccd.setRms_processing_status(JustinFileClose.DEST);
-            }
-            else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
-              if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
-                ccd.setRms_processing_status(JustinFileClose.PEND);
-              }
-              else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
-                ccd.setRms_processing_status(JustinFileClose.SEMA);
-              }
-              
-            }
-            else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
-              ccd.setRms_processing_status(JustinFileClose.PEND);
-            }
-            else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
-              ccd.setRms_processing_status(JustinFileClose.RETN);
-            }
-        }
-
-        // logic
-        // need court_file_id to pass into file_close, get the one from the array of related court cases
-        // call file_close, go through returned data and do logic in BCPSDEMS-1761
-        // look at rms status code --> new to court case object
-        */
-       exchange.setProperty("metadata_data", ccd);
+        exchange.setProperty("metadata_data", ccd);
       }
     })
     //.setHeader(Exchange.HTTP_METHOD, simple("GET"))
@@ -3509,6 +3410,9 @@ public class CcmNotificationService extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
+          Boolean setActiveCase = Boolean.FALSE;
+          List<String> rmsProccessStatus = new ArrayList<String>();
+
           if (primaryFileClose.getRms_event_type().isBlank()) {
             var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
             closeFileResult++;
@@ -3521,49 +3425,91 @@ public class CcmNotificationService extends RouteBuilder {
 
           if (activeFileCount >0 && closeFileResults.size() == activeFileCount ) {
             // only active files
-            ccd.setRms_processing_status(JustinFileClose.ACTIVE);
+           // ccd.getr(JustinFileClose.ACTIVE);
+           //rmsProccessStatus.add(JustinFileClose.ACTIVE);
+           SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.ACTIVE);
+            setActiveCase = Boolean.TRUE;
           }
           else{
              
              if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
                 // Destroyed except NPRQ
-                ccd.setRms_processing_status(JustinFileClose.DEST);
+                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
+              
+               //ccd.setRms_processing_status(JustinFileClose.DEST);
+                setActiveCase = Boolean.FALSE;
               }
               else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
                 if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
-                  ccd.setRms_processing_status(JustinFileClose.PEND);
+                  SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
+                  //ccd.setRms_processing_status(JustinFileClose.PEND);
                 }
                 else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
-                  ccd.setRms_processing_status(JustinFileClose.SEMA);
+                  SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.SEMA);
+                  //ccd.setRms_processing_status(JustinFileClose.SEMA);
                 }
                 
               }
               else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
-                ccd.setRms_processing_status(JustinFileClose.PEND);
+                //ccd.setRms_processing_status(JustinFileClose.PEND);
+                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
+                setActiveCase = Boolean.TRUE;
               }
               else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
-                ccd.setRms_processing_status(JustinFileClose.RETN);
+                //ccd.setRms_processing_status(JustinFileClose.RETN);
+                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.RETN);
+                setActiveCase = Boolean.TRUE;
               }
           }
-        
-            exchange.getMessage().setBody(ccd,CourtCaseData.class);
+          ccd.setRms_processing_status(rmsProccessStatus);
+          String courtFileId = ccd.getCourt_file_id();
+          
+          exchange.getMessage().setBody(ccd,CourtCaseData.class);
+          exchange.setProperty("inactiveCase", setActiveCase.booleanValue());
+          exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
+          exchange.setProperty("caseId", courtFileId);
+          //exchange.getMessage().setHeader("caseId", courtFileId);
         }})
     .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+    
     .log(LoggingLevel.INFO, "Updating court case data")
    .doTry()
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-
+    .setHeader("rcc_id", simple("${exchangeProperties.rcc_id}"))
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
     .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+    .setProperty("kpi_component_route_name", simple("processFileClose"))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+    .to("direct:publishEventKPI")
+    .endDoTry()
+    .doTry()
+    .choice()
+    .when(simple("${exchangeProperty.inactiveCase} == 'true'"))
+      .setHeader("case_id").simple("${exchangeProperty.caseId}")
+      .to("http://ccm-dems-adapter/inactivateCase")
+      .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
+      .endChoice()
     .endDoTry()
   .doCatch(HttpOperationFailedException.class)
   .log(LoggingLevel.ERROR,"Exception: ${exception}")
    .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+   .setProperty("kpi_component_route_name", simple("processFileClose"))
+   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+   .to("direct:publishEventKPI")
     
   .end();
     
+  }
+  private void SetRmsProcessingStatus(List<String> rmsList , String statusToSet) {
+    if (rmsList.isEmpty()) {
+      rmsList.add(JustinFileClose.DEST);
+    }
+    else{
+      rmsList = new ArrayList<String>();
+      rmsList.add(JustinFileClose.DEST);
+    }
   }
    
 }
