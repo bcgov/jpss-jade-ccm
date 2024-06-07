@@ -3375,7 +3375,6 @@ public class CcmNotificationService extends RouteBuilder {
           Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
           result++;
         }
-
       }
     })
 
@@ -3425,8 +3424,6 @@ public class CcmNotificationService extends RouteBuilder {
 
           if (activeFileCount >0 && closeFileResults.size() == activeFileCount ) {
             // only active files
-           // ccd.getr(JustinFileClose.ACTIVE);
-           //rmsProccessStatus.add(JustinFileClose.ACTIVE);
            SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.ACTIVE);
             setActiveCase = Boolean.TRUE;
           }
@@ -3435,28 +3432,23 @@ public class CcmNotificationService extends RouteBuilder {
              if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
                 // Destroyed except NPRQ
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
-              
-               //ccd.setRms_processing_status(JustinFileClose.DEST);
                 setActiveCase = Boolean.FALSE;
               }
               else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
                 if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
                   SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
-                  //ccd.setRms_processing_status(JustinFileClose.PEND);
                 }
                 else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
                   SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.SEMA);
-                  //ccd.setRms_processing_status(JustinFileClose.SEMA);
                 }
-                
               }
               else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
-                //ccd.setRms_processing_status(JustinFileClose.PEND);
+                
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
                 setActiveCase = Boolean.TRUE;
               }
               else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
-                //ccd.setRms_processing_status(JustinFileClose.RETN);
+                
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.RETN);
                 setActiveCase = Boolean.TRUE;
               }
@@ -3466,17 +3458,19 @@ public class CcmNotificationService extends RouteBuilder {
           
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setActiveCase.booleanValue());
-          exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
+          exchange.setProperty("rcc_id", ccd.getCourt_file_no());
+          exchange.setProperty("caseFlags", ccd.getCase_flags());
           exchange.setProperty("caseId", courtFileId);
-          //exchange.getMessage().setHeader("caseId", courtFileId);
         }})
-    .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+      .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     
     .log(LoggingLevel.INFO, "Updating court case data")
    .doTry()
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("rcc_id", simple("${exchangeProperties.rcc_id}"))
+    .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
+    .setBody(simple("${body}"))
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
     .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
@@ -3485,6 +3479,7 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:publishEventKPI")
     .endDoTry()
     .doTry()
+    .log(LoggingLevel.INFO, "inactive case value : " + simple("${exchangeProperty.caseId}"))
     .choice()
     .when(simple("${exchangeProperty.inactiveCase} == 'true'"))
       .setHeader("case_id").simple("${exchangeProperty.caseId}")
@@ -3498,7 +3493,6 @@ public class CcmNotificationService extends RouteBuilder {
    .setProperty("kpi_component_route_name", simple("processFileClose"))
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
    .to("direct:publishEventKPI")
-    
   .end();
     
   }
