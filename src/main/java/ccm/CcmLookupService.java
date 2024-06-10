@@ -59,6 +59,7 @@ public class CcmLookupService extends RouteBuilder {
     getCaseHyperlink();
     getCaseListHyperlink();
     getJustinFileClose();
+    getFileNote();
   }
 
 
@@ -639,4 +640,40 @@ public class CcmLookupService extends RouteBuilder {
    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
    ;
  }
+
+ private void getFileDisp() {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  from("platform-http:/" + routeId)
+  .routeId(routeId)
+  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  .removeHeader("CamelHttpUri")
+  .removeHeader("CamelHttpBaseUri")
+  .removeHeaders("CamelHttp*")
+  .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+  .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+  .to("http://ccm-justin-out-adapter/getFileDisp")
+  .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+  ;
+}
+
+private void getFileNote() {
+  // use method name as route id
+  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+  from("platform-http:/" + routeId)
+  .routeId(routeId)
+  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+  .removeHeader("CamelHttpUri")
+  .removeHeader("CamelHttpBaseUri")
+  .removeHeaders("CamelHttp*")
+  .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+  .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+  .to("http://ccm-justin-out-adapter/getFileNote")
+  .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+  ;
+}
 }
