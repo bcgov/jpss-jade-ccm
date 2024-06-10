@@ -28,7 +28,6 @@ import org.apache.camel.Processor;
 import org.apache.camel.Route;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import org.apache.camel.support.service.ServiceHelper;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
@@ -544,7 +543,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
-  
+
   private void publishEventKPI() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

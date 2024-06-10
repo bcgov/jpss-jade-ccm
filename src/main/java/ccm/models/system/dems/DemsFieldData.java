@@ -94,6 +94,8 @@ public class DemsFieldData {
         //added as part of jade-2621
         PRIMARY_AGENCY_FILE_ID("Primary Agency File ID"),
         PRIMARY_AGENCY_FILE_NO("Primary Agency File No."),
+        //added as part of jade - 2859
+        OTC_PIN("OTC"),
         //added as part of jade -2617
         JUSTIN_IMAGE_ID("Image ID");
 

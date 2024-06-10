@@ -53,10 +53,12 @@ public class CcmReportsProcessor extends RouteBuilder {
   public void configure() throws Exception {
     attachExceptionHandlers(); 
     processReportEvents();
+    processReportPriorityEvents();
+    processDocumentRecord();
     createRccStaticReportsEvent();
     publishEventKPI();
     processUnknownStatus();
-      
+
   }
 
   private void attachExceptionHandlers() {
@@ -339,27 +341,7 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .setBody(header("event"))
 
-        .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange ex) {
-            ReportEvent re = ex.getIn().getBody(ReportEvent.class);
-            JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
-
-            ex.getMessage().setBody(keyList);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
-        .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
-        //.removeHeaders("CamelHttp*")
-        .removeHeader("kafka.HEADERS")
-        .removeHeader("Accept-Encoding")
-        .removeHeader("Content-Encoding")
-        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .log(LoggingLevel.DEBUG, "headers: ${headers}")
-        .log(LoggingLevel.INFO,"Lookup message: '${body}'")
-        .to("http://ccm-dems-adapter/processDocumentRecord")
+        .to("direct:processDocumentRecord")
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
@@ -370,6 +352,101 @@ public class CcmReportsProcessor extends RouteBuilder {
         .to("direct:publishEventKPI")
         .endChoice()
       .end();
+    ;
+  }
+
+  private void processReportPriorityEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.reports-priority.name}}?groupId=ccm-dems-adapter&maxPollRecords=1&maxPollIntervalMs=4800000")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports-priority.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("rcc_id")
+      .jsonpath("$.justin_rcc_id") // image data get does not return this value, so save in headers
+    .setHeader("mdoc_justin_no")
+      .jsonpath("$.mdoc_justin_no") // image data get does not return this value, so save in headers
+    .setHeader("rcc_ids")
+      .jsonpath("$.rcc_ids") // image data get does not return this value, so save in headers
+    .setHeader("image_id")
+      .jsonpath("$.image_id") // image data get does not return this value, so save in headers
+    .setHeader("filtered_yn")
+      .jsonpath("$.filtered_yn") // image data get does not return this value, so save in headers
+    .setHeader("force_update")
+      .jsonpath("$.force_update") // force_update to force static rcc reports to update.
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setProperty("rcc_ids", simple("${headers[rcc_ids]}"))
+    .setHeader("event").simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
+    .log(LoggingLevel.INFO, "rcc_id = ${header[rcc_id]} part_id = ${header[part_id]} mdoc_justin_no = ${header[mdoc_justin_no]} rcc_ids = ${header[rcc_ids]} image_id = ${header[image_id]} filtered_yn = ${header[filtered_yn]}")
+    .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .choice()
+      .when(header("event_status").isNotNull())
+        .setProperty("kpi_component_route_name", simple("processReportEvents"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+
+        .to("direct:processDocumentRecord")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end();
+    ;
+  }
+
+  private void processDocumentRecord() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    // property: caseFound
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .unmarshal().json(JsonLibrary.Jackson, ReportEvent.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        ReportEvent re = ex.getIn().getBody(ReportEvent.class);
+        JustinDocumentKeyList keyList = new JustinDocumentKeyList(re);
+
+        ex.getMessage().setBody(keyList);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinDocumentKeyList.class)
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
+    //.removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeader("Accept-Encoding")
+    .removeHeader("Content-Encoding")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.INFO,"Lookup message: '${body}'")
+    .to("http://ccm-dems-adapter/processDocumentRecord")
+    .log(LoggingLevel.INFO, "Completed reports processing.")
     ;
   }
 
@@ -403,6 +480,7 @@ public class CcmReportsProcessor extends RouteBuilder {
             reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
             ReportEvent re = new ReportEvent();
+            re.setEvent_key(rcc_id);
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
@@ -413,8 +491,8 @@ public class CcmReportsProcessor extends RouteBuilder {
         })
         .setProperty("kpi_event_object", body())
         .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
-        .to("kafka:{{kafka.topic.reports.name}}")
-        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports.name}}"))
+        .to("kafka:{{kafka.topic.reports-priority.name}}")
+        .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports-priority.name}}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
 
         .process(new Processor() {
