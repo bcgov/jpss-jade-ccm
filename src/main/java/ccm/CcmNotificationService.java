@@ -3428,25 +3428,25 @@ public class CcmNotificationService extends RouteBuilder {
             setActiveCase = Boolean.TRUE;
           }
           else{
-             
-             if (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue() == ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue() ) {
+             // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
+             if ( (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) 
+                 == (ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
                 // Destroyed except NPRQ
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
                 setActiveCase = Boolean.FALSE;
               }
+              //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
               else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+                //Has any PENDING
                 if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
                   SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
                 }
+                // Has any SEMI ACTIVE
                 else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
                   SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.SEMA);
                 }
               }
-              else if (closeFileResults.get(JustinFileClose.PEND).intValue() > 0 ){
-                
-                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
-                setActiveCase = Boolean.TRUE;
-              }
+             
               else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
                 
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.RETN);
@@ -3466,11 +3466,15 @@ public class CcmNotificationService extends RouteBuilder {
     
     .log(LoggingLevel.INFO, "Updating court case data")
    .doTry()
+   .log(LoggingLevel.INFO, "in do try...")
+   .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("rcc_id", simple("${exchangeProperties.rcc_id}"))
+    .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+    .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
+    //.setBody(simple("${body}"))
     .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
-    .setBody(simple("${body}"))
+    
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
     .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
