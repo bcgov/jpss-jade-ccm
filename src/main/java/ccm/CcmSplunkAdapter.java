@@ -1,6 +1,7 @@
 package ccm;
 
 import java.net.ConnectException;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
 import org.apache.camel.CamelException;
@@ -45,7 +46,7 @@ public class CcmSplunkAdapter extends RouteBuilder {
   }
 
   private void retryExceptionHandler() {
-    onException(ConnectException.class, SocketTimeoutException.class, NoHttpResponseException.class, HttpOperationFailedException.class)
+    onException(ConnectException.class, SocketException.class, SocketTimeoutException.class, NoHttpResponseException.class)
     .maximumRedeliveries(10).redeliveryDelay(45000)
     .process(new Processor() {
       @Override
