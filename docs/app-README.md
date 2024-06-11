@@ -98,6 +98,8 @@ https://jade-ccm-justin-adapter-test.apps.silver.devops.gov.bc.ca/justin/api/v1
 
 https://jade-ccm-justin-adapter-prod.apps.silver.devops.gov.bc.ca/justin/api/v1
 
+The APIs require a bearer token to access.  This token value can be retrieved from the openshift project under Secrets -> ccm-secrets, under the "justin-in-security-token" entry.
+
 * eg. <justin-adapter url>/getCaseHyperlink?rcc_id=50450.0734
 * eg. <justin-adapter url>/getCaseListHyperlink
 body: { "rcc_ids" : ["174152.0877", "174153.0877", "174105.0877"]}
