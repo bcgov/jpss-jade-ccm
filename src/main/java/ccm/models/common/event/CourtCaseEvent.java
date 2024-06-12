@@ -25,7 +25,8 @@ public class CourtCaseEvent extends BaseEvent {
     CHANGED,
     MANUALLY_CHANGED,
     APPEARANCE_CHANGED,
-    CROWN_ASSIGNMENT_CHANGED
+    CROWN_ASSIGNMENT_CHANGED,
+    FILE_CLOSE
   }
 
   public CourtCaseEvent() {
@@ -53,6 +54,9 @@ public class CourtCaseEvent extends BaseEvent {
         break;
       case CRN_ASSIGN:
         setEvent_status(STATUS.CROWN_ASSIGNMENT_CHANGED.toString());
+        break;
+      case FILE_CLOSE:
+        setEvent_status(STATUS.FILE_CLOSE.toString());
         break;
       default:
         // unknown status

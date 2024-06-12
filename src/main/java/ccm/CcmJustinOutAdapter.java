@@ -32,11 +32,13 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.Error;
@@ -48,6 +50,7 @@ import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinFileClose;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -65,6 +68,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getImageData();
+    justinFileClose();
 
   }
 
@@ -493,5 +497,38 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     ;
   }
 
+  private void justinFileClose() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"file close request received.")
+    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .log(LoggingLevel.INFO, "LookupService calling Justin file close")
+    .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+    
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinFileClose j = exchange.getIn().getBody(JustinFileClose.class);
+        FileCloseData fileCloseData = new FileCloseData(j.getMdoc_justin_no(),j.getRms_event_type(), j.getRms_event_date());
+       exchange.getMessage().setBody(fileCloseData);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, FileCloseData.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+  }
 
 }
