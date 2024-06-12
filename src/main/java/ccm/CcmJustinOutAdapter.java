@@ -86,7 +86,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
     onException(NoHttpResponseException.class, NoRouteToHostException.class, UnknownHostException.class)
       .maximumRedeliveries(10).redeliveryDelay(60000)
-      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException) called.")
+      .log(LoggingLevel.ERROR,"onException(NoHttpResponseException, NoRouteToHostException, UnknownHostException) called.")
       .setBody(constant("An unexpected network error occurred"))
       .retryAttemptedLogLevel(LoggingLevel.ERROR)
       .handled(true)
@@ -95,6 +95,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
      // HttpOperation Failed
     onException(HttpOperationFailedException.class)
     .maximumRedeliveries(3).redeliveryDelay(20000)
+    .log(LoggingLevel.ERROR,"onException(HttpOperationFailedException) called.")
     .choice()
       .when(simple("${exchangeProperty.kpi_event_object} != null"))
         .process(new Processor() {
@@ -488,6 +489,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
         JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
         ReportDocumentList rd = new ReportDocumentList(j);
         exchange.getMessage().setBody(rd, ReportDocumentList.class);
+        log.info("Document count: "+rd.getDocuments().size());
       }
     })
     .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)

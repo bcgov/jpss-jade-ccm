@@ -1645,7 +1645,7 @@ private void getDemsFieldMappingsrccStatus() {
       .choice()
         .when(simple("${exchangeProperty.edtCaseStatus} == 'Queued'"))
           .log(LoggingLevel.ERROR, "Court case... ${exchangeProperty.id} possibly stuck in queue.")
-
+          .setBody(simple(""))
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
           .setHeader("CCMException", simple("{\"error\": \"Case possibly stuck in queued state.\"}"))
           .stop()
@@ -1971,7 +1971,7 @@ private void getDemsFieldMappingsrccStatus() {
         String doesCourtFileUniqueIdExist = exchange.getProperty("courtFileUniqueId", String.class);
         String doesKFilePreExist = exchange.getProperty("kFileValue", String.class);
         ChargeAssessmentData b = exchange.getIn().getBody(ChargeAssessmentData.class);
-        
+
         if(doesCourtFileUniqueIdExist != null && !doesCourtFileUniqueIdExist.isEmpty()) {
           // this is an approved court case.
           if(doesKFilePreExist != null && !doesKFilePreExist.isEmpty()) {
@@ -2414,7 +2414,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"Case group sync processing completed.")
     ;
   }
- 
+
   private void processAccusedPerson() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -2832,7 +2832,10 @@ private void getDemsFieldMappingsrccStatus() {
         System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + decodedBytes.length, footerBytes.length);
         exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
         exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+        String boundryString = "multipart/form-data;boundary=" + boundary;
         exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+        exchange.setProperty("contentType", boundryString);
+        exchange.setProperty("multipartBody", multipartBody);
         exchange.getMessage().setBody(multipartBody);
       }
     })
@@ -2847,6 +2850,15 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG, "body: ${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    .setBody(simple("${exchangeProperty.multipartBody}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader(Exchange.CONTENT_TYPE, simple("${exchangeProperty.contentType}"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Pdf?renditionAction=Regenerate")
+    .log(LoggingLevel.INFO,"DEMS case record pdf file uploaded.")
     ;
   }
 
@@ -3900,10 +3912,10 @@ private void getDemsFieldMappingsrccStatus() {
                 @Override
                 public void process(Exchange exchange) {
                   StringBuffer outputStringBuffer = new StringBuffer();
-      
+
                   outputStringBuffer.append("{\"userIds\": [");
                   outputStringBuffer.append("]}");
-      
+
                   exchange.getMessage().setBody(outputStringBuffer.toString());
                 }
               })
@@ -4173,7 +4185,7 @@ private void getDemsFieldMappingsrccStatus() {
                         log.info("dgg: " + personData);
                       }else{
                         LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
-                        
+
                         ObjectMapper objectMapper = new ObjectMapper();
                         String json = objectMapper.writeValueAsString(dataMap);
 
@@ -4299,11 +4311,11 @@ private void getDemsFieldMappingsrccStatus() {
                           log.info("dgg: " + personData);
                         }else{
                           LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
-                          
+
                           ObjectMapper objectMapper = new ObjectMapper();
                           String json = objectMapper.writeValueAsString(dataMap);
                           String prefix = "";String suffix = "";
-                          
+
                           Boolean present =false;
                           ObjectMapper personDataMapper = new ObjectMapper();
                           personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
@@ -4340,7 +4352,7 @@ private void getDemsFieldMappingsrccStatus() {
                           if(value1 != null && value1.length() > 2) {
                             Pattern pattern = Pattern.compile("\\{([^{}]+)\\}");
                             Matcher matcher = pattern.matcher(value1);
-                            String[] pairs = new String[3]; 
+                            String[] pairs = new String[3];
                             int index = 0;
                             while (matcher.find()) {
                                 String pair = matcher.group(1).trim();
@@ -4375,7 +4387,7 @@ private void getDemsFieldMappingsrccStatus() {
                                 int high = 999999;
                                 int random = r.nextInt(high-low) + low;
                                 log.info("Random Pin number generation" + random);
-                              
+
                               // Create new JSON object
                               ObjectNode newNode = mapper.createObjectNode();
                               newNode.put("id", 113);
