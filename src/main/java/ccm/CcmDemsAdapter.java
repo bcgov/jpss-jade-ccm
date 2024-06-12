@@ -3984,6 +3984,125 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void deleteExistingCase() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Searching for case with: rcc_id = ${header.rcc_id} ...")
+    .setProperty("rcc_id", header("rcc_id"))
+    .choice()
+      .when(simple("${exchangeProperty.rcc_id} != null"))
+        .log(LoggingLevel.INFO, "Look-up caseId.")
+        .setHeader("number", simple("${header[rcc_id]}"))
+
+        .to("direct:getCourtCaseStatusByKey")
+        .unmarshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
+
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            DemsCaseStatus demsCaseStatus = (DemsCaseStatus)exchange.getIn().getBody(DemsCaseStatus.class);
+            exchange.setProperty("dems_case_id", demsCaseStatus.getId());
+
+            //Random r = new Random();
+            //int low = 1;
+            //int high = 9999;
+            //int random = r.nextInt(high-low) + low;
+            StringBuffer outputStringBuffer = new StringBuffer();
+
+            outputStringBuffer.append("{\"id\": \"");
+            outputStringBuffer.append(demsCaseStatus.getId());
+            outputStringBuffer.append("\", \"name\": \"");
+            outputStringBuffer.append(demsCaseStatus.getName());
+
+            /*outputStringBuffer.append("\", \"key\": \"");
+            outputStringBuffer.append("AUTO-DELETE-");
+            outputStringBuffer.append(random);
+            outputStringBuffer.append("-");
+            outputStringBuffer.append(demsCaseStatus.getKey());
+            outputStringBuffer.append("\", \"status\": \"");*/
+
+            outputStringBuffer.append("\", \"key\": null");
+            outputStringBuffer.append(", \"status\": \"");
+
+            outputStringBuffer.append("Inactive");
+            outputStringBuffer.append("\", \"fields\": [");
+
+            outputStringBuffer.append("{ \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
+            outputStringBuffer.append("{ \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
+            outputStringBuffer.append("]}");
+
+            exchange.getMessage().setBody(outputStringBuffer.toString());
+          }
+        })
+
+        .doTry()
+          .choice()
+            .when(simple("${exchangeProperty.dems_case_id} != ''"))
+              // delete case
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .log(LoggingLevel.INFO,"Deleting DEMS case (key = ${header.rcc_id} id = ${exchangeProperty.dems_case_id})... ${body}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
+              .log(LoggingLevel.INFO,"DEMS case deleted.")
+              .log(LoggingLevel.INFO,"Removing users")
+
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  StringBuffer outputStringBuffer = new StringBuffer();
+
+                  outputStringBuffer.append("{\"userIds\": [");
+                  outputStringBuffer.append("]}");
+
+                  exchange.getMessage().setBody(outputStringBuffer.toString());
+                }
+              })
+
+              // sync case users
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
+              .log(LoggingLevel.INFO,"Synchronizing case users ...")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/users/sync")
+
+            .endChoice()
+            .otherwise()
+              .setBody(simple("${exchangeProperty.caseNotFound}"))
+              .setHeader("CamelHttpResponseCode", simple("200"))
+              .log(LoggingLevel.INFO,"Case not found.")
+            .endChoice()
+          .end() // choice end
+        .endDoTry()
+        .doCatch(Exception.class)
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+          .setBody(simple("${exchangeProperty.caseNotFound}"))
+          .setHeader("CamelHttpResponseCode", simple("200"))
+        .end()
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.ERROR, "No rcc_id provided.")
+      .endChoice()
+    .end()
+    ;
+  }
+
   private void createEdtExternalIdExistingParticipant() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -4155,125 +4274,6 @@ private void getDemsFieldMappingsrccStatus() {
       .end()//choice
     .end()//split
     .log(LoggingLevel.INFO,"end of updateEdtExternalIdExistingParticipant.")
-    ;
-  }
-
-  private void deleteExistingCase() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Searching for case with: rcc_id = ${header.rcc_id} ...")
-    .setProperty("rcc_id", header("rcc_id"))
-    .choice()
-      .when(simple("${exchangeProperty.rcc_id} != null"))
-        .log(LoggingLevel.INFO, "Look-up caseId.")
-        .setHeader("number", simple("${header[rcc_id]}"))
-
-        .to("direct:getCourtCaseStatusByKey")
-        .unmarshal().json(JsonLibrary.Jackson, DemsCaseStatus.class)
-
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) {
-            DemsCaseStatus demsCaseStatus = (DemsCaseStatus)exchange.getIn().getBody(DemsCaseStatus.class);
-            exchange.setProperty("dems_case_id", demsCaseStatus.getId());
-
-            //Random r = new Random();
-            //int low = 1;
-            //int high = 9999;
-            //int random = r.nextInt(high-low) + low;
-            StringBuffer outputStringBuffer = new StringBuffer();
-
-            outputStringBuffer.append("{\"id\": \"");
-            outputStringBuffer.append(demsCaseStatus.getId());
-            outputStringBuffer.append("\", \"name\": \"");
-            outputStringBuffer.append(demsCaseStatus.getName());
-
-            /*outputStringBuffer.append("\", \"key\": \"");
-            outputStringBuffer.append("AUTO-DELETE-");
-            outputStringBuffer.append(random);
-            outputStringBuffer.append("-");
-            outputStringBuffer.append(demsCaseStatus.getKey());
-            outputStringBuffer.append("\", \"status\": \"");*/
-
-            outputStringBuffer.append("\", \"key\": null");
-            outputStringBuffer.append(", \"status\": \"");
-
-            outputStringBuffer.append("Inactive");
-            outputStringBuffer.append("\", \"fields\": [");
-
-            outputStringBuffer.append("{ \"name\": \"Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Agency File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Court File No.\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Court File Unique ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Primary Agency File ID\", \"value\": \"AUTO-DELETE\" },");
-            outputStringBuffer.append("{ \"name\": \"Primary Agency File No.\", \"value\": \"AUTO-DELETE\" }");
-            outputStringBuffer.append("]}");
-
-            exchange.getMessage().setBody(outputStringBuffer.toString());
-          }
-        })
-
-        .doTry()
-          .choice()
-            .when(simple("${exchangeProperty.dems_case_id} != ''"))
-              // delete case
-              .removeHeader("CamelHttpUri")
-              .removeHeader("CamelHttpBaseUri")
-              .removeHeaders("CamelHttp*")
-              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-              .log(LoggingLevel.INFO,"Deleting DEMS case (key = ${header.rcc_id} id = ${exchangeProperty.dems_case_id})... ${body}")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}")
-              .log(LoggingLevel.INFO,"DEMS case deleted.")
-              .log(LoggingLevel.INFO,"Removing users")
-
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) {
-                  StringBuffer outputStringBuffer = new StringBuffer();
-
-                  outputStringBuffer.append("{\"userIds\": [");
-                  outputStringBuffer.append("]}");
-
-                  exchange.getMessage().setBody(outputStringBuffer.toString());
-                }
-              })
-
-              // sync case users
-              .removeHeader("CamelHttpUri")
-              .removeHeader("CamelHttpBaseUri")
-              .removeHeaders("CamelHttp*")
-              .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-              .setHeader("Authorization", simple("Bearer " + "{{dems.token}}"))
-              .log(LoggingLevel.INFO,"Synchronizing case users ...")
-              .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/users/sync")
-
-            .endChoice()
-            .otherwise()
-              .setBody(simple("${exchangeProperty.caseNotFound}"))
-              .setHeader("CamelHttpResponseCode", simple("200"))
-              .log(LoggingLevel.INFO,"Case not found.")
-            .endChoice()
-          .end() // choice end
-        .endDoTry()
-        .doCatch(Exception.class)
-          .log(LoggingLevel.ERROR,"Exception: ${exception}")
-          .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
-          .setBody(simple("${exchangeProperty.caseNotFound}"))
-          .setHeader("CamelHttpResponseCode", simple("200"))
-        .end()
-      .endChoice()
-      .otherwise()
-        .log(LoggingLevel.ERROR, "No rcc_id provided.")
-      .endChoice()
-    .end()
     ;
   }
 
