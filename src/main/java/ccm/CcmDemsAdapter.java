@@ -3159,6 +3159,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG, "body: ${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    .delay(1200)
     .setBody(simple("${exchangeProperty.multipartBody}"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
