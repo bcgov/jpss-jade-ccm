@@ -9,7 +9,7 @@ import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -17,11 +17,8 @@ import org.apache.camel.CamelException;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
-import org.apache.camel.ProducerTemplate;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.http.NoHttpResponseException;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 // import org.apache.camel.component.http4.HttpOperationFailedException;
 // import org.apache.camel.component.http4.HttpMethods;
@@ -3358,6 +3355,7 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.setProperty("metadata_data", ccd);
       }
     })
+
     //.setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number",simple("${exchangeProperty.number}"))
@@ -3379,10 +3377,12 @@ public class CcmNotificationService extends RouteBuilder {
     })
 
     .setProperty("primaryJustinFileClose",body())
+    .log(LoggingLevel.INFO, "before split....")
     .split().exchangeProperty("courtFileData")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
+        log.info("In split loop...");
         CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
         exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
       }})
@@ -3404,12 +3404,13 @@ public class CcmNotificationService extends RouteBuilder {
         }
       }})
       .end() // end split
+      .log(LoggingLevel.INFO,"after split")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
           JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
-          Boolean setActiveCase = Boolean.FALSE;
+          Boolean setInactiveCase = Boolean.FALSE;
           List<String> rmsProccessStatus = new ArrayList<String>();
 
           if (primaryFileClose.getRms_event_type().isBlank()) {
@@ -3425,7 +3426,7 @@ public class CcmNotificationService extends RouteBuilder {
           if (activeFileCount >0 && closeFileResults.size() == activeFileCount ) {
             // only active files
            SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.ACTIVE);
-            setActiveCase = Boolean.TRUE;
+           setInactiveCase = Boolean.FALSE;
           }
           else{
              // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
@@ -3433,7 +3434,7 @@ public class CcmNotificationService extends RouteBuilder {
                  == (ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
                 // Destroyed except NPRQ
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
-                setActiveCase = Boolean.FALSE;
+                setInactiveCase = Boolean.TRUE;
               }
               //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
               else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
@@ -3450,15 +3451,16 @@ public class CcmNotificationService extends RouteBuilder {
               else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
                 
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.RETN);
-                setActiveCase = Boolean.TRUE;
+                setInactiveCase = Boolean.FALSE;
               }
           }
           ccd.setRms_processing_status(rmsProccessStatus);
+          log.info("case rms processing status : " + ccd.getRms_processing_status().get(0));
           String courtFileId = ccd.getCourt_file_id();
           
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
-          exchange.setProperty("inactiveCase", setActiveCase.booleanValue());
-          exchange.setProperty("rcc_id", ccd.getCourt_file_no());
+          exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());
+          exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
           exchange.setProperty("caseFlags", ccd.getCase_flags());
           exchange.setProperty("caseId", courtFileId);
         }})
@@ -3468,12 +3470,14 @@ public class CcmNotificationService extends RouteBuilder {
    .doTry()
    .log(LoggingLevel.INFO, "in do try...")
    .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
+   .log(LoggingLevel.INFO, "sending rcc_id : ${exchangeProperty.rcc_id}")
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+    
     .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
     //.setBody(simple("${body}"))
-    .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
+    //.log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
     
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
@@ -3483,12 +3487,20 @@ public class CcmNotificationService extends RouteBuilder {
     .to("direct:publishEventKPI")
     .endDoTry()
     .doTry()
-    .log(LoggingLevel.INFO, "inactive case value : " + simple("${exchangeProperty.caseId}"))
+    .log(LoggingLevel.INFO, "need to get court case id by key")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+    .to("http://ccm-lookup-service/getCourtCaseExists")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .log(LoggingLevel.INFO, "sending case id to inactivate : ${exchangeProperty.caseId}")
     .choice()
-    .when(simple("${exchangeProperty.inactiveCase} == 'true'"))
+    .when( simple("${exchangeProperty.inactiveCase} == 'true'"))
+       
       .setHeader("case_id").simple("${exchangeProperty.caseId}")
       .to("http://ccm-dems-adapter/inactivateCase")
-      .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
+      .log(LoggingLevel.INFO,"Inactivated case")
       .endChoice()
     .endDoTry()
   .doCatch(HttpOperationFailedException.class)
