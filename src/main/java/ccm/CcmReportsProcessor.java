@@ -45,19 +45,20 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.utils.DateTimeUtils;
+import ccm.utils.KafkaComponentUtils;
 import ccm.models.common.event.Error;
 
 public class CcmReportsProcessor extends RouteBuilder {
 
   @Override
   public void configure() throws Exception {
-    attachExceptionHandlers(); 
+    attachExceptionHandlers();
     processReportEvents();
     processReportPriorityEvents();
     createRccStaticReportsEvent();
     publishEventKPI();
     processUnknownStatus();
-      
+
   }
 
   private void attachExceptionHandlers() {
@@ -483,6 +484,7 @@ public class CcmReportsProcessor extends RouteBuilder {
             reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
 
             ReportEvent re = new ReportEvent();
+            re.setEvent_key(rcc_id);
             re.setJustin_rcc_id(rcc_id);
             re.setEvent_status(ReportEvent.STATUS.REPORT.name());
             re.setEvent_source(ReportEvent.SOURCE.JADE_CCM.name());
@@ -497,34 +499,27 @@ public class CcmReportsProcessor extends RouteBuilder {
         .setProperty("kpi_event_topic_name", simple("{{kafka.topic.reports-priority.name}}"))
         .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
 
+        // extract kpi_event_topic_offset
+        // extract kpi_event_topic_partition
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
             // extract the offset from response header.  Example format: "[some-topic-0@301]"
-            String expectedTopicName = (String)exchange.getProperty("kpi_event_topic_name");
 
             try {
               // https://kafka.apache.org/30/javadoc/org/apache/kafka/clients/producer/RecordMetadata.html
               Object o = (Object)exchange.getProperty("kpi_event_topic_recordmetadata");
               String recordMetadata = o.toString();
 
-              StringTokenizer tokenizer = new StringTokenizer(recordMetadata, "[@]");
-
-              if (tokenizer.countTokens() == 2) {
-                // get first token
-                String topicAndPartition = tokenizer.nextToken();
-
-                if (topicAndPartition.startsWith(expectedTopicName)) {
-                  // this is the metadata we are looking for
-                  Long offset = Long.parseLong(tokenizer.nextToken());
-                  exchange.setProperty("kpi_event_topic_offset", offset);
-                }
-              }
+              String event_offset = KafkaComponentUtils.extractOffsetFromRecordMetadata(recordMetadata);
+              String event_partition = KafkaComponentUtils.extractPartitionFromRecordMetadata(recordMetadata);
+              exchange.setProperty("kpi_event_topic_offset", event_offset);
+              exchange.setProperty("kpi_event_topic_partition", event_partition);
             } catch (Exception e) {
               // failed to retrieve offset. Do nothing.
             }
-          }
-        })
+          }})
+
         .setProperty("kpi_component_route_name", simple(routeId))
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
         .to("direct:publishEventKPI")

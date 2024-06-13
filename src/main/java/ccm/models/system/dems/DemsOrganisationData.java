@@ -1,6 +1,5 @@
 package ccm.models.system.dems;
 
-
 public class DemsOrganisationData {
 
     private String organisationId;
