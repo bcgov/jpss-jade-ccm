@@ -3377,7 +3377,6 @@ public class CcmNotificationService extends RouteBuilder {
     })
 
     .setProperty("primaryJustinFileClose",body())
-    .log(LoggingLevel.INFO, "before split....")
     .split().exchangeProperty("courtFileData")
     .process(new Processor() {
       @Override
@@ -3404,7 +3403,7 @@ public class CcmNotificationService extends RouteBuilder {
         }
       }})
       .end() // end split
-      .log(LoggingLevel.INFO,"after split")
+      
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -3455,22 +3454,19 @@ public class CcmNotificationService extends RouteBuilder {
               }
           }
           ccd.setRms_processing_status(rmsProccessStatus);
-          log.info("case rms processing status : " + ccd.getRms_processing_status().get(0));
-          String courtFileId = ccd.getCourt_file_id();
+          //String courtFileId = ccd.getCourt_file_id();
           
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());
           exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
           exchange.setProperty("caseFlags", ccd.getCase_flags());
-          exchange.setProperty("caseId", courtFileId);
+          //exchange.setProperty("caseId", courtFileId);
         }})
       .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     
     .log(LoggingLevel.INFO, "Updating court case data")
    .doTry()
-   .log(LoggingLevel.INFO, "in do try...")
-   .log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
-   .log(LoggingLevel.INFO, "sending rcc_id : ${exchangeProperty.rcc_id}")
+   
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
