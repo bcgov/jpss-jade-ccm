@@ -1815,7 +1815,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log(LoggingLevel.DEBUG,"Processing File Note event: ${body}")
+    .log(LoggingLevel.INFO,"Processing File Note event: ${body}")
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -1833,8 +1833,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
         }})
       .setProperty("kpi_event_object", body())
-      .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
-      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
+      .marshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
+      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.file.notes}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.file.notes}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -1859,7 +1859,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .doFinally()
     .choice()
     .when(exchangeProperty("kpi_event_topic_name").isNotNull())
-    .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+    .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")

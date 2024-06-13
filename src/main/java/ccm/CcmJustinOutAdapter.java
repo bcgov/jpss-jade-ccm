@@ -538,26 +538,26 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"getFileNote request received. mdoc_justin_no = ${header.number}")
+    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}fileNote?file_note_id=${header.number}")
+    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson, JustinFileNote.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         JustinFileNote j = exchange.getIn().getBody(JustinFileNote.class);
-        //FileNote fileDisposition = new FileNote(j.getMdoc_justin_no(), j.getDisposition_date());
-       //exchange.getMessage().setBody(fileDisposition);
+        FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no());
+        exchange.getMessage().setBody(fileNote);
       }
     })
     .marshal().json(JsonLibrary.Jackson, FileNote.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 }

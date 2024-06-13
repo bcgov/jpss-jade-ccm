@@ -669,11 +669,11 @@ private void getFileNote() {
   .removeHeader("CamelHttpUri")
   .removeHeader("CamelHttpBaseUri")
   .removeHeaders("CamelHttp*")
-  .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+  .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
   .setHeader(Exchange.HTTP_METHOD, simple("GET"))
   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
   .to("http://ccm-justin-out-adapter/getFileNote")
-  .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+  .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
   ;
 }
 }

@@ -3361,7 +3361,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .log(LoggingLevel.INFO,"processFileNote event_message_id = ${header[event_key]}")
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getFileNote")

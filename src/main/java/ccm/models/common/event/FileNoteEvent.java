@@ -12,8 +12,11 @@ public class FileNoteEvent extends BaseEvent{
   private String justin_fetched_date;
   private String justin_guid;
   private String justin_mdoc_no;
+  private String file_note_id;
 
-  public static final String JUSTIN_MDOC_NO = "MDOC_JUSTIN_NO";
+  public static final String GUID = "GUID";
+  public static final String FILE_NOTE_ID = "FILE_NOTE_ID";
+  public static final String FETCHED_DATE = "FETCHED_DATE";
   public enum SOURCE {
     JUSTIN;
   }
@@ -46,13 +49,19 @@ public class FileNoteEvent extends BaseEvent{
       JustinEventDataElement jed = i.next();
 
       switch(jed.getData_element_nm()) {
-        case JUSTIN_MDOC_NO:
-          setJustin_mdoc_no(jed.getData_value_txt());
+        case FILE_NOTE_ID:
+          setFile_note_id(jed.getData_value_txt());
+          break;
+        case GUID:
+          setJustin_guid(jed.getData_value_txt());
+          break;
+        case FETCHED_DATE:
+          setJustin_fetched_date(jed.getData_value_txt());
           break;
       }
     }
 
-    setEvent_key(getJustin_mdoc_no());
+    setEvent_key(getFile_note_id());
   }
 
   public FileNoteEvent() {
@@ -105,5 +114,12 @@ public class FileNoteEvent extends BaseEvent{
   public void setJustin_mdoc_no(String justin_mdoc_no) {
     this.justin_mdoc_no = justin_mdoc_no;
   }
-  
+
+  public String getFile_note_id() {
+    return file_note_id;
+  }
+
+  public void setFile_note_id(String file_note_id) {
+    this.file_note_id = file_note_id;
+  }
 }

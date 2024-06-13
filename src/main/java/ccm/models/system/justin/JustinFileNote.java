@@ -4,7 +4,7 @@ public class JustinFileNote {
     private String file_note_id;
     private String user_name;
     private String entry_date;
-    private String note_text;
+    private String note_txt;
     private String rcc_id;
     private String mdoc_justin_no;
 
@@ -26,11 +26,11 @@ public class JustinFileNote {
     public void setEntry_date(String entry_date) {
         this.entry_date = entry_date;
     }
-    public String getNote_text() {
-        return note_text;
+    public String getNote_txt() {
+        return note_txt;
     }
-    public void setNote_text(String note_text) {
-        this.note_text = note_text;
+    public void setNote_txt(String note_txt) {
+        this.note_txt = note_txt;
     }
     public String getRcc_id() {
         return rcc_id;
