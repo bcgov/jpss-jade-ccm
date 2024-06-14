@@ -3381,7 +3381,6 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-        log.info("In split loop...");
         CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
         exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
       }})
@@ -3472,9 +3471,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
     
     .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
-    //.setBody(simple("${body}"))
-    //.log(LoggingLevel.INFO,"court data = ${bodyAs(String)}.")
-    
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
 
     .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
