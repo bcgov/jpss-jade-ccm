@@ -3420,16 +3420,17 @@ public class CcmNotificationService extends RouteBuilder {
             closeFileResult++;
           }
           int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
+          int caseFileCount = closeFileResults.size();
 
-          if (activeFileCount >0 && closeFileResults.size() == activeFileCount ) {
+          if (activeFileCount >0 && caseFileCount == activeFileCount ) {
             // only active files
            SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.ACTIVE);
            setInactiveCase = Boolean.FALSE;
           }
           else{
              // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
-             if ( (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) 
-                 == (ccd.getRelated_court_file().size() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
+             if ( caseFileCount > 0 &&  (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) 
+                 == (caseFileCount - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
                 // Destroyed except NPRQ
                 SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
                 setInactiveCase = Boolean.TRUE;
@@ -3453,13 +3454,11 @@ public class CcmNotificationService extends RouteBuilder {
               }
           }
           ccd.setRms_processing_status(rmsProccessStatus);
-          //String courtFileId = ccd.getCourt_file_id();
-          
+         
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());
           exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
           exchange.setProperty("caseFlags", ccd.getCase_flags());
-          //exchange.setProperty("caseId", courtFileId);
         }})
       .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     
@@ -3472,11 +3471,6 @@ public class CcmNotificationService extends RouteBuilder {
     
     .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-
-    .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
-    .setProperty("kpi_component_route_name", simple("processFileClose"))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-    .to("direct:publishEventKPI")
     .endDoTry()
     .doTry()
     .log(LoggingLevel.INFO, "need to get court case id by key")
@@ -3494,12 +3488,18 @@ public class CcmNotificationService extends RouteBuilder {
       .to("http://ccm-dems-adapter/inactivateCase")
       .log(LoggingLevel.INFO,"Inactivated case")
       .endChoice()
+
     .endDoTry()
+    .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+    .setProperty("kpi_component_route_name", simple("processFileClose"))
+    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+    .to("direct:publishEventKPI")
   .doCatch(HttpOperationFailedException.class)
   .log(LoggingLevel.ERROR,"Exception: ${exception}")
    .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
    .setProperty("kpi_component_route_name", simple("processFileClose"))
    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+   .log(LoggingLevel.INFO, "Exception processing file close event")
    .to("direct:publishEventKPI")
   .end();
     
