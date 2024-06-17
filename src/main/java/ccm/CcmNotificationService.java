@@ -2218,6 +2218,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
@@ -2265,6 +2266,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
