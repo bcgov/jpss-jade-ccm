@@ -2116,6 +2116,7 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .setProperty("court_file_id").simple("${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .to("direct:compileRelatedCourtFiles")
 
@@ -2319,6 +2320,8 @@ public class CcmNotificationService extends RouteBuilder {
       .endChoice()
     .end()
 
+    .setHeader("event_key", simple("${exchangeProperty.court_file_id}"))
+    .log(LoggingLevel.ERROR, "key value: ${header.event_key}")
     // wireTap makes an call and immediate return without waiting for the process to complete
     // the direct call will wait for a certain time before creating the Report End event.
     .wireTap("direct:generateInformationReportEvent")

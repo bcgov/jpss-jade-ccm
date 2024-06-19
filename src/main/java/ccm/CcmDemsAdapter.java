@@ -1645,7 +1645,7 @@ private void getDemsFieldMappingsrccStatus() {
           .log(LoggingLevel.ERROR, "Court case... ${exchangeProperty.id} possibly stuck in queue.")
           .setBody(simple(""))
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
-          .setHeader("CCMException", simple("{\"error\": \"Case possibly stuck in queued state.\"}"))
+          .setHeader("CCMException", simple("{\"error\": \"Case id ${exchangeProperty.id} possibly stuck in queued state.\"}"))
           .stop()
         .endChoice()
       .end()
