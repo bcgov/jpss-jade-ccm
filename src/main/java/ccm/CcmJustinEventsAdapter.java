@@ -42,6 +42,7 @@ import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.versioning.Version;
@@ -78,7 +79,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     processReportEvents();
     processUnknownEvent();
     processFileClose();
-
+    processFileNote();
     processPartMergeEvents();
 
     confirmEventProcessed();
@@ -669,6 +670,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
+          .endChoice()
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
+          .to("direct:processFileNote")
           .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
@@ -1794,6 +1798,68 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .choice()
     .when(exchangeProperty("kpi_event_topic_name").isNotNull())
     .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+      .setBody(simple("${exchangeProperty.justin_event}"))
+      .setProperty("event_message_id")
+        .jsonpath("$.event_message_id")
+      .to("direct:confirmEventProcessed")
+      .end()
+    .end()
+    ;
+  }
+  private void processFileNote() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setProperty("justin_event").body()
+    .setProperty("kpi_component_route_name", simple(routeId))
+    .log(LoggingLevel.INFO,"Processing File Note event: ${body}")
+    .doTry()
+      .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          // Insert code that gets executed *before* delegating
+          // to the next processor in the chain.
+
+          JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+
+          FileNoteEvent be = new FileNoteEvent(je);
+          
+          exchange.getMessage().setBody(be, FileNoteEvent.class);
+          exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+
+        }})
+      .setProperty("kpi_event_object", body())
+      .marshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
+      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .to("kafka:{{kafka.topic.file.notes}}")
+      .setProperty("kpi_event_topic_name", simple("{{kafka.topic.file.notes}}"))
+      .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+      .setProperty("kpi_component_route_name", simple(routeId))
+      .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+      .to("direct:preprocessAndPublishEventCreatedKPI")
+    .doCatch(Exception.class)
+      .log(LoggingLevel.DEBUG,"General Exception thrown.")
+      .log(LoggingLevel.DEBUG,"${exception}")
+      .setProperty("error_event_object", body())
+      .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+      .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+      .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+      //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+      .to("direct:publishJustinEventKPIError")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          throw exchange.getException();
+        }
+      })
+    .doFinally()
+    .choice()
+    .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+    .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
       .setBody(simple("${exchangeProperty.justin_event}"))
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")

@@ -40,6 +40,7 @@ import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.FileDisposition;
+import ccm.models.common.data.FileNote;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.Error;
@@ -53,6 +54,7 @@ import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinDocumentList;
 import ccm.models.system.justin.JustinFileClose;
 import ccm.models.system.justin.JustinFileDisposition;
+import ccm.models.system.justin.JustinFileNote;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -72,6 +74,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getImageData();
     justinFileClose();
     getFileDisp();
+    getFileNote();
   }
 
   private void attachExceptionHandlers() {
@@ -562,4 +565,33 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     ;
   }
 
+  private void getFileNote(){
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileNote.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinFileNote j = exchange.getIn().getBody(JustinFileNote.class);
+        FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no());
+        exchange.getMessage().setBody(fileNote);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, FileNote.class)
+    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+  }
 }
