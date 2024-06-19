@@ -39,6 +39,7 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileCloseData;
+import ccm.models.common.data.FileDisposition;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.Error;
@@ -51,6 +52,7 @@ import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinDocumentList;
 import ccm.models.system.justin.JustinFileClose;
+import ccm.models.system.justin.JustinFileDisposition;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -69,7 +71,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseCrownAssignmentList();
     getImageData();
     justinFileClose();
-
+    getFileDisp();
   }
 
   private void attachExceptionHandlers() {
@@ -529,6 +531,35 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
 
+  }
+  private void getFileDisp() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"getFileDisp request received. mdoc_justin_no = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .toD("https://{{justin.host}}/fileDisp?mdoc_justin_no=${header.number}")
+    .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileDisposition.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinFileDisposition j = exchange.getIn().getBody(JustinFileDisposition.class);
+        FileDisposition fileDisposition = new FileDisposition(j.getMdoc_justin_no(), j.getDisposition_date());
+       exchange.getMessage().setBody(fileDisposition);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, FileDisposition.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
   }
 
 }

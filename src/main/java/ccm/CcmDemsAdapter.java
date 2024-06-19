@@ -153,6 +153,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateEdtExternalIdExistingParticipant();
     updateExistingParticipantwithOTC();
     updateExistingParticipantwithOTCOrig();
+    destroyCaseRecords();
   }
 
 
@@ -4444,4 +4445,24 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void destroyCaseRecords() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    // IN: header = id
+    from("platform-http:/" + routeId )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request id = ${header.id}...")
+    .setProperty("dems_case_id", header("id"))
+    .setHeader("dems_case_id",simple("${exchangeProperty.id}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log(LoggingLevel.INFO," DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
+    .log(LoggingLevel.INFO,"DEMS case record deleted. ")
+    ;
+  }
 }
