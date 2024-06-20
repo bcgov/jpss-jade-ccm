@@ -58,9 +58,9 @@ public class CcmLookupService extends RouteBuilder {
     getCaseListByUserKey();
     getCaseHyperlink();
     getCaseListHyperlink();
-    getJustinFileClose();
     getFileDisp();
     getFileNote();
+    getFileCloseData();
   }
 
 
@@ -591,28 +591,29 @@ public class CcmLookupService extends RouteBuilder {
     .end()
     ;
   }
- //as part of jade 2425
- private void getCaseListHyperlink() {
-   // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-   from("platform-http:/" + routeId)
-   .routeId(routeId)
-   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .removeHeader("CamelHttpUri")
-   .removeHeader("CamelHttpBaseUri")
-   .removeHeaders("CamelHttp*")
-   .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${body}")
-   .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-   .setProperty("body_request", body())
-   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-   // attempt to retrieve case id using getCaseListHyperlink DEMS adapter endpoint.
-   .doTry()
-     .to("http://ccm-dems-adapter/getCaseListHyperlink")
-     .endDoTry()
-   .doCatch(HttpOperationFailedException.class)
-     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-     .process(new Processor() {
+  //as part of jade 2425
+  private void getCaseListHyperlink() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Processing getCaseListHyperlink request... key = ${body}")
+    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setProperty("body_request", body())
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    // attempt to retrieve case id using getCaseListHyperlink DEMS adapter endpoint.
+    .doTry()
+      .to("http://ccm-dems-adapter/getCaseListHyperlink")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .process(new Processor() {
        @Override
        public void process(Exchange exchange) throws Exception {
          HttpOperationFailedException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
@@ -621,60 +622,62 @@ public class CcmLookupService extends RouteBuilder {
        }
      })
      .stop()
-   .end()
-   ;
- }
- private void getJustinFileClose() {
-   // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    .end()
+    ;
+  }
 
-   from("platform-http:/" + routeId)
-   .routeId(routeId)
-   .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-   .removeHeader("CamelHttpUri")
-   .removeHeader("CamelHttpBaseUri")
-   .removeHeaders("CamelHttp*")
-   .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
-   .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-   .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-   .to("http://ccm-justin-out-adapter/justinFileClose")
-   .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
-   ;
- }
+  private void getFileCloseData() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
- private void getFileDisp() {
-  // use method name as route id
-  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-out-adapter/getFileCloseData")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+    ;
+  }
 
-  from("platform-http:/" + routeId)
-  .routeId(routeId)
-  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-  .removeHeader("CamelHttpUri")
-  .removeHeader("CamelHttpBaseUri")
-  .removeHeaders("CamelHttp*")
-  .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
-  .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-  .to("http://ccm-justin-out-adapter/getFileDisp")
-  .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
-  ;
-}
+  private void getFileDisp() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-private void getFileNote() {
-  // use method name as route id
-  String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-out-adapter/getFileDisp")
+    .log(LoggingLevel.DEBUG,"response from JUSTIN: ${body}")
+    ;
+  }
 
-  from("platform-http:/" + routeId)
-  .routeId(routeId)
-  .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-  .removeHeader("CamelHttpUri")
-  .removeHeader("CamelHttpBaseUri")
-  .removeHeaders("CamelHttp*")
-  .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
-  .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-  .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-  .to("http://ccm-justin-out-adapter/getFileNote")
-  .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
-  ;
-}
+  private void getFileNote() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-out-adapter/getFileNote")
+    .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
+    ;
+  }
+
 }

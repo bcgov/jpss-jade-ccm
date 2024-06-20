@@ -1,6 +1,15 @@
 package ccm.models.system.justin;
 
 public class JustinFileClose {
+
+    public static final  String  SEMA = "SEMA";  // Semi-Active
+    public static final  String  PEND = "PEND";  // Pending
+    public static final  String  NPRQ = "NPRQ";  // No Process Required
+    public static final  String  DEST = "DEST";  // Destroyed
+    public static final  String  RETN = "RETN";  // Returned
+    public static final  String  ACTIVE = "ACTIVE";
+
+    
     
     private String mdoc_justin_no;
     private String rms_event_type;

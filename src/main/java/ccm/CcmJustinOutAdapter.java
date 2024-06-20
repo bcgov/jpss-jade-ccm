@@ -72,9 +72,9 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getImageData();
-    justinFileClose();
     getFileDisp();
     getFileNote();
+    getFileCloseData();
   }
 
   private void attachExceptionHandlers() {
@@ -502,7 +502,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     ;
   }
 
-  private void justinFileClose() {
+  private void getFileCloseData() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -510,7 +510,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"file close request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+    //.log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

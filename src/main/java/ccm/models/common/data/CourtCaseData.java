@@ -28,7 +28,9 @@ public class CourtCaseData {
   private String court_home_registry_name;
   private String court_home_registry_identifier;
   private String accused_names;
-  //private String rms_processing_status;
+  private List<String> rms_processing_status;
+ 
+
   private List<String> case_flags;
 
   private List<CaseAccused> accused_persons;
@@ -57,7 +59,8 @@ public class CourtCaseData {
     setCourt_file_designation(jcf.getFile_designation());
     setCourt_file_sworn_date(jcf.getSworn_date());
     setOffence_description_list(jcf.getApproved_charges());
-
+    
+    //setRms_processing_status(jcf.ge);
     //"$MAPID30-$MAPID33-$MAPID31"
     StringBuilder fileSeqNoType = new StringBuilder();
     fileSeqNoType.append(jcf.getCourt_file_no());
@@ -341,6 +344,12 @@ public class CourtCaseData {
   public void setRelated_court_cases(List<CourtCaseData> related_court_cases) {
     this.related_court_cases = related_court_cases;
   }
+  public  List<String> getRms_processing_status() {
+    return rms_processing_status;
+  }
 
+  public void setRms_processing_status(List<String> rms_processing_status) {
+    this.rms_processing_status = rms_processing_status;
+  }
 }
   
