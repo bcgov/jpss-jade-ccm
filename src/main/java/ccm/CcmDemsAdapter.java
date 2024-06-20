@@ -153,6 +153,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateEdtExternalIdExistingParticipant();
     updateExistingParticipantwithOTC();
     updateExistingParticipantwithOTCOrig();
+    processNoteRecord();
   }
 
 
@@ -4431,4 +4432,7 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void processNoteRecord() {
+
+  }
 }

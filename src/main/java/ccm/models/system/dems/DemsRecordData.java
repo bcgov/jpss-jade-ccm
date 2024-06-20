@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import ccm.models.common.event.ReportEvent.REPORT_TYPES;
+import ccm.models.common.data.FileNote;
 import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.CourtCaseDocumentData;
 import ccm.models.common.data.document.ImageDocumentData;
@@ -31,6 +32,7 @@ public class DemsRecordData {
     private String reportType;
     private int incrementalDocCount = 1;
     private String image_id;
+    private String caseNoteCategory;
 
     public String DescriptipnShortFormValue(String formTypeDescription) {
         Map<String, String> map = new HashMap<>();
@@ -548,6 +550,75 @@ public class DemsRecordData {
         setFields(fieldData);
     }
 
+    public DemsRecordData(FileNote nrd) {
+        List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+
+        if(nrd.getNote_txt() != null) {
+            DemsFieldData notetxt = new DemsFieldData("Notes", nrd.getNote_txt());
+            fieldData.add(notetxt);
+        }
+        if(nrd.getUser_name() != null) {
+            DemsFieldData username = new DemsFieldData("Author", nrd.getUser_name());
+            fieldData.add(username);
+        }
+        if(nrd.getEntry_date() != null) {
+            DemsFieldData entry_date = new DemsFieldData("Entry Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+            fieldData.add(entry_date);
+        }
+        setOriginalFileNumber(nrd.getMdoc_justin_no());
+        if(getOriginalFileNumber() != null) {
+            DemsFieldData title = new DemsFieldData("Justin Court File No", getOriginalFileNumber());
+            fieldData.add(title);
+        }
+        setSource("BCPS Work");
+        if(getSource() != null) {
+            DemsFieldData source = new DemsFieldData("Source", getSource());
+            fieldData.add(source);
+        }
+        setCaseNoteCategory("JUSTIN");
+        if(getCaseNoteCategory() != null){
+            DemsFieldData caseNoteCategory = new DemsFieldData("Case Note Category", getCaseNoteCategory());
+            fieldData.add(caseNoteCategory); 
+        }
+        setDocumentId(nrd.getFile_note_id());
+        if(getDocumentId() != null) {
+            DemsFieldData documentId = new DemsFieldData("Document ID", getDocumentId());
+            fieldData.add(documentId);
+        }
+        setType("BCPS-CASE NOTES");
+        if(getType() != null) {
+            DemsFieldData type = new DemsFieldData("Type", getType());
+            fieldData.add(type);
+        }
+        StringBuilder notes = new StringBuilder();
+        if(nrd.getNote_txt().length() > 256) {
+            String truncatedCaseName = nrd.getNote_txt().substring(0, 256);
+            notes.append(truncatedCaseName);
+            notes.append(" ...");
+        }
+        setDescriptions(notes.toString());
+        if(getDescriptions() != null) {
+            DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
+            fieldData.add(descriptions);
+        }
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        if(getLocation() != null) {
+            DemsFieldData location = new DemsFieldData("ISL Event", getLocation());
+            fieldData.add(location);
+        }
+        if(getLastApiRecordUpdate() != null) {
+            DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
+            fieldData.add(lastUpdate);
+        }
+        setFileExtension(".txt");
+        if(getFileExtension() != null) {
+            DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
+            fieldData.add(extension);
+        }
+
+        setFields(fieldData);
+    }
+
     public void incrementDocumentId() {
         // update the document id with the next incremental id
         // in case of INFORMATION report type,
@@ -720,5 +791,12 @@ public class DemsRecordData {
     public void setImage_id(String image_id) {
     this.image_id = image_id;
     }
+    
+    public String getCaseNoteCategory() {
+        return caseNoteCategory;
+    }
 
+    public void setCaseNoteCategory(String caseNoteCategory) {
+        this.caseNoteCategory = caseNoteCategory;
+    }
 }
