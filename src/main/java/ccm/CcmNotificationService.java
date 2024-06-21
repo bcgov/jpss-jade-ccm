@@ -4,9 +4,12 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -58,6 +61,7 @@ import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinFileClose;
+import ccm.models.system.justin.JustinFileDisposition;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -3392,6 +3396,11 @@ public class CcmNotificationService extends RouteBuilder {
         closeFileResults.put(JustinFileClose.SEMA, 0);
         closeFileResults.put(JustinFileClose.ACTIVE, 0);
 
+       
+
+       
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
     //IN: property = kpi_object
     from("direct:" + routeId)
     .routeId(routeId)
@@ -3409,6 +3418,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
+  
     .log(LoggingLevel.INFO, "metadata_data: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .process(new Processor() {
@@ -3442,10 +3452,34 @@ public class CcmNotificationService extends RouteBuilder {
           Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
           result++;
         }
+        
       }
     })
 
     .setProperty("primaryJustinFileClose",body())
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number",simple("${exchangeProperty.number}"))
+    .to("http://ccm-lookup-service/getFileDisp")
+    .unmarshal().json(JsonLibrary.Jackson,JustinFileDisposition.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        JustinFileDisposition fileDisp = exchange.getIn().getBody(JustinFileDisposition.class);
+        
+        if (!fileDisp.getDisposition_date().isBlank()) {
+          Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
+          Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+          if (mostRecentDispDate != null) {
+            if (dispDate.after(mostRecentDispDate)){
+              exchange.setProperty("mostRecentDispDate", dispDate);
+            }
+          }
+          else{
+            exchange.setProperty("mostRecentDispDate", dispDate);
+          }
+        }
+      }
+      })
     .split().exchangeProperty("courtFileData")
     .process(new Processor() {
       @Override
@@ -3470,6 +3504,27 @@ public class CcmNotificationService extends RouteBuilder {
           closeFileResult++;
         }
       }})
+      .to("http://ccm-lookup-service/getFileDisp")
+      .unmarshal().json(JsonLibrary.Jackson,JustinFileDisposition.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          JustinFileDisposition fileDisp = exchange.getIn().getBody(JustinFileDisposition.class);
+          
+          if (!fileDisp.getDisposition_date().isBlank()) {
+            Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
+            Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+            if (mostRecentDispDate != null) {
+              if (dispDate.after(mostRecentDispDate)){
+                exchange.setProperty("mostRecentDispDate", dispDate);
+              }
+            }
+            else{
+              exchange.setProperty("mostRecentDispDate", dispDate);
+            }
+          }
+        }
+      })
       .end() // end split
       
       .process(new Processor() {
@@ -3523,6 +3578,9 @@ public class CcmNotificationService extends RouteBuilder {
               }
           }
           ccd.setRms_processing_status(rmsProccessStatus);
+          Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+
+          ccd.setDisposition_date(dateFormat.format(mostRecentDispDate).toString());
          
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());

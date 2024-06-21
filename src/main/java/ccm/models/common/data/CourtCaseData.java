@@ -29,7 +29,10 @@ public class CourtCaseData {
   private String court_home_registry_identifier;
   private String accused_names;
   private List<String> rms_processing_status;
+  private String disposition_date;
  
+
+  
 
   private List<String> case_flags;
 
@@ -350,6 +353,14 @@ public class CourtCaseData {
 
   public void setRms_processing_status(List<String> rms_processing_status) {
     this.rms_processing_status = rms_processing_status;
+  }
+
+  public String getDisposition_date() {
+    return disposition_date;
+  }
+
+  public void setDisposition_date(String disposition_date) {
+    this.disposition_date = disposition_date;
   }
 }
   
