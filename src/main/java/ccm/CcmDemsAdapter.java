@@ -3356,11 +3356,33 @@ private void getDemsFieldMappingsrccStatus() {
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .setBody(simple("{\"entityType\":\"Person\",\"entityId\":\"${header.fromPartid}\",\"identifierType\":\"PrimaryId\",\"identifierValue\":\"${header.toPartid}\"}"))
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
+    .doTry()
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .setBody(simple("{\"entityType\":\"Person\",\"entityId\":\"${header.fromPartid}\",\"identifierType\":\"PrimaryId\",\"identifierValue\":\"${header.toPartid}\"}"))
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exception message: ${body}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            exchange.getMessage().setBody(cause.getResponseBody());
+            log.info("Returned body : " + cause.getResponseBody());
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+    .end()
+
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
