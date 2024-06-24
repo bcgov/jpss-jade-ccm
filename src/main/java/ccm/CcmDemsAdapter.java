@@ -3381,6 +3381,36 @@ private void getDemsFieldMappingsrccStatus() {
       })
 
       .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+      .setHeader("CCMException", simple("${exception.statusCode}"))
+
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+            exchange.getMessage().setBody(cause.getResponseBody());
+
+            log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+
+            exchange.setProperty("exception", cause);
+
+            if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+              String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+              exchange.getIn().setHeader("CCMExceptionEncoded", body);
+            }
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
+      .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+
+
+
     .end()
 
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -3388,6 +3418,23 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
     .log(LoggingLevel.INFO, "response: '${body}'")
+    
+    .log(LoggingLevel.INFO, "Checking for exceptions")
+    .choice()
+      .when(simple("${exchangeProperty.exception} != null"))
+        .log(LoggingLevel.INFO, "There is an exception")
+        .log(LoggingLevel.ERROR, "Exception: ${exchangeProperty.exception}")
+
+        .process(new Processor() {
+          public void process(Exchange exchange) throws Exception {
+
+            Exception ex = (Exception)exchange.getProperty("exception");
+            throw ex;
+          }
+        })
+      .otherwise()
+        .log(LoggingLevel.INFO, "No exception")
+    .end()
     ;
   }
 
