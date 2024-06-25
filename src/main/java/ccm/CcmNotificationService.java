@@ -2467,7 +2467,8 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .setHeader("event_key", simple("${exchangeProperty.court_file_id}"))
-    .log(LoggingLevel.ERROR, "key value: ${header.event_key}")
+    .log(LoggingLevel.INFO, "key value: ${header.event_key}")
+
     // wireTap makes an call and immediate return without waiting for the process to complete
     // the direct call will wait for a certain time before creating the Report End event.
     .wireTap("direct:generateInformationReportEvent")
