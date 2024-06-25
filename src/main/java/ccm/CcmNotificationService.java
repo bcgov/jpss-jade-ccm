@@ -54,6 +54,7 @@ import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.ChargeAssessmentEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.justin.JustinFileClose;
@@ -102,6 +103,8 @@ public class CcmNotificationService extends RouteBuilder {
     processParticipantMerge();
     processParticipantMergeEvents();
     processAccusedPersons();
+    processFileNoteEvents();
+    processFileNote();
     processFileClose();
   }
 
@@ -497,6 +500,53 @@ public class CcmNotificationService extends RouteBuilder {
     ;
   }
 
+  private void processFileNoteEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.file.notes}}?groupId=ccm-notification-service&maxPollRecords=3&maxPollIntervalMs=4800000")
+    .routeId(routeId)
+    .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.file.notes}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+      "    on the topic ${headers[kafka.TOPIC]}\n" +
+      "    on the partition ${headers[kafka.PARTITION]}\n" +
+      "    with the offset ${headers[kafka.OFFSET]}\n" +
+      "    with the key ${headers[kafka.KEY]}")
+    .setHeader("event_key")
+      .jsonpath("$.event_key")
+    .setHeader("event_status")
+      .jsonpath("$.event_status")
+    .setHeader("event_message_id")
+      .jsonpath("$.justin_event_message_id")
+    .setHeader("event_message_type")
+      .jsonpath("$.justin_message_event_type_cd")
+    .setHeader("event")
+      .simple("${body}")
+    .unmarshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
+    .setProperty("kpi_event_object", body())
+    .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+    .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+    .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
+    .marshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
+    .choice()
+      .when(header("event_status").isEqualTo(FileNoteEvent.STATUS.FILE_NOTE))
+        .setProperty("kpi_component_route_name", simple("processFileNote"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processFileNote")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .otherwise()
+        .to("direct:processUnknownStatus")
+        .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+      .end()
+    ;
+  }
+
   private void createPartIdProvisionCompleted() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -864,16 +914,15 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
-        .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.FILE_CLOSE))
+      .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.FILE_CLOSE))
         .setProperty("kpi_component_route_name", simple("processFileClose"))
 
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
         .to("direct:publishEventKPI")
+        .setBody(header("event"))
         .to("direct:processFileClose")
-        //.setBody(header("event"))
-        //.to("direct:processCourtCaseAuthListChanged")
-        //.setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
-       // .to("direct:publishEventKPI")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
         .endChoice()
       .otherwise()
         .to("direct:processUnknownStatus")
@@ -2210,6 +2259,7 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .setProperty("court_file_id").simple("${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .to("direct:compileRelatedCourtFiles")
 
@@ -2315,6 +2365,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
@@ -2362,6 +2413,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
@@ -2413,6 +2465,9 @@ public class CcmNotificationService extends RouteBuilder {
       .end()
       .endChoice()
     .end()
+
+    .setHeader("event_key", simple("${exchangeProperty.court_file_id}"))
+    .log(LoggingLevel.INFO, "key value: ${header.event_key}")
 
     // wireTap makes an call and immediate return without waiting for the process to complete
     // the direct call will wait for a certain time before creating the Report End event.
@@ -2643,7 +2698,7 @@ public class CcmNotificationService extends RouteBuilder {
               .removeHeader(Exchange.CONTENT_ENCODING)
               .to("http://ccm-lookup-service/getCourtCaseDetails")
 
-              .log(LoggingLevel.INFO,"Retrieved related Court Case from JUSTIN: ${body}")
+              .log(LoggingLevel.DEBUG,"Retrieved related Court Case from JUSTIN: ${body}")
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
               .process(new Processor() {
                 @Override
@@ -3310,6 +3365,21 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
   }
 
+  private void processFileNote(){
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"processFileNote event_message_id = ${header[event_key]}")
+    // double check that case had not been already created since.
+    .setHeader("number", simple("${header[event_key]}"))
+    .to("http://ccm-lookup-service/getFileNote")
+    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+    .end();
+  }
+
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3504,6 +3574,7 @@ public class CcmNotificationService extends RouteBuilder {
   .end();
     
   }
+
   private void SetRmsProcessingStatus(List<String> rmsList , String statusToSet) {
     if (rmsList.isEmpty()) {
       rmsList.add(JustinFileClose.DEST);
@@ -3513,5 +3584,5 @@ public class CcmNotificationService extends RouteBuilder {
       rmsList.add(JustinFileClose.DEST);
     }
   }
-   
+
 }

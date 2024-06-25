@@ -58,9 +58,9 @@ kamel -n $ns run \
   --trait logging.level=$logging_level \
   --trait environment.vars=TZ="Canada/Pacific" \
   --trait container.request-cpu=5m \
-  --trait container.request-memory=500mi \
+  --trait container.request-memory=500Mi \
   --trait container.limit-cpu=200m \
-  --trait container.limit-memory=1000mi \
+  --trait container.limit-memory=1000Mi \
   --trait route.enabled=false \
   --trait service.node-port=false
 fi
