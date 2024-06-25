@@ -28,11 +28,8 @@ public class CourtCaseData {
   private String court_home_registry_name;
   private String court_home_registry_identifier;
   private String accused_names;
-  private List<String> rms_processing_status;
+  private String rms_processing_status;
   private String disposition_date;
- 
-
-  
 
   private List<String> case_flags;
 
@@ -347,11 +344,11 @@ public class CourtCaseData {
   public void setRelated_court_cases(List<CourtCaseData> related_court_cases) {
     this.related_court_cases = related_court_cases;
   }
-  public  List<String> getRms_processing_status() {
+  public  String getRms_processing_status() {
     return rms_processing_status;
   }
 
-  public void setRms_processing_status(List<String> rms_processing_status) {
+  public void setRms_processing_status(String rms_processing_status) {
     this.rms_processing_status = rms_processing_status;
   }
 

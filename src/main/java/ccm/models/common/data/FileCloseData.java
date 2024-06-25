@@ -1,12 +1,22 @@
 package ccm.models.common.data;
 
 public class FileCloseData {
-    
+
+    public static final  String  SEMA = "SEMA";  // Semi-Active
+    public static final  String  PEND = "PEND";  // Pending
+    public static final  String  NPRQ = "NPRQ";  // No Process Required
+    public static final  String  DEST = "DEST";  // Destroyed
+    public static final  String  RETN = "RETN";  // Returned
+    public static final  String  ACTIVE = "ACTIVE";
+
     private String mdoc_justin_no;
     private String rms_event_type;
     private String rms_event_date;
     
    
+    public FileCloseData() {
+    }
+
     public FileCloseData(String mdoc_justin_no, String rmsEventType, String rmsEventDate) {
         this.mdoc_justin_no = mdoc_justin_no;
         this.rms_event_date = rmsEventDate;

@@ -97,8 +97,6 @@ public class DemsApprovedCourtCaseData {
             }
         }
 
-        //DemsFieldData rmsProcStatus = new FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), bccm.get());
-        //DemsFieldData assignedLegalStaff = new FIELD_MAPPINGS.ASSIGNED_LEGAL_STAFF.getLabel(), bccm.get());
         DemsFieldData accusedName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), accusedNames.toString());
         DemsFieldData lastJustinUpdate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LAST_JUSTIN_UPDATE.getLabel(), DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
         //added as part of jade-2621
@@ -293,6 +291,7 @@ public class DemsApprovedCourtCaseData {
         fieldData.add(accusedName);
         fieldData.add(crownOffice);
         fieldData.add(lastJustinUpdate);
+
         //added as part of jade-2483
         if(primaryCourtCaseData.getRelated_agency_file().size() == 1 && (courtCaseDataList == null || courtCaseDataList.size() == 0)){
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_STATE.getLabel(), "Approved Court Case"));
@@ -305,12 +304,18 @@ public class DemsApprovedCourtCaseData {
         }else{
 
         }
+
         for(ChargeAssessmentDataRef raf : primaryCourtCaseData.getRelated_agency_file()){
             if(raf.getPrimary_yn().equals("Y")){
                 fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_ID.getLabel(), raf.getRcc_id()));
                 fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PRIMARY_AGENCY_FILE_NO.getLabel(), raf.getAgency_file_no()));
             }
         }
+
+        if(primaryCourtCaseData.getRms_processing_status() != null) {
+            fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), primaryCourtCaseData.getRms_processing_status()));
+        }
+
         setFields(fieldData);
     }
 
