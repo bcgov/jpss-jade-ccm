@@ -2116,6 +2116,7 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .setProperty("court_file_id").simple("${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .to("direct:compileRelatedCourtFiles")
 
@@ -2218,6 +2219,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
@@ -2265,6 +2267,7 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setBody(be, CourtCaseEvent.class);
               exchange.setProperty("derived_event_object", be);
               exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+              exchange.getMessage().setHeader("event_key", be.getEvent_key());
             }})
           .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
           .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
@@ -2316,6 +2319,9 @@ public class CcmNotificationService extends RouteBuilder {
       .end()
       .endChoice()
     .end()
+
+    .setHeader("event_key", simple("${exchangeProperty.court_file_id}"))
+    .log(LoggingLevel.INFO, "key value: ${header.event_key}")
 
     // wireTap makes an call and immediate return without waiting for the process to complete
     // the direct call will wait for a certain time before creating the Report End event.
@@ -2546,7 +2552,7 @@ public class CcmNotificationService extends RouteBuilder {
               .removeHeader(Exchange.CONTENT_ENCODING)
               .to("http://ccm-lookup-service/getCourtCaseDetails")
 
-              .log(LoggingLevel.INFO,"Retrieved related Court Case from JUSTIN: ${body}")
+              .log(LoggingLevel.DEBUG,"Retrieved related Court Case from JUSTIN: ${body}")
               .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
               .process(new Processor() {
                 @Override
