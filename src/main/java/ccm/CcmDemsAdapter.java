@@ -3159,7 +3159,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG, "body: ${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
-    .delay(1200)
+    .delay(1500)
     .setBody(simple("${exchangeProperty.multipartBody}"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -3418,7 +3418,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
     .log(LoggingLevel.INFO, "response: '${body}'")
-    
+
     .log(LoggingLevel.INFO, "Checking for exceptions")
     .choice()
       .when(simple("${exchangeProperty.exception} != null"))
