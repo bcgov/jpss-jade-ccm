@@ -3492,6 +3492,7 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .setHeader("number",simple("${exchangeProperty.number}"))
         .to("http://ccm-lookup-service/getFileDisp")
+        .log(LoggingLevel.DEBUG, "FileDisp Response: ${body}")
         .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
         .process(new Processor() {
           @Override
@@ -3514,6 +3515,7 @@ public class CcmNotificationService extends RouteBuilder {
         })
         .log(LoggingLevel.DEBUG, "Split court file data")
         .split().exchangeProperty("courtFileData")
+          .log(LoggingLevel.DEBUG, "Body content: ${body}")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
@@ -3521,9 +3523,12 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
             }
           })
-          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
 
+          
+          .log(LoggingLevel.DEBUG, "mdoc query: ${header[number]}")
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .to("http://ccm-lookup-service/getFileCloseData")
+          .log(LoggingLevel.DEBUG, "FileClose Response: ${body}")
           .unmarshal().json(JsonLibrary.Jackson,FileCloseData.class)
           .process(new Processor() {
             @Override
@@ -3542,6 +3547,7 @@ public class CcmNotificationService extends RouteBuilder {
             }
           })
           .to("http://ccm-lookup-service/getFileDisp")
+          .log(LoggingLevel.DEBUG, "FileDisp Response: ${body}")
           .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
           .process(new Processor() {
             @Override
