@@ -3502,6 +3502,8 @@ public class CcmNotificationService extends RouteBuilder {
             if (!fileDisp.getDisposition_date().isBlank()) {
               Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
               Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+              log.info("dispDate:"+dispDate);
+              log.info("mostRecentDispDate:"+mostRecentDispDate);
               if (mostRecentDispDate != null) {
                 if (dispDate.after(mostRecentDispDate)){
                   exchange.setProperty("mostRecentDispDate", dispDate);
@@ -3557,14 +3559,18 @@ public class CcmNotificationService extends RouteBuilder {
               if (!fileDisp.getDisposition_date().isBlank()) {
                 Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
                 Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+                log.info("dispDate:"+dispDate);
+                log.info("mostRecentDispDate:"+mostRecentDispDate);
                 if (mostRecentDispDate != null) {
                   if (dispDate.after(mostRecentDispDate)){
+                    log.info("New disposition is after.");
                     exchange.setProperty("mostRecentDispDate", dispDate);
                   }
                 }
                 else{
                   exchange.setProperty("mostRecentDispDate", dispDate);
                 }
+                log.info("New mostRecentDispDate:"+exchange.getProperty("mostRecentDispDate",Date.class));
               }
             }
           })

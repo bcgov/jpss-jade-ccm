@@ -316,6 +316,10 @@ public class DemsApprovedCourtCaseData {
             fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RMS_PROC_STAT.getLabel(), primaryCourtCaseData.getRms_processing_status()));
         }
 
+        if(primaryCourtCaseData.getDisposition_date() != null) {
+            fieldData.add(new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.DISPOSITION_DATE.getLabel(), primaryCourtCaseData.getDisposition_date()));
+        }
+
         setFields(fieldData);
     }
 
