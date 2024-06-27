@@ -4,7 +4,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.text.DateFormat;
+
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 
@@ -51,6 +51,7 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.FileDisposition;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
@@ -3386,20 +3387,14 @@ public class CcmNotificationService extends RouteBuilder {
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-   
-        HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
-        closeFileResults.put(JustinFileClose.DEST, 0);
-        closeFileResults.put(JustinFileClose.NPRQ, 0);
-        closeFileResults.put(JustinFileClose.PEND, 0);
-        closeFileResults.put(JustinFileClose.RETN, 0);
-        closeFileResults.put(JustinFileClose.SEMA, 0);
-        closeFileResults.put(JustinFileClose.ACTIVE, 0);
-
-       
-
-       
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
+    closeFileResults.put(JustinFileClose.DEST, 0);
+    closeFileResults.put(JustinFileClose.NPRQ, 0);
+    closeFileResults.put(JustinFileClose.PEND, 0);
+    closeFileResults.put(JustinFileClose.RETN, 0);
+    closeFileResults.put(JustinFileClose.SEMA, 0);
+    closeFileResults.put(JustinFileClose.ACTIVE, 0);
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     //IN: property = kpi_object
     from("direct:" + routeId)
@@ -3427,15 +3422,12 @@ public class CcmNotificationService extends RouteBuilder {
 
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
         
-        ccd.setRms_processing_status(new ArrayList<String>());
         exchange.setProperty("courtCaseData", ccd);
         exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
         exchange.setProperty("number", ccd.getCourt_file_id());
         exchange.setProperty("metadata_data", ccd);
       }
     })
-
-    //.setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number",simple("${exchangeProperty.number}"))
     .to("http://ccm-lookup-service/getFileCloseData")
@@ -3452,21 +3444,21 @@ public class CcmNotificationService extends RouteBuilder {
           Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
           result++;
         }
-        
       }
     })
 
     .setProperty("primaryJustinFileClose",body())
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number",simple("${exchangeProperty.number}"))
+    .log(LoggingLevel.INFO,"Getting file disposition for primary court file")
     .to("http://ccm-lookup-service/getFileDisp")
-    .unmarshal().json(JsonLibrary.Jackson,JustinFileDisposition.class)
+    .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-        JustinFileDisposition fileDisp = exchange.getIn().getBody(JustinFileDisposition.class);
+        FileDisposition fileDisp = exchange.getIn().getBody(FileDisposition.class);
         
-        if (!fileDisp.getDisposition_date().isBlank()) {
+        if ( fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
           Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
           Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
           if (mostRecentDispDate != null) {
@@ -3478,14 +3470,22 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("mostRecentDispDate", dispDate);
           }
         }
+        exchange.getMessage().setBody(exchange.getProperty("courtFileData"),ArrayList.class);
       }
       })
-    .split().exchangeProperty("courtFileData")
+      
+     
+     // .marshal().json(JsonLibrary.Jackson,ArrayList.class)
+    .split(body())
+   
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
+        
         exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
+        exchange.setProperty("currentCourtCaseFileId", relatedCourtCaseData.getCourt_file_id());
+        //log.info("setting court file id in split");
       }})
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     
@@ -3495,23 +3495,29 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
-        if (!fileCloseData.getRms_event_type().isBlank()) {
+        //log.info("justin file close call in split");
+        if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
           var closeFileResult = closeFileResults.get(fileCloseData.getRms_event_type());
           closeFileResult++;
         }
-        else{
+        else if (fileCloseData != null) {
           var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
           closeFileResult++;
         }
+       
       }})
+      .log(LoggingLevel.INFO, "prep for calling fileDisp")
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("number", simple("${exchangeProperty.currentCourtCaseFileId}"))
       .to("http://ccm-lookup-service/getFileDisp")
-      .unmarshal().json(JsonLibrary.Jackson,JustinFileDisposition.class)
+      .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-          JustinFileDisposition fileDisp = exchange.getIn().getBody(JustinFileDisposition.class);
+          FileDisposition fileDisp = exchange.getIn().getBody(FileDisposition.class);
           
-          if (!fileDisp.getDisposition_date().isBlank()) {
+          if (fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
+           
             Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
             Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
             if (mostRecentDispDate != null) {
@@ -3526,14 +3532,16 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
       .end() // end split
-      
+      .log(LoggingLevel.INFO,"end split reached.")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
           JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
+         
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
+         
           Boolean setInactiveCase = Boolean.FALSE;
-          List<String> rmsProccessStatus = new ArrayList<String>();
+          String rmsProccessStatus = "";
 
           if (primaryFileClose.getRms_event_type().isBlank()) {
             var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
@@ -3548,7 +3556,7 @@ public class CcmNotificationService extends RouteBuilder {
 
           if (activeFileCount >0 && caseFileCount == activeFileCount ) {
             // only active files
-           SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.ACTIVE);
+           rmsProccessStatus =  JustinFileClose.ACTIVE;
            setInactiveCase = Boolean.FALSE;
           }
           else{
@@ -3556,27 +3564,28 @@ public class CcmNotificationService extends RouteBuilder {
              if ( caseFileCount > 0 &&  (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) 
                  == (caseFileCount - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
                 // Destroyed except NPRQ
-                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.DEST);
+                rmsProccessStatus = JustinFileClose.DEST;
                 setInactiveCase = Boolean.TRUE;
               }
               //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
               else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
                 //Has any PENDING
                 if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
-                  SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.PEND);
+                  rmsProccessStatus =  JustinFileClose.PEND;
                 }
                 // Has any SEMI ACTIVE
                 else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
-                  SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.SEMA);
+                  rmsProccessStatus =  JustinFileClose.SEMA;
                 }
               }
              
               else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
                 
-                SetRmsProcessingStatus(rmsProccessStatus, JustinFileClose.RETN);
+                rmsProccessStatus =  JustinFileClose.RETN;
                 setInactiveCase = Boolean.FALSE;
               }
           }
+          log.info("setting processing status : " + rmsProccessStatus);
           ccd.setRms_processing_status(rmsProccessStatus);
           Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
 
@@ -3617,7 +3626,7 @@ public class CcmNotificationService extends RouteBuilder {
       .endChoice()
 
     .endDoTry()
-    .log(LoggingLevel.DEBUG,"Completed update of court case. ${body}")
+    .log(LoggingLevel.INFO,"Completed update of court case. ${body}")
     .setProperty("kpi_component_route_name", simple("processFileClose"))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
     .to("direct:publishEventKPI")
@@ -3629,7 +3638,6 @@ public class CcmNotificationService extends RouteBuilder {
    .log(LoggingLevel.INFO, "Exception processing file close event")
    .to("direct:publishEventKPI")
   .end();
-    
   }
 
   private void SetRmsProcessingStatus(List<String> rmsList , String statusToSet) {
