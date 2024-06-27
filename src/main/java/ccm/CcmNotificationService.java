@@ -3413,7 +3413,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
-  
+   
     .log(LoggingLevel.INFO, "metadata_data: ${body}")
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .process(new Processor() {
@@ -3426,6 +3426,7 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
         exchange.setProperty("number", ccd.getCourt_file_id());
         exchange.setProperty("metadata_data", ccd);
+        exchange.setProperty("storedCourtFileResults", closeFileResults);
       }
     })
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -3436,14 +3437,18 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinFileClose primaryFileClose = exchange.getIn().getBody(JustinFileClose.class);
+        HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
         if (primaryFileClose.getRms_event_type().isEmpty()){
           var activeResult = closeFileResults.get(JustinFileClose.ACTIVE);
           activeResult++;
+          closeFileResults.put(JustinFileClose.ACTIVE,activeResult);
         }
         else {
           Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
           result++;
+          closeFileResults.put(JustinFileClose.ACTIVE,result);
         }
+        exchange.setProperty("storedCourtFileResults", closeFileResults);
       }
     })
 
@@ -3473,19 +3478,15 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.getMessage().setBody(exchange.getProperty("courtFileData"),ArrayList.class);
       }
       })
-      
-     
-     // .marshal().json(JsonLibrary.Jackson,ArrayList.class)
     .split(body())
-   
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
         CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
-        
+       
         exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
         exchange.setProperty("currentCourtCaseFileId", relatedCourtCaseData.getCourt_file_id());
-        //log.info("setting court file id in split");
+      
       }})
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     
@@ -3495,16 +3496,21 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
-        //log.info("justin file close call in split");
+        HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
+        log.info("justin file close call in split, rms event type found : " + fileCloseData.getRms_event_type());
         if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
           var closeFileResult = closeFileResults.get(fileCloseData.getRms_event_type());
           closeFileResult++;
+          closeFileResults.put(fileCloseData.getRms_event_type(), closeFileResult);
+          log.info("incrementing value for rms type : " + fileCloseData.getRms_event_type());
         }
         else if (fileCloseData != null) {
           var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
+          log.info("incrementing value for rms type : Active");
           closeFileResult++;
+          closeFileResults.put(JustinFileClose.ACTIVE, closeFileResult);
         }
-       
+       exchange.setProperty("storedCourtFileResults", closeFileResults);
       }})
       .log(LoggingLevel.INFO, "prep for calling fileDisp")
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -3537,7 +3543,7 @@ public class CcmNotificationService extends RouteBuilder {
         @Override
         public void process(Exchange exchange) throws Exception {
           JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
-         
+          HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
          
           Boolean setInactiveCase = Boolean.FALSE;
@@ -3546,14 +3552,16 @@ public class CcmNotificationService extends RouteBuilder {
           if (primaryFileClose.getRms_event_type().isBlank()) {
             var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
             closeFileResult++;
+            closeFileResults.put(JustinFileClose.ACTIVE, closeFileResult);
           }
           else{
             var closeFileResult = closeFileResults.get(primaryFileClose.getRms_event_type());
             closeFileResult++;
+            closeFileResults.put(primaryFileClose.getRms_event_type(), closeFileResult);
           }
           int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
           int caseFileCount = closeFileResults.size();
-
+          log.info("caseFileCount : " + caseFileCount + " active file count : " + activeFileCount);
           if (activeFileCount >0 && caseFileCount == activeFileCount ) {
             // only active files
            rmsProccessStatus =  JustinFileClose.ACTIVE;
@@ -3568,7 +3576,7 @@ public class CcmNotificationService extends RouteBuilder {
                 setInactiveCase = Boolean.TRUE;
               }
               //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
-              else if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+              if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
                 //Has any PENDING
                 if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
                   rmsProccessStatus =  JustinFileClose.PEND;
@@ -3579,12 +3587,13 @@ public class CcmNotificationService extends RouteBuilder {
                 }
               }
              
-              else if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
+              if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
                 
                 rmsProccessStatus =  JustinFileClose.RETN;
                 setInactiveCase = Boolean.FALSE;
               }
           }
+          log.info("close file results : " + closeFileResults);
           log.info("setting processing status : " + rmsProccessStatus);
           ccd.setRms_processing_status(rmsProccessStatus);
           Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
