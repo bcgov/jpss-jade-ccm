@@ -61,8 +61,10 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
+import ccm.models.system.dems.DemsListItemFieldData;
+import ccm.models.system.dems.DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS;
 import ccm.models.system.justin.JustinFileClose;
-import ccm.models.system.justin.JustinFileDisposition;
+
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -3387,13 +3389,13 @@ public class CcmNotificationService extends RouteBuilder {
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    HashMap<String, Integer> closeFileResults = new HashMap<String,Integer>();
-    closeFileResults.put(JustinFileClose.DEST, 0);
-    closeFileResults.put(JustinFileClose.NPRQ, 0);
-    closeFileResults.put(JustinFileClose.PEND, 0);
-    closeFileResults.put(JustinFileClose.RETN, 0);
-    closeFileResults.put(JustinFileClose.SEMA, 0);
-    closeFileResults.put(JustinFileClose.ACTIVE, 0);
+    HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = new HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>();
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST, 0);
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, 0);
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND, 0);
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN, 0);
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA, 0);
+    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, 0);
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     //IN: property = kpi_object
@@ -3437,16 +3439,16 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinFileClose primaryFileClose = exchange.getIn().getBody(JustinFileClose.class);
-        HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
+        HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
         if (primaryFileClose.getRms_event_type().isEmpty()){
-          var activeResult = closeFileResults.get(JustinFileClose.ACTIVE);
+          var activeResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
           activeResult++;
-          closeFileResults.put(JustinFileClose.ACTIVE,activeResult);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE,activeResult);
         }
         else {
-          Integer result = closeFileResults.get(primaryFileClose.getRms_event_type());
+          Integer result = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
           result++;
-          closeFileResults.put(JustinFileClose.ACTIVE,result);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()),result);
         }
         exchange.setProperty("storedCourtFileResults", closeFileResults);
       }
@@ -3496,19 +3498,19 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
-        HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
+        HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
         log.info("justin file close call in split, rms event type found : " + fileCloseData.getRms_event_type());
         if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
-          var closeFileResult = closeFileResults.get(fileCloseData.getRms_event_type());
+          var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()));
           closeFileResult++;
-          closeFileResults.put(fileCloseData.getRms_event_type(), closeFileResult);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()), closeFileResult);
           log.info("incrementing value for rms type : " + fileCloseData.getRms_event_type());
         }
         else if (fileCloseData != null) {
-          var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
+          var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
           log.info("incrementing value for rms type : Active");
           closeFileResult++;
-          closeFileResults.put(JustinFileClose.ACTIVE, closeFileResult);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResult);
         }
        exchange.setProperty("storedCourtFileResults", closeFileResults);
       }})
@@ -3543,23 +3545,23 @@ public class CcmNotificationService extends RouteBuilder {
         @Override
         public void process(Exchange exchange) throws Exception {
           JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
-          HashMap<String, Integer> closeFileResults = (HashMap<String,Integer>)exchange.getProperty("storedCourtFileResults");
+          HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
          
           Boolean setInactiveCase = Boolean.FALSE;
           String rmsProccessStatus = "";
 
           if (primaryFileClose.getRms_event_type().isBlank()) {
-            var closeFileResult = closeFileResults.get(JustinFileClose.ACTIVE);
+            var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
             closeFileResult++;
-            closeFileResults.put(JustinFileClose.ACTIVE, closeFileResult);
+            closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResult);
           }
           else{
-            var closeFileResult = closeFileResults.get(primaryFileClose.getRms_event_type());
+            var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
             closeFileResult++;
-            closeFileResults.put(primaryFileClose.getRms_event_type(), closeFileResult);
+            closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()), closeFileResult);
           }
-          int activeFileCount = closeFileResults.get(JustinFileClose.ACTIVE).intValue();
+          int activeFileCount = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE).intValue();
           int caseFileCount = closeFileResults.size();
           log.info("caseFileCount : " + caseFileCount + " active file count : " + activeFileCount);
           if (activeFileCount >0 && caseFileCount == activeFileCount ) {
@@ -3569,28 +3571,37 @@ public class CcmNotificationService extends RouteBuilder {
           }
           else{
              // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
-             if ( caseFileCount > 0 &&  (closeFileResults.get(JustinFileClose.DEST).intValue() - closeFileResults.get(JustinFileClose.NPRQ).intValue()) 
-                 == (caseFileCount - closeFileResults.get(JustinFileClose.NPRQ).intValue()) ) {
-                // Destroyed except NPRQ
-                rmsProccessStatus = JustinFileClose.DEST;
-                setInactiveCase = Boolean.TRUE;
-              }
+             if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST)  > 0  
+             && (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST) - closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ) > 0) ) {
+              rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST.getName();
+              setInactiveCase = Boolean.TRUE;
+             }
+            
               //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
-              if (closeFileResults.get(JustinFileClose.ACTIVE) == 0){
+              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE) == 0 && closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN) == 0){
                 //Has any PENDING
-                if (closeFileResults.get(JustinFileClose.PEND).intValue() >= 1 ){
-                  rmsProccessStatus =  JustinFileClose.PEND;
+                if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND).intValue() >= 1 ){
+                  rmsProccessStatus =  DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND.getName();
                 }
                 // Has any SEMI ACTIVE
-                else if (closeFileResults.get(JustinFileClose.SEMA).intValue() >= 1) {
-                  rmsProccessStatus =  JustinFileClose.SEMA;
+                else if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA).intValue() >= 1) {
+                  rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA.getName();
                 }
+                setInactiveCase = Boolean.TRUE;
               }
              
-              if (closeFileResults.get(JustinFileClose.RETN).intValue() > 0) {
+              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
                 
-                rmsProccessStatus =  JustinFileClose.RETN;
+                rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
                 setInactiveCase = Boolean.FALSE;
+              }
+              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ).intValue() > 0) {
+                boolean noProcessOnly = VerifyAllFileResultsOnlyFor(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, closeFileResults);
+                if (noProcessOnly) {
+                  rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
+                  setInactiveCase = Boolean.FALSE;
+                }
+                 
               }
           }
           log.info("close file results : " + closeFileResults);
@@ -3649,14 +3660,20 @@ public class CcmNotificationService extends RouteBuilder {
   .end();
   }
 
-  private void SetRmsProcessingStatus(List<String> rmsList , String statusToSet) {
-    if (rmsList.isEmpty()) {
-      rmsList.add(JustinFileClose.DEST);
+  private boolean VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS typeToFInd, HashMap<RMS_PROCESSING_STATUS_MAPPINGS,Integer> results) {
+    boolean retValue = false;
+    RMS_PROCESSING_STATUS_MAPPINGS valueWithCount = null;
+    for (RMS_PROCESSING_STATUS_MAPPINGS iterable_element : results.keySet()) {
+      Integer resultValue = results.get(iterable_element);
+
+      valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
     }
-    else{
-      rmsList = new ArrayList<String>();
-      rmsList.add(JustinFileClose.DEST);
+    if (valueWithCount != null ) {
+      retValue = valueWithCount == typeToFInd;
     }
+    return retValue;
+
   }
+  
 
 }

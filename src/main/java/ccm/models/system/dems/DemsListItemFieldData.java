@@ -121,6 +121,60 @@ public class DemsListItemFieldData {
         }
     }
 
+    public enum RMS_PROCESSING_STATUS_MAPPINGS {
+        DEST("Destroyed"),
+        RETN("Returned"),
+        SEMA("Semi-Active"),
+        PEND("Pending"),
+        NPRQ("No Process Required"),
+        ACTIVE("Active");
+        
+
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+        private RMS_PROCESSING_STATUS_MAPPINGS(String name) {
+            this.name = name;
+        }
+        public static RMS_PROCESSING_STATUS_MAPPINGS GetRmsProcessingType(String typeCode) {
+            RMS_PROCESSING_STATUS_MAPPINGS retValue = null;
+            if (typeCode.isBlank()) return retValue;
+            
+            switch (typeCode) {
+                case "DEST":
+                    retValue = DEST;
+                    break;
+                case "PEND" :
+                retValue = PEND;
+                break;
+                case "ACTIVE" :
+                retValue = ACTIVE;
+                break;
+                case "RETN":
+                retValue = RETN;
+                break;
+                case "SEMA":
+                retValue = SEMA;
+                break;
+                case "NPRQ":
+                retValue = NPRQ;
+                break;
+                default:
+                    break;
+            }
+          
+            return retValue;
+
+        }
+    }
+
+
     private String name;
 
     public String getName() {
