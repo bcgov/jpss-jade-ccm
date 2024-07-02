@@ -3450,13 +3450,13 @@ public class CcmNotificationService extends RouteBuilder {
           var activeResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
           activeResult = activeResult + 1;
           closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE,activeResult);
-          log.info("active file counter set to value : " + activeResult);
+          //log.info("active file counter set to value : " + activeResult);
         }
         else {
           Integer result = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
           result = result + 1;
           closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()),result);
-          log.info("other processing type : " + primaryFileClose.getRms_event_type() + " value set to : " + result);
+          //log.info("other processing type : " + primaryFileClose.getRms_event_type() + " value set to : " + result);
         }
 
         exchange.setProperty("storedCourtFileResults", closeFileResults);
@@ -3648,7 +3648,7 @@ public class CcmNotificationService extends RouteBuilder {
       .to("http://ccm-dems-adapter/inactivateCase")
       .log(LoggingLevel.INFO,"Inactivated case")
       .endChoice()
-      .when( simple("${exchangeProperty.inactiveCase != 'true'}"))
+      .when( simple("${exchangeProperty.inactiveCase} == 'false'"))
       .setHeader("case_id").simple("${exchangeProperty.caseId}")
       .to("http://ccm-dems-adapter/activateCase")
       .log(LoggingLevel.INFO,"Case activated.")
