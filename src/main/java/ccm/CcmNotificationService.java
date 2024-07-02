@@ -3646,7 +3646,7 @@ public class CcmNotificationService extends RouteBuilder {
       .endChoice()
 
     .endDoTry()
-    .log(LoggingLevel.INFO,"Completed update of court case. ${body}")
+    .log(LoggingLevel.INFO,"Completed update of court case.")
     .setProperty("kpi_component_route_name", simple("processFileClose"))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
     .to("direct:publishEventKPI")
