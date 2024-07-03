@@ -3564,11 +3564,8 @@ public class CcmNotificationService extends RouteBuilder {
          
           Boolean setInactiveCase = Boolean.FALSE;
           String rmsProccessStatus = "";
-         
-          int activeFileCount = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE).intValue();
-          int caseFileCount = closeFileResults.size();
           //log.info("caseFileCount : " + caseFileCount + " active file count : " + activeFileCount);
-          if (activeFileCount >0 && caseFileCount == activeFileCount ) {
+          if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResults) ) {
             // only active files
            rmsProccessStatus =  JustinFileClose.ACTIVE;
            setInactiveCase = Boolean.FALSE;
@@ -3579,6 +3576,11 @@ public class CcmNotificationService extends RouteBuilder {
              && (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST) - closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ) > 0) ) {
               rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST.getName();
               setInactiveCase = Boolean.TRUE;
+             }
+             // all NPRQ
+             else if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, closeFileResults)){
+               setInactiveCase = Boolean.FALSE;
+               rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
              }
             
               //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
@@ -3599,14 +3601,7 @@ public class CcmNotificationService extends RouteBuilder {
                 rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
                 setInactiveCase = Boolean.FALSE;
               }
-              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ).intValue() > 0) {
-                boolean noProcessOnly = VerifyAllFileResultsOnlyFor(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, closeFileResults);
-                if (noProcessOnly) {
-                  rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
-                  setInactiveCase = Boolean.FALSE;
-                }
-                 
-              }
+             
           }
           log.info("close file results : " + closeFileResults);
           log.info("setting processing status : " + rmsProccessStatus);
@@ -3640,10 +3635,9 @@ public class CcmNotificationService extends RouteBuilder {
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
-    .log(LoggingLevel.INFO, "sending case id to inactivate : ${exchangeProperty.caseId}")
+    .log(LoggingLevel.INFO, "sending case id : ${exchangeProperty.caseId}")
     .choice()
     .when( simple("${exchangeProperty.inactiveCase} == 'true'"))
-       
       .setHeader("case_id").simple("${exchangeProperty.caseId}")
       .to("http://ccm-dems-adapter/inactivateCase")
       .log(LoggingLevel.INFO,"Inactivated case")
@@ -3670,18 +3664,18 @@ public class CcmNotificationService extends RouteBuilder {
 
   private boolean VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS typeToFInd, HashMap<RMS_PROCESSING_STATUS_MAPPINGS,Integer> results) {
     boolean retValue = false;
+    /// loop thru hashmap, find 1st non-zero if not match for type return false. if find type, return true
     RMS_PROCESSING_STATUS_MAPPINGS valueWithCount = null;
     for (RMS_PROCESSING_STATUS_MAPPINGS iterable_element : results.keySet()) {
       Integer resultValue = results.get(iterable_element);
-
       valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
+      if (valueWithCount != null )  {
+        break;  
+      }
     }
     if (valueWithCount != null ) {
       retValue = valueWithCount == typeToFInd;
     }
     return retValue;
-
   }
-  
-
 }
