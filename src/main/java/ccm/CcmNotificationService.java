@@ -3456,7 +3456,6 @@ public class CcmNotificationService extends RouteBuilder {
           Integer result = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
           result = result + 1;
           closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()),result);
-          //log.info("other processing type : " + primaryFileClose.getRms_event_type() + " value set to : " + result);
         }
 
         exchange.setProperty("storedCourtFileResults", closeFileResults);
@@ -3464,7 +3463,6 @@ public class CcmNotificationService extends RouteBuilder {
     })
 
     .setProperty("primaryJustinFileClose",body())
-
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number",simple("${exchangeProperty.number}"))
     .log(LoggingLevel.INFO,"Getting file disposition for primary court file")
@@ -3495,12 +3493,8 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
-       
         exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
         exchange.setProperty("currentCourtCaseFileId", relatedCourtCaseData.getCourt_file_id());
-        log.info("court file id  : " + relatedCourtCaseData.getCourt_file_id());
-        log.info("court file no : " + relatedCourtCaseData.getCourt_file_no());
-      
       }})
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     
@@ -3511,12 +3505,10 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange exchange) throws Exception {
         JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
         HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
-        log.info("justin file close call in split, rms event type found : " + fileCloseData.getRms_event_type());
         if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
           var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()));
           closeFileResult = closeFileResult + 1;
           closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()), closeFileResult);
-          log.info("incrementing value for rms type : " + fileCloseData.getRms_event_type());
         }
         else if (fileCloseData != null) {
           var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
@@ -3524,8 +3516,6 @@ public class CcmNotificationService extends RouteBuilder {
           closeFileResult = closeFileResult + 1;
           closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResult);
         }
-
-        log.info("close file results in split : " + closeFileResults);
        exchange.setProperty("storedCourtFileResults", closeFileResults);
       }})
       .log(LoggingLevel.INFO, "prep for calling fileDisp")
@@ -3558,13 +3548,11 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-         // JustinFileClose primaryFileClose = exchange.getProperty("primaryJustinFileClose",JustinFileClose.class);
+         
           HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
-         
           Boolean setInactiveCase = Boolean.FALSE;
           String rmsProccessStatus = "";
-          //log.info("caseFileCount : " + caseFileCount + " active file count : " + activeFileCount);
           if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResults) ) {
             // only active files
            rmsProccessStatus =  JustinFileClose.ACTIVE;
@@ -3597,19 +3585,15 @@ public class CcmNotificationService extends RouteBuilder {
               }
              
               if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
-                
                 rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
                 setInactiveCase = Boolean.FALSE;
               }
-             
           }
           log.info("close file results : " + closeFileResults);
           log.info("setting processing status : " + rmsProccessStatus);
           ccd.setRms_processing_status(rmsProccessStatus);
           Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
-
           ccd.setDisposition_date(dateFormat.format(mostRecentDispDate).toString());
-         
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());
           exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
@@ -3619,11 +3603,9 @@ public class CcmNotificationService extends RouteBuilder {
     
     .log(LoggingLevel.INFO, "Updating court case data")
    .doTry()
-   
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-    
     .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
     .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
     .endDoTry()
