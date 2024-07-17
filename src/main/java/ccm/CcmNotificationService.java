@@ -3389,13 +3389,7 @@ public class CcmNotificationService extends RouteBuilder {
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = new HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>();
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, 0);
+    
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     //IN: property = kpi_object
@@ -3409,7 +3403,7 @@ public class CcmNotificationService extends RouteBuilder {
     .removeHeaders("CamelHttp*")
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
-    .removeProperty("storedCourtFileResults")
+    //.removeProperty("storedCourtFileResults")
     //.setProperty("primaryJustinFileClose",null)
     .to("direct:compileRelatedCourtFiles")
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
@@ -3422,7 +3416,13 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
-
+        HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = new HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>();
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST, 0);
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, 0);
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND, 0);
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN, 0);
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA, 0);
+        closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, 0);
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
         log.info("related court case file size : " + ccd.getRelated_court_cases().size());
         for (CourtCaseData element :  ccd.getRelated_court_cases()) {
