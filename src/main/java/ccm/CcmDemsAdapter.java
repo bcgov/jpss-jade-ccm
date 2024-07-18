@@ -3650,7 +3650,7 @@ private void getDemsFieldMappingsrccStatus() {
      from("platform-http:/" + routeId)
      .routeId(routeId)
      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-     .log(LoggingLevel.INFO,"looking to inactive case id = ${header.case_id}...")
+     .log(LoggingLevel.INFO,"looking to activate case id = ${header.case_id}...")
  
      .setProperty("dems_case_id", simple("${header.case_id}"))
  
@@ -3690,7 +3690,7 @@ private void getDemsFieldMappingsrccStatus() {
            .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
            .log(LoggingLevel.INFO, "Body: '${exception}'")
            .log(LoggingLevel.INFO, "${exception.message}")
-           .log(LoggingLevel.INFO, "Case not inactivated")
+           .log(LoggingLevel.INFO, "Case not activated")
            .process(new Processor() {
              @Override
              public void process(Exchange exchange) throws Exception {
