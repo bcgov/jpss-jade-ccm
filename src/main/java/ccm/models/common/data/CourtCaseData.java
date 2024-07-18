@@ -30,9 +30,6 @@ public class CourtCaseData {
   private String accused_names;
   private String rms_processing_status;
   private String disposition_date;
- 
-
-  
 
   private List<String> case_flags;
 

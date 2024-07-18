@@ -12,7 +12,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -51,6 +51,7 @@ import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.FileDisposition;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
@@ -63,7 +64,6 @@ import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.dems.DemsListItemFieldData;
 import ccm.models.system.dems.DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS;
-import ccm.models.system.justin.JustinFileClose;
 
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
@@ -3389,19 +3389,13 @@ public class CcmNotificationService extends RouteBuilder {
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = new HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>();
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA, 0);
-    closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, 0);
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     //IN: property = kpi_object
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .setHeader("event_key", simple("35886"))
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
     .setHeader("number", simple("${header[event_key]}"))
     .removeHeader("CamelHttpUri")
@@ -3410,117 +3404,107 @@ public class CcmNotificationService extends RouteBuilder {
     .removeHeader("kafka.HEADERS")
     .removeHeaders("x-amz*")
     .removeProperty("storedCourtFileResults")
-    //.setProperty("primaryJustinFileClose",null)
     .to("direct:compileRelatedCourtFiles")
+
     .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
     .log(LoggingLevel.INFO, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
    
     .log(LoggingLevel.INFO, "metadata_data: ${body}")
+
     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
 
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
-        log.info("related court case file size : " + ccd.getRelated_court_cases().size());
-        for (CourtCaseData element :  ccd.getRelated_court_cases()) {
-          log.info("related court case id : " + element.getCourt_file_id());
-        }
-        exchange.setProperty("courtCaseData", ccd);
-        exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
-        exchange.setProperty("number", ccd.getCourt_file_id());
-        exchange.setProperty("metadata_data", ccd);
-        exchange.setProperty("storedCourtFileResults", closeFileResults);
+        exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
       }
     })
+    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+    .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+    .setBody(simple("${bodyAs(String)}"))
+
+    .setProperty("rcc_id", jsonpath("$.rcc_id"))
+    .setProperty("primary_yn", jsonpath("$.primary_yn"))
+
+    .setHeader("key").simple("${exchangeProperty.rcc_id}")
+    .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+    .setHeader("number",simple("${exchangeProperty.rcc_id}"))
+    //.log(LoggingLevel.INFO,"Retrieve court case status first")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number",simple("${exchangeProperty.number}"))
-    .to("http://ccm-lookup-service/getFileCloseData")
-    .unmarshal().json(JsonLibrary.Jackson,JustinFileClose.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        JustinFileClose primaryFileClose = exchange.getIn().getBody(JustinFileClose.class);
-        log.info("primary justin file close mdoc : " + primaryFileClose.getMdoc_justin_no());
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+    .unmarshal().json()
 
-        HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
-        if (primaryFileClose.getRms_event_type().isEmpty()){
-          var activeResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
-          activeResult = activeResult + 1;
-          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE,activeResult);
-          //log.info("active file counter set to value : " + activeResult);
-        }
-        else {
-          Integer result = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
-          result = result + 1;
-          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()),result);
-        }
+    .setProperty("caseFound").simple("${body[id]}")
 
-        exchange.setProperty("storedCourtFileResults", closeFileResults);
-      }
-    })
+    .choice()
+      .when(simple("${exchangeProperty.caseFound} != ''"))
 
-    .setProperty("primaryJustinFileClose",body())
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number",simple("${exchangeProperty.number}"))
-    .log(LoggingLevel.INFO,"Getting file disposition for primary court file")
-    .to("http://ccm-lookup-service/getFileDisp")
-    .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        FileDisposition fileDisp = exchange.getIn().getBody(FileDisposition.class);
-        
-        if ( fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
-          Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
-          Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
-          if (mostRecentDispDate != null) {
-            if (dispDate.after(mostRecentDispDate)){
-              exchange.setProperty("mostRecentDispDate", dispDate);
-            }
+      .log(LoggingLevel.DEBUG, "CourtCaseData: ${exchangeProperty.metadata_data}")
+      // re-set body to the metadata_data json.
+      .setBody(simple("${exchangeProperty.metadata_data}"))
+
+
+      .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+
+          HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = new HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>();
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST, 0);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, 0);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND, 0);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN, 0);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA, 0);
+          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, 0);
+
+          CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+          log.info("related court case file size : " + ccd.getRelated_court_cases().size());
+          for (CourtCaseData element :  ccd.getRelated_court_cases()) {
+            log.info("related court case id : " + element.getCourt_file_id());
           }
-          else{
-            exchange.setProperty("mostRecentDispDate", dispDate);
-          }
+          exchange.setProperty("courtCaseData", ccd);
+          exchange.setProperty("courtFileData", ccd.getRelated_court_cases());
+          exchange.setProperty("number", ccd.getCourt_file_id());
+          exchange.setProperty("metadata_data", ccd);
+          exchange.setProperty("storedCourtFileResults", closeFileResults);
         }
-        exchange.getMessage().setBody(exchange.getProperty("courtFileData"),ArrayList.class);
-      }
       })
-    .split(body())
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
-        exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
-        exchange.setProperty("currentCourtCaseFileId", relatedCourtCaseData.getCourt_file_id());
-      }})
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    
-    .to("http://ccm-lookup-service/getFileCloseData")
-    .unmarshal().json(JsonLibrary.Jackson,JustinFileClose.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) throws Exception {
-        JustinFileClose fileCloseData = exchange.getIn().getBody(JustinFileClose.class);
-        HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
-        if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
-          var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()));
-          closeFileResult = closeFileResult + 1;
-          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()), closeFileResult);
+      .setHeader("number",simple("${exchangeProperty.number}"))
+      .to("http://ccm-lookup-service/getFileCloseData")
+      .unmarshal().json(JsonLibrary.Jackson,FileCloseData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          FileCloseData primaryFileClose = exchange.getIn().getBody(FileCloseData.class);
+          log.info("primary justin file close mdoc : " + primaryFileClose.getMdoc_justin_no());
+
+          HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> storedCloseFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
+          if (primaryFileClose.getRms_event_type().isEmpty()){
+            var activeResult = storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
+            activeResult = activeResult + 1;
+            storedCloseFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE,activeResult);
+            //log.info("active file counter set to value : " + activeResult);
+          }
+          else {
+            Integer result = storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()));
+            result = result + 1;
+            storedCloseFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(primaryFileClose.getRms_event_type()),result);
+          }
+
+          exchange.setProperty("storedCourtFileResults", storedCloseFileResults);
         }
-        else if (fileCloseData != null) {
-          var closeFileResult = closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
-          log.info("incrementing value for rms type : Active");
-          closeFileResult = closeFileResult + 1;
-          closeFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResult);
-        }
-       exchange.setProperty("storedCourtFileResults", closeFileResults);
-      }})
-      .log(LoggingLevel.INFO, "prep for calling fileDisp")
+      })
+
+      .setProperty("primaryFileCloseData",body())
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .setHeader("number", simple("${exchangeProperty.currentCourtCaseFileId}"))
+      .setHeader("number",simple("${exchangeProperty.number}"))
+      .log(LoggingLevel.INFO,"Getting file disposition for primary court file")
       .to("http://ccm-lookup-service/getFileDisp")
       .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
       .process(new Processor() {
@@ -3528,8 +3512,7 @@ public class CcmNotificationService extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
           FileDisposition fileDisp = exchange.getIn().getBody(FileDisposition.class);
           
-          if (fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
-           
+          if ( fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
             Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
             Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
             if (mostRecentDispDate != null) {
@@ -3541,107 +3524,185 @@ public class CcmNotificationService extends RouteBuilder {
               exchange.setProperty("mostRecentDispDate", dispDate);
             }
           }
+          exchange.getMessage().setBody(exchange.getProperty("courtFileData"),ArrayList.class);
         }
-      })
+        })
+      .split(body())
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            CourtCaseData relatedCourtCaseData = exchange.getIn().getBody(CourtCaseData.class);
+            exchange.getMessage().setHeader("number", relatedCourtCaseData.getCourt_file_id());
+            exchange.setProperty("currentCourtCaseFileId", relatedCourtCaseData.getCourt_file_id());
+          }
+        })
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        
+        .to("http://ccm-lookup-service/getFileCloseData")
+        .unmarshal().json(JsonLibrary.Jackson,FileCloseData.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            FileCloseData fileCloseData = exchange.getIn().getBody(FileCloseData.class);
+            HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> storedCloseFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
+            if (fileCloseData != null && !fileCloseData.getRms_event_type().isBlank()) {
+              var closeFileResult = storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()));
+              closeFileResult = closeFileResult + 1;
+              storedCloseFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.GetRmsProcessingType(fileCloseData.getRms_event_type()), closeFileResult);
+            }
+            else if (fileCloseData != null) {
+              var closeFileResult = storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE);
+              log.info("incrementing value for rms type : Active");
+              closeFileResult = closeFileResult + 1;
+              storedCloseFileResults.put(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResult);
+            }
+          exchange.setProperty("storedCourtFileResults", storedCloseFileResults);
+          }
+        })
+        .log(LoggingLevel.INFO, "prep for calling fileDisp")
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("number", simple("${exchangeProperty.currentCourtCaseFileId}"))
+        .to("http://ccm-lookup-service/getFileDisp")
+        .unmarshal().json(JsonLibrary.Jackson,FileDisposition.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            FileDisposition fileDisp = exchange.getIn().getBody(FileDisposition.class);
+            
+            if (fileDisp != null && !fileDisp.getDisposition_date().isBlank()) {
+            
+              Date dispDate = dateFormat.parse(fileDisp.getDisposition_date());
+              Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
+              if (mostRecentDispDate != null) {
+                if (dispDate.after(mostRecentDispDate)){
+                  exchange.setProperty("mostRecentDispDate", dispDate);
+                }
+              }
+              else{
+                exchange.setProperty("mostRecentDispDate", dispDate);
+              }
+            }
+          }
+        })
       .end() // end split
       .log(LoggingLevel.INFO,"end split reached.")
+
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-         
-          HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> closeFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
+          
+          HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS, Integer> storedCloseFileResults = (HashMap<DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS,Integer>)exchange.getProperty("storedCourtFileResults");
           CourtCaseData ccd = exchange.getProperty("courtCaseData",CourtCaseData.class);
           Boolean setInactiveCase = Boolean.FALSE;
+          Boolean destroyCaseRecords = Boolean.FALSE;
           String rmsProccessStatus = "";
-          if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, closeFileResults) ) {
+          if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE, storedCloseFileResults) ) {
             // only active files
-           rmsProccessStatus =  JustinFileClose.ACTIVE;
-           setInactiveCase = Boolean.FALSE;
+            rmsProccessStatus =  FileCloseData.ACTIVE;
+            setInactiveCase = Boolean.FALSE;
           }
           else{
-             // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
-             if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST)  > 0  
-             && (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST) - closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ) > 0) ) {
+            // if ALL Court files are "Destroyed" (Exclude any NPRQ Statuses), 
+            if (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST)  > 0  
+            && (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST) - storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ) > 0) ) {
               rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.DEST.getName();
               setInactiveCase = Boolean.TRUE;
-             }
-             // all NPRQ
-             else if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, closeFileResults)){
-               setInactiveCase = Boolean.FALSE;
-               rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
-             }
+              destroyCaseRecords = Boolean.TRUE;
+            }
+            // all NPRQ
+            else if (VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS.NPRQ, storedCloseFileResults)){
+              setInactiveCase = Boolean.FALSE;
+              rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
+            }
+          
+            //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
+            if (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE) == 0 && storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN) == 0){
+              //Has any PENDING
+              if (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND).intValue() >= 1 ){
+                rmsProccessStatus =  DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND.getName();
+              }
+              // Has any SEMI ACTIVE
+              else if (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA).intValue() >= 1) {
+                rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA.getName();
+              }
+              setInactiveCase = Boolean.TRUE;
+            }
             
-              //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
-              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE) == 0 && closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN) == 0){
-                //Has any PENDING
-                if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND).intValue() >= 1 ){
-                  rmsProccessStatus =  DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND.getName();
-                }
-                // Has any SEMI ACTIVE
-                else if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA).intValue() >= 1) {
-                  rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.SEMA.getName();
-                }
-                setInactiveCase = Boolean.TRUE;
-              }
-             
-              if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
-                rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
-                setInactiveCase = Boolean.FALSE;
-              }
+            if (storedCloseFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
+              rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
+              setInactiveCase = Boolean.FALSE;
+            }
           }
-          log.info("close file results : " + closeFileResults);
+          log.info("close file results : " + storedCloseFileResults);
           log.info("setting processing status : " + rmsProccessStatus);
           ccd.setRms_processing_status(rmsProccessStatus);
           Date mostRecentDispDate = exchange.getProperty("mostRecentDispDate",Date.class);
           ccd.setDisposition_date(dateFormat.format(mostRecentDispDate).toString());
           exchange.getMessage().setBody(ccd,CourtCaseData.class);
           exchange.setProperty("inactiveCase", setInactiveCase.booleanValue());
+          exchange.setProperty("destroyCaseRecords", destroyCaseRecords.booleanValue());
           exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
           exchange.setProperty("caseFlags", ccd.getCase_flags());
-        }})
+        }
+      })
       .marshal().json(JsonLibrary.Jackson, CourtCaseData.class)
-    
-    .log(LoggingLevel.INFO, "Updating court case data")
-   .doTry()
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-    .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
-    .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
-    .endDoTry()
-    .doTry()
-    .log(LoggingLevel.INFO, "need to get court case id by key")
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-    .to("http://ccm-lookup-service/getCourtCaseExists")
-    .unmarshal().json()
-    .setProperty("caseId").simple("${body[id]}")
-    .log(LoggingLevel.INFO, "sending case id : ${exchangeProperty.caseId}")
-    .choice()
-    .when( simple("${exchangeProperty.inactiveCase} == 'true'"))
-      .setHeader("case_id").simple("${exchangeProperty.caseId}")
-      .to("http://ccm-dems-adapter/inactivateCase")
-      .log(LoggingLevel.INFO,"Inactivated case")
+      
+      .log(LoggingLevel.INFO, "Updating court case data")
+      .doTry()
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+        .setHeader("caseFlags",simple("${exchangeProperty.caseFlags}"))
+        .to("http://ccm-dems-adapter/updateCourtCaseWithMetadata")
+      .endDoTry()
+      .doTry()
+        .log(LoggingLevel.INFO, "need to get court case id by key")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+        .to("http://ccm-lookup-service/getCourtCaseExists")
+        .unmarshal().json()
+        .setProperty("caseId").simple("${body[id]}")
+        .log(LoggingLevel.INFO, "sending case id : ${exchangeProperty.caseId}")
+        .choice()
+          .when( simple("${exchangeProperty.destroyCaseRecords} == 'true'"))
+            .setHeader("case_id").simple("${exchangeProperty.caseId}")
+            .to("http://ccm-dems-adapter/inactivateCase")
+            .log(LoggingLevel.INFO,"Inactivated case")
+
+            .setHeader("id").simple("${exchangeProperty.caseId}")
+            .to("http://ccm-dems-adapter/destroyCaseRecords")
+            .log(LoggingLevel.INFO,"Case records destroyed")
+          .endChoice()
+          .when( simple("${exchangeProperty.inactiveCase} == 'true'"))
+            .setHeader("case_id").simple("${exchangeProperty.caseId}")
+            .to("http://ccm-dems-adapter/inactivateCase")
+            .log(LoggingLevel.INFO,"Inactivated case")
+          .endChoice()
+          .when( simple("${exchangeProperty.inactiveCase} == 'false'"))
+            .setHeader("case_id").simple("${exchangeProperty.caseId}")
+            .to("http://ccm-dems-adapter/activateCase")
+            .log(LoggingLevel.INFO,"Case activated.")
+          .endChoice()
+
+      .endDoTry()
+        .log(LoggingLevel.INFO,"Completed update of court case.")
+        .setProperty("kpi_component_route_name", simple("processFileClose"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+      .doCatch(HttpOperationFailedException.class)
+        .log(LoggingLevel.ERROR,"Exception: ${exception}")
+        .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
+        .setProperty("kpi_component_route_name", simple("processFileClose"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
+        .log(LoggingLevel.INFO, "Exception processing file close event")
+        .to("direct:publishEventKPI")
+      .end()
       .endChoice()
-      .when( simple("${exchangeProperty.inactiveCase} == 'false'"))
-      .setHeader("case_id").simple("${exchangeProperty.caseId}")
-      .to("http://ccm-dems-adapter/activateCase")
-      .log(LoggingLevel.INFO,"Case activated.")
-      .endChoice()
-    .endDoTry()
-    .log(LoggingLevel.INFO,"Completed update of court case.")
-    .setProperty("kpi_component_route_name", simple("processFileClose"))
-    .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
-    .to("direct:publishEventKPI")
-  .doCatch(HttpOperationFailedException.class)
-  .log(LoggingLevel.ERROR,"Exception: ${exception}")
-   .log(LoggingLevel.ERROR,"Exchange Context: ${exchange.context}")
-   .setProperty("kpi_component_route_name", simple("processFileClose"))
-   .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_FAILED.name()))
-   .log(LoggingLevel.INFO, "Exception processing file close event")
-   .to("direct:publishEventKPI")
-  .end();
+      .otherwise()
+        .log(LoggingLevel.WARN, "Case does not exist")
+    .end()
+    ;
   }
 
   private boolean VerifyAllFileResultsOnlyFor(RMS_PROCESSING_STATUS_MAPPINGS typeToFInd, HashMap<RMS_PROCESSING_STATUS_MAPPINGS,Integer> results) {

@@ -12,7 +12,6 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Base64;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
 

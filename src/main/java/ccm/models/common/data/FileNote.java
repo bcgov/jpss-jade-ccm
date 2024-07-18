@@ -8,6 +8,9 @@ public class FileNote {
     private String rcc_id;
     private String mdoc_justin_no;
 
+    public FileNote() {
+    }
+
     public FileNote(String file_note_id, String user_name, String entry_date, String note_txt, String rcc_id, String mdoc_justin_no) {
         this.mdoc_justin_no = mdoc_justin_no;
         this.file_note_id = file_note_id;
