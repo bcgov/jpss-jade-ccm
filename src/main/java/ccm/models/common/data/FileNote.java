@@ -7,6 +7,7 @@ public class FileNote {
     private String note_txt;
     private String rcc_id;
     private String mdoc_justin_no;
+    private String original_file_number;
 
     public FileNote() {
     }
@@ -18,6 +19,7 @@ public class FileNote {
         this.entry_date = entry_date;
         this.note_txt = note_txt;
         this.rcc_id = rcc_id;
+        this.original_file_number = original_file_number;
     }
 
     public String getFile_note_id() {
@@ -56,5 +58,10 @@ public class FileNote {
     public void setMdoc_justin_no(String mdoc_justin_no) {
         this.mdoc_justin_no = mdoc_justin_no;
     }
-
+    public String getOriginal_file_number(){
+        return original_file_number;
+    }
+    public void setOriginal_file_number(String original_file_number){
+        this.original_file_number = original_file_number;
+    }
 }

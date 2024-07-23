@@ -52,6 +52,7 @@ import ccm.models.common.data.ChargeAssessmentDataRef;
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.FileDisposition;
+import ccm.models.common.data.FileNote;
 import ccm.models.common.event.CourtCaseEvent;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
@@ -3382,6 +3383,61 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getFileNote")
     .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+    .setBody(simple("${body}"))
+
+    .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+    .setProperty("primary_rcc_id", simple("${body[rcc_id]}"))
+    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+    .setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
+    .log(LoggingLevel.INFO, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
+
+    .choice() 
+      .when(simple("${exchangeProperty.primary_rcc_id} != null"))
+        .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
+        .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
+        .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
+        .setProperty("rcc_id", simple("${exchangeProperty.primary_rcc_id}"))
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        
+        .unmarshal().json()
+        .setProperty("destinationCaseId").simple("${body[id]}")
+        .setProperty("agencyfileno",jsonpath("$.fields[?(@.name == 'Agency File No.')]"))
+        .log(LoggingLevel.INFO,"${exchangeProperty.agencyfileno}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+            String agencyFileId = exchange.getProperty("agencyfileno", String.class);
+            fileNote.setOriginal_file_number(agencyFileId);
+            exchange.getMessage().setBody(fileNote);
+          }})
+          .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+    .end()
+    .choice() 
+    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
+      .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
+      .setHeader("number", jsonpath("${exchangeProperty.primary_mdoc_justin_no}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseMetadata")
+
+      .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+      .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+          CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+          fileNote.setOriginal_file_number(bcm.getCourt_file_no());
+          exchange.getMessage().setBody(fileNote);
+        }
+      }).log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+    .endChoice()
+  .end()
+
     .end();
   }
 

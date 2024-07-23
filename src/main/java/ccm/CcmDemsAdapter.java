@@ -155,6 +155,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingParticipantwithOTCOrig();
     destroyCaseRecords();
     activateCase();
+    processNoteRecord();
   }
 
 
@@ -4602,5 +4603,9 @@ private void getDemsFieldMappingsrccStatus() {
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
     .log(LoggingLevel.INFO,"DEMS case record deleted. ")
     ;
+  }
+
+  private void processNoteRecord() {
+
   }
 }

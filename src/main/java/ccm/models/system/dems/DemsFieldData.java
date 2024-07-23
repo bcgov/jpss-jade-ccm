@@ -98,7 +98,11 @@ public class DemsFieldData {
         OTC_PIN("OTC"),
         DISPOSITION_DATE("Disposition Date"),
         //added as part of jade -2617
-        JUSTIN_IMAGE_ID("Image ID");
+        JUSTIN_IMAGE_ID("Image ID"),
+        //added as partt of jade 2909
+        NOTES("note_txt"),
+        AUTHOR("user_name"),
+        CASE_NOTE_CATEGORY("CASE NOTE CATEGORY");
 
         private String label;
 
