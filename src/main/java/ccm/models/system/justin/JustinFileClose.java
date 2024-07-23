@@ -1,7 +1,7 @@
 package ccm.models.system.justin;
 
 public class JustinFileClose {
-    
+
     private String mdoc_justin_no;
     private String rms_event_type;
    

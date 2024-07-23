@@ -12,7 +12,6 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Base64;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import org.apache.camel.CamelException;
 
@@ -753,6 +752,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
           .endChoice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DOCM))
           .to("direct:processReportEvents")
+          .endChoice()
+          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
+          .to("direct:processFileClose")
           .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
