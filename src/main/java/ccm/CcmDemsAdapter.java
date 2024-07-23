@@ -154,6 +154,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingParticipantwithOTC();
     updateExistingParticipantwithOTCOrig();
     destroyCaseRecords();
+    activateCase();
   }
 
 
@@ -3639,6 +3640,74 @@ private void getDemsFieldMappingsrccStatus() {
       .end()
     .end()
     ;
+  }
+
+  private void activateCase() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+     //IN: header.number
+     from("platform-http:/" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.INFO,"looking to activate case id = ${header.case_id}...")
+ 
+     .setProperty("dems_case_id", simple("${header.case_id}"))
+ 
+     //.toD("direct:deleteJustinRecords")
+     //.log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
+     .doTry()
+       .choice()
+         .when(simple("${header[case_id]} != ''"))
+           .log(LoggingLevel.INFO, "Activate case")
+           // inactivate the case.
+           .setProperty("id", simple("${header.case_id}"))
+           .to("direct:getCourtCaseStatusById")
+           .setProperty("caseName",jsonpath("$.name"))
+           .setProperty("rccId",jsonpath("$.key"))
+ 
+           .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Active\"}"))
+           //.log(LoggingLevel.INFO, "${body}")
+           .removeHeader("CamelHttpUri")
+           .removeHeader("CamelHttpBaseUri")
+           .removeHeaders("CamelHttp*")
+           .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+           .toD("https://{{dems.host}}/cases/${header.case_id}")
+           .log(LoggingLevel.INFO, "Case activated.")
+         .endChoice()
+         .otherwise()
+           .log(LoggingLevel.INFO, "Case lookup didn't return results.")
+         .endChoice()
+       .end()
+     .endDoTry()
+     .doCatch(Exception.class)
+       .log(LoggingLevel.ERROR,"Exception: ${exception}")
+       .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+       .choice()
+         .when().simple("${exception.statusCode} >= 400")
+           .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+           .log(LoggingLevel.INFO, "Body: '${exception}'")
+           .log(LoggingLevel.INFO, "${exception.message}")
+           .log(LoggingLevel.INFO, "Case not activated")
+           .process(new Processor() {
+             @Override
+             public void process(Exchange exchange) throws Exception {
+               try {
+                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+ 
+                 exchange.getMessage().setBody(cause.getResponseBody());
+                 log.info("Returned body : " + cause.getResponseBody());
+               } catch(Exception ex) {
+                 ex.printStackTrace();
+               }
+             }
+           })
+           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+         .endChoice()
+       .end()
+    .end();
   }
 
   private void inactivateCase() {
