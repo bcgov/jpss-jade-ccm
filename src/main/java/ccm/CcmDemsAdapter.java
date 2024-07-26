@@ -1900,6 +1900,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
       .to("direct:getCourtCaseDataById")
+      .delay(30000)
 
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
