@@ -112,6 +112,7 @@ public class CcmNotificationService extends RouteBuilder {
     processAccusedPersons();
     processFileNoteEvents();
     processFileNote();
+    processFileNoteDelete();
     processFileClose();
   }
 
@@ -544,6 +545,16 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
+        .when(header("event_status").isEqualTo(FileNoteEvent.STATUS.DEL_FNOTE))
+        .setProperty("kpi_component_route_name", simple("processFileNoteDelete"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processFileNoteDelete")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+
       .otherwise()
         .to("direct:processUnknownStatus")
         .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
@@ -3441,6 +3452,30 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
   }
 
+  private void processFileNoteDelete() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+     from("direct:" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.INFO,"processFileNoteDelete event_message_id = ${header[event_key]}")
+     // double check that case had not been already created since.
+     .setHeader("number", simple("${header[event_key]}"))
+     .to("http://ccm-lookup-service/getFileNote")
+     .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+     .setBody(simple("${body}"))
+     .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+        if (fileNote != null) {
+          log.info("File note id to from delete : " + fileNote.getFile_note_id());
+        }
+      }})
+     .end();
+ 
+  }
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

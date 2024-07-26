@@ -22,7 +22,8 @@ public class FileNoteEvent extends BaseEvent{
   }
 
   public enum STATUS {
-    FILE_NOTE
+    FILE_NOTE,
+    DEL_FNOTE
   }
 
   public FileNoteEvent(JustinEvent je) {
@@ -37,6 +38,9 @@ public class FileNoteEvent extends BaseEvent{
       
       case FILE_NOTE:
         setEvent_status(STATUS.FILE_NOTE.toString());
+        break;
+        case DEL_FNOTE:
+        setEvent_status(STATUS.DEL_FNOTE.toString());
         break;
       default:
         // unknown status
