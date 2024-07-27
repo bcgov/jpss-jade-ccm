@@ -596,279 +596,388 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("length",jsonpath("$.documents.length()"))
     .log(LoggingLevel.INFO, "create date: ${exchangeProperty.create_date}")
 
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        ArrayList<Exception> errorList = new ArrayList<Exception>();
+        ex.setProperty("errorList", errorList);
+      }
+    })
+
     // For cases like witness statement, there can be multiple docs returned.
     // This will split through each of the documents and process them individually.
     .log(LoggingLevel.INFO,"Parsing through report documents of count: ${exchangeProperty.length}")
     .split()
       .jsonpathWriteAsString("$.documents")
-      .log(LoggingLevel.INFO,"Parsing through single report document")
-      .log(LoggingLevel.DEBUG,"Body: ${body}")
-      // clear-out properties, so that they do not accidentally get re-used for each split iteration.
-      .removeProperty("charge_assessment_document")
-      .removeProperty("court_case_document")
-      .removeProperty("image_document")
+      .doTry()
+        .log(LoggingLevel.INFO,"Parsing through single report document")
+        .log(LoggingLevel.DEBUG,"Body: ${body}")
+        // clear-out properties, so that they do not accidentally get re-used for each split iteration.
+        .removeProperty("charge_assessment_document")
+        .removeProperty("court_case_document")
+        .removeProperty("image_document")
 
-      .unmarshal().json(JsonLibrary.Jackson, ReportDocument.class)
-      .process(new Processor() {
-        @Override
-        public void process(Exchange ex) {
-          ReportDocument rd = ex.getIn().getBody(ReportDocument.class);
-          String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
-          String create_date = ex.getProperty("create_date", String.class);
+        .unmarshal().json(JsonLibrary.Jackson, ReportDocument.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+            ReportDocument rd = ex.getIn().getBody(ReportDocument.class);
+            String event_message_id = ex.getMessage().getHeader("event_message_id", String.class);
+            String create_date = ex.getProperty("create_date", String.class);
 
-          log.info("event_message_id: "+event_message_id);
-          if(ex.getMessage().getHeader("rcc_id") != null) {
-            log.info("processing into charge assessment document record");
-            ChargeAssessmentDocumentData chargeAssessmentDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, rd);
-            DemsRecordData demsRecord = new DemsRecordData(chargeAssessmentDocument);
+            log.info("event_message_id: "+event_message_id);
+            if(ex.getMessage().getHeader("rcc_id") != null) {
+              log.info("processing into charge assessment document record");
+              ChargeAssessmentDocumentData chargeAssessmentDocument = new ChargeAssessmentDocumentData(event_message_id, create_date, rd);
+              DemsRecordData demsRecord = new DemsRecordData(chargeAssessmentDocument);
 
 
-            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-            ex.setProperty("charge_assessment_document", chargeAssessmentDocument);
-            ex.setProperty("drd", demsRecord);
+              ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+              ex.setProperty("charge_assessment_document", chargeAssessmentDocument);
+              ex.setProperty("drd", demsRecord);
 
-            ex.getMessage().setBody(demsRecord);
-          } else if(rd.getPrimary_rcc_id() != null) {
-            log.info("processing into charge assessment document record");
-            ImageDocumentData imageDocument = new ImageDocumentData(event_message_id, create_date, rd);
-            DemsRecordData demsRecord = new DemsRecordData(imageDocument);
-            ex.getMessage().setHeader("primary_rcc_id", rd.getPrimary_rcc_id());
+              ex.getMessage().setBody(demsRecord);
+            } else if(rd.getPrimary_rcc_id() != null) {
+              log.info("processing into charge assessment document record");
+              ImageDocumentData imageDocument = new ImageDocumentData(event_message_id, create_date, rd);
+              DemsRecordData demsRecord = new DemsRecordData(imageDocument);
+              ex.getMessage().setHeader("primary_rcc_id", rd.getPrimary_rcc_id());
 
-            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
-            if(imageDocument.getMdoc_justin_no() != null && mdoc_justin_no == null) {
-              ex.getMessage().setHeader("mdoc_justin_no", rd.getMdoc_justin_no());
-            }
-
-            ex.setProperty("image_document", imageDocument);
-            ex.setProperty("drd", demsRecord);
-            ex.setProperty("reportType", demsRecord.getDescriptions());
-            ex.setProperty("reportTitle", demsRecord.getTitle());
-            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-
-            ex.getMessage().setBody(demsRecord);
-          } else {
-            log.debug("justin_request: " + ex.getProperty("justin_request",String.class));
-            //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
-            log.info("processing into court case document record");
-            CourtCaseDocumentData courtCaseDocument = new CourtCaseDocumentData(event_message_id, create_date, rd);
-            Object filtered_yn = ex.getMessage().getHeader("filtered_yn");
-            if(filtered_yn != null) {
-              courtCaseDocument.setFiltered_yn((String)filtered_yn);
-            }
-            DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
-            ex.setProperty("reportType", demsRecord.getDescriptions());
-            ex.setProperty("reportTitle", demsRecord.getTitle());
-
-            Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
-            String rcc_list = ex.getProperty("rcc_ids", String.class);
-            //log.info("obj mdoc_justin_no:" + mdoc_justin_no);
-            //log.info("string rcc_ids:" + rcc_list);
-            if((courtCaseDocument.getRcc_ids() == null || courtCaseDocument.getRcc_ids().isEmpty()) && rcc_list != null) {
-              log.info("setting list from header.");
-              // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
-              ObjectMapper objectMapper = new ObjectMapper();
-              try {
-                //System.out.println(rcc_list);
-                String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
-                courtCaseDocument.setRcc_ids(Arrays.asList(rcc_id_list));
-              } catch(Exception e) {
-                e.printStackTrace();
+              Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+              if(imageDocument.getMdoc_justin_no() != null && mdoc_justin_no == null) {
+                ex.getMessage().setHeader("mdoc_justin_no", rd.getMdoc_justin_no());
               }
 
-            }
+              ex.setProperty("image_document", imageDocument);
+              ex.setProperty("drd", demsRecord);
+              ex.setProperty("reportType", demsRecord.getDescriptions());
+              ex.setProperty("reportTitle", demsRecord.getTitle());
+              ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
 
-            if(courtCaseDocument.getMdoc_justin_no() == null && mdoc_justin_no != null) {
-              courtCaseDocument.setMdoc_justin_no((String)mdoc_justin_no);
-            }
-
-            ex.setProperty("court_case_document", courtCaseDocument);
-            ex.setProperty("drd", demsRecord);
-
-            // make sure the header has most up to date values.
-            ex.getMessage().setHeader("rcc_ids", courtCaseDocument.getRcc_ids());
-            ex.getMessage().setHeader("mdoc_justin_no", courtCaseDocument.getMdoc_justin_no());
-            ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-
-            ex.getMessage().setBody(demsRecord);
-          }
-        }
-
-      })
-      .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-      .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]} primary_rcc_id: ${header[primary_rcc_id]} mdoc_justin_no: ${header[mdoc_justin_no]} rcc_ids: ${header[rcc_ids]} image_id: ${header[image_id]}")
-      .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
-      .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
-      .choice()
-        .when(simple("${header.rcc_id} != null"))
-          .log(LoggingLevel.INFO,"RCC based report")
-          // get the primary rcc, based on the dems primary agency file id
-
-          .setHeader("number", simple("${header[rcc_id]}"))
-          // look for current status of the dems case.
-          // and set the rcc to the primary rcc
-          .to("direct:getCourtCaseStatusByKey")
-          .unmarshal().json()
-          .setProperty("caseId").simple("${body[id]}")
-          .setProperty("caseStatus").simple("${body[status]}")
-          .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
-              if(caseRccId != null && !caseRccId.isEmpty()) {
-                exchange.getMessage().setHeader("number", caseRccId);
+              ex.getMessage().setBody(demsRecord);
+            } else {
+              log.debug("justin_request: " + ex.getProperty("justin_request",String.class));
+              //JustinDocumentKeyList jdkl = (JustinDocumentKeyList)ex.getProperty("justin_request", JustinDocumentKeyList.class);
+              log.info("processing into court case document record");
+              CourtCaseDocumentData courtCaseDocument = new CourtCaseDocumentData(event_message_id, create_date, rd);
+              Object filtered_yn = ex.getMessage().getHeader("filtered_yn");
+              if(filtered_yn != null) {
+                courtCaseDocument.setFiltered_yn((String)filtered_yn);
               }
-            }
-          })
-          .to("direct:createDocumentRecord")
-          .log(LoggingLevel.INFO,"End of RCC based report")
-        .endChoice()
-        .when(simple("${header.mdoc_justin_no} != null"))
-          .log(LoggingLevel.INFO,"MDOC based report")
-          // primary_rcc_id should end-up here, because we had also set the mdoc_justin_no
-          // need to look-up the list of rcc ids associated to the mdoc
-          .to("direct:processNonStaticDocuments")
-        .endChoice()
-        .when(simple("${header.rcc_ids} != null"))
-          .log(LoggingLevel.INFO,"rcc id list based report: ${header.rcc_ids}")
+              DemsRecordData demsRecord = new DemsRecordData(courtCaseDocument);
+              ex.setProperty("reportType", demsRecord.getDescriptions());
+              ex.setProperty("reportTitle", demsRecord.getTitle());
 
-          // Filter through rcc list and make sure it's not a duplicated primary rcc.
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              CourtCaseDocumentData ccdd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
-              List<String> rccList = ccdd.getRcc_ids();
-              exchange.setProperty("rcc_list", rccList);
-            }
-          })
-
-          .setBody(simple("${exchangeProperty.court_case_document}"))
-          .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
-          .split()
-            .jsonpathWriteAsString("$.rcc_ids")
-            .setProperty("rcc_id",jsonpath("$"))
-
-            .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
-            .setHeader("number", simple("${header[rcc_id]}"))
-
-            .doTry()
-              // look for current status of the dems case, and grab the primary agency file
-              .to("direct:getCourtCaseStatusByKey")
-              .unmarshal().json()
-              .setProperty("caseId").simple("${body[id]}")
-              .setProperty("caseStatus").simple("${body[status]}")
-              .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-              .setProperty("agencyRccId").simple("${body[agencyFileId]}")
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) {
-                  CourtCaseDocumentData ccdd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
-                  ArrayList<String> rccList = (ArrayList<String>)exchange.getProperty("rcc_list", ArrayList.class);
-                  String caseId = (String)exchange.getProperty("caseId", String.class);
-                  String rccId = (String)exchange.getProperty("rcc_id", String.class);
-                  String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
-
-                  log.debug("comparing rcc: "+rccId + " to caseRcc: "+caseRccId);
-                  if(caseRccId != null && !caseRccId.isEmpty() && !caseRccId.equalsIgnoreCase(rccId)) {
-                    //log.info("rccs do not match");
-
-                    // check if the rcc list already contains the caseRccId
-                    boolean primaryFound = false;
-                    for(String rcc : rccList) {
-                      if(rcc.equalsIgnoreCase(caseRccId)) {
-                        primaryFound = true;
-                        break;
-                      }
-                    }
-
-                    String removeRcc = null;
-                    for(String rcc : rccList) {
-                      if(rcc.equalsIgnoreCase(rccId)) {
-                        removeRcc = rcc;
-                        break;
-                      }
-                    }
-
-                    if(primaryFound && removeRcc != null) {
-                      //log.info("removing the rcc: "+ rccId);
-                      rccList.remove(removeRcc);
-                    }
-                  } else if(caseId == null || caseId.isEmpty()) {
-
-                    //log.info("rcc_id not found in dems:"+rccId);
-                    String removeRcc = null;
-                    for(String rcc : rccList) {
-                      if(rcc.equalsIgnoreCase(rccId)) {
-                        removeRcc = rcc;
-                        break;
-                      }
-                    }
-                    // the rcc doesn't exist in the dems environment, so remove from the list.
-                    if(removeRcc != null) {
-                      rccList.remove(removeRcc);
-                    }
-                  }
-                  ccdd.setRcc_ids(rccList);
-                  exchange.setProperty("court_case_document", ccdd);
-
-                  //log.info("New rcc list size: "+rccList.size());
+              Object mdoc_justin_no = ex.getMessage().getHeader("mdoc_justin_no");
+              String rcc_list = ex.getProperty("rcc_ids", String.class);
+              //log.info("obj mdoc_justin_no:" + mdoc_justin_no);
+              //log.info("string rcc_ids:" + rcc_list);
+              if((courtCaseDocument.getRcc_ids() == null || courtCaseDocument.getRcc_ids().isEmpty()) && rcc_list != null) {
+                log.info("setting list from header.");
+                // Justin won't necessarily return the list of rcc_ids, so need to set it based on report event message.
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                  //System.out.println(rcc_list);
+                  String[] rcc_id_list = objectMapper.readValue(rcc_list, String[].class);
+                  courtCaseDocument.setRcc_ids(Arrays.asList(rcc_id_list));
+                } catch(Exception e) {
+                  e.printStackTrace();
                 }
-              })
-            .endDoTry()
-            .doCatch(Exception.class)
-              .log(LoggingLevel.ERROR,"General Exception thrown.")
-              .log(LoggingLevel.ERROR,"${exception}")
-            .end()
-          .end()
 
-          .setBody(simple("${exchangeProperty.court_case_document}"))
-          .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
-          .split()
-            .jsonpathWriteAsString("$.rcc_ids")
-            .setProperty("rcc_id",jsonpath("$"))
-            .log(LoggingLevel.INFO, "---- rcc record is: '${exchangeProperty.rcc_id}'")
-            //JADE 2603 for scenario #3
-            .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-            .to("http://ccm-lookup-service/getCourtCaseDetails")
-            .log(LoggingLevel.DEBUG,"body : ${body}")
-            .setProperty("courtcase_data", simple("${body}"))
-            .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+              }
+
+              if(courtCaseDocument.getMdoc_justin_no() == null && mdoc_justin_no != null) {
+                courtCaseDocument.setMdoc_justin_no((String)mdoc_justin_no);
+              }
+
+              ex.setProperty("court_case_document", courtCaseDocument);
+              ex.setProperty("drd", demsRecord);
+
+              // make sure the header has most up to date values.
+              ex.getMessage().setHeader("rcc_ids", courtCaseDocument.getRcc_ids());
+              ex.getMessage().setHeader("mdoc_justin_no", courtCaseDocument.getMdoc_justin_no());
+              ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+
+              ex.getMessage().setBody(demsRecord);
+            }
+          }
+
+        })
+        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+        .log(LoggingLevel.INFO,"rcc_id: ${header[rcc_id]} primary_rcc_id: ${header[primary_rcc_id]} mdoc_justin_no: ${header[mdoc_justin_no]} rcc_ids: ${header[rcc_ids]} image_id: ${header[image_id]}")
+        .log(LoggingLevel.DEBUG,"Generating derived dems record: ${body}")
+        .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, in case we need to parse through list of records
+        .choice()
+          .when(simple("${header.rcc_id} != null"))
+            .log(LoggingLevel.INFO,"RCC based report")
+            // get the primary rcc, based on the dems primary agency file id
+
+            .setHeader("number", simple("${header[rcc_id]}"))
+            // look for current status of the dems case.
+            // and set the rcc to the primary rcc
+            .to("direct:getCourtCaseStatusByKey")
+            .unmarshal().json()
+            .setProperty("caseId").simple("${body[id]}")
+            .setProperty("caseStatus").simple("${body[status]}")
+            .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
             .process(new Processor() {
               @Override
               public void process(Exchange exchange) {
-                ChargeAssessmentData ccdd = exchange.getIn().getBody(ChargeAssessmentData.class);
-                CourtCaseDocumentData cadd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
-                DemsRecordData demsRecord = (DemsRecordData)exchange.getProperty("dems_record", DemsRecordData.class);
-                if(ccdd!=null){
-                  cadd.setCourt_file_no(ccdd.getAgency_file());
-                  demsRecord = new DemsRecordData(cadd);
+                String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
+                if(caseRccId != null && !caseRccId.isEmpty()) {
+                  exchange.getMessage().setHeader("number", caseRccId);
                 }
-                if(demsRecord != null) {
-                  exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-                  exchange.setProperty("drd", demsRecord);
-                }
-                exchange.getMessage().setBody(demsRecord);
               }
             })
-            .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-            .log(LoggingLevel.DEBUG,"demsrecord = ${bodyAs(String)}.")
-            .setBody(simple("${body}"))
-            .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-            .setHeader("reportType", simple("${exchangeProperty.reportType}"))
-            .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-            .setProperty("dems_record").simple("${bodyAs(String)}")
-            .to("direct:changeDocumentRecord")
-          .end()
-          .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
-        .endChoice()
-        .otherwise()
-          .log(LoggingLevel.INFO,"No identifying values, so skipped.")
-        .endChoice()
+            .to("direct:createDocumentRecord")
+            .log(LoggingLevel.INFO,"End of RCC based report")
+          .endChoice()
+          .when(simple("${header.mdoc_justin_no} != null"))
+            .log(LoggingLevel.INFO,"MDOC based report")
+            // primary_rcc_id should end-up here, because we had also set the mdoc_justin_no
+            // need to look-up the list of rcc ids associated to the mdoc
+            .to("direct:processNonStaticDocuments")
+          .endChoice()
+          .when(simple("${header.rcc_ids} != null"))
+            .log(LoggingLevel.INFO,"rcc id list based report: ${header.rcc_ids}")
 
-      .end() // end choice
+            // Filter through rcc list and make sure it's not a duplicated primary rcc.
+            .process(new Processor() {
+              @Override
+              public void process(Exchange exchange) {
+                CourtCaseDocumentData ccdd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
+                List<String> rccList = ccdd.getRcc_ids();
+                exchange.setProperty("rcc_list", rccList);
+              }
+            })
+
+            .setBody(simple("${exchangeProperty.court_case_document}"))
+            .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
+            .split()
+              .jsonpathWriteAsString("$.rcc_ids")
+              .setProperty("rcc_id",jsonpath("$"))
+
+              .setHeader("rcc_id", simple("${exchangeProperty.rcc_id}"))
+              .setHeader("number", simple("${header[rcc_id]}"))
+
+              .doTry()
+                // look for current status of the dems case, and grab the primary agency file
+                .to("direct:getCourtCaseStatusByKey")
+                .unmarshal().json()
+                .setProperty("caseId").simple("${body[id]}")
+                .setProperty("caseStatus").simple("${body[status]}")
+                .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+                .setProperty("agencyRccId").simple("${body[agencyFileId]}")
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) {
+                    CourtCaseDocumentData ccdd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
+                    ArrayList<String> rccList = (ArrayList<String>)exchange.getProperty("rcc_list", ArrayList.class);
+                    String caseId = (String)exchange.getProperty("caseId", String.class);
+                    String rccId = (String)exchange.getProperty("rcc_id", String.class);
+                    String caseRccId = (String)exchange.getProperty("caseRccId", String.class);
+
+                    log.debug("comparing rcc: "+rccId + " to caseRcc: "+caseRccId);
+                    if(caseRccId != null && !caseRccId.isEmpty() && !caseRccId.equalsIgnoreCase(rccId)) {
+                      //log.info("rccs do not match");
+
+                      // check if the rcc list already contains the caseRccId
+                      boolean primaryFound = false;
+                      for(String rcc : rccList) {
+                        if(rcc.equalsIgnoreCase(caseRccId)) {
+                          primaryFound = true;
+                          break;
+                        }
+                      }
+
+                      String removeRcc = null;
+                      for(String rcc : rccList) {
+                        if(rcc.equalsIgnoreCase(rccId)) {
+                          removeRcc = rcc;
+                          break;
+                        }
+                      }
+
+                      if(primaryFound && removeRcc != null) {
+                        //log.info("removing the rcc: "+ rccId);
+                        rccList.remove(removeRcc);
+                      }
+                    } else if(caseId == null || caseId.isEmpty()) {
+
+                      //log.info("rcc_id not found in dems:"+rccId);
+                      String removeRcc = null;
+                      for(String rcc : rccList) {
+                        if(rcc.equalsIgnoreCase(rccId)) {
+                          removeRcc = rcc;
+                          break;
+                        }
+                      }
+                      // the rcc doesn't exist in the dems environment, so remove from the list.
+                      if(removeRcc != null) {
+                        rccList.remove(removeRcc);
+                      }
+                    }
+                    ccdd.setRcc_ids(rccList);
+                    exchange.setProperty("court_case_document", ccdd);
+
+                    //log.info("New rcc list size: "+rccList.size());
+                  }
+                })
+              .endDoTry()
+              .doCatch(HttpOperationFailedException.class)
+                .log(LoggingLevel.ERROR,"Exception in createDocumentRecord call")
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+                .setHeader("CCMException", simple("${exception.statusCode}"))
+      
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) throws Exception {
+                    try {
+                      ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
+                      if(errorList == null) {
+                        errorList = new ArrayList<Exception>();
+                      }
+      
+      
+                      HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                      exchange.getMessage().setBody(cause.getResponseBody());
+      
+                      log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+      
+                      exchange.setProperty("exception", cause);
+      
+                      if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                        String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                        exchange.getIn().setHeader("CCMExceptionEncoded", body);
+                      }
+      
+                      errorList.add(cause);
+                      exchange.setProperty("errorList", errorList);
+                    } catch(Exception ex) {
+                      ex.printStackTrace();
+                    }
+                  }
+                })
+      
+                .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
+                .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+              .end()
+
+            .end() // end split
+
+            .setBody(simple("${exchangeProperty.court_case_document}"))
+            .marshal().json(JsonLibrary.Jackson, CourtCaseDocumentData.class)
+            .split()
+              .jsonpathWriteAsString("$.rcc_ids")
+              .setProperty("rcc_id",jsonpath("$"))
+              .log(LoggingLevel.INFO, "---- rcc record is: '${exchangeProperty.rcc_id}'")
+              //JADE 2603 for scenario #3
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+              .to("http://ccm-lookup-service/getCourtCaseDetails")
+              .log(LoggingLevel.DEBUG,"body : ${body}")
+              .setProperty("courtcase_data", simple("${body}"))
+              .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) {
+                  ChargeAssessmentData ccdd = exchange.getIn().getBody(ChargeAssessmentData.class);
+                  CourtCaseDocumentData cadd = (CourtCaseDocumentData)exchange.getProperty("court_case_document", CourtCaseDocumentData.class);
+                  DemsRecordData demsRecord = (DemsRecordData)exchange.getProperty("dems_record", DemsRecordData.class);
+                  if(ccdd!=null){
+                    cadd.setCourt_file_no(ccdd.getAgency_file());
+                    demsRecord = new DemsRecordData(cadd);
+                  }
+                  if(demsRecord != null) {
+                    exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+                    exchange.setProperty("drd", demsRecord);
+                  }
+                  exchange.getMessage().setBody(demsRecord);
+                }
+              })
+              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+              .log(LoggingLevel.DEBUG,"demsrecord = ${bodyAs(String)}.")
+              .setBody(simple("${body}"))
+              .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+              .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+              .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
+              .setProperty("dems_record").simple("${bodyAs(String)}")
+              .to("direct:changeDocumentRecord")
+            .end()
+            .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
+          .endChoice()
+          .otherwise()
+            .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+          .endChoice()
+
+        .end() // end choice
+      .endDoTry()
+      .doCatch(HttpOperationFailedException.class)
+        .log(LoggingLevel.ERROR,"Exception while processing single document")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .setHeader("CCMException", simple("${exception.statusCode}"))
+
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            try {
+              ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
+              if(errorList == null) {
+                log.info("Had to create new arrayList");
+                errorList = new ArrayList<Exception>();
+              }
+
+
+              HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+              exchange.getMessage().setBody(cause.getResponseBody());
+
+              log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+
+              exchange.setProperty("exception", cause);
+
+              if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                exchange.getIn().setHeader("CCMExceptionEncoded", body);
+              }
+
+              errorList.add(cause);
+              exchange.setProperty("errorList", errorList);
+            } catch(Exception ex) {
+              ex.printStackTrace();
+            }
+          }
+        })
+
+        .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
+        .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+      .end()
+
     .end() // end split
+
+    .log(LoggingLevel.INFO, "Checking for exceptions")
+    .choice()
+      .when(simple("${exchangeProperty.errorList} != null"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            log.info("Get error list.");
+            ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
+            if(errorList != null && errorList.size() > 0) {
+              log.info("Get first error of: "+errorList.size());
+              Exception ex = (Exception)errorList.get(0);
+              log.info("There is an exception");
+              log.error("Exception: "+ex.getMessage());
+              throw ex;
+            } else {
+              log.info("There is no exception");
+            }
+          }
+        })
+      .otherwise()
+        .log(LoggingLevel.INFO, "No errorList found.")
+    .end()
+
     .log(LoggingLevel.INFO, "end of processDocumentRecord")
     ;
   }
@@ -3160,7 +3269,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG, "body: ${body}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
     .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
-    .delay(1500)
+    .delay(3000)
     .setBody(simple("${exchangeProperty.multipartBody}"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")

@@ -314,7 +314,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentEvent.class)
-    .delay(5000)
     .choice()
       .when(header("event_status").isEqualTo(ChargeAssessmentEvent.STATUS.CHANGED))
         .setProperty("kpi_component_route_name", simple("processChargeAssessmentChanged"))
@@ -671,7 +670,6 @@ public class CcmNotificationService extends RouteBuilder {
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
 
-          .delay(35000)
           .to("http://ccm-dems-adapter/createCourtCase")
 
         .endDoTry()
@@ -808,7 +806,6 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
     .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
     .marshal().json(JsonLibrary.Jackson, CourtCaseEvent.class)
-    .delay(25000)
     .choice()
       .when(header("event_status").isEqualTo(CourtCaseEvent.STATUS.CHANGED))
         .setProperty("kpi_component_route_name", simple("processCourtCaseChanged"))
