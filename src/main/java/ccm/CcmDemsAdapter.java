@@ -961,7 +961,6 @@ private void getDemsFieldMappingsrccStatus() {
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
-            log.info("Get error list.");
             ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
             if(errorList != null && errorList.size() > 0) {
               log.info("Get first error of: "+errorList.size());
@@ -1080,17 +1079,43 @@ private void getDemsFieldMappingsrccStatus() {
             .endChoice()
           .end()
         .endDoTry()
-        .doCatch(Exception.class)
-          .log(LoggingLevel.INFO,"General Exception thrown.")
-          .log(LoggingLevel.INFO,"${exception}")
-          .process(new Processor() {
-            public void process(Exchange exchange) throws Exception {
+        .doCatch(HttpOperationFailedException.class)
+          .log(LoggingLevel.ERROR,"Exception in processNonStaticDocuments call")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .setHeader("CCMException", simple("${exception.statusCode}"))
 
-              exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-              exchange.getMessage().setBody(exchange.getException().getMessage());
-              throw exchange.getException();
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
+                if(errorList == null) {
+                  errorList = new ArrayList<Exception>();
+                }
+
+
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                exchange.getMessage().setBody(cause.getResponseBody());
+
+                log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+
+                exchange.setProperty("exception", cause);
+
+                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                  exchange.getIn().setHeader("CCMExceptionEncoded", body);
+                }
+
+                errorList.add(cause);
+                exchange.setProperty("errorList", errorList);
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
             }
           })
+
+          .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
+          .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
         .end()
         .log(LoggingLevel.INFO, "Completed primary rcc id based call.")
       .endChoice()
@@ -2009,6 +2034,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO, "New case id: ${exchangeProperty.courtCaseId}")
       .setProperty("id", simple("${exchangeProperty.courtCaseId}"))
       .to("direct:getCourtCaseDataById")
+      //.delay(15000)
 
       //jade 1747
       .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
