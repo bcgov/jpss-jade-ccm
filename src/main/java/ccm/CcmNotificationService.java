@@ -2986,9 +2986,12 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-dems-adapter/updateCourtCase")
+        
+        .log(LoggingLevel.INFO,"Update court case auth list.")
+        .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO, "Completed court case update.")
+    .log(LoggingLevel.INFO, "Completed court case processCaseMerge.")
 
     ;
   }
