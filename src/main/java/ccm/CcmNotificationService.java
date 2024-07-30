@@ -3464,7 +3464,6 @@ public class CcmNotificationService extends RouteBuilder {
      .setHeader("number", simple("${header[event_key]}"))
      .to("http://ccm-lookup-service/getFileNote")
      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
-     //.setBody(simple("${body}"))
      .unmarshal().json(JsonLibrary.Jackson,FileNote.class)
      .process(new Processor() {
       @Override

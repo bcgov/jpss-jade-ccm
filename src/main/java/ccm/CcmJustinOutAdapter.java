@@ -585,7 +585,6 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
-    //.unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
   
     .process(new Processor() {
