@@ -3464,13 +3464,17 @@ public class CcmNotificationService extends RouteBuilder {
      .setHeader("number", simple("${header[event_key]}"))
      .to("http://ccm-lookup-service/getFileNote")
      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
-     .setBody(simple("${body}"))
+     //.setBody(simple("${body}"))
+     .unmarshal().json(JsonLibrary.Jackson,FileNote.class)
      .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
         if (fileNote != null) {
           log.info("File note id to from delete : " + fileNote.getFile_note_id());
+        }
+        else {
+          log.info("File Note not found for event_message_id.");
         }
       }})
      .end();
