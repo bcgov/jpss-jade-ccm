@@ -14,6 +14,7 @@ import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
 
+    private static final String TXT_FILE_EXTENSION = ".txt";
     private String descriptions;
     private String title;
     private String startDate;
@@ -589,7 +590,7 @@ public class DemsRecordData {
         if(getType() != null) {
             DemsFieldData type = new DemsFieldData("Type", getType());
             fieldData.add(type);
-        }
+        } 
         StringBuilder notes = new StringBuilder();
         if(nrd.getNote_txt().length() > 256) {
             String truncatedCaseName = nrd.getNote_txt().substring(0, 256);
@@ -610,7 +611,7 @@ public class DemsRecordData {
             DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
             fieldData.add(lastUpdate);
         }
-        setFileExtension(".txt");
+        setFileExtension(TXT_FILE_EXTENSION);
         if(getFileExtension() != null) {
             DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
             fieldData.add(extension);
