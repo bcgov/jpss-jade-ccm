@@ -12,7 +12,7 @@ public class FileNote {
     public FileNote() {
     }
 
-    public FileNote(String file_note_id, String user_name, String entry_date, String note_txt, String rcc_id, String mdoc_justin_no) {
+    public FileNote(String file_note_id, String user_name, String entry_date, String note_txt, String rcc_id, String mdoc_justin_no, String original_file_number) {
         this.mdoc_justin_no = mdoc_justin_no;
         this.file_note_id = file_note_id;
         this.user_name = user_name;
@@ -46,10 +46,10 @@ public class FileNote {
     public void setNote_txt(String note_txt) {
         this.note_txt = note_txt;
     }
-    public String getRcc_id() {
+    public String getrcc_id() {
         return rcc_id;
     }
-    public void setRcc_id(String rcc_id) {
+    public void setrcc_id(String rcc_id) {
         this.rcc_id = rcc_id;
     }
     public String getMdoc_justin_no() {

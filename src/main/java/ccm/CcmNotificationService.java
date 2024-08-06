@@ -3397,9 +3397,18 @@ public class CcmNotificationService extends RouteBuilder {
     .setBody(simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
-    .setProperty("primary_rcc_id", simple("${body[rcc_id]}"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+        exchange.setProperty("primary_rcc_id", fileNote.getrcc_id());
+        exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
+      }})
+
+    //.unmarshal().json()
+   // .setProperty("primary_rcc_id", simple("${body[rcc_id]}"))
     .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-    .setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
+    //.setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
     .log(LoggingLevel.INFO, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
 
     .choice() 
