@@ -1757,6 +1757,15 @@ private void getDemsFieldMappingsrccStatus() {
             .setHeader("CCMException", simple("{\"error\": \"Record is deleted in EDT.\"}"))
             .stop()
           .endChoice()
+          .when(simple("${exchangeProperty.edtCaseStatus} == 'Offline'"))
+            .log(LoggingLevel.WARN, "The case is offline in EDT, clear-out the returned body.")
+            .setBody(simple(""))
+            .setProperty("continueLoop").simple("false")
+
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
+            .setHeader("CCMException", simple("{\"error\": \"Record is offline in EDT.\"}"))
+            .stop()
+          .endChoice()
           .when(simple("${exchangeProperty.edtCaseStatus} != 'Active' && ${exchangeProperty.edtCaseStatus} != 'Inactive'"))
             .log(LoggingLevel.DEBUG,"${body}")
             .log(LoggingLevel.INFO, "Case ${exchangeProperty.id} not active yet, wait 10 seconds... iteration: ${exchangeProperty.incrementCount}")
@@ -2669,7 +2678,7 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         CaseAccused b = exchange.getIn().getBody(CaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
-        d.generateOTC(d);
+        d.generateOTC();
         exchange.getMessage().setBody(d);
       }
     })
@@ -3174,13 +3183,24 @@ private void getDemsFieldMappingsrccStatus() {
 
   //as part of jade 1750
   private void reassignParticipantCases() {
+    // IN: header.fromPersonId
+    // IN: header.toPersonId
+    // IN: header.fromPartId
+    // IN: header.toPartId
+    // IN: header.fromMergedPartKeys
+    // IN: header.toMergedPartKeys
+
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"fromPartid = ${header[fromPartid]} ")
-    .log(LoggingLevel.INFO,"toPartid = ${header[toPartid]}")
+    .log(LoggingLevel.INFO,"fromPersonId = ${header[fromPersonId]} ")
+    .log(LoggingLevel.INFO,"toPersonId = ${header[toPersonId]}")
+    .log(LoggingLevel.INFO,"fromPartId = ${header[fromPartId]} ")
+    .log(LoggingLevel.INFO,"toPartId = ${header[toPartId]}")
+    .log(LoggingLevel.INFO,"fromMergedPartKeys = ${header[fromMergedPartKeys]} ")
+    .log(LoggingLevel.INFO,"toMergedPartKeys = ${header[toMergedPartKeys]}")
 
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
@@ -3189,7 +3209,8 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.HTTP_METHOD, simple("POST"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      .setBody(simple("{\"entityType\":\"Person\",\"entityId\":\"${header.fromPartid}\",\"identifierType\":\"PrimaryId\",\"identifierValue\":\"${header.toPartid}\"}"))
+      // Add identifier record for inactivated person to indicate the new person record to refer to.
+      .setBody(simple("{\"entityType\":\"Person\",\"entityId\":\"${header.fromPersonId}\",\"identifierType\":\"PrimaryId\",\"identifierValue\":\"${header.toPersonId}\"}"))
       .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/identifiers")
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -3237,15 +3258,262 @@ private void getDemsFieldMappingsrccStatus() {
 
       .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
       .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
-
-
-
     .end()
 
+    // BCPSDEMS-1969 - set the Merged Participant Keys custom field.
+    // first get any values that exist in the source (to be inactivated participant)
+    // set the source's value to the target part id
+    // get the values that exist in the target (primary participant)
+    // append both the source value and target value together, in comma delimited string.
+
+    //look-up source person to be inactivated and set the MergedParticipantKeys custom field to the primary part id.
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[fromPersonId]}")
+      .log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+      .setProperty("demspersondata", simple("${body}"))
+      .unmarshal().json()
+
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200"))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String toPartId = (String)exchange.getProperty("toPartId");
+              Object d =(Object)exchange.getIn().getBody();
+              exchange.getMessage().setBody(d);
+
+              LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+
+              ObjectMapper objectMapper = new ObjectMapper();
+              String json = objectMapper.writeValueAsString(dataMap);
+
+              Boolean present =false;
+              ObjectMapper personDataMapper = new ObjectMapper();
+              personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+              DemsPersonData personData = personDataMapper.readValue(json, DemsPersonData.class);
+              for(DemsFieldData fieldData : personData.getFields()) {
+                log.info("Field Name: " + fieldData.getName());
+                log.info("Field Value: " + fieldData.getValue());
+                if(fieldData.getName().equalsIgnoreCase("MergedParticipantKeys")) {
+                  present = true;
+                  fieldData.setValue(toPartId);
+                  break;
+                }
+              }
+              if(!present) {
+                personData.generateMergedParticipantKeys(toPartId);
+              }
+
+              exchange.getMessage().setBody(personData, DemsPersonData.class);
+            }
+          })
+          .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+          .log(LoggingLevel.DEBUG,"DEMS-bound person data: '${body}'")
+          .setProperty("update_data", simple("${body}"))
+
+          // update person
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[fromPersonId]}")
+          .log(LoggingLevel.INFO,"Person updated.")
+
+          .log(LoggingLevel.INFO, "There are cases with the person.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO, "No cases associated to person.")
+        .end()
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exception message: ${body}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            exchange.getMessage().setBody(cause.getResponseBody());
+            log.info("Returned body : " + cause.getResponseBody());
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+      .setHeader("CCMException", simple("${exception.statusCode}"))
+
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+            exchange.getMessage().setBody(cause.getResponseBody());
+
+            log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+
+            exchange.setProperty("exception", cause);
+
+            if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+              String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+              exchange.getIn().setHeader("CCMExceptionEncoded", body);
+            }
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
+      .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+    .end()
+  
+
+    //look-up target person to be primary and set the MergedParticipantKeys custom field to the fromMergedPartKeys, toMergedPartKeys and source part id.
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[toPersonId]}")
+      .log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+      .setProperty("demspersondata", simple("${body}"))
+      .unmarshal().json()
+
+      .choice()
+        .when(simple("${header.CamelHttpResponseCode} == 200"))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String fromPartId = (String)exchange.getProperty("fromPartId");
+              String fromMergedPartKeys = (String)exchange.getProperty("fromMergedPartKeys");
+              String toMergedPartKeys = (String)exchange.getProperty("toMergedPartKeys");
+
+              StringBuffer participantKeys = new StringBuffer(fromPartId);
+              if(fromMergedPartKeys != null && fromMergedPartKeys != "") {
+                participantKeys.append(",");
+                participantKeys.append(fromMergedPartKeys);
+              }
+
+              if(toMergedPartKeys != null && toMergedPartKeys != "") {
+                participantKeys.append(",");
+                participantKeys.append(toMergedPartKeys);
+              }
+
+              Object d =(Object)exchange.getIn().getBody();
+              exchange.getMessage().setBody(d);
+              LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+
+              ObjectMapper objectMapper = new ObjectMapper();
+              String json = objectMapper.writeValueAsString(dataMap);
+
+              Boolean present =false;
+              ObjectMapper personDataMapper = new ObjectMapper();
+              personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+              DemsPersonData personData = personDataMapper.readValue(json, DemsPersonData.class);
+              for(DemsFieldData fieldData : personData.getFields()) {
+                log.info("Field Name: " + fieldData.getName());
+                log.info("Field Value: " + fieldData.getValue());
+                if(fieldData.getName().equalsIgnoreCase("MergedParticipantKeys")) {
+                  present = true;
+                  fieldData.setValue(participantKeys.toString());
+                  break;
+                }
+              }
+              if(!present) {
+                personData.generateMergedParticipantKeys(participantKeys.toString());
+              }
+
+              exchange.getMessage().setBody(personData, DemsPersonData.class);
+            }
+          })
+          .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+          .log(LoggingLevel.DEBUG,"DEMS-bound person data: '${body}'")
+          .setProperty("update_data", simple("${body}"))
+
+          // update case
+          .setBody(simple("${exchangeProperty.update_data}"))
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[toPersonId]}")
+          .log(LoggingLevel.INFO,"Person updated.")
+          .log(LoggingLevel.INFO, "There are cases with the person.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO, "No cases associated to person.")
+        .end()
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Exception message: ${body}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            exchange.getMessage().setBody(cause.getResponseBody());
+            log.info("Returned body : " + cause.getResponseBody());
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+      .setHeader("CCMException", simple("${exception.statusCode}"))
+
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+            exchange.getMessage().setBody(cause.getResponseBody());
+
+            log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+
+            exchange.setProperty("exception", cause);
+
+            if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+              String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+              exchange.getIn().setHeader("CCMExceptionEncoded", body);
+            }
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
+      .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
+      .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+    .end()
+  
+
+    // Re-assign any straggling cases on the source person over to the now primary person.
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPartid}/reassign-cases/${header.toPartid}")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header.fromPersonId}/reassign-cases/${header.toPersonId}")
     .log(LoggingLevel.INFO, "response: '${body}'")
 
     .log(LoggingLevel.INFO, "Checking for exceptions")
@@ -4445,10 +4713,10 @@ private void getDemsFieldMappingsrccStatus() {
               .setProperty("caselength",jsonpath("$.cases.length()"))
               .setProperty("existingOtc",jsonpath("$.fields[?(@.name == 'OTC')]"))
               .unmarshal().json()
-              .log(LoggingLevel.DEBUG, "Participant case length: ${exchangeProperty.caselength}")
+              .log(LoggingLevel.INFO, "Participant case length: ${exchangeProperty.caselength}")
 
               .choice()
-                .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.caselength} > 0"))
+                .when(simple("${header.CamelHttpResponseCode} == 200"))
                   .log(LoggingLevel.INFO, "existingOtc: ${exchangeProperty.existingOtc}")
                   .process(new Processor() {
                     @Override
@@ -4479,7 +4747,7 @@ private void getDemsFieldMappingsrccStatus() {
                           }
                         }
                         if(!present) {
-                          personData.generateOTC(personData);
+                          personData.generateOTC();
                         }
 
                         exchange.getMessage().setBody(personData, DemsPersonData.class);
@@ -4494,15 +4762,17 @@ private void getDemsFieldMappingsrccStatus() {
                       // update case
                       .setBody(simple("${exchangeProperty.update_data}"))
                       .setHeader("key", jsonpath("$.key"))
-                      .log(LoggingLevel.INFO,"DEMS-bound person key: '${header[key]}'")
+                      .setHeader("id", jsonpath("$.id"))
+                      .log(LoggingLevel.INFO,"DEMS-bound person id: '${header[id]}' key: '${header[key]}'")
                       .setHeader("key").simple("${header.key}")
+                      .setHeader("id").simple("${header.id}")
                       .removeHeader("CamelHttpUri")
                       .removeHeader("CamelHttpBaseUri")
                       .removeHeaders("CamelHttp*")
                       .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
                       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
+                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[id]}")
                       .log(LoggingLevel.INFO,"Person updated.")
                     .endChoice()
                     .otherwise()
@@ -4606,7 +4876,7 @@ private void getDemsFieldMappingsrccStatus() {
                             }
                           }
                           if(!present) {
-                            personData.generateOTC(personData);
+                            personData.generateOTC();
                           }
 
                           /*
