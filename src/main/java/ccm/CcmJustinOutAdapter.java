@@ -604,6 +604,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, FileNote.class)
     .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .end()
     ;
   }
 }

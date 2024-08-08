@@ -3401,8 +3401,10 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+        log.info("file note to set : file note id " + fileNote.getFile_note_id());
         exchange.setProperty("primary_rcc_id", fileNote.getrcc_id());
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
+        exchange.setProperty("storedFileNote", fileNote);
       }})
 
     //.unmarshal().json()
@@ -3410,6 +3412,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
     //.setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
     .log(LoggingLevel.INFO, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
+
 
     .choice() 
       .when(simple("${exchangeProperty.primary_rcc_id} != null"))
@@ -3424,18 +3427,24 @@ public class CcmNotificationService extends RouteBuilder {
         
         .unmarshal().json()
         .setProperty("destinationCaseId").simple("${body[id]}")
-        .setProperty("agencyfileno",jsonpath("$.fields[?(@.name == 'Agency File No.')]"))
+        //.setProperty("agencyfileno",jsonpath("$.fields[?(@.name == 'Agency File No.')]"))
+        .setProperty("agencyfileno",simple("${body[agencyFileNo]}"))
         .log(LoggingLevel.INFO,"${exchangeProperty.agencyfileno}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
-            FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+            FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
+            log.info("2 file note pulled from property : file note id " + fileNote.getFile_note_id());
             String agencyFileId = exchange.getProperty("agencyfileno", String.class);
             fileNote.setOriginal_file_number(agencyFileId);
             exchange.getMessage().setBody(fileNote);
           }})
-          .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          .log(LoggingLevel.INFO,"Retrieved related :${bodyAs(String)}")
+          .setBody(simple("${body}"))
+          
     .end()
+    
     .choice() 
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
@@ -3444,19 +3453,25 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseMetadata")
 
-      .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+      .log(LoggingLevel.INFO,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
       .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) {
-          FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+          FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
           CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
           fileNote.setOriginal_file_number(bcm.getCourt_file_no());
           exchange.getMessage().setBody(fileNote);
         }
-      }).log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+      })
+      .marshal().json(JsonLibrary.Jackson, FileNote.class)
+      .log(LoggingLevel.INFO,"Retrieved related : ${body}")
+      .setBody(simple("${body}"))
+      
     .endChoice()
+    
   .end()
+ 
 
     .end();
   }
