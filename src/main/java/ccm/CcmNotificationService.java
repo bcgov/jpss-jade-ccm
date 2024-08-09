@@ -3389,11 +3389,11 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"processFileNote event_message_id = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"processFileNote event_message_id = ${header[event_key]}")
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
     .to("http://ccm-lookup-service/getFileNote")
-    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
@@ -3401,21 +3401,15 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-        log.info("file note to set : file note id " + fileNote.getFile_note_id());
+        log.debug("file note to set : file note id " + fileNote.getFile_note_id());
         exchange.setProperty("primary_rcc_id", fileNote.getrcc_id());
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
         exchange.setProperty("storedFileNote", fileNote);
       }})
-
-    //.unmarshal().json()
-   // .setProperty("primary_rcc_id", simple("${body[rcc_id]}"))
-    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-    //.setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
-    .log(LoggingLevel.INFO, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
-
-
+    .log(LoggingLevel.DEBUG, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+    .log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
     .choice() 
-      .when(simple("${exchangeProperty.primary_rcc_id} != null"))
+      .when(simple(" ${exchangeProperty.primary_rcc_id} != ''"))
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3427,7 +3421,6 @@ public class CcmNotificationService extends RouteBuilder {
         
         .unmarshal().json()
         .setProperty("destinationCaseId").simple("${body[id]}")
-        //.setProperty("agencyfileno",jsonpath("$.fields[?(@.name == 'Agency File No.')]"))
         .setProperty("agencyfileno",simple("${body[agencyFileNo]}"))
         .log(LoggingLevel.INFO,"${exchangeProperty.agencyfileno}")
         .process(new Processor() {
@@ -3446,9 +3439,9 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
     
     .choice() 
-    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
+    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != ''"))
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
-      .setHeader("number", jsonpath("${exchangeProperty.primary_mdoc_justin_no}"))
+      .setHeader("number", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseMetadata")
