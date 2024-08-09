@@ -3427,13 +3427,12 @@ public class CcmNotificationService extends RouteBuilder {
           @Override
           public void process(Exchange exchange) throws Exception {
             FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
-            log.info("2 file note pulled from property : file note id " + fileNote.getFile_note_id());
             String agencyFileId = exchange.getProperty("agencyfileno", String.class);
             fileNote.setOriginal_file_number(agencyFileId);
             exchange.getMessage().setBody(fileNote);
           }})
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
-          .log(LoggingLevel.INFO,"Retrieved related :${bodyAs(String)}")
+          .log(LoggingLevel.DEBUG,"Retrieved related :${bodyAs(String)}")
           .setBody(simple("${body}"))
           
     .end()
@@ -3458,15 +3457,11 @@ public class CcmNotificationService extends RouteBuilder {
         }
       })
       .marshal().json(JsonLibrary.Jackson, FileNote.class)
-      .log(LoggingLevel.INFO,"Retrieved related : ${body}")
+      .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
       .setBody(simple("${body}"))
-      
     .endChoice()
-    
   .end()
- 
-
-    .end();
+  .end();
   }
 
   private void processFileNoteDelete() {
