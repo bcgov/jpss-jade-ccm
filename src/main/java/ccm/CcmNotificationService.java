@@ -1280,7 +1280,7 @@ public class CcmNotificationService extends RouteBuilder {
         // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
         // check if this is a scenario of an rcc being re-submitted.
         .choice()
-          .when(simple("${body[rccStatus]} == 'Return'"))
+          .when(simple("${body[rccStatus]} == 'Return' || ${body[rccStatus]} == 'Received' || ${body[rccStatus]} == 'Submit'"))
             .setHeader("number").simple("${header.event_key}")
             .setHeader(Exchange.HTTP_METHOD, simple("GET"))
             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -3791,15 +3791,23 @@ public class CcmNotificationService extends RouteBuilder {
     boolean retValue = false;
     /// loop thru hashmap, find 1st non-zero if not match for type return false. if find type, return true
     RMS_PROCESSING_STATUS_MAPPINGS valueWithCount = null;
+    RMS_PROCESSING_STATUS_MAPPINGS findWithCount = null;
     for (RMS_PROCESSING_STATUS_MAPPINGS iterable_element : results.keySet()) {
       Integer resultValue = results.get(iterable_element);
-      valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
-      if (valueWithCount != null )  {
-        break;  
+      log.info(iterable_element.getName() + ": " + resultValue.toString());
+      if(typeToFInd != iterable_element) {
+        valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
+        if (valueWithCount != null )  {
+          break;  
+        }
+      } else if(typeToFInd == iterable_element) {
+        findWithCount  = resultValue.intValue() > 0 ?  iterable_element : null;
       }
     }
     if (valueWithCount != null ) {
       retValue = valueWithCount == typeToFInd;
+    } else if (findWithCount != null) {
+      retValue = true;
     }
     log.info("VerifyAllFileResultsOnlyFor"+retValue);
     return retValue;

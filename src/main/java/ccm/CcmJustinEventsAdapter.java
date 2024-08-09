@@ -670,9 +670,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
+        /*.when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
           .to("direct:processFileNote")
-          .endChoice()
+          .endChoice()*/
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -1808,6 +1808,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .end()
     ;
   }
+
   private void processFileNote() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

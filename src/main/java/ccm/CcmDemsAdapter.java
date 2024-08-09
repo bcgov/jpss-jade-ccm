@@ -151,6 +151,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     deleteExistingCase();
     createEdtExternalIdExistingParticipant();
     updateEdtExternalIdExistingParticipant();
+    updateExistingParticipantwithOTCV2();
     updateExistingParticipantwithOTC();
     updateExistingParticipantwithOTCOrig();
     destroyCaseRecords();
@@ -3275,7 +3276,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[fromPersonId]}")
-      .log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+      //.log(LoggingLevel.DEBUG,"Person in system: '${body}'")
       .setProperty("demspersondata", simple("${body}"))
       .unmarshal().json()
 
@@ -3307,6 +3308,7 @@ private void getDemsFieldMappingsrccStatus() {
                 }
               }
               if(!present) {
+                log.info("Adding the merged participant key: " + toPartId);
                 personData.generateMergedParticipantKeys(toPartId);
               }
 
@@ -3390,7 +3392,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[toPersonId]}")
-      .log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+      //.log(LoggingLevel.DEBUG,"Person in system: '${body}'")
       .setProperty("demspersondata", simple("${body}"))
       .unmarshal().json()
 
@@ -3435,6 +3437,7 @@ private void getDemsFieldMappingsrccStatus() {
                 }
               }
               if(!present) {
+                log.info("Adding the merged participant key: " + participantKeys.toString());
                 personData.generateMergedParticipantKeys(participantKeys.toString());
               }
 
@@ -4670,6 +4673,137 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void updateExistingParticipantwithOTCV2() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+        // IN: header = id
+        from("platform-http:/" + routeId )
+        .routeId(routeId)
+        .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+        .log(LoggingLevel.INFO,"updateExistingParticipantwithOTC...")
+        //.setProperty("id", header("id"))
+        
+        .setProperty("v2DemsHost", simple("{{dems.host}}"))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            String v2DemsHost = (String)exchange.getProperty("v2DemsHost");
+            v2DemsHost = v2DemsHost.replace("/v1", "/v2");
+            exchange.setProperty("v2DemsHost", v2DemsHost);
+          }
+        })
+        .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        //traverse through all cases in DEMS
+        .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/persons/")
+        //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+        .setProperty("length",jsonpath("$.items.length()"))
+        .log(LoggingLevel.INFO,"Person count: ${exchangeProperty.length}")
+        .split()
+          .jsonpathWriteAsString("$.items.*")
+          .setProperty("personId",jsonpath("$.id"))
+          .setProperty("personKey",jsonpath("$.key"))
+          .setProperty("status",jsonpath("$.status"))
+          .log(LoggingLevel.DEBUG,"Person Id: ${exchangeProperty.personId}, status: ${exchangeProperty.status}")
+          .choice()
+            .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.personKey} != null")
+              //look-up list of accused participants of each case
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              //traverse through all cases in DEMS
+              .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${exchangeProperty.personId}")
+              //.log(LoggingLevel.DEBUG,"Person in system: '${body}'")
+              .setProperty("otcfieldexist").simple("false")
+              .setProperty("demspersondata", simple("${body}"))
+              .setProperty("caselength",jsonpath("$.cases.length()"))
+              .setProperty("existingOtc",jsonpath("$.fields[?(@.name == 'OTC')]"))
+              .unmarshal().json()
+              .log(LoggingLevel.INFO, "Participant case length: ${exchangeProperty.caselength}")
+
+              .choice()
+                .when(simple("${header.CamelHttpResponseCode} == 200"))
+                  .log(LoggingLevel.INFO, "existingOtc: ${exchangeProperty.existingOtc}")
+                  .process(new Processor() {
+                    @Override
+                    public void process(Exchange exchange) throws Exception {
+                      Object d =(Object)exchange.getIn().getBody();
+                      exchange.getMessage().setBody(d);
+                      if (d instanceof DemsPersonData) {
+                        DemsPersonData personData = (DemsPersonData) d;
+                        // Now you can use 'personData' as a PersonData instance
+                        log.info("dgg: " + personData);
+                      }else{
+                        LinkedHashMap<String, Object> dataMap = (LinkedHashMap<String, Object>) d;
+
+                        ObjectMapper objectMapper = new ObjectMapper();
+                        String json = objectMapper.writeValueAsString(dataMap);
+
+                        Boolean present =false;
+                        ObjectMapper personDataMapper = new ObjectMapper();
+                        personDataMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                        DemsPersonData personData = personDataMapper.readValue(json, DemsPersonData.class);
+                        for(DemsFieldData fieldData : personData.getFields()) {
+                          log.info("Field Name: " + fieldData.getName());
+                          log.info("Field Value: " + fieldData.getValue());
+                          if(fieldData.getName().equalsIgnoreCase("OTC")) {
+                            present = true;
+                            exchange.setProperty("otcfieldexist", "true");
+                            break;
+                          }
+                        }
+                        if(!present) {
+                          personData.generateOTC();
+                        }
+
+                        exchange.getMessage().setBody(personData, DemsPersonData.class);
+                      }
+                    }
+                  })
+                  .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
+                  .log(LoggingLevel.INFO,"DEMS-bound person data: '${body}'")
+                  .setProperty("update_data", simple("${body}"))
+                  .choice()
+                    .when(simple("${exchangeProperty.otcfieldexist} == 'false'"))
+                      // update case
+                      .setBody(simple("${exchangeProperty.update_data}"))
+                      .setHeader("key", jsonpath("$.key"))
+                      .setHeader("id", jsonpath("$.id"))
+                      .log(LoggingLevel.INFO,"DEMS-bound person id: '${header[id]}' key: '${header[key]}'")
+                      .setHeader("key").simple("${header.key}")
+                      .setHeader("id").simple("${header.id}")
+                      .removeHeader("CamelHttpUri")
+                      .removeHeader("CamelHttpBaseUri")
+                      .removeHeaders("CamelHttp*")
+                      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+                      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+                      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+                      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[id]}")
+                      .log(LoggingLevel.INFO,"Person updated.")
+                    .endChoice()
+                    .otherwise()
+                      .log(LoggingLevel.INFO,"Person OTC exists already.")
+                    .endChoice()
+                  .log(LoggingLevel.INFO, "There are cases with the person.")
+                .endChoice()
+                .otherwise()
+                  .log(LoggingLevel.INFO, "No cases associated to person.")
+                .end()
+            .end()
+          .end()
+        .end()
+    .log(LoggingLevel.INFO,"end of updateExistingParticipantwithOTC.")
+    ;
+  }
+
   private void updateExistingParticipantwithOTC() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -4689,7 +4823,7 @@ private void getDemsFieldMappingsrccStatus() {
         .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/")
         //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
         .setProperty("length",jsonpath("$.length()"))
-        .log(LoggingLevel.DEBUG,"Person count: ${exchangeProperty.length}")
+        .log(LoggingLevel.INFO,"Person count: ${exchangeProperty.length}")
         .split()
           .jsonpathWriteAsString("$.*")
           .setProperty("personId",jsonpath("$.id"))
