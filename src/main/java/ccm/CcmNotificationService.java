@@ -3434,9 +3434,7 @@ public class CcmNotificationService extends RouteBuilder {
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
           .log(LoggingLevel.DEBUG,"Retrieved related :${bodyAs(String)}")
           .setBody(simple("${body}"))
-          
     .end()
-    
     .choice() 
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != ''"))
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
