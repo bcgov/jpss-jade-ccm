@@ -396,7 +396,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
-    .log(LoggingLevel.INFO,"Event re-queued.")
+    .log(LoggingLevel.INFO,"Event re-queued. Return code: ${header.CamelHttpResponseCode}")
     ;
   }
 

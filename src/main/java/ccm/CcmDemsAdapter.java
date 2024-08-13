@@ -3279,13 +3279,14 @@ private void getDemsFieldMappingsrccStatus() {
       //.log(LoggingLevel.DEBUG,"Person in system: '${body}'")
       .setProperty("demspersondata", simple("${body}"))
       .unmarshal().json()
+      .log(LoggingLevel.DEBUG, "Search for from person: ${header[fromPersonId]} response: ${header[CamelHttpResponseCode]}")
 
       .choice()
         .when(simple("${header.CamelHttpResponseCode} == 200"))
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
-              String toPartId = (String)exchange.getProperty("toPartId");
+              String toPartId = exchange.getMessage().getHeader("toPartId", String.class);
               Object d =(Object)exchange.getIn().getBody();
               exchange.getMessage().setBody(d);
 
@@ -3303,12 +3304,13 @@ private void getDemsFieldMappingsrccStatus() {
                 log.info("Field Value: " + fieldData.getValue());
                 if(fieldData.getName().equalsIgnoreCase("MergedParticipantKeys")) {
                   present = true;
+                  log.info("Updating existing participant keys to:" + toPartId);
                   fieldData.setValue(toPartId);
                   break;
                 }
               }
               if(!present) {
-                log.info("Adding the merged participant key: " + toPartId);
+                log.info("Adding the merged participant primary key: " + toPartId);
                 personData.generateMergedParticipantKeys(toPartId);
               }
 
@@ -3396,14 +3398,15 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("demspersondata", simple("${body}"))
       .unmarshal().json()
 
+      .log(LoggingLevel.DEBUG, "Search to person: ${header[toPersonId]} response: ${header[CamelHttpResponseCode]}")
       .choice()
         .when(simple("${header.CamelHttpResponseCode} == 200"))
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
-              String fromPartId = (String)exchange.getProperty("fromPartId");
-              String fromMergedPartKeys = (String)exchange.getProperty("fromMergedPartKeys");
-              String toMergedPartKeys = (String)exchange.getProperty("toMergedPartKeys");
+              String fromPartId = exchange.getMessage().getHeader("fromPartId", String.class);
+              String fromMergedPartKeys = exchange.getMessage().getHeader("fromMergedPartKeys", String.class);
+              String toMergedPartKeys = exchange.getMessage().getHeader("toMergedPartKeys", String.class);
 
               StringBuffer participantKeys = new StringBuffer(fromPartId);
               if(fromMergedPartKeys != null && fromMergedPartKeys != "") {
@@ -3432,12 +3435,13 @@ private void getDemsFieldMappingsrccStatus() {
                 log.info("Field Value: " + fieldData.getValue());
                 if(fieldData.getName().equalsIgnoreCase("MergedParticipantKeys")) {
                   present = true;
+                  log.info("Updating existing participant keys to:" + participantKeys.toString());
                   fieldData.setValue(participantKeys.toString());
                   break;
                 }
               }
               if(!present) {
-                log.info("Adding the merged participant key: " + participantKeys.toString());
+                log.info("Adding the merged participant keys: " + participantKeys.toString());
                 personData.generateMergedParticipantKeys(participantKeys.toString());
               }
 
