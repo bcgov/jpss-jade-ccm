@@ -96,6 +96,7 @@ public class DemsFieldData {
         PRIMARY_AGENCY_FILE_NO("Primary Agency File No."),
         //added as part of jade - 2859
         OTC_PIN("OTC"),
+        MERGED_PARTICIPANT_KEYS("MergedParticipantKeys"),
         DISPOSITION_DATE("Disposition Date"),
         //added as part of jade -2617
         JUSTIN_IMAGE_ID("Image ID"),

@@ -139,15 +139,23 @@ public class DemsPersonData {
             fieldData.add(otc);
         }
     }
-    public void generateOTC(DemsPersonData d ) {
+
+    public void generateOTC() {
         Random r = new Random();
         int low = 0000;
         int high = 999999;
         int random = r.nextInt(high-low) + low;
         //System.out.println("Random Pin number generation" + random);
 
-        List<DemsFieldData> fieldData = d.getFields();
+        List<DemsFieldData> fieldData = getFields();
         DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),random);
+        fieldData.add(otc);
+        
+    }
+
+    public void generateMergedParticipantKeys(String participantKeys) {
+        List<DemsFieldData> fieldData = getFields();
+        DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MERGED_PARTICIPANT_KEYS.getLabel(), participantKeys);
         fieldData.add(otc);
         
     }

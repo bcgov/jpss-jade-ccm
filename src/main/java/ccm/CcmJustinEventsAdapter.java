@@ -397,7 +397,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/requeueEventById?id=${exchangeProperty.id}")
-    .log(LoggingLevel.INFO,"Event re-queued.")
+    .log(LoggingLevel.INFO,"Event re-queued. Return code: ${header.CamelHttpResponseCode}")
     ;
   }
 
@@ -671,10 +671,10 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
           .to("direct:processFileNote")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DEL_FNOTE))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DEL_FNOTE))
           .to("direct:processDeleteFileNote")
           .endChoice()
         .otherwise()
@@ -1812,6 +1812,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .end()
     ;
   }
+
   private void processFileNote() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

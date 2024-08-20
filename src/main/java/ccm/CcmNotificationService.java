@@ -864,7 +864,15 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ReportEvent.class)
     .delay(30000)
-    .to("kafka:{{kafka.topic.reports-priority.name}}")
+
+    .choice() // -> JADE-2896-MANU events get a priority topic
+      .when(simple("${header[event_message_type]} == 'MANU_FILE'"))
+        .setProperty("kafka-topic-reports").simple("{{kafka.topic.reports-priority.name}}")
+      .endChoice()
+      .otherwise()
+        .setProperty("kafka-topic-reports").simple("{{kafka.topic.reports.name}}")
+    .end()
+    .toD("kafka:${exchangeProperty.kafka-topic-reports}")
     ;
   }
 
@@ -1129,7 +1137,7 @@ public class CcmNotificationService extends RouteBuilder {
     })
     .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
     .log(LoggingLevel.INFO,"Generating derived event: ${body}")
-    .log(LoggingLevel.DEBUG,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
+    .log(LoggingLevel.INFO,"fromPartId : ${exchangeProperty.fromPartId} & toPartID : ${exchangeProperty.toPartId}")
     //search if from part id exist in the dems system
     .choice()
       .when(simple(" ${exchangeProperty.fromPartId} != ''"))
@@ -1141,8 +1149,15 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader("key", simple("${exchangeProperty.fromPartId}"))
       .to("http://ccm-dems-adapter/checkPersonExist")
       .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+      .doTry()
+        .setProperty("fromMergedKeys",jsonpath("$.fields[?(@.name == 'MergedParticipantKeys')].value"))
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR,"General Exception thrown.")
+        .log(LoggingLevel.ERROR,"${exception}")
+      .end()
       .unmarshal().json()
-      .setProperty("frompartId").simple("${body[id]}")
+      .setProperty("fromPersonId").simple("${body[id]}")
       .endChoice()
     .end()
     //search if to part id exist in the dems system
@@ -1156,16 +1171,27 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader("key", simple("${exchangeProperty.toPartId}"))
       .to("http://ccm-dems-adapter/checkPersonExist")
       .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+      .doTry()
+        .setProperty("toMergedKeys",jsonpath("$.fields[?(@.name == 'MergedParticipantKeys')].value"))
+      .endDoTry()
+      .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR,"General Exception thrown.")
+        .log(LoggingLevel.ERROR,"${exception}")
+      .end()
       .unmarshal().json()
-      .setProperty("topartId").simple("${body[id]}")
+      .setProperty("toPersonId").simple("${body[id]}")
       .endChoice()
     .end()
     //.log(LoggingLevel.INFO,"from part id :${exchangeProperty.frompartId} & to part id:${exchangeProperty.topartId}")
     //if both exist calling the merge api
     .choice()
-        .when(simple("${exchangeProperty.frompartId} != '' && ${exchangeProperty.topartId} != ''"))
-          .setHeader("fromPartid", simple("${exchangeProperty.frompartId}"))
-          .setHeader("toPartid", simple("${exchangeProperty.topartId}"))
+        .when(simple("${exchangeProperty.fromPersonId} != '' && ${exchangeProperty.toPersonId} != ''"))
+          .setHeader("fromPersonId", simple("${exchangeProperty.fromPersonId}"))
+          .setHeader("toPersonId", simple("${exchangeProperty.toPersonId}"))
+          .setHeader("fromPartid", simple("${exchangeProperty.fromPartId}"))
+          .setHeader("toPartid", simple("${exchangeProperty.toPartId}"))
+          .setHeader("fromMergedPartKeys", simple("${exchangeProperty.fromMergedKeys}"))
+          .setHeader("toMergedPartKeys", simple("${exchangeProperty.toMergedKeys}"))
           .to("http://ccm-dems-adapter/reassignParticipantCases")
           .log(LoggingLevel.INFO,"Received response: '${body}'")
         .endChoice()
@@ -1265,7 +1291,7 @@ public class CcmNotificationService extends RouteBuilder {
         // BCPSDEMS-1519, JADE-2712 If the DEMS case is inactive and not disabled due to a merge, then
         // check if this is a scenario of an rcc being re-submitted.
         .choice()
-          .when(simple("${body[rccStatus]} == 'Return'"))
+          .when(simple("${body[rccStatus]} == 'Return' || ${body[rccStatus]} == 'Received' || ${body[rccStatus]} == 'Submit'"))
             .setHeader("number").simple("${header.event_key}")
             .setHeader(Exchange.HTTP_METHOD, simple("GET"))
             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -1390,7 +1416,6 @@ public class CcmNotificationService extends RouteBuilder {
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
             
               .to("http://ccm-dems-adapter/updateCourtCase")
-              .log(LoggingLevel.INFO,"Update court case auth list.")
             .doCatch(HttpOperationFailedException.class)
               .log(LoggingLevel.ERROR,"Exception in updateCourtCase call")
               .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
@@ -1435,7 +1460,8 @@ public class CcmNotificationService extends RouteBuilder {
             .setHeader("number",simple("${exchangeProperty.courtNumber}"))
             .log(LoggingLevel.DEBUG, "calling processAccused persons ${body}")
             .to("direct:processAccusedPersons")
-        
+
+            .log(LoggingLevel.INFO,"Update court case auth list.")
             .to("direct:processCourtCaseAuthListChanged")
             .process(new Processor() {
               @Override
@@ -1862,7 +1888,7 @@ public class CcmNotificationService extends RouteBuilder {
     .unmarshal().json()
 
     .choice()
-      .when(simple("${body[status]} != 'Inactive'"))
+      .when(simple("${body[status]} != 'Inactive' || ${body[key]} == ${body[primaryAgencyFileId]}"))
         .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
         .process(new Processor() {
           @Override
@@ -2124,7 +2150,10 @@ public class CcmNotificationService extends RouteBuilder {
           }
           if(bcm.getCourt_file_id() != null && !bcm.getCourt_file_id().isEmpty()) {
             // Only add if JUSTIN returned court file info.
-            relatedCf.add(bcm);
+            // and if the related court file isn't the current court file.
+            if(!metadata.getCourt_file_id().equalsIgnoreCase(bcm.getCourt_file_id())) {
+              relatedCf.add(bcm);
+            }
           }
           metadata.setRelated_court_cases(relatedCf);
           exchange.setProperty("metadata_object", metadata);
@@ -2148,8 +2177,8 @@ public class CcmNotificationService extends RouteBuilder {
       .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
       .unmarshal().json()
 
-      .choice() // If this is an inactive cast, look for the primary, if it exists.  That one should have all court files listed.
-        .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ''"))
+      .choice() // If this case key does not match the primary file id, look for the primary, if it exists.  That one should have all court files listed.
+        .when(simple("${body[primaryAgencyFileId]} != '' && ${body[key]} != ${body[primaryAgencyFileId]}"))
           .setHeader("key").simple("${body[primaryAgencyFileId]}")
           .setHeader("event_key",simple("${body[primaryAgencyFileId]}"))
           .setHeader("number",simple("${body[primaryAgencyFileId]}"))
@@ -2162,92 +2191,84 @@ public class CcmNotificationService extends RouteBuilder {
         .endChoice()
       .end()
 
-      .choice() // TODO: EW need to verify with business if we should be limiting to primary only or go through all rccs.
-        .when(simple("${body[status]} != 'Inactive'"))
-          .setProperty("dems_court_files").simple("${body[courtFileId]}")
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) {
-              CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
-              String demsCourtFiles = (String)exchange.getProperty("dems_court_files", String.class);
-              String[] demsCourtFileList = demsCourtFiles.split("; ");
-              ArrayList<String> courtFileList = new ArrayList<String>();
-              if(demsCourtFileList != null && demsCourtFileList.length > 0) {
-                //log.info("metaMainCourtFile:"+metadata.getCourt_file_id());
-                for(String demsCourtFileId : demsCourtFileList) {
-                  //log.info("Comparing court file:"+demsCourtFileId);
-                  if(demsCourtFileId.equalsIgnoreCase(metadata.getCourt_file_id())) {
-                    continue;
-                  } else {
-                    //log.info("related length:"+metadata.getRelated_court_cases().size());
-                    boolean matchFound = false;
-                    for(CourtCaseData ccd : metadata.getRelated_court_cases()) {
-                      String courtFileId = ccd.getCourt_file_id();
-                      //log.info("related court file:"+courtFileId);
-                      if(demsCourtFileId.equalsIgnoreCase(courtFileId)) {
-                        matchFound = true;
-                        break;
-                      }
-                    }
-                    if(!matchFound) {
-                      courtFileList.add(demsCourtFileId);
-                    }
+      .setProperty("dems_court_files").simple("${body[courtFileId]}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
+          String demsCourtFiles = (String)exchange.getProperty("dems_court_files", String.class);
+          String[] demsCourtFileList = demsCourtFiles.split("; ");
+          ArrayList<String> courtFileList = new ArrayList<String>();
+          if(demsCourtFileList != null && demsCourtFileList.length > 0) {
+            log.info("metaMainCourtFile:"+metadata.getCourt_file_id());
+            for(String demsCourtFileId : demsCourtFileList) {
+              log.info("Comparing court file:"+demsCourtFileId);
+              if(demsCourtFileId.equalsIgnoreCase(metadata.getCourt_file_id())) {
+                continue;
+              } else {
+                log.info("related length:"+metadata.getRelated_court_cases().size());
+                boolean matchFound = false;
+                for(CourtCaseData ccd : metadata.getRelated_court_cases()) {
+                  String courtFileId = ccd.getCourt_file_id();
+                  log.info("related court file:"+courtFileId);
+                  if(demsCourtFileId.equalsIgnoreCase(courtFileId)) {
+                    matchFound = true;
+                    break;
                   }
                 }
+                if(!matchFound) {
+                  courtFileList.add(demsCourtFileId);
+                }
               }
-              exchange.getMessage().setBody(courtFileList);
             }
-          })
-          .log(LoggingLevel.INFO, "Unprocessed court file list: ${body}")
-          .split().jsonpathWriteAsString("$.*")
-            .setProperty("courtFileId", simple("${body}"))
-            .log(LoggingLevel.DEBUG, "court file: ${exchangeProperty.courtFileId}")
+          }
+          exchange.getMessage().setBody(courtFileList);
+        }
+      })
+      .log(LoggingLevel.INFO, "Unprocessed court file list: ${body}")
+      .split().jsonpathWriteAsString("$.*")
+        .setProperty("courtFileId", simple("${body}"))
+        .log(LoggingLevel.DEBUG, "court file: ${exchangeProperty.courtFileId}")
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            String courtFileId = exchange.getProperty("courtFileId", String.class);
+            //log.info("courtFileId:"+courtFileId);
+            exchange.setProperty("courtFileId", courtFileId.replaceAll("\"", ""));
+          }
+        })
+
+        .choice()
+          .when(simple("${exchangeProperty.courtFileId} != ''"))
+            .log(LoggingLevel.DEBUG, "court file updated: ${exchangeProperty.courtFileId}")
+            .setHeader("number").simple("${exchangeProperty.courtFileId}")
+            .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+            .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+            .removeHeader(Exchange.CONTENT_ENCODING)
+            .to("http://ccm-lookup-service/getCourtCaseMetadata")
+
+            .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+            .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
             .process(new Processor() {
               @Override
               public void process(Exchange exchange) {
-                String courtFileId = exchange.getProperty("courtFileId", String.class);
-                //log.info("courtFileId:"+courtFileId);
-                exchange.setProperty("courtFileId", courtFileId.replaceAll("\"", ""));
+                CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+                CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
+                List<CourtCaseData> relatedCf = metadata.getRelated_court_cases();
+                if(relatedCf == null) {
+                  relatedCf = new ArrayList<CourtCaseData>();
+                }
+                if(bcm.getCourt_file_id() != null && !bcm.getCourt_file_id().isEmpty()) {
+                  // Only add if JUSTIN returned court file info.
+                  relatedCf.add(bcm);
+                }
+                //log.info("Added new court file to metadata object.");
+                metadata.setRelated_court_cases(relatedCf);
+                exchange.setProperty("metadata_object", metadata);
               }
             })
-
-            .choice()
-              .when(simple("${exchangeProperty.courtFileId} != ''"))
-                .log(LoggingLevel.DEBUG, "court file updated: ${exchangeProperty.courtFileId}")
-                .setHeader("number").simple("${exchangeProperty.courtFileId}")
-                .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .removeHeader(Exchange.CONTENT_ENCODING)
-                .to("http://ccm-lookup-service/getCourtCaseMetadata")
-
-                .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
-                .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
-                .process(new Processor() {
-                  @Override
-                  public void process(Exchange exchange) {
-                    CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
-                    CourtCaseData metadata = (CourtCaseData)exchange.getProperty("metadata_object", CourtCaseData.class);
-                    List<CourtCaseData> relatedCf = metadata.getRelated_court_cases();
-                    if(relatedCf == null) {
-                      relatedCf = new ArrayList<CourtCaseData>();
-                    }
-                    if(bcm.getCourt_file_id() != null && !bcm.getCourt_file_id().isEmpty()) {
-                      // Only add if JUSTIN returned court file info.
-                      relatedCf.add(bcm);
-                    }
-                    //log.info("Added new court file to metadata object.");
-                    metadata.setRelated_court_cases(relatedCf);
-                    exchange.setProperty("metadata_object", metadata);
-                  }
-                })
-              .endChoice()
-            .end()
-          .end()
-        .endChoice()
-        .otherwise()
-          // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
-          .log(LoggingLevel.INFO, "Not an active primary case")
-        .endChoice()
+          .endChoice()
+        .end()
       .end()
 
     .end()
@@ -2997,9 +3018,12 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-dems-adapter/updateCourtCase")
+        
+        .log(LoggingLevel.INFO,"Update court case auth list.")
+        .to("direct:processCourtCaseAuthListChanged")
       .endChoice()
     .end()
-    .log(LoggingLevel.INFO, "Completed court case update.")
+    .log(LoggingLevel.INFO, "Completed court case processCaseMerge.")
 
     ;
   }
@@ -3720,9 +3744,8 @@ public class CcmNotificationService extends RouteBuilder {
               setInactiveCase = Boolean.FALSE;
               rmsProccessStatus = DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.NPRQ.getName();
             }
-          
             //f all court files are either “Semi-Active”, "Pending", "No Process Required" or “Destroyed”
-            if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE) == 0 && closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN) == 0){
+            else if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.ACTIVE) == 0 && closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN) == 0){
               //Has any PENDING
               if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND).intValue() >= 1 ){
                 rmsProccessStatus =  DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.PEND.getName();
@@ -3733,8 +3756,7 @@ public class CcmNotificationService extends RouteBuilder {
               }
               setInactiveCase = Boolean.TRUE;
             }
-            
-            if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
+            else if (closeFileResults.get(DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN).intValue() > 0) {
               rmsProccessStatus =   DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS.RETN.getName();
               setInactiveCase = Boolean.FALSE;
             }
@@ -3817,16 +3839,25 @@ public class CcmNotificationService extends RouteBuilder {
     boolean retValue = false;
     /// loop thru hashmap, find 1st non-zero if not match for type return false. if find type, return true
     RMS_PROCESSING_STATUS_MAPPINGS valueWithCount = null;
+    RMS_PROCESSING_STATUS_MAPPINGS findWithCount = null;
     for (RMS_PROCESSING_STATUS_MAPPINGS iterable_element : results.keySet()) {
       Integer resultValue = results.get(iterable_element);
-      valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
-      if (valueWithCount != null )  {
-        break;  
+      log.info(iterable_element.getName() + ": " + resultValue.toString());
+      if(typeToFInd != iterable_element) {
+        valueWithCount = resultValue.intValue() > 0 ?  iterable_element : null;
+        if (valueWithCount != null )  {
+          break;  
+        }
+      } else if(typeToFInd == iterable_element) {
+        findWithCount  = resultValue.intValue() > 0 ?  iterable_element : null;
       }
     }
     if (valueWithCount != null ) {
       retValue = valueWithCount == typeToFInd;
+    } else if (findWithCount != null) {
+      retValue = true;
     }
+    log.info("VerifyAllFileResultsOnlyFor"+retValue);
     return retValue;
   }
 }

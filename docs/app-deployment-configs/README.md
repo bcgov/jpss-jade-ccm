@@ -14,6 +14,7 @@
 | splunk-host-url | Splunk URI | Host URI (without HTTP prefix) |
 | pidp-kafka-topic-usercreation-name | PIDP Kafka User Creation Topic Name | string |
 | pidp-kafka-topic-processresponse-name | PIDP Kafka User Process Response Topic Name | string |
+| pidp-kafka-topic-participantmerge-name | PIDP Kafka Participant Merge Topic Name | string |
 | pidp-kafka-oauth-token-endpoint-url | PIDP OAuth Token Endpoint URI | Host URI (with HTTP prefix) |
 | pidp-kafka-bootstrapservers-url | PIDP Kafka Boostrap Servers URI | Host URI (without HTTP prefix) |
 | pidp-kafka-apicurioregistry-url | PIDP Kafka Apicurio Registry URI | Host URI (with HTTP prefix) |
