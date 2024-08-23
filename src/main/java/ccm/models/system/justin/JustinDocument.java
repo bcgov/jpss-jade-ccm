@@ -49,6 +49,7 @@ public class JustinDocument {
 
   private String active_yn;
   private String participants;
+  private String http_response_code;
 
 
   public String getReport_type() {
@@ -409,6 +410,14 @@ public class JustinDocument {
 
   public void setParticipants(String participants) {
     this.participants = participants;
+  }
+
+  public String getHttp_response_code() {
+    return http_response_code;
+  }
+
+  public void setHttp_response_code(String http_response_code) {
+    this.http_response_code = http_response_code;
   }
 
 }

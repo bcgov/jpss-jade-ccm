@@ -511,8 +511,8 @@ public class CcmPidpAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG, "bearer set : ${header.pidp_access.token}")
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
-      //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
-      .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+      //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}CaseAccess/getCaseUserKeys?RCCNumber=${header.number}")
+      .toD("{{pidp-api-host}}CaseAccess/getCaseUserKeys?RCCNumber=${header.number}")
 
       .log(LoggingLevel.DEBUG,"Received response from Case Mgt API: '${body}'")
       .choice()

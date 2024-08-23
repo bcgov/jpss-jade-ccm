@@ -477,28 +477,72 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/imageDataGet")
-    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
-    .process(new Processor() {
-      @Override
-      public void process(Exchange exchange) {
-        JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
-        ReportDocumentList rd = new ReportDocumentList(j);
-        exchange.getMessage().setBody(rd, ReportDocumentList.class);
-        log.info("Document count: "+rd.getDocuments().size());
-      }
-    })
-    .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
-    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+
+    .doTry()
+
+      .log(LoggingLevel.INFO,"getImageData request received.")
+      .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+      .toD("https://{{justin.host}}/imageDataGet")
+      .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+      .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
+          ReportDocumentList rd = new ReportDocumentList(j);
+          exchange.getMessage().setBody(rd, ReportDocumentList.class);
+          log.info("Document count: "+rd.getDocuments().size());
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
+      .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .choice()
+        .when().simple("${exception.statusCode} == 404")
+          .log(LoggingLevel.WARN, "404 Document not found.")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ReportDocumentList rd = new ReportDocumentList();
+              exchange.getMessage().setBody(rd, ReportDocumentList.class);
+            }
+          })
+          .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
+          .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.ERROR,"HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.ERROR, "Body: '${exception}'")
+          .log(LoggingLevel.ERROR, "${exception.message}")
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned response body : " + cause.getResponseBody());
+                throw exchange.getException();
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+    .end()
     ;
   }
 
