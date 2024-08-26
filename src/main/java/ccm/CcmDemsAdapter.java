@@ -1671,9 +1671,11 @@ private void getDemsFieldMappingsrccStatus() {
         //.log(LoggingLevel.INFO, "headers: ${headers}")
         .setProperty("length",jsonpath("$.length()"))
 
+        // check if there is an override to skip looping, instead of waiting for a case to complete creation.
         .choice()
-          .when(simple("${exchangeProperty.skipLoop} != 'true'"))
+          .when(simple("${exchangeProperty.skipLoop} == 'true'"))
             .setProperty("continueLoop").simple("false")
+            .log(LoggingLevel.DEBUG, "skip loop")
           .endChoice()
         .end()
 
