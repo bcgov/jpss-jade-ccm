@@ -3458,6 +3458,8 @@ public class CcmNotificationService extends RouteBuilder {
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
           .log(LoggingLevel.DEBUG,"Retrieved related :${bodyAs(String)}")
           .setBody(simple("${body}"))
+          .setHeader("rcc_id",simple("${exchangeProperty.rcc_id}"))
+          .to("http://ccm-dems-adapter/processFileNote")
     .end()
     .choice() 
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != ''"))
@@ -3481,6 +3483,8 @@ public class CcmNotificationService extends RouteBuilder {
       .marshal().json(JsonLibrary.Jackson, FileNote.class)
       .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
       .setBody(simple("${body}"))
+      .setHeader("rcc_id",simple("${exchangeProperty.rcc_id}"))
+      .to("http://ccm-dems-adapter/processNoteRecord")
     .endChoice()
   .end()
   .end();
