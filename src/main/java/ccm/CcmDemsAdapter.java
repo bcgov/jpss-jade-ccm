@@ -131,6 +131,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     createCaseRecord();
     updateCaseRecord();
     streamCaseRecord();
+    streamCaseRecordNative();
+    streamCaseRecordPdf();
     mergeCaseRecordsAndInactivateCase();
     getCaseRecordImageExistsByKey();
     getCaseRecordIdByDescriptionImageId();
@@ -3024,8 +3026,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("dems_case_id", jsonpath("$.caseId"))
     .setProperty("dems_record_id", jsonpath("$.recordId"))
     // decode the data element from Base64
-    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id} dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, DemsRecordDocumentData.class)
     .process(new Processor() {
       @Override
@@ -3056,26 +3057,108 @@ private void getDemsFieldMappingsrccStatus() {
       }
     })
     //.to("file:/tmp/output?fileName=${exchangeProperty.dems_case_id}-${exchangeProperty.dems_record_id}-jade.pdf")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
-    .log(LoggingLevel.DEBUG, "headers: ${headers}")
-    .log(LoggingLevel.DEBUG, "body: ${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
-    .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    .to("direct:streamCaseRecordNative")
+
+    // wait 3 seconds, before uploading the pdf version of the document
     .delay(3000)
-    .setBody(simple("${exchangeProperty.multipartBody}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, simple("${exchangeProperty.contentType}"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Pdf?renditionAction=Regenerate")
-    .log(LoggingLevel.INFO,"DEMS case record pdf file uploaded.")
+
+    .to("direct:streamCaseRecordPdf")
+
+    .end()
+    ;
+  }
+
+  private void streamCaseRecordNative() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .doTry()
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+      .log(LoggingLevel.DEBUG, "headers: ${headers}")
+      .log(LoggingLevel.DEBUG, "body: ${body}")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
+      .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      //.log(LoggingLevel.ERROR,"Exception message: ${body}")
+      .choice()
+        .when().simple("${exception.statusCode} == 412")
+          .log(LoggingLevel.ERROR, "Encountered import record conflict on Native record upload.  Wait additional 1.5 seconds to retry.")
+          .delay(1500)
+
+          .setBody(simple("${exchangeProperty.multipartBody}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .log(LoggingLevel.INFO,"Retry uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
+          .log(LoggingLevel.INFO,"DEMS case record native file re-uploaded successfully.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR, "Unexpected error while uploading native document.")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+              throw exchange.getException();
+            }
+          })
+        .end()
+      .log(LoggingLevel.ERROR, "Encountered exception while uploading native record")
+    .endDoCatch()
+    ;
+  }
+
+  private void streamCaseRecordPdf() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .doTry()
+      .setBody(simple("${exchangeProperty.multipartBody}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, simple("${exchangeProperty.contentType}"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .log(LoggingLevel.INFO,"Uploading DEMS case record pdf file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Pdf?renditionAction=Regenerate")
+      .log(LoggingLevel.INFO,"DEMS case record pdf file uploaded.")
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      //.log(LoggingLevel.ERROR,"Exception message: ${body}")
+      .choice()
+        .when().simple("${exception.statusCode} == 412")
+          .log(LoggingLevel.ERROR, "Encountered import record conflict on Pdf record upload.  Wait additional 1.5 seconds to retry.")
+          .delay(1500)
+
+          .setBody(simple("${exchangeProperty.multipartBody}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .log(LoggingLevel.INFO,"Retry uploading DEMS case record pdf file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Pdf?renditionAction=Regenerate")
+          .log(LoggingLevel.INFO,"DEMS case record pdf file re-uploaded successfully.")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR, "Unexpected error while uploading pdf document.")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .process(new Processor() {
+            public void process(Exchange exchange) throws Exception {
+              throw exchange.getException();
+            }
+          })
+        .end()
+      .log(LoggingLevel.ERROR, "Encountered exception while uploading pdf record")
+    .endDoCatch()
     ;
   }
 
