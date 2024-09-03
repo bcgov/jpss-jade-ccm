@@ -301,7 +301,7 @@ public class CcmReportsProcessor extends RouteBuilder {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&maxPollRecords=1&maxPollIntervalMs=4800000")
+    from("kafka:{{kafka.topic.reports.name}}?groupId=ccm-dems-adapter&consumersCount={{kafka.topic.chargeassessment.consumer.count}}&maxPollRecords=1&maxPollIntervalMs=4800000")
     .routeId(routeId)
     .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.reports.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
       "    on the topic ${headers[kafka.TOPIC]}\n" +

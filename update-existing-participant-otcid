@@ -10,9 +10,9 @@ else
     env=""
 fi
 
-id="$2"
+pageFrom="$2"
 
-idEnd="$3"
+pageTo="$3"
 
 if [ "$env" = "" ]; then
    echo "Error.  Invalid environment specified: '$1'"
@@ -34,12 +34,26 @@ if [ "$env" = "prod" ]; then
     fi
 fi
 
+if [ "$pageFrom" = "" ]; then
+   echo "Error.  pageFrom not specified.\n"
+   echo "$0 env pageFrom pageTo"
+   echo "E.g., $0 dev 1 15\n"
+   return 1
+fi
+
+if [ "$pageTo" = "" ]; then
+   echo "Error.  pageTo not specified.\n"
+   echo "$0 env pageFrom pageTo"
+   echo "E.g., $0 dev 1 15\n"
+   return 1
+fi
+
 echo "`basename $0` to $ns ..."
 
 if [ "$idEnd" = "" ]; then
     oc -n $ns exec service/ccm-dems-adapter -- curl \
     -X PUT \
-    "http://ccm-dems-adapter/updateExistingParticipantwithOTC"
+    "http://ccm-dems-adapter/updateExistingParticipantwithOTCV2?pageFrom=$pageFrom&pageTo=$pageTo"
 else
   echo "Unable to execute script"
 fi
