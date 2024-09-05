@@ -3430,7 +3430,7 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
         exchange.setProperty("storedFileNote", fileNote);
       }})
-    .log(LoggingLevel.DEBUG, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
     .log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
     .choice() 
       .when(simple(" ${exchangeProperty.primary_rcc_id} != ''"))
@@ -3458,8 +3458,8 @@ public class CcmNotificationService extends RouteBuilder {
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
           .log(LoggingLevel.DEBUG,"Retrieved related :${bodyAs(String)}")
           .setBody(simple("${body}"))
-          .setHeader("rcc_id",simple("${exchangeProperty.rcc_id}"))
-          .to("http://ccm-dems-adapter/processFileNote")
+          .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
+          .to("http://ccm-dems-adapter/processNoteRecord")
     .end()
     .choice() 
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != ''"))
@@ -3478,12 +3478,13 @@ public class CcmNotificationService extends RouteBuilder {
           CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
           fileNote.setOriginal_file_number(bcm.getCourt_file_no());
           exchange.getMessage().setBody(fileNote);
+          exchange.setProperty("primary_rcc_id", bcm.getCourt_file_id());
         }
       })
       .marshal().json(JsonLibrary.Jackson, FileNote.class)
-      .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+      .log(LoggingLevel.INFO,"Retrieved related : ${body}")
       .setBody(simple("${body}"))
-      .setHeader("rcc_id",simple("${exchangeProperty.rcc_id}"))
+      .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
       .to("http://ccm-dems-adapter/processNoteRecord")
     .endChoice()
   .end()
