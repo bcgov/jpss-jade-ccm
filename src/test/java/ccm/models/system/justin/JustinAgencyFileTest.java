@@ -3,33 +3,20 @@ package ccm.models.system.justin;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import ccm.models.system.justin.JustinAgencyFile;
-import ccm.models.system.justin.JustinAccused;
-import ccm.models.system.justin.JustinCourtFile;
 import ccm.utils.JsonParseUtils;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.system.dems.DemsChargeAssessmentCaseData;
 import ccm.models.system.dems.DemsFieldData;
-import ccm.models.system.dems.DemsPersonData;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
