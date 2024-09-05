@@ -146,7 +146,7 @@ public class DemsPersonData {
         int high = 999999;
         int random = r.nextInt(high-low) + low;
         String formatted = String.format("%06d", random);
-        System.out.println("Random Pin number generation" + formatted);
+        //System.out.println("Random Pin number generation: " + formatted);
 
         List<DemsFieldData> fieldData = getFields();
         DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),formatted);
