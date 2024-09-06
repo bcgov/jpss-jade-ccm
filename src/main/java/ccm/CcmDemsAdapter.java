@@ -5224,10 +5224,11 @@ private void getDemsFieldMappingsrccStatus() {
     .choice()
       .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
         .log(LoggingLevel.INFO, "Creating document record in dems")
+        
         .setBody(simple("${exchangeProperty.dems_record}"))
 
         .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
-        .log(LoggingLevel.DEBUG,"Sending derived dems record: ${body}")
+        .log(LoggingLevel.INFO,"Sending derived dems record: ${body}")
 
         // proceed to create record in dems, base on the caseid
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -5262,10 +5263,10 @@ private void getDemsFieldMappingsrccStatus() {
               data = id.getData();
             }
 
-            DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
+            //DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
             
-            //FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
-            ex.getMessage().setBody(demsFileNote.getFileNote());
+            FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
+            ex.getMessage().setBody(fileNoteDoc);
             String caseId = (String)ex.getProperty("caseId", String.class);
             String recordId = (String)ex.getProperty("recordId", String.class);
 
