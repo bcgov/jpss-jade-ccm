@@ -37,7 +37,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-
+import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
@@ -52,6 +52,7 @@ import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileNote;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
@@ -2868,7 +2869,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .log(LoggingLevel.INFO,"Processing request: " + simple("${body}"))
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
@@ -5153,16 +5154,26 @@ private void getDemsFieldMappingsrccStatus() {
   private void processNoteRecord() throws HttpOperationFailedException{
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
+    JacksonDataFormat df = new JacksonDataFormat(FileNote.class);
     // IN
-    // property: event_object
-    // property: caseFound
-    // property: dems_record
-    from("platform-http:/" + routeId )
+  
+    // property: filenoteevent
+    from("platform-http:/" + routeId + "?httpMethodRestrict=POST" )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"body (before unmarshalling): '${body}'")
     // need to look-up rcc_id if it exists in the body.
-    .setProperty("file_note").body()
+   // .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+   .unmarshal(df)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        //ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
+        
+        FileNote bodyInput = exchange.getIn().getBody(FileNote.class);
+        exchange.setProperty("file_note", bodyInput);
+      }})
+    //.setProperty("file_note").body()
     .setProperty("rcc_id", simple("${headers[rcc_id]}"))
     .log(LoggingLevel.INFO,"File note message: '${body}'")
 
@@ -5182,17 +5193,22 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
 
     // Check to make sure that there will not be any document collision.
-    .setBody(simple("${exchangeProperty.dems_record}"))
-    .unmarshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+    //.setBody(simple("${exchangeProperty.dems_record}"))
+    //.unmarshal().json(JsonLibrary.Jackson, DemsRecordData.class)
 
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
         // check to see if the record with the doc id exists, if so, increment the document id
-        DemsRecordData demsRecord = (DemsRecordData)ex.getIn().getBody(DemsRecordData.class);
-
+        //DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
+        //FileNoteEvent fileNoteEvent = demsFileNote.getFileNoteEvent();
+        FileNote demsFileNote = (FileNote) ex.getProperty("file_note");
+        log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
+        DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
+        //demsRecord.setType(fileNoteEvent.getJustin_message_event_type_cd());
         ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
         log.info("DocId: " + demsRecord.getDocumentId());
+        ex.setProperty("dems_record", demsRecord);
       }
 
     })
@@ -5246,9 +5262,10 @@ private void getDemsFieldMappingsrccStatus() {
               data = id.getData();
             }
 
-           
-            FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
-            ex.getMessage().setBody(fileNoteDoc);
+            DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
+            
+            //FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
+            ex.getMessage().setBody(demsFileNote.getFileNote());
             String caseId = (String)ex.getProperty("caseId", String.class);
             String recordId = (String)ex.getProperty("recordId", String.class);
 

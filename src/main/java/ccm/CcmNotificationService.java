@@ -62,6 +62,7 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
+import ccm.models.system.dems.DemsFileNote;
 import ccm.models.system.dems.DemsListItemFieldData;
 import ccm.models.system.dems.DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS;
 
@@ -3414,8 +3415,10 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"processFileNote event_message_id = ${header[event_key]}")
+    .setProperty("fileNoteEvent").body()
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
+    
     .to("http://ccm-lookup-service/getFileNote")
     .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
@@ -3453,12 +3456,20 @@ public class CcmNotificationService extends RouteBuilder {
             FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
             String agencyFileId = exchange.getProperty("agencyfileno", String.class);
             fileNote.setOriginal_file_number(agencyFileId);
-            exchange.getMessage().setBody(fileNote);
+           // exchange.getMessage().setBody(fileNote);
+            FileNoteEvent fileNoteEvent = exchange.getProperty("fileNoteEvent", FileNoteEvent.class);
+            //DemsFileNote demsFileNote = new DemsFileNote(fileNote, fileNoteEvent);
+            exchange.removeProperty("storedFileNote");
+          exchange.setProperty("storedFileNote", fileNote);
+
           }})
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
-          .log(LoggingLevel.DEBUG,"Retrieved related :${bodyAs(String)}")
-          .setBody(simple("${body}"))
+          .log(LoggingLevel.INFO,"Retrieved related :${bodyAs(String)}")
+          .setBody(simple("${exchangeProperty.storedFileNote}"))
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
+
           .to("http://ccm-dems-adapter/processNoteRecord")
     .end()
     .choice() 
@@ -3477,13 +3488,22 @@ public class CcmNotificationService extends RouteBuilder {
           FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
           CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
           fileNote.setOriginal_file_number(bcm.getCourt_file_no());
-          exchange.getMessage().setBody(fileNote);
+          FileNoteEvent fileNoteEvent = exchange.getProperty("fileNoteEvent", FileNoteEvent.class);
+          //exchange.getMessage().setBody(fileNote);
+          exchange.removeProperty("storedFileNote");
+          exchange.setProperty("storedFileNote", fileNote);
+        //  DemsFileNote demsFileNote = new DemsFileNote(fileNote, fileNoteEvent);
+        //  exchange.getMessage().setBody(demsFileNote);
+          //exchange.getMessage().setBody(fileNote);
           exchange.setProperty("primary_rcc_id", bcm.getCourt_file_id());
         }
       })
       .marshal().json(JsonLibrary.Jackson, FileNote.class)
       .log(LoggingLevel.INFO,"Retrieved related : ${body}")
-      .setBody(simple("${body}"))
+      //.setBody(simple("${body}"))
+      .setBody(simple("${exchangeProperty.storedFileNote}"))
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
       .to("http://ccm-dems-adapter/processNoteRecord")
     .endChoice()
