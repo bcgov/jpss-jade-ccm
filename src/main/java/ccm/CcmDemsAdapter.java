@@ -386,7 +386,7 @@ public class CcmDemsAdapter extends RouteBuilder {
         .endChoice()
       .otherwise()
         .log(LoggingLevel.ERROR, "General Exception thrown: ${exception.message}")
-        .log("Body: ${body}")
+        //.log("Body: ${body}")
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("500"))
         .setBody(simple("{\"error\": \"${exception.message}\"}"))
         .transform().simple("Error reported: ${exception.message} - cannot process this message.")
@@ -834,7 +834,7 @@ private void getDemsFieldMappingsrccStatus() {
                 .log(LoggingLevel.ERROR,"Exception in createDocumentRecord call")
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
                 .setHeader("CCMException", simple("${exception.statusCode}"))
-      
+
                 .process(new Processor() {
                   @Override
                   public void process(Exchange exchange) throws Exception {
@@ -843,20 +843,20 @@ private void getDemsFieldMappingsrccStatus() {
                       if(errorList == null) {
                         errorList = new ArrayList<Exception>();
                       }
-      
-      
+
+
                       HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
                       exchange.getMessage().setBody(cause.getResponseBody());
-      
+
                       log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
-      
+
                       exchange.setProperty("exception", cause);
-      
+
                       if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
                         String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
                         exchange.getIn().setHeader("CCMExceptionEncoded", body);
                       }
-      
+
                       errorList.add(cause);
                       exchange.setProperty("errorList", errorList);
                     } catch(Exception ex) {
@@ -864,7 +864,7 @@ private void getDemsFieldMappingsrccStatus() {
                     }
                   }
                 })
-      
+
                 .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
                 .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
               .end()
@@ -3534,7 +3534,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
       .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
     .end()
-  
+
 
     //look-up target person to be primary and set the MergedParticipantKeys custom field to the fromMergedPartKeys, toMergedPartKeys and source part id.
     .doTry()
@@ -3665,7 +3665,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.WARN, "Failed indentifier creation of associated merge: ${exchangeProperty.exception}")
       .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
     .end()
-  
+
 
     // Re-assign any straggling cases on the source person over to the now primary person.
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -4213,9 +4213,9 @@ private void getDemsFieldMappingsrccStatus() {
      .routeId(routeId)
      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
      .log(LoggingLevel.INFO,"looking to activate case id = ${header.case_id}...")
- 
+
      .setProperty("dems_case_id", simple("${header.case_id}"))
- 
+
      //.toD("direct:deleteJustinRecords")
      //.log(LoggingLevel.INFO,"DEMS case records deleted.  Return code of ${header.CamelHttpResponseCode}")
      .doTry()
@@ -4227,7 +4227,7 @@ private void getDemsFieldMappingsrccStatus() {
            .to("direct:getCourtCaseStatusById")
            .setProperty("caseName",jsonpath("$.name"))
            .setProperty("rccId",jsonpath("$.key"))
- 
+
            .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Active\"}"))
            //.log(LoggingLevel.INFO, "${body}")
            .removeHeader("CamelHttpUri")
@@ -4258,7 +4258,7 @@ private void getDemsFieldMappingsrccStatus() {
              public void process(Exchange exchange) throws Exception {
                try {
                  HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
- 
+
                  exchange.getMessage().setBody(cause.getResponseBody());
                  log.info("Returned body : " + cause.getResponseBody());
                } catch(Exception ex) {
@@ -4379,10 +4379,10 @@ private void getDemsFieldMappingsrccStatus() {
 
   private void syncAccusedPersons() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-   
+
     //IN: property =number - primary rcc_id
     //IN: property =accused - List<CaseAccused>
-   
+
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -4395,7 +4395,7 @@ private void getDemsFieldMappingsrccStatus() {
         ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
         exchange.setProperty("accusedPersons", bodyInput);
       }})
-    
+
     .choice()
     .when(simple("${header.number}!= '' && ${body} != '' "))
       // get the primary rcc, based on the dems primary agency file id
@@ -4455,7 +4455,7 @@ private void getDemsFieldMappingsrccStatus() {
               .log(LoggingLevel.ERROR, "Encountered timeout.  Wait additional 30 seconds to continue.")
                // Sometimes EDT takes longer to create a case than their 30 second gateway timeout, so add a delay and continue on.
               .delay(30000)
-    
+
               //jade 1747
               .log(LoggingLevel.INFO,"Retry call SyncCaseParticipants for case ${exchangeProperty.caseId}")
               .setProperty("ParticipantTypeFilter", simple("Accused"))
@@ -4479,7 +4479,7 @@ private void getDemsFieldMappingsrccStatus() {
                   exchange.getMessage().setBody(accusedPersons);
                 }
               })
-    
+
               .marshal().json()
               .split()
                 .jsonpathWriteAsString("$.*")
@@ -4490,7 +4490,7 @@ private void getDemsFieldMappingsrccStatus() {
                 .to("direct:processAccusedPerson")
                 .log(LoggingLevel.INFO,"Accused participant updated.")
               .end()
-    
+
             .endChoice()
             .when().simple("${exception.statusCode} >= 400")
               .log(LoggingLevel.ERROR,"Client side error.  HTTP response code = ${exception.statusCode}")
@@ -4501,7 +4501,7 @@ private void getDemsFieldMappingsrccStatus() {
                 public void process(Exchange exchange) throws Exception {
                   try {
                     HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-    
+
                     exchange.getMessage().setBody(cause.getResponseBody());
                     log.info("Returned body : " + cause.getResponseBody());
                   } catch(Exception ex) {
@@ -4514,23 +4514,23 @@ private void getDemsFieldMappingsrccStatus() {
               .stop()
             .endChoice()
           .end()
-        .end() 
+        .end()
       .endChoice()
     .end();
   }
 
   private void http_syncAccusedPersons() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-   
+
     //IN: property =number - primary rcc_id
     //IN: property =accused - List<CaseAccused>
-   
+
     from("platform-http:/syncAccusedPersons?httpMethodRestrict=POST")
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
-    
+
     .to("direct:syncAccusedPersons")
     .end();
   }
@@ -4664,7 +4664,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"updateExistingParticipantwithOTC... pages: ${header.pageFrom} -> ${header.pageTo}")
     //.setProperty("pageFrom", header("pageFrom"))
     //.setProperty("pageTo", header("pageTo"))
-    
+
     .setProperty("v2DemsHost", simple("{{dems.host}}"))
     .process(new Processor() {
       @Override
@@ -4758,7 +4758,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"end of processParticipantsList.")
     ;
   }
-  
+
   private void updateOtcParticipants() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
