@@ -32,11 +32,15 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.FileCloseData;
+import ccm.models.common.data.FileDisposition;
+import ccm.models.common.data.FileNote;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.Error;
@@ -48,6 +52,9 @@ import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtFile;
 import ccm.models.system.justin.JustinCrownAssignmentList;
 import ccm.models.system.justin.JustinDocumentList;
+import ccm.models.system.justin.JustinFileClose;
+import ccm.models.system.justin.JustinFileDisposition;
+import ccm.models.system.justin.JustinFileNote;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -65,7 +72,9 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
     getImageData();
-
+    getFileDisp();
+    getFileNote();
+    getFileCloseData();
   }
 
   private void attachExceptionHandlers() {
@@ -468,30 +477,165 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getImageData request received.")
-    .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+
+    .doTry()
+
+      .log(LoggingLevel.INFO,"getImageData request received.")
+      .log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+      .toD("https://{{justin.host}}/imageDataGet")
+      .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
+      .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
+          ReportDocumentList rd = new ReportDocumentList(j);
+          exchange.getMessage().setBody(rd, ReportDocumentList.class);
+          log.info("Document count: "+rd.getDocuments().size());
+        }
+      })
+      .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
+      .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+
+    .endDoTry()
+    .doCatch(HttpOperationFailedException.class)
+      .choice()
+        .when().simple("${exception.statusCode} == 404")
+          .log(LoggingLevel.WARN, "404 Document not found.")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              ReportDocumentList rd = new ReportDocumentList();
+              exchange.getMessage().setBody(rd, ReportDocumentList.class);
+            }
+          })
+          .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
+          .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+        .endChoice()
+        .otherwise()
+          .log(LoggingLevel.ERROR,"Exception: ${exception}")
+          .log(LoggingLevel.ERROR,"HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.ERROR, "Body: '${exception}'")
+          .log(LoggingLevel.ERROR, "${exception.message}")
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+                exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+                exchange.getMessage().setBody(cause.getResponseBody());
+                log.info("Returned response body : " + cause.getResponseBody());
+                throw exchange.getException();
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+        .endChoice()
+      .end()
+    .end()
+    ;
+  }
+
+  private void getFileCloseData() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"file close request received for mdoc: ${header.number}")
+    //.log(LoggingLevel.DEBUG,"Request to justin: '${body}'")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/imageDataGet")
+    .log(LoggingLevel.INFO, "LookupService calling Justin file close")
+    .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinDocumentList.class)
+    
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        JustinDocumentList j = exchange.getIn().getBody(JustinDocumentList.class);
-        ReportDocumentList rd = new ReportDocumentList(j);
-        exchange.getMessage().setBody(rd, ReportDocumentList.class);
-        log.info("Document count: "+rd.getDocuments().size());
+        JustinFileClose j = exchange.getIn().getBody(JustinFileClose.class);
+        FileCloseData fileCloseData = new FileCloseData(j.getMdoc_justin_no(),j.getRms_event_type(), j.getRms_event_date());
+       exchange.getMessage().setBody(fileCloseData);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ReportDocumentList.class)
+    .marshal().json(JsonLibrary.Jackson, FileCloseData.class)
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+
+  }
+  private void getFileDisp() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.DEBUG,"getFileDisp request received. mdoc_justin_no = ${header.number}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .toD("https://{{justin.host}}/fileDisp?mdoc_justin_no=${header.number}")
+    .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileDisposition.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinFileDisposition j = exchange.getIn().getBody(JustinFileDisposition.class);
+        FileDisposition fileDisposition = new FileDisposition(j.getMdoc_justin_no(), j.getDisposition_date());
+       exchange.getMessage().setBody(fileDisposition);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, FileDisposition.class)
     .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     ;
   }
 
+  private void getFileNote(){
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
+    .unmarshal().json(JsonLibrary.Jackson, JustinFileNote.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinFileNote j = exchange.getIn().getBody(JustinFileNote.class);
+        FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no());
+        exchange.getMessage().setBody(fileNote);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, FileNote.class)
+    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    ;
+  }
 }

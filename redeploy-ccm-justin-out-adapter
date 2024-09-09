@@ -71,6 +71,7 @@ kamel -n $ns run \
   # --resource file:../../mapping/justin2businessCourtCaseData.adm \
   # --trait logging.level=DEBUG
 fi
+
 #kubectl -n $ns patch integration ccm-justin-out-adapter --type='json' -p='[{"op": "replace", "path": "/spec/replicas", "value": 3}]'
 popd
 

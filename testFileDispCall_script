@@ -34,12 +34,21 @@ if [ "$env" = "prod" ]; then
     fi
 fi
 
+if [ "$id" = "" ]; then
+   echo "Error.  Event id or range not specified.\n"
+   echo "$0 env justin_event_id"
+   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
+   echo "E.g., $0 dev 100"
+   echo "      $0 dev 100 105\n"
+   return 1
+fi
+
 echo "`basename $0` to $ns ..."
 
 if [ "$idEnd" = "" ]; then
-    oc -n $ns exec service/ccm-dems-adapter -- curl \
+    oc -n $ns exec service/ccm-lookup-service -- curl \
     -X PUT \
-    "http://ccm-dems-adapter/updateEdtExternalIdExistingParticipant"
+    "http://ccm-justin-out-adapter/getFileDisp?number=$id"
 else
   echo "Unable to execute script"
 fi

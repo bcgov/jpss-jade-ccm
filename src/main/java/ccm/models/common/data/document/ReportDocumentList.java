@@ -13,7 +13,9 @@ public class ReportDocumentList {
   private List<ReportDocument> documents;
 
   public ReportDocumentList() {
+    documents = new ArrayList<ReportDocument>();
   }
+
   public ReportDocumentList(JustinDocumentList jdl) {
     setCreate_date(jdl.getCreate_date());
     setVersion(jdl.getVersion());

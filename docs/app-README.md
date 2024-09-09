@@ -86,6 +86,28 @@ Installation instructions for GraphViz dot is available [here](https://plantuml.
 
 ---
 
+## External API endpoints
+
+JADE-CCM has a couple of external API endpoints, which are used by JUSTIN and CCSS
+* GET getCaseHyperlink, which takes a parameter of rcc_id
+* POST getCaseListHyperlink, which takes a JSON in the body in the form of { "rcc_ids" : ["<rcc_id>", "<rcc_id>", ...] }
+
+https://jade-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca/justin/api/v1
+
+https://jade-ccm-justin-adapter-test.apps.silver.devops.gov.bc.ca/justin/api/v1
+
+https://jade-ccm-justin-adapter-prod.apps.silver.devops.gov.bc.ca/justin/api/v1
+
+The APIs require a bearer token to access.  This token value can be retrieved from the openshift project under Secrets -> ccm-secrets, under the "justin-in-security-token" entry.
+
+* eg. <justin-adapter url>/getCaseHyperlink?rcc_id=50450.0734
+* eg. <justin-adapter url>/getCaseListHyperlink
+body: { "rcc_ids" : ["174152.0877", "174153.0877", "174105.0877"]}
+
+
+
+---
+
 ## Integrated Development Environment (IDE) and Extensions
 
 JADE-CCM is developed using the Visual Studio Code IDE.  The freely downloadable IDE tool can be downloaded from Microsoft's official web site: https://code.visualstudio.com .  For Apple Mac developers, you can also install the tool via Homebrew (https://brew.sh) and the cask formulae https://formulae.brew.sh/cask/visual-studio-code#default .

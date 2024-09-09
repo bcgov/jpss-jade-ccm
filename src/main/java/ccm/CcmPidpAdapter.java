@@ -45,6 +45,8 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
 import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.ParticipantMergeEvent;
+import ccm.models.system.pidp.PidpParticipantMergeEvent;
 import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.models.system.pidp.PidpUserProcessStatusEvent;
 import ccm.utils.DateTimeUtils;
@@ -60,6 +62,8 @@ public class CcmPidpAdapter extends RouteBuilder {
     processCaseUserAccountCreated();
     processBulkCaseUserEvents();
     processCaseUserBulkLoadCompleted();
+    processParticipantMergeEvents();
+    processParticipantMerge();
     publishBodyAsEventKPI();
     getCourtCaseAuthList();
     getKafkaToken();
@@ -416,6 +420,80 @@ public class CcmPidpAdapter extends RouteBuilder {
     ;
   }
 
+  private void processParticipantMergeEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("kafka:{{kafka.topic.participant.name}}?brokers={{ccm.kafka.brokers}}&groupId=ccm-pidp-adapter&maxPollRecords=30&maxPollIntervalMs=600000&securityProtocol=PLAINTEXT")
+    .routeId(routeId)
+    .doTry()
+      .log(LoggingLevel.INFO,"Event from Kafka {{kafka.topic.participant.name}} topic (offset=${headers[kafka.OFFSET]}): ${body}\n" +
+        "    on the topic ${headers[kafka.TOPIC]}\n" +
+        "    on the partition ${headers[kafka.PARTITION]}\n" +
+        "    with the offset ${headers[kafka.OFFSET]}\n" +
+        "    with the key ${headers[kafka.KEY]}")
+      .setHeader("event_key")
+        .jsonpath("$.event_key")
+      .setHeader("event_status")
+        .jsonpath("$.event_status")
+      .setHeader("event_message_id")
+        .jsonpath("$.justin_event_message_id")
+      .setHeader("event")
+        .simple("${body}")
+      .unmarshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+      .setProperty("kpi_event_object", body())
+      .setProperty("kpi_event_topic_name", simple("${headers[kafka.TOPIC]}"))
+      .setProperty("kpi_event_topic_offset", simple("${headers[kafka.OFFSET]}"))
+      .setProperty("kpi_event_topic_partition", simple("${headers[kafka.PARTITION]}"))
+      .marshal().json(JsonLibrary.Jackson, ParticipantMergeEvent.class)
+      .choice()
+        .when(header("event_status").isEqualTo(ParticipantMergeEvent.STATUS.PART_MERGE))
+          .setProperty("kpi_component_route_name", simple("processParticipantMerge"))
+          .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+          .to("direct:publishEventKPI")
+          .setBody(header("event"))
+          .to("direct:processParticipantMerge")
+          .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+          .to("direct:publishEventKPI")
+          .endChoice()
+      .end()
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Unable to process topic message: ${body}")
+      .log(LoggingLevel.ERROR,"General Exception thrown.")
+      .log(LoggingLevel.ERROR,"${exception}")
+    .end()
+    ;
+  }
+
+  private void processParticipantMerge() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN
+    // property: event_object
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    // in the following, should create PIDP object to be pushed onto PIDP topic.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        ParticipantMergeEvent original_event = (ParticipantMergeEvent)exchange.getProperty("kpi_event_object");
+        PidpParticipantMergeEvent ppme = new PidpParticipantMergeEvent(original_event);
+
+        exchange.getMessage().setBody(ppme);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, PidpParticipantMergeEvent.class)
+    .log(LoggingLevel.INFO,"Publishing part merge to PIDP topic. ${body}")
+
+    .to("kafka:{{pidp.kafka.topic.participantmerge.name}}")
+    .log(LoggingLevel.INFO,"Returned from processParticipantMerge.")
+    ;
+  }
+
   private void getCourtCaseAuthList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -433,8 +511,8 @@ public class CcmPidpAdapter extends RouteBuilder {
       .log(LoggingLevel.DEBUG, "bearer set : ${header.pidp_access.token}")
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "${header.pidp_access.token}") //https://dev.jpidp.justice.gov.bc.ca/api/v1/evidence-case-management/getCaseUserKeys?RCCNumber=
-      //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
-      .toD("{{pidp-api-host}}evidence-case-management/getCaseUserKeys?RCCNumber=${header.number}")
+      //.log(LoggingLevel.INFO,"trying to call evidence url : {{pidp-api-host}}CaseAccess/getCaseUserKeys?RCCNumber=${header.number}")
+      .toD("{{pidp-api-host}}CaseAccess/getCaseUserKeys?RCCNumber=${header.number}")
 
       .log(LoggingLevel.DEBUG,"Received response from Case Mgt API: '${body}'")
       .choice()
