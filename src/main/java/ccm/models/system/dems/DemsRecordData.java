@@ -566,12 +566,25 @@ public class DemsRecordData {
             DemsFieldData entry_date = new DemsFieldData("Entry Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
             fieldData.add(entry_date);
         }
-        setOriginalFileNumber(nrd.getMdoc_justin_no());
+        if (nrd.getMdoc_justin_no().isEmpty()) {
+            setOriginalFileNumber(nrd.getOriginal_file_number());
+        }
+        else{
+            setOriginalFileNumber(nrd.getMdoc_justin_no());
+        }
         if(getOriginalFileNumber() != null) {
             DemsFieldData title = new DemsFieldData("Justin Court File No", getOriginalFileNumber());
             fieldData.add(title);
         }
         setSource("BCPS Work");
+        setTitle(title);
+      
+        setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+        setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+        setPrimaryDateUtc(getStartDate());
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        setLocation("JUSTIN");
+        setFolder("JUSTIN");
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
@@ -597,12 +610,15 @@ public class DemsRecordData {
             notes.append(truncatedCaseName);
             notes.append(" ...");
         }
+        else{
+            notes.append(nrd.getNote_txt());
+        }
         setDescriptions(notes.toString());
         if(getDescriptions() != null) {
             DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
             fieldData.add(descriptions);
         }
-        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+       
         if(getLocation() != null) {
             DemsFieldData location = new DemsFieldData("ISL Event", getLocation());
             fieldData.add(location);
@@ -616,7 +632,6 @@ public class DemsRecordData {
             DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
             fieldData.add(extension);
         }
-
         setFields(fieldData);
     }
 
@@ -800,4 +815,25 @@ public class DemsRecordData {
     public void setCaseNoteCategory(String caseNoteCategory) {
         this.caseNoteCategory = caseNoteCategory;
     }
+
+    @Override
+    public String toString() {
+        return "DemsRecordData [descriptions=" + descriptions + ", title=" + title + ", startDate=" + startDate
+                + ", originalFileNumber=" + originalFileNumber + ", dateToCrown=" + dateToCrown + ", source=" + source
+                + ", custodian=" + custodian + ", location=" + location + ", folder=" + folder + ", documentId="
+                + documentId + ", fileExtension=" + fileExtension + ", primaryDateUtc=" + primaryDateUtc + ", type="
+                + type + ", lastApiRecordUpdate=" + lastApiRecordUpdate + ", reportType="
+                + reportType + ", incrementalDocCount=" + incrementalDocCount + ", image_id=" + image_id
+                + ", caseNoteCategory=" + caseNoteCategory + ", getTitle()=" + getTitle() + ", getStartDate()="
+                + getStartDate() + ", getSource()=" + getSource() + ", getCustodian()=" + getCustodian()
+                + ", getLocation()=" + getLocation() + ", getFolder()=" + getFolder() + ", getDocumentId()="
+                + getDocumentId() + ", getFileExtension()=" + getFileExtension() + ", getPrimaryDateUtc()="
+                + getPrimaryDateUtc() + ", getDescriptions()=" + getDescriptions() + ", getDateToCrown()="
+                + getDateToCrown() + ", getOriginalFileNumber()=" + getOriginalFileNumber() + ", getType()=" + getType()
+                + ", getLastApiRecordUpdate()=" + getLastApiRecordUpdate() + ", getIncrementalDocCount()="
+                + getIncrementalDocCount() + ", getReportType()=" + getReportType() + ", getImage_id()=" + getImage_id()
+                + ", getCaseNoteCategory()=" + getCaseNoteCategory() + "]";
+    }
+
+    
 }

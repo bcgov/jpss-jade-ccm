@@ -1395,7 +1395,7 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
       .when(simple("${exchangeProperty.existingRecordId} != ''"))
         .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
-        .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
+       // .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
       .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
@@ -5154,17 +5154,15 @@ private void getDemsFieldMappingsrccStatus() {
   private void processNoteRecord() throws HttpOperationFailedException{
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    JacksonDataFormat df = new JacksonDataFormat(FileNote.class);
     // IN
   
-    // property: filenoteevent
+    // property: filenote
     from("platform-http:/" + routeId + "?httpMethodRestrict=POST" )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"body (before unmarshalling): '${body}'")
-    // need to look-up rcc_id if it exists in the body.
-   // .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
-   .unmarshal(df)
+   
+   .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
@@ -5175,15 +5173,10 @@ private void getDemsFieldMappingsrccStatus() {
       }})
     //.setProperty("file_note").body()
     .setProperty("rcc_id", simple("${headers[rcc_id]}"))
-    .log(LoggingLevel.INFO,"File note message: '${body}'")
-
     .log(LoggingLevel.INFO,"rcc_id passed in : " + "${exchangeProperty.rcc_id}")
-    .log(LoggingLevel.INFO,"rcc_id = ${header[rcc_id]}")
     .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
 
     .removeProperty("recordId")
-
-
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
     .to("direct:getCourtCaseStatusByKey")
@@ -5191,17 +5184,11 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("caseId").simple("${body[id]}")
     .setProperty("caseStatus").simple("${body[status]}")
     .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
-
-    // Check to make sure that there will not be any document collision.
-    //.setBody(simple("${exchangeProperty.dems_record}"))
-    //.unmarshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
         // check to see if the record with the doc id exists, if so, increment the document id
-        //DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
-        //FileNoteEvent fileNoteEvent = demsFileNote.getFileNoteEvent();
+       
         FileNote demsFileNote = (FileNote) ex.getProperty("file_note");
         log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
         DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
@@ -5209,8 +5196,8 @@ private void getDemsFieldMappingsrccStatus() {
         ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
         log.info("DocId: " + demsRecord.getDocumentId());
         ex.setProperty("dems_record", demsRecord);
+        log.info("dems record from file note : " + demsRecord.toString());
       }
-
     })
 
     // now check this next value to see if there is a collision of this document
@@ -5226,7 +5213,6 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.INFO, "Creating document record in dems")
         
         .setBody(simple("${exchangeProperty.dems_record}"))
-
         .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
         .log(LoggingLevel.INFO,"Sending derived dems record: ${body}")
 
@@ -5249,22 +5235,7 @@ private void getDemsFieldMappingsrccStatus() {
         .process(new Processor() {
           @Override
           public void process(Exchange ex) {
-            // There are potentially 3 different record object types returne from JUSTIN, find the correct one,
-            // convert it to DemsRecordDocumentData and set it as the body.
-            ChargeAssessmentDocumentData cadd = (ChargeAssessmentDocumentData)ex.getProperty("charge_assessment_document", ChargeAssessmentDocumentData.class);
-            CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
-            ImageDocumentData id = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
-            String data = null;
-            if(cadd != null) {
-              data = cadd.getData();
-            } else if(ccdd != null) {
-              data = ccdd.getData();
-            } else if(id != null) {
-              data = id.getData();
-            }
-
-            //DemsFileNote demsFileNote = (DemsFileNote) ex.getProperty("file_note", DemsFileNote.class);
-            
+           
             FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
             ex.getMessage().setBody(fileNoteDoc);
             String caseId = (String)ex.getProperty("caseId", String.class);
@@ -5272,21 +5243,16 @@ private void getDemsFieldMappingsrccStatus() {
 
             ex.getMessage().setHeader("caseId", caseId);
             ex.getMessage().setHeader("recordId", recordId);
-           
           }
 
         })
         .marshal().json(JsonLibrary.Jackson, FileNote.class)
-        .log(LoggingLevel.DEBUG,"Sending file note record: ${body}")
+        .log(LoggingLevel.INFO,"Sending file note record: ${body}")
 
         // proceed to create record in dems, base on the caseid
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-        .to("direct:streamNoteRecord")
-      .endChoice()
-      .when(simple("${exchangeProperty.existingRecordId} != ''"))
-        .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
-        .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
+       .to("direct:streamNoteRecord")
       .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of processNoteRecord")
@@ -5298,7 +5264,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .log(LoggingLevel.INFO,"Processing request streamNoteRecord: ${body}")
     .setProperty("NoteRecord", simple("${bodyAs(String)}"))
     .setProperty("dems_case_id", simple("${headers[caseId]}"))
     .setProperty("dems_record_id", simple("${headers[recordId]}"))

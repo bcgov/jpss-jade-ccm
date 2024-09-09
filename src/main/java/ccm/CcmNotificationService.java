@@ -3420,7 +3420,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_key]}"))
     
     .to("http://ccm-lookup-service/getFileNote")
-    .log(LoggingLevel.DEBUG,"Lookup response = '${body}'")
+    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
@@ -3428,7 +3428,7 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-        log.debug("file note to set : file note id " + fileNote.getFile_note_id());
+        log.info("file note to set : file note id " + fileNote.getFile_note_id());
         exchange.setProperty("primary_rcc_id", fileNote.getrcc_id());
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
         exchange.setProperty("storedFileNote", fileNote);
@@ -3437,6 +3437,7 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
     .choice() 
       .when(simple(" ${exchangeProperty.primary_rcc_id} != ''"))
+
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3456,16 +3457,14 @@ public class CcmNotificationService extends RouteBuilder {
             FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
             String agencyFileId = exchange.getProperty("agencyfileno", String.class);
             fileNote.setOriginal_file_number(agencyFileId);
-           // exchange.getMessage().setBody(fileNote);
-            FileNoteEvent fileNoteEvent = exchange.getProperty("fileNoteEvent", FileNoteEvent.class);
-            //DemsFileNote demsFileNote = new DemsFileNote(fileNote, fileNoteEvent);
             exchange.removeProperty("storedFileNote");
-          exchange.setProperty("storedFileNote", fileNote);
+            exchange.setProperty("storedFileNote", fileNote);
+            exchange.getMessage().setBody(fileNote);
 
           }})
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
-          .log(LoggingLevel.INFO,"Retrieved related :${bodyAs(String)}")
-          .setBody(simple("${exchangeProperty.storedFileNote}"))
+          //.setBody(simple("${exchangeProperty.storedFileNote}"))
+          .log(LoggingLevel.INFO,"Sending body from rcc :${bodyAs(String)}")
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3488,27 +3487,22 @@ public class CcmNotificationService extends RouteBuilder {
           FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
           CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
           fileNote.setOriginal_file_number(bcm.getCourt_file_no());
-          FileNoteEvent fileNoteEvent = exchange.getProperty("fileNoteEvent", FileNoteEvent.class);
-          //exchange.getMessage().setBody(fileNote);
           exchange.removeProperty("storedFileNote");
           exchange.setProperty("storedFileNote", fileNote);
-        //  DemsFileNote demsFileNote = new DemsFileNote(fileNote, fileNoteEvent);
-        //  exchange.getMessage().setBody(demsFileNote);
-          //exchange.getMessage().setBody(fileNote);
           exchange.setProperty("primary_rcc_id", bcm.getCourt_file_id());
+          exchange.getMessage().setBody(fileNote);
         }
       })
       .marshal().json(JsonLibrary.Jackson, FileNote.class)
-      .log(LoggingLevel.INFO,"Retrieved related : ${body}")
-      //.setBody(simple("${body}"))
-      .setBody(simple("${exchangeProperty.storedFileNote}"))
+      //.setBody(simple("${exchangeProperty.storedFileNote}"))
+      .log(LoggingLevel.INFO,"Sending body from mdoc :${bodyAs(String)}")
       .setHeader(Exchange.HTTP_METHOD, simple("POST"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
       .to("http://ccm-dems-adapter/processNoteRecord")
     .endChoice()
-  .end()
   .end();
+ 
   }
 
   private void processFileNoteDelete() {
