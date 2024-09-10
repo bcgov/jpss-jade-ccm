@@ -577,7 +577,7 @@ public class DemsRecordData {
             fieldData.add(title);
         }
         setSource("BCPS Work");
-        setTitle(title);
+        setTitle(getOriginalFileNumber());
       
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));

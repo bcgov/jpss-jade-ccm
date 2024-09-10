@@ -5168,22 +5168,23 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         //ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
         
-        FileNote bodyInput = exchange.getIn().getBody(FileNote.class);
+        FileNote bodyInput = (FileNote)exchange.getIn().getBody(FileNote.class);
         exchange.setProperty("file_note", bodyInput);
       }})
-    //.setProperty("file_note").body()
+    .setProperty("file_note").body()
     .setProperty("rcc_id", simple("${headers[rcc_id]}"))
+    
     .log(LoggingLevel.INFO,"rcc_id passed in : " + "${exchangeProperty.rcc_id}")
-    .log(LoggingLevel.DEBUG,"Lookup message: '${body}'")
-
+    .log(LoggingLevel.INFO,"Body after setting to prop: '${body}'")
+   
     .removeProperty("recordId")
     .setProperty("key", simple("${header.number}"))
+    
     // check to see if the court case exists, before trying to insert record to dems.
-    .to("direct:getCourtCaseStatusByKey")
-    .unmarshal().json()
-    .setProperty("caseId").simple("${body[id]}")
-    .setProperty("caseStatus").simple("${body[status]}")
-    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+   .to("direct:getCourtCaseStatusByKey")
+   .log(LoggingLevel.INFO, "body coming back : ${body} " )
+   .setProperty("caseId", jsonpath("$.id"))
+   .setProperty("caseStatus",jsonpath("$.status"))
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
@@ -5199,14 +5200,14 @@ private void getDemsFieldMappingsrccStatus() {
         log.info("dems record from file note : " + demsRecord.toString());
       }
     })
-
+      
     // now check this next value to see if there is a collision of this document
     .to("direct:getCaseDocIdExistsByKey")
     .log(LoggingLevel.INFO, "returned key: ${body}")
-    .unmarshal().json()
-    .setProperty("existingRecordId").simple("${body[id]}")
+    //.unmarshal().json()
+    .setProperty("existingRecordId",jsonpath("$.id"))
     .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
-
+ 
     // Make sure that it is an existing and active case, before attempting to add the record
     .choice()
       .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
@@ -5253,7 +5254,7 @@ private void getDemsFieldMappingsrccStatus() {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
        .to("direct:streamNoteRecord")
-      .endChoice()
+      .endChoice() 
     .end()
     .log(LoggingLevel.INFO, "end of processNoteRecord")
     ;
