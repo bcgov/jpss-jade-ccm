@@ -5193,7 +5193,6 @@ private void getDemsFieldMappingsrccStatus() {
         FileNote demsFileNote = (FileNote) ex.getProperty("file_note");
         log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
         DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
-        //demsRecord.setType(fileNoteEvent.getJustin_message_event_type_cd());
         ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
         log.info("DocId: " + demsRecord.getDocumentId());
         ex.setProperty("dems_record", demsRecord);
@@ -5204,7 +5203,6 @@ private void getDemsFieldMappingsrccStatus() {
     // now check this next value to see if there is a collision of this document
     .to("direct:getCaseDocIdExistsByKey")
     .log(LoggingLevel.INFO, "returned key: ${body}")
-    //.unmarshal().json()
     .setProperty("existingRecordId",jsonpath("$.id"))
     .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
  

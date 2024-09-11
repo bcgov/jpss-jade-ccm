@@ -589,6 +589,10 @@ public class DemsRecordData {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
         }
+        else {
+            DemsFieldData source = new DemsFieldData("Source", "");
+            fieldData.add(source);
+        }
         setCaseNoteCategory("JUSTIN");
         if(getCaseNoteCategory() != null){
             DemsFieldData caseNoteCategory = new DemsFieldData("Case Note Category", getCaseNoteCategory());
