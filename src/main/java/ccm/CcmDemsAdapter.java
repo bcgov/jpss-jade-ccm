@@ -4879,52 +4879,38 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"body (before unmarshalling): '${body}'")
    
-   .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+    .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        //ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
-        
-        FileNote bodyInput = (FileNote)exchange.getIn().getBody(FileNote.class);
-        exchange.setProperty("file_note", bodyInput);
-      }})
-    .setProperty("file_note").body()
-    .setProperty("rcc_id", simple("${headers[rcc_id]}"))
-    
-    .log(LoggingLevel.INFO,"rcc_id passed in : " + "${exchangeProperty.rcc_id}")
-    .log(LoggingLevel.INFO,"Body after setting to prop: '${body}'")
-   
-    .removeProperty("recordId")
-    .setProperty("key", simple("${header.number}"))
-    
-    // check to see if the court case exists, before trying to insert record to dems.
-   .to("direct:getCourtCaseStatusByKey")
-   .log(LoggingLevel.INFO, "body coming back : ${body} " )
-   .setProperty("caseId", jsonpath("$.id"))
-   .setProperty("caseStatus",jsonpath("$.status"))
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        // check to see if the record with the doc id exists, if so, increment the document id
-       
-        FileNote demsFileNote = (FileNote) ex.getProperty("file_note");
+        FileNote demsFileNote = exchange.getIn().getBody(FileNote.class);
         log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
         DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
-        //demsRecord.setType(fileNoteEvent.getJustin_message_event_type_cd());
-        ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+        exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
         log.info("DocId: " + demsRecord.getDocumentId());
-        ex.setProperty("dems_record", demsRecord);
-        log.info("dems record from file note : " + demsRecord.toString());
+        exchange.getMessage().setBody(demsRecord);
       }
     })
-      
+    .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+    .log(LoggingLevel.DEBUG,"demsrecord = ${bodyAs(String)}.")
+    .setBody(simple("${body}"))
+    .setProperty("dems_record").simple("${bodyAs(String)}")
+
+    .setProperty("key", simple("${header.number}"))
+    // check to see if the court case exists, before trying to insert record to dems.
+    .to("direct:getCourtCaseStatusByKey")
+    .unmarshal().json()
+    .setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus").simple("${body[status]}")
+    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+
     // now check this next value to see if there is a collision of this document
     .to("direct:getCaseDocIdExistsByKey")
     .log(LoggingLevel.INFO, "returned key: ${body}")
-    //.unmarshal().json()
-    .setProperty("existingRecordId",jsonpath("$.id"))
+    .unmarshal().json()
+    .setProperty("existingRecordId").simple("${body[id]}")
     .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
- 
+
     // Make sure that it is an existing and active case, before attempting to add the record
     .choice()
       .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
@@ -4971,11 +4957,12 @@ private void getDemsFieldMappingsrccStatus() {
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
        .to("direct:streamNoteRecord")
-      .endChoice() 
+      .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of processNoteRecord")
     ;
   }
+
   private void streamNoteRecord() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();

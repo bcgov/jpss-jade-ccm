@@ -638,7 +638,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
         JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
         if (k != null && !k.getfilenotelist().isEmpty()) {
           JustinFileNote j = k.getfilenotelist().get(0);
-          FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no(), null);
+          FileNote fileNote = new FileNote(j);
           exchange.getMessage().setBody(fileNote);
         }
         else{

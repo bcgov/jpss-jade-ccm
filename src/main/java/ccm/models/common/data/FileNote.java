@@ -1,5 +1,7 @@
 package ccm.models.common.data;
 
+import ccm.models.system.justin.JustinFileNote;
+
 public class FileNote {
     private String file_note_id;
     private String user_name;
@@ -12,14 +14,13 @@ public class FileNote {
     public FileNote() {
     }
 
-    public FileNote(String file_note_id, String user_name, String entry_date, String note_txt, String rcc_id, String mdoc_justin_no, String original_file_number) {
-        this.mdoc_justin_no = mdoc_justin_no;
-        this.file_note_id = file_note_id;
-        this.user_name = user_name;
-        this.entry_date = entry_date;
-        this.note_txt = note_txt;
-        this.rcc_id = rcc_id;
-        this.original_file_number = original_file_number;
+    public FileNote(JustinFileNote justinNote) {
+        this.mdoc_justin_no = justinNote.getMdoc_justin_no();
+        this.file_note_id = justinNote.getFile_note_id();
+        this.user_name = justinNote.getUser_name();
+        this.entry_date = justinNote.getEntry_date();
+        this.note_txt = justinNote.getNote_txt();
+        this.rcc_id = justinNote.getRcc_id();
     }
 
     public String getFile_note_id() {
