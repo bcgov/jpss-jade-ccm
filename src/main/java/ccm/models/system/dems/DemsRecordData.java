@@ -563,8 +563,8 @@ public class DemsRecordData {
             fieldData.add(username);
         }
         if(nrd.getEntry_date() != null) {
-            DemsFieldData entry_date = new DemsFieldData("Entry Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
-            fieldData.add(entry_date);
+            DemsFieldData date = new DemsFieldData("Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+            fieldData.add(date);
         }
         if (nrd.getMdoc_justin_no().isEmpty()) {
             setOriginalFileNumber(nrd.getOriginal_file_number());
@@ -573,17 +573,17 @@ public class DemsRecordData {
             setOriginalFileNumber(nrd.getMdoc_justin_no());
         }
         if(getOriginalFileNumber() != null) {
-            DemsFieldData title = new DemsFieldData("Justin Court File No", getOriginalFileNumber());
+            DemsFieldData title = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(title);
         }
         setSource("BCPS Work");
-        setTitle(title);
+        setTitle(getOriginalFileNumber());
       
         setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
         setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
         setPrimaryDateUtc(getStartDate());
         setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
-        setLocation("JUSTIN");
+        //setLocation("JUSTIN");
         setFolder("JUSTIN");
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
@@ -592,7 +592,7 @@ public class DemsRecordData {
         setCaseNoteCategory("JUSTIN");
         if(getCaseNoteCategory() != null){
             DemsFieldData caseNoteCategory = new DemsFieldData("Case Note Category", getCaseNoteCategory());
-            fieldData.add(caseNoteCategory); 
+            //fieldData.add(caseNoteCategory); 
         }
         setDocumentId(nrd.getFile_note_id());
         if(getDocumentId() != null) {
@@ -603,7 +603,7 @@ public class DemsRecordData {
         if(getType() != null) {
             DemsFieldData type = new DemsFieldData("Type", getType());
             fieldData.add(type);
-        } 
+        }
         StringBuilder notes = new StringBuilder();
         if(nrd.getNote_txt().length() > 256) {
             String truncatedCaseName = nrd.getNote_txt().substring(0, 256);

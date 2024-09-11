@@ -23,13 +23,14 @@ public class DemsChargeAssessmentCaseData {
     private String templateCase;
     private List<DemsFieldData> fields;
     private boolean waitForCaseCompletion;
+    private boolean createdViaUi;
 
     public DemsChargeAssessmentCaseData() {
     }
 
     public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList) 
     {
-
+        createdViaUi = true;
         StringBuilder case_name = new StringBuilder();
         List<CaseAccused> caseAccusedList = new ArrayList<CaseAccused>();
 
@@ -453,6 +454,14 @@ public class DemsChargeAssessmentCaseData {
 
     public void setWaitForCaseCompletion(boolean waitForCaseCompletion) {
         this.waitForCaseCompletion = waitForCaseCompletion;
+    }
+
+    public boolean isCreatedViaUi() {
+        return createdViaUi;
+    }
+
+    public void setCreatedViaUi(boolean createdViaUi) {
+        this.createdViaUi = createdViaUi;
     }
 
 }
