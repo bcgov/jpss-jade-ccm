@@ -37,7 +37,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-
+import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
@@ -49,8 +49,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ccm.models.common.data.CourtCaseData;
+import ccm.models.common.data.FileNote;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
+import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
@@ -157,6 +159,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     destroyCaseRecords();
     activateCase();
     processNoteRecord();
+    streamNoteRecord();
   }
 
 
@@ -1392,7 +1395,7 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
       .when(simple("${exchangeProperty.existingRecordId} != ''"))
         .log(LoggingLevel.WARN, "Skipped new document creation, due to doc id collision with record: ${exchangeProperty.existingRecordId}")
-        .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
+       // .log(LoggingLevel.DEBUG, "${exchangeProperty.dems_record}")
       .endChoice()
     .end()
     .log(LoggingLevel.INFO, "end of createDocumentRecord")
@@ -2935,7 +2938,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request: " + simple("${body}"))
     .setProperty("DemsRecordData", simple("${bodyAs(String)}"))
     .setProperty("key", simple("${header.number}"))
     .to("direct:getCourtCaseIdByKey")
@@ -4865,7 +4868,167 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
-  private void processNoteRecord() {
+  private void processNoteRecord() throws HttpOperationFailedException{
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    // IN
+  
+    // property: filenote
+    from("platform-http:/" + routeId + "?httpMethodRestrict=POST" )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"body (before unmarshalling): '${body}'")
+   
+   .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        //ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
+        
+        FileNote bodyInput = (FileNote)exchange.getIn().getBody(FileNote.class);
+        exchange.setProperty("file_note", bodyInput);
+      }})
+    .setProperty("file_note").body()
+    .setProperty("rcc_id", simple("${headers[rcc_id]}"))
+    
+    .log(LoggingLevel.INFO,"rcc_id passed in : " + "${exchangeProperty.rcc_id}")
+    .log(LoggingLevel.INFO,"Body after setting to prop: '${body}'")
+   
+    .removeProperty("recordId")
+    .setProperty("key", simple("${header.number}"))
+    
+    // check to see if the court case exists, before trying to insert record to dems.
+   .to("direct:getCourtCaseStatusByKey")
+   .log(LoggingLevel.INFO, "body coming back : ${body} " )
+   .setProperty("caseId", jsonpath("$.id"))
+   .setProperty("caseStatus",jsonpath("$.status"))
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        // check to see if the record with the doc id exists, if so, increment the document id
+       
+        FileNote demsFileNote = (FileNote) ex.getProperty("file_note");
+        log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
+        DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
+        //demsRecord.setType(fileNoteEvent.getJustin_message_event_type_cd());
+        ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+        log.info("DocId: " + demsRecord.getDocumentId());
+        ex.setProperty("dems_record", demsRecord);
+        log.info("dems record from file note : " + demsRecord.toString());
+      }
+    })
+      
+    // now check this next value to see if there is a collision of this document
+    .to("direct:getCaseDocIdExistsByKey")
+    .log(LoggingLevel.INFO, "returned key: ${body}")
+    //.unmarshal().json()
+    .setProperty("existingRecordId",jsonpath("$.id"))
+    .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
+ 
+    // Make sure that it is an existing and active case, before attempting to add the record
+    .choice()
+      .when(simple("${exchangeProperty.existingRecordId} == '' && ${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} == 'Active'"))
+        .log(LoggingLevel.INFO, "Creating document record in dems")
+        
+        .setBody(simple("${exchangeProperty.dems_record}"))
+        .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
+        .log(LoggingLevel.INFO,"Sending derived dems record: ${body}")
 
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("direct:createCaseRecord")
+        .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
+        .setProperty("recordId", jsonpath("$.edtId"))
+        .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+      .endChoice()
+      .otherwise()
+        .log(LoggingLevel.WARN, "Did not create case record due to existing record id: ${exchangeProperty.existingRecordId}, case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
+      .endChoice()
+    .end()
+    .choice()
+      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.recordId} != null && ${exchangeProperty.recordId} != ''"))
+        .log(LoggingLevel.INFO, "attempt to stream the record's content.")
+        // if inserting the record to dems was successful, then go ahead and stream the data to the record.
+        .process(new Processor() {
+          @Override
+          public void process(Exchange ex) {
+           
+            FileNote fileNoteDoc = ex.getProperty("file_note", FileNote.class);
+            ex.getMessage().setBody(fileNoteDoc);
+            String caseId = (String)ex.getProperty("caseId", String.class);
+            String recordId = (String)ex.getProperty("recordId", String.class);
+
+            ex.getMessage().setHeader("caseId", caseId);
+            ex.getMessage().setHeader("recordId", recordId);
+          }
+
+        })
+        .marshal().json(JsonLibrary.Jackson, FileNote.class)
+        .log(LoggingLevel.INFO,"Sending file note record: ${body}")
+
+        // proceed to create record in dems, base on the caseid
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+       .to("direct:streamNoteRecord")
+      .endChoice() 
+    .end()
+    .log(LoggingLevel.INFO, "end of processNoteRecord")
+    ;
+  }
+  private void streamNoteRecord() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"Processing request streamNoteRecord: ${body}")
+    .setProperty("NoteRecord", simple("${bodyAs(String)}"))
+    .setProperty("dems_case_id", simple("${headers[caseId]}"))
+    .setProperty("dems_record_id", simple("${headers[recordId]}"))
+    // decode the data element from Base64
+    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception{
+        FileNote b = exchange.getIn().getBody(FileNote.class);
+        //log.info("about to decode data"+ b.getData());
+        byte[] decodedBytes = Base64.getDecoder().decode(b.getNote_txt());
+        exchange.getIn().setBody(decodedBytes);
+        //log.info("decodedBytes" + decodedBytes);
+        //log.info("decoded data");
+        String fileName = "notes.txt";
+        String boundary = "simpleboundary";
+        String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
+        String multipartFooter = "\r\n" + "--" + boundary + "--";
+        byte[] headerBytes = multipartHeader.getBytes(StandardCharsets.UTF_8);
+        byte[] footerBytes = multipartFooter.getBytes(StandardCharsets.UTF_8);
+        byte[] multipartBody = new byte[headerBytes.length + decodedBytes.length + footerBytes.length];
+        System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
+        System.arraycopy(decodedBytes, 0, multipartBody, headerBytes.length, decodedBytes.length);
+        System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + decodedBytes.length, footerBytes.length);
+        exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+        exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+        String boundryString = "multipart/form-data;boundary=" + boundary;
+        exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
+        exchange.setProperty("contentType", boundryString);
+        exchange.setProperty("multipartBody", multipartBody);
+        exchange.getMessage().setBody(multipartBody);
+      }
+    })
+    //.to("file:/tmp/output?fileName=${exchangeProperty.dems_case_id}-${exchangeProperty.dems_record_id}-jade.pdf")
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "body: ${body}")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
+    .log(LoggingLevel.INFO,"DEMS case record File Note uploaded.")
+    .end();
   }
 }
