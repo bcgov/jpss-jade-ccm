@@ -3436,9 +3436,10 @@ public class CcmNotificationService extends RouteBuilder {
     .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
     .log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
 
-    .choice() 
-      .when(simple(" ${exchangeProperty.primary_rcc_id} != ''"))
-        .log(LoggingLevel.INFO, "this is an rcc note ${exchangeProperty.primary_rcc_id}")
+
+    .choice()
+      .when(simple("${exchangeProperty.primary_rcc_id} != null"))
+
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3484,9 +3485,10 @@ public class CcmNotificationService extends RouteBuilder {
 
           .to("http://ccm-dems-adapter/processNoteRecord")
     .end()
-    .choice() 
-    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != ''"))
-      .log(LoggingLevel.INFO, "this is an mdoc note ${exchangeProperty.primary_mdoc_justin_no}")
+
+    .choice()
+    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
+
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("event_key", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("number", simple("${exchangeProperty.primary_mdoc_justin_no}"))
