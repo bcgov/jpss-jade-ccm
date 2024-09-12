@@ -37,13 +37,11 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
 import org.apache.http.NoHttpResponseException;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,7 +50,6 @@ import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileNote;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
-import ccm.models.common.event.FileNoteEvent;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
@@ -4884,6 +4881,7 @@ private void getDemsFieldMappingsrccStatus() {
       @Override
       public void process(Exchange exchange) {
         FileNote demsFileNote = exchange.getIn().getBody(FileNote.class);
+        exchange.setProperty("file_note", demsFileNote);
         log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
         DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
         exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
@@ -4973,19 +4971,19 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("NoteRecord", simple("${bodyAs(String)}"))
     .setProperty("dems_case_id", simple("${headers[caseId]}"))
     .setProperty("dems_record_id", simple("${headers[recordId]}"))
-    // decode the data element from Base64
+    .removeHeader(Exchange.CONTENT_TYPE)
+    
     .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
     .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+    .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"))
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception{
         FileNote b = exchange.getIn().getBody(FileNote.class);
-        //log.info("about to decode data"+ b.getData());
-        byte[] decodedBytes = Base64.getDecoder().decode(b.getNote_txt());
+        byte[] decodedBytes = b.getNote_txt().getBytes(StandardCharsets.UTF_8);
         exchange.getIn().setBody(decodedBytes);
-        //log.info("decodedBytes" + decodedBytes);
-        //log.info("decoded data");
+      
         String fileName = "notes.txt";
         String boundary = "simpleboundary";
         String multipartHeader = "--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n" + "Content-Type: application/octet-stream\r\n" + "\r\n";
@@ -4996,8 +4994,9 @@ private void getDemsFieldMappingsrccStatus() {
         System.arraycopy(headerBytes, 0, multipartBody, 0, headerBytes.length);
         System.arraycopy(decodedBytes, 0, multipartBody, headerBytes.length, decodedBytes.length);
         System.arraycopy(footerBytes, 0, multipartBody, headerBytes.length + decodedBytes.length, footerBytes.length);
-        exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
-        exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
+        //exchange.getMessage().setHeader("Content-Disposition", new ValueBuilder(simple("form-data; name=\"file\"; filename=\"${header.CamelFileName}\"")));
+        exchange.getMessage().setHeader("Content-Disposition", "form-data; name=\"file\"; filename=\"" + fileName + "\"");
+       // exchange.getMessage().setHeader("CamelHttpMethod", constant("PUT"));
         String boundryString = "multipart/form-data;boundary=" + boundary;
         exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "multipart/form-data;boundary=" + boundary);
         exchange.setProperty("contentType", boundryString);
@@ -5005,17 +5004,8 @@ private void getDemsFieldMappingsrccStatus() {
         exchange.getMessage().setBody(multipartBody);
       }
     })
-    //.to("file:/tmp/output?fileName=${exchangeProperty.dems_case_id}-${exchangeProperty.dems_record_id}-jade.pdf")
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
-    .log(LoggingLevel.DEBUG, "headers: ${headers}")
-    .log(LoggingLevel.DEBUG, "body: ${body}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
-    .log(LoggingLevel.INFO,"DEMS case record File Note uploaded.")
+    .to("direct:streamCaseRecordNative")
+   .log(LoggingLevel.INFO,"DEMS case record File Note uploaded.")
     .end();
   }
 }
