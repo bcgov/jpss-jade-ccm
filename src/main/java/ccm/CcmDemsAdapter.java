@@ -1974,17 +1974,25 @@ private void getDemsFieldMappingsrccStatus() {
       .when(simple("${exchangeProperty.caseId} != ''"))
         .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
         .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.suffix}}"))
+        .setProperty("hyperlinkSuffixPost", simple("{{dems.case.hyperlink.suffix.post}}"))
+        .setProperty("hyperlinkCaseIdPost", simple("{{dems.case.hyperlink.post-case-id}}"))
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-            String caseId = exchange.getProperty("caseId", String.class);
+            String suffixPost = exchange.getProperty("hyperlinkSuffixPost", String.class);
+            Integer postCaseId = (Integer)exchange.getProperty("hyperlinkCaseIdPost", Integer.class);
+            Integer caseId = exchange.getProperty("caseId", Integer.class);
             String rccId = exchange.getProperty("key", String.class);
             CaseHyperlinkData body = new CaseHyperlinkData();
 
             body.setMessage("Case found.");
-            body.setHyperlink(prefix + caseId + suffix);
+            if(caseId > postCaseId) {
+              body.setHyperlink(prefix + caseId + suffixPost);
+            } else {
+              body.setHyperlink(prefix + caseId + suffix);
+            }
             body.setRcc_id(rccId);
             exchange.getMessage().setBody(body);
           }
@@ -2047,8 +2055,10 @@ private void getDemsFieldMappingsrccStatus() {
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
         .unmarshal().json(JsonLibrary.Jackson, List.class)
-        .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
+        .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.list.prefix}}"))
         .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.list.suffix}}"))
+        .setProperty("hyperlinkSuffixPost", simple("{{dems.case.hyperlink.list.suffix.post}}"))
+        .setProperty("hyperlinkCaseIdPost", simple("{{dems.case.hyperlink.post-case-id}}"))
         .setProperty("caseIds").simple("${body}")
         .log(LoggingLevel.DEBUG,"case ids: ${exchangeProperty.caseIds}")
         .process(new Processor() {
@@ -2058,8 +2068,10 @@ private void getDemsFieldMappingsrccStatus() {
             CaseHyperlinkDataList metadata = (CaseHyperlinkDataList)exchange.getProperty("metadata_object", CaseHyperlinkDataList.class);
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
+            String suffixPost = exchange.getProperty("hyperlinkSuffixPost", String.class);
+            Integer postCaseId = (Integer)exchange.getProperty("hyperlinkCaseIdPost", Integer.class);
             //log.info("originalList size: "+metadata.getcase_hyperlinks().size());
-            metadata.processHyperlinks(prefix, suffix, items);
+            metadata.processHyperlinks(prefix, suffix, suffixPost, postCaseId, items);
             //log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
             //for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
               //log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
@@ -3083,7 +3095,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO,"Uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
       .log(LoggingLevel.DEBUG, "headers: ${headers}")
       .log(LoggingLevel.DEBUG, "body: ${body}")
-      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
+      .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
       .log(LoggingLevel.INFO,"DEMS case record native file uploaded.")
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
@@ -3098,7 +3110,7 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .log(LoggingLevel.INFO,"Retry uploading DEMS case record native file (caseId = ${exchangeProperty.dems_case_id} recordId = ${exchangeProperty.dems_record_id}) ...")
-          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native?renditionAction=Regenerate")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records/${exchangeProperty.dems_record_id}/Native")
           .log(LoggingLevel.INFO,"DEMS case record native file re-uploaded successfully.")
         .endChoice()
         .otherwise()

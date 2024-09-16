@@ -50,7 +50,7 @@ fi
 
 echo "`basename $0` to $ns ..."
 
-if [ "$idEnd" = "" ]; then
+if [ "$pageFrom" != "" ]; then
     oc -n $ns exec service/ccm-dems-adapter -- curl \
     -X PUT \
     "http://ccm-dems-adapter/updateExistingParticipantwithOTCV2?pageFrom=$pageFrom&pageTo=$pageTo"

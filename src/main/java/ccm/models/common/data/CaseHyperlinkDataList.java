@@ -26,7 +26,7 @@ public class CaseHyperlinkDataList {
        case_hyperlinks.add(body);    
     }
 
-    public void processHyperlinks(String prefix, String suffix, List<Map<String, Object>> rccList) {
+    public void processHyperlinks(String prefix, String suffix, String suffixPost, int postCaseId, List<Map<String, Object>> rccList) {
         for(CaseHyperlinkData data : case_hyperlinks) {
             String key = data.getRcc_id();
             for (Map<String, Object> item : rccList) {
@@ -34,7 +34,11 @@ public class CaseHyperlinkDataList {
                 if (key.equals(itemKey)) {
                     Integer id = (Integer) item.get("id");
 
-                    data.setHyperlink(prefix + id + suffix);
+                    if(id > postCaseId) {
+                        data.setHyperlink(prefix + id + suffixPost);
+                    } else {
+                        data.setHyperlink(prefix + id + suffix);
+                    }
                     data.setRcc_id(key.toString());
                     data.setMessage("Case found.");
                     break;
