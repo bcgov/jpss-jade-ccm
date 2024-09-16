@@ -4885,7 +4885,7 @@ private void getDemsFieldMappingsrccStatus() {
         log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
         DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
         exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-        log.info("DocId: " + demsRecord.getDocumentId());
+        //log.info("DocId: " + demsRecord.getDocumentId());
         exchange.getMessage().setBody(demsRecord);
       }
     })
@@ -4897,17 +4897,18 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("key", simple("${header.number}"))
     // check to see if the court case exists, before trying to insert record to dems.
     .to("direct:getCourtCaseStatusByKey")
-    .unmarshal().json()
-    .setProperty("caseId").simple("${body[id]}")
-    .setProperty("caseStatus").simple("${body[status]}")
-    .log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
+    //.unmarshal().json()
+    .setProperty("caseId", jsonpath("$.id"))
+    //.setProperty("caseId").simple("${body[id]}")
+    .setProperty("caseStatus",jsonpath("$.status"))
+    //.log(LoggingLevel.INFO, "caseId: '${exchangeProperty.caseId}'")
 
     // now check this next value to see if there is a collision of this document
     .to("direct:getCaseDocIdExistsByKey")
-    .log(LoggingLevel.INFO, "returned key: ${body}")
-    .unmarshal().json()
-    .setProperty("existingRecordId").simple("${body[id]}")
-    .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
+    //.log(LoggingLevel.INFO, "returned key: ${body}")
+    //.unmarshal().json()
+    .setProperty("existingRecordId").jsonpath("$.id")
+    //.log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.existingRecordId}'")
 
     // Make sure that it is an existing and active case, before attempting to add the record
     .choice()
@@ -4916,7 +4917,7 @@ private void getDemsFieldMappingsrccStatus() {
         
         .setBody(simple("${exchangeProperty.dems_record}"))
         .log(LoggingLevel.DEBUG, "dems_record: '${exchangeProperty.dems_record}'")
-        .log(LoggingLevel.INFO,"Sending derived dems record: ${body}")
+        //.log(LoggingLevel.INFO,"Sending derived dems record: ${body}")
 
         // proceed to create record in dems, base on the caseid
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
@@ -4924,7 +4925,7 @@ private void getDemsFieldMappingsrccStatus() {
         .to("direct:createCaseRecord")
         .log(LoggingLevel.DEBUG,"Created dems record: ${body}")
         .setProperty("recordId", jsonpath("$.edtId"))
-        .log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
+        //.log(LoggingLevel.INFO, "recordId: '${exchangeProperty.recordId}'")
       .endChoice()
       .otherwise()
         .log(LoggingLevel.WARN, "Did not create case record due to existing record id: ${exchangeProperty.existingRecordId}, case id: ${exchangeProperty.caseId}, or case status: ${exchangeProperty.caseStatus}")
@@ -4949,7 +4950,7 @@ private void getDemsFieldMappingsrccStatus() {
 
         })
         .marshal().json(JsonLibrary.Jackson, FileNote.class)
-        .log(LoggingLevel.INFO,"Sending file note record: ${body}")
+        //.log(LoggingLevel.INFO,"Sending file note record: ${body}")
 
         // proceed to create record in dems, base on the caseid
         .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
@@ -4967,14 +4968,14 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request streamNoteRecord: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing request streamNoteRecord: ${body}")
     .setProperty("NoteRecord", simple("${bodyAs(String)}"))
     .setProperty("dems_case_id", simple("${headers[caseId]}"))
     .setProperty("dems_record_id", simple("${headers[recordId]}"))
     .removeHeader(Exchange.CONTENT_TYPE)
     
-    .log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
-    .log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
+    //.log(LoggingLevel.INFO,"dems_case_id: ${exchangeProperty.dems_case_id}")
+    //.log(LoggingLevel.INFO,"dems_record_id: ${exchangeProperty.dems_record_id}")
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
     .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"))
     .process(new Processor() {

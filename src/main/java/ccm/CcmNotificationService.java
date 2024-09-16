@@ -2174,7 +2174,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-      .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+      .log(LoggingLevel.INFO, "Dems case status: ${body}")
       .unmarshal().json()
 
       .choice() // If this case key does not match the primary file id, look for the primary, if it exists.  That one should have all court files listed.
@@ -3419,7 +3419,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_key]}"))
     
     .to("http://ccm-lookup-service/getFileNote")
-    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+    //.log(LoggingLevel.INFO,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
@@ -3427,18 +3427,18 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-        log.info("file note to set : file note id " + fileNote.getFile_note_id());
+       // log.info("file note to set : file note id " + fileNote.getFile_note_id());
         exchange.setProperty("primary_rcc_id", fileNote.getRcc_id());
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
         exchange.setProperty("storedFileNote", fileNote);
       }})
-    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-    .log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
+    //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+    //.log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
 
 
     .choice()
-      .when(simple("${exchangeProperty.primary_rcc_id} != null"))
-
+      .when(simple("${exchangeProperty.primary_rcc_id} != null && ${exchangeProperty.primary_rcc_id != ''}"))
+        .log(LoggingLevel.INFO, "primary_rcc_id not null, trying to get court case details")
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3456,12 +3456,10 @@ public class CcmNotificationService extends RouteBuilder {
             exchange.setProperty("agency_file_no", courtfiledata.getAgency_file());
           }}
         )
-
-
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        //.log(LoggingLevel.INFO, "Dems case status: ${body}")
 
         .unmarshal().json()
         .setProperty("destinationCaseId").simple("${body[id]}")
@@ -3476,8 +3474,7 @@ public class CcmNotificationService extends RouteBuilder {
 
           }})
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
-          //.setBody(simple("${exchangeProperty.storedFileNote}"))
-          .log(LoggingLevel.INFO,"Sending body from rcc :${bodyAs(String)}")
+          //.log(LoggingLevel.INFO,"Sending body from rcc :${bodyAs(String)}")
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3487,14 +3484,13 @@ public class CcmNotificationService extends RouteBuilder {
 
     .choice()
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
-
+          //.log(LoggingLevel.INFO, "using mdoc to find related court files")
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("event_key", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("number", simple("${exchangeProperty.primary_mdoc_justin_no}"))
-
       .to("direct:compileRelatedCourtFiles")
   
-      .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
+     // .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
       // get list of associated rcc_ids?
 
       // re-set body to the metadata_data json.
@@ -3526,7 +3522,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
   
       .setProperty("primary_rcc_id", simple("${body[primaryAgencyFileId]}"))
-      .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+      //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
   
       //JADE-2671 - look-up primary rcc for update.
       .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
@@ -3555,12 +3551,12 @@ public class CcmNotificationService extends RouteBuilder {
               FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
               CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
               fileNote.setOriginal_file_number(bcm.getCourt_file_number_seq_type());
-              log.info("OriginalFileNumber: "+bcm.getCourt_file_number_seq_type());
+              //log.info("OriginalFileNumber: "+bcm.getCourt_file_number_seq_type());
               exchange.getMessage().setBody(fileNote);
             }
           })
           .marshal().json(JsonLibrary.Jackson, FileNote.class)
-          .log(LoggingLevel.INFO,"Sending body from mdoc :${bodyAs(String)}")
+          //.log(LoggingLevel.INFO,"Sending body from mdoc :${bodyAs(String)}")
           .setHeader(Exchange.HTTP_METHOD, simple("POST"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .to("http://ccm-dems-adapter/processNoteRecord")
@@ -3569,11 +3565,8 @@ public class CcmNotificationService extends RouteBuilder {
         .otherwise()
           // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
           .log(LoggingLevel.WARN, "Not an active primary case")
-  
         .endChoice()
       .end()
-
-
     ;
   }
 
