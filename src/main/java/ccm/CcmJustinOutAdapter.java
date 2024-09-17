@@ -10,7 +10,10 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 import org.apache.camel.CamelException;
 
@@ -55,6 +58,7 @@ import ccm.models.system.justin.JustinDocumentList;
 import ccm.models.system.justin.JustinFileClose;
 import ccm.models.system.justin.JustinFileDisposition;
 import ccm.models.system.justin.JustinFileNote;
+import ccm.models.system.justin.JustinFileNoteList;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -625,17 +629,26 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinFileNote.class)
+    .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
+  
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        JustinFileNote j = exchange.getIn().getBody(JustinFileNote.class);
-        FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no());
-        exchange.getMessage().setBody(fileNote);
+     
+        JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
+        if (k != null && !k.getfilenotelist().isEmpty()) {
+          JustinFileNote j = k.getfilenotelist().get(0);
+          FileNote fileNote = new FileNote(j);
+          exchange.getMessage().setBody(fileNote);
+        }
+        else{
+          exchange.getMessage().setBody(new FileNote());
+        }
       }
     })
     .marshal().json(JsonLibrary.Jackson, FileNote.class)
     .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .end()
     ;
   }
 }

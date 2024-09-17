@@ -1,0 +1,51 @@
+@startuml
+'hide footbox
+
+skinparam Shadowing true
+skinparam CollectionsBackgroundColor Lavender
+skinparam ControlBackgroundColor LightSkyBlue
+skinparam BoundaryBackgroundColor LightGrey
+
+/' 
+Available colours
+https://plantuml-documentation.readthedocs.io/en/latest/formatting/color-names.html
+'/
+
+boundary j_interface as "JUSTIN Interface"
+control j_adapter as "JUSTIN Out Adapter"
+collections inferred_file_note_topic as "File Note Events"
+control notification_service as "Notification Service"
+control lookup_service as "Lookup Service"
+
+title
+CCM File Note Event Processing Sequence Diagram
+end title
+
+autonumber
+
+inferred_file_note_topic o-> notification_service : Process FILE_NOTE event
+activate notification_service
+
+group Call route processFileNoteEvents
+notification_service -> lookup_service : Retrieve File Note
+activate lookup_service
+
+lookup_service -> j_adapter : Retrieve file note
+activate j_adapter
+
+j_adapter -> JUSTIN : retrieve file note by id
+activate JUSTIN
+j_adapter->j_adapter : Convert Justin_File_Note to File_Note, fill in original file number based on rcc_id or justin_mdoc
+
+end group
+
+
+deactivate notification_service
+deactivate lookup_service
+deactivate j_adapter
+deactivate j_interface
+
+caption
+Prepared by Todd Wuolle | Updated August 20, 2024
+end caption
+@enduml

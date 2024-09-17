@@ -14,6 +14,7 @@ import ccm.utils.DateTimeUtils;
 
 public class DemsRecordData {
 
+    private static final String TXT_FILE_EXTENSION = ".txt";
     private String descriptions;
     private String title;
     private String startDate;
@@ -562,15 +563,28 @@ public class DemsRecordData {
             fieldData.add(username);
         }
         if(nrd.getEntry_date() != null) {
-            DemsFieldData entry_date = new DemsFieldData("Entry Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
-            fieldData.add(entry_date);
+            DemsFieldData date = new DemsFieldData("Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+            fieldData.add(date);
         }
-        setOriginalFileNumber(nrd.getMdoc_justin_no());
+        if (nrd.getMdoc_justin_no().isEmpty()) {
+            setOriginalFileNumber(nrd.getOriginal_file_number());
+        }
+        else{
+            setOriginalFileNumber(nrd.getMdoc_justin_no());
+        }
         if(getOriginalFileNumber() != null) {
-            DemsFieldData title = new DemsFieldData("Justin Court File No", getOriginalFileNumber());
+            DemsFieldData title = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(title);
         }
         setSource("BCPS Work");
+        setTitle(getOriginalFileNumber());
+      
+        setStartDate(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+        setDateToCrown(DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
+        setPrimaryDateUtc(getStartDate());
+        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+        //setLocation("JUSTIN");
+        setFolder("JUSTIN");
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
             fieldData.add(source);
@@ -578,7 +592,7 @@ public class DemsRecordData {
         setCaseNoteCategory("JUSTIN");
         if(getCaseNoteCategory() != null){
             DemsFieldData caseNoteCategory = new DemsFieldData("Case Note Category", getCaseNoteCategory());
-            fieldData.add(caseNoteCategory); 
+            //fieldData.add(caseNoteCategory); 
         }
         setDocumentId(nrd.getFile_note_id());
         if(getDocumentId() != null) {
@@ -596,12 +610,15 @@ public class DemsRecordData {
             notes.append(truncatedCaseName);
             notes.append(" ...");
         }
+        else{
+            notes.append(nrd.getNote_txt());
+        }
         setDescriptions(notes.toString());
         if(getDescriptions() != null) {
             DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
             fieldData.add(descriptions);
         }
-        setLastApiRecordUpdate(DateTimeUtils.convertToUtcFromBCDateTimeString(DateTimeUtils.generateCurrentDtm()));
+       
         if(getLocation() != null) {
             DemsFieldData location = new DemsFieldData("ISL Event", getLocation());
             fieldData.add(location);
@@ -610,12 +627,11 @@ public class DemsRecordData {
             DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
             fieldData.add(lastUpdate);
         }
-        setFileExtension(".txt");
+        setFileExtension(TXT_FILE_EXTENSION);
         if(getFileExtension() != null) {
             DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
             fieldData.add(extension);
         }
-
         setFields(fieldData);
     }
 
@@ -799,4 +815,25 @@ public class DemsRecordData {
     public void setCaseNoteCategory(String caseNoteCategory) {
         this.caseNoteCategory = caseNoteCategory;
     }
+
+    @Override
+    public String toString() {
+        return "DemsRecordData [descriptions=" + descriptions + ", title=" + title + ", startDate=" + startDate
+                + ", originalFileNumber=" + originalFileNumber + ", dateToCrown=" + dateToCrown + ", source=" + source
+                + ", custodian=" + custodian + ", location=" + location + ", folder=" + folder + ", documentId="
+                + documentId + ", fileExtension=" + fileExtension + ", primaryDateUtc=" + primaryDateUtc + ", type="
+                + type + ", lastApiRecordUpdate=" + lastApiRecordUpdate + ", reportType="
+                + reportType + ", incrementalDocCount=" + incrementalDocCount + ", image_id=" + image_id
+                + ", caseNoteCategory=" + caseNoteCategory + ", getTitle()=" + getTitle() + ", getStartDate()="
+                + getStartDate() + ", getSource()=" + getSource() + ", getCustodian()=" + getCustodian()
+                + ", getLocation()=" + getLocation() + ", getFolder()=" + getFolder() + ", getDocumentId()="
+                + getDocumentId() + ", getFileExtension()=" + getFileExtension() + ", getPrimaryDateUtc()="
+                + getPrimaryDateUtc() + ", getDescriptions()=" + getDescriptions() + ", getDateToCrown()="
+                + getDateToCrown() + ", getOriginalFileNumber()=" + getOriginalFileNumber() + ", getType()=" + getType()
+                + ", getLastApiRecordUpdate()=" + getLastApiRecordUpdate() + ", getIncrementalDocCount()="
+                + getIncrementalDocCount() + ", getReportType()=" + getReportType() + ", getImage_id()=" + getImage_id()
+                + ", getCaseNoteCategory()=" + getCaseNoteCategory() + "]";
+    }
+
+    
 }

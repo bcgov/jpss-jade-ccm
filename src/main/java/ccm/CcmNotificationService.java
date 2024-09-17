@@ -112,6 +112,7 @@ public class CcmNotificationService extends RouteBuilder {
     processAccusedPersons();
     processFileNoteEvents();
     processFileNote();
+    processFileNoteDelete();
     processFileClose();
   }
 
@@ -544,6 +545,16 @@ public class CcmNotificationService extends RouteBuilder {
         .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
         .to("direct:publishEventKPI")
         .endChoice()
+        .when(header("event_status").isEqualTo(FileNoteEvent.STATUS.DEL_FNOTE))
+        .setProperty("kpi_component_route_name", simple("processFileNoteDelete"))
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_STARTED.name()))
+        .to("direct:publishEventKPI")
+        .setBody(header("event"))
+        .to("direct:processFileNoteDelete")
+        .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_PROCESSING_COMPLETED.name()))
+        .to("direct:publishEventKPI")
+        .endChoice()
+
       .otherwise()
         .to("direct:processUnknownStatus")
         .setProperty("kpi_component_route_name", simple("processUnknownStatus"))
@@ -2163,7 +2174,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-      .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+      .log(LoggingLevel.INFO, "Dems case status: ${body}")
       .unmarshal().json()
 
       .choice() // If this case key does not match the primary file id, look for the primary, if it exists.  That one should have all court files listed.
@@ -3402,69 +3413,190 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"processFileNote event_message_id = ${header[event_key]}")
+    .log(LoggingLevel.DEBUG,"processFileNote event_message_id = ${header[event_key]}")
+    .setProperty("fileNoteEvent").body()
     // double check that case had not been already created since.
     .setHeader("number", simple("${header[event_key]}"))
+    
     .to("http://ccm-lookup-service/getFileNote")
-    .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+    //.log(LoggingLevel.INFO,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
-    .setProperty("primary_rcc_id", simple("${body[rcc_id]}"))
-    .log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-    .setProperty("primary_mdoc_justin_no", simple("${body[mdoc_justin_no]}"))
-    .log(LoggingLevel.INFO, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+       // log.info("file note to set : file note id " + fileNote.getFile_note_id());
+        exchange.setProperty("primary_rcc_id", fileNote.getRcc_id());
+        exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
+        exchange.setProperty("storedFileNote", fileNote);
+      }})
+    //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+    //.log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
+
 
     .choice()
-      .when(simple("${exchangeProperty.primary_rcc_id} != null"))
+      .when(simple("${exchangeProperty.primary_rcc_id} != null && ${exchangeProperty.primary_rcc_id != ''}"))
+        .log(LoggingLevel.INFO, "primary_rcc_id not null, trying to get court case details")
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
         .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
         .setProperty("rcc_id", simple("${exchangeProperty.primary_rcc_id}"))
+
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .removeHeader(Exchange.CONTENT_ENCODING)
+        .to("http://ccm-lookup-service/getCourtCaseDetails")
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentData.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ChargeAssessmentData courtfiledata = exchange.getIn().getBody(ChargeAssessmentData.class);
+            exchange.setProperty("agency_file_no", courtfiledata.getAgency_file());
+          }}
+        )
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        //.log(LoggingLevel.INFO, "Dems case status: ${body}")
 
         .unmarshal().json()
         .setProperty("destinationCaseId").simple("${body[id]}")
-        .setProperty("agencyfileno",jsonpath("$.fields[?(@.name == 'Agency File No.')]"))
-        .log(LoggingLevel.INFO,"${exchangeProperty.agencyfileno}")
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
-            FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-            String agencyFileId = exchange.getProperty("agencyfileno", String.class);
+            FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
+            String agencyFileId = exchange.getProperty("agency_file_no", String.class);
             fileNote.setOriginal_file_number(agencyFileId);
+            exchange.setProperty("storedFileNote", fileNote);
             exchange.getMessage().setBody(fileNote);
+
           }})
-          .log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          //.log(LoggingLevel.INFO,"Sending body from rcc :${bodyAs(String)}")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("rcc_id",simple("${exchangeProperty.primary_rcc_id}"))
+
+          .to("http://ccm-dems-adapter/processNoteRecord")
     .end()
+
     .choice()
     .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
+          //.log(LoggingLevel.INFO, "using mdoc to find related court files")
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
-      .setHeader("number", jsonpath("${exchangeProperty.primary_mdoc_justin_no}"))
-      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-      .to("http://ccm-lookup-service/getCourtCaseMetadata")
+      .setHeader("event_key", simple("${exchangeProperty.primary_mdoc_justin_no}"))
+      .setHeader("number", simple("${exchangeProperty.primary_mdoc_justin_no}"))
+      .to("direct:compileRelatedCourtFiles")
+  
+     // .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
+      // get list of associated rcc_ids?
 
-      .log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+      // re-set body to the metadata_data json.
+      .setBody(simple("${exchangeProperty.metadata_data}"))
+      .log(LoggingLevel.DEBUG, "metadata_data: ${body}")
       .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
       .process(new Processor() {
         @Override
-        public void process(Exchange exchange) {
-          FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-          CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
-          fileNote.setOriginal_file_number(bcm.getCourt_file_no());
-          exchange.getMessage().setBody(fileNote);
+        public void process(Exchange exchange) throws Exception {
+  
+          CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+          exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
         }
-      }).log(LoggingLevel.DEBUG,"Retrieved related : ${body}")
-    .endChoice()
-  .end()
+      })
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+      .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+      .setBody(simple("${bodyAs(String)}"))
+      .setProperty("rcc_id", jsonpath("$.rcc_id"))
+      .setProperty("primary_yn", jsonpath("$.primary_yn"))
+  
+      .setHeader("key").simple("${exchangeProperty.rcc_id}")
+      .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
+      .setHeader("number",simple("${exchangeProperty.rcc_id}"))
+      //.log(LoggingLevel.INFO,"Retrieve court case status first")
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+      .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+      .unmarshal().json()
+  
+      .setProperty("primary_rcc_id", simple("${body[primaryAgencyFileId]}"))
+      //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
+  
+      //JADE-2671 - look-up primary rcc for update.
+      .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
+        .when(simple("${body[status]} == 'Inactive' && ${exchangeProperty.primary_rcc_id} != ${header.event_key}"))
+          .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
+          .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
+          .setHeader("number",simple("${exchangeProperty.primary_rcc_id}"))
+          .setProperty("rcc_id", simple("${exchangeProperty.primary_rcc_id}"))
+          //.log(LoggingLevel.INFO,"Retrieve court case status first")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+          .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+          .unmarshal().json()
+        .endChoice()
+      .end()
+  
+      .choice()
+        .when(simple("${body[status]} != 'Inactive'"))
 
-    .end();
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
+              CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+              fileNote.setOriginal_file_number(bcm.getCourt_file_number_seq_type());
+              //log.info("OriginalFileNumber: "+bcm.getCourt_file_number_seq_type());
+              exchange.getMessage().setBody(fileNote);
+            }
+          })
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          //.log(LoggingLevel.INFO,"Sending body from mdoc :${bodyAs(String)}")
+          .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .to("http://ccm-dems-adapter/processNoteRecord")
+
+        .endChoice()
+        .otherwise()
+          // go through other rccs and check if they exist in dems and is active, if they do, need to do a merge.
+          .log(LoggingLevel.WARN, "Not an active primary case")
+        .endChoice()
+      .end()
+    ;
   }
 
+  private void processFileNoteDelete() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+     from("direct:" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.INFO,"processFileNoteDelete event_message_id = ${header[event_key]}")
+     // double check that case had not been already created since.
+     .setHeader("number", simple("${header[event_key]}"))
+     .to("http://ccm-lookup-service/getFileNote")
+     .log(LoggingLevel.INFO,"Lookup response = '${body}'")
+     .unmarshal().json(JsonLibrary.Jackson,FileNote.class)
+     .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+        if (fileNote != null) {
+          log.info("File note id to from delete : " + fileNote.getFile_note_id());
+        }
+        else {
+          log.info("File Note not found for event_message_id.");
+        }
+      }})
+     .end();
+ 
+  }
   private void processFileClose() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
