@@ -4,7 +4,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 
@@ -3587,13 +3587,34 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-        if (fileNote != null) {
+        int fileNoteId = 0;
+        try{
+         fileNoteId = Integer.parseInt(fileNote.getFile_note_id());
+        }
+        catch(NumberFormatException parseException) {
+          log.error("problem parsing file note id");
+        }
+        exchange.setProperty("fileNoteId", fileNoteId);
+        if (fileNote != null && fileNoteId > 0) {
           log.info("File note id to from delete : " + fileNote.getFile_note_id());
+           exchange.setProperty("fileNote", fileNote);
+           
         }
         else {
           log.info("File Note not found for event_message_id.");
         }
       }})
+      .choice()
+      
+      .when(simple("${exchangeProperty.fileNote} != null && ${exchangeProperty.fileNoteId} > 0"))
+        .log(LoggingLevel.INFO, "received file note")
+        .marshal().json(JsonLibrary.Jackson,FileNote.class)
+        .setHeader(Exchange.HTTP_METHOD, simple("POST"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-dems-adapter/processDeleteNoteRecord")
+      
+      .endChoice()
+
      .end();
  
   }
