@@ -96,6 +96,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     getDemsFieldListIdName();
     getCourtCaseExists();
     getCourtCaseIdByKey();
+    getPrimaryCourtCaseIdByKey();
     getCourtCaseDataById();
     getCourtCaseDataByKey();
     getCourtCaseNameByKey();
@@ -1786,6 +1787,53 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void getPrimaryCourtCaseIdByKey() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: exchangeProperty.id
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"key = ${exchangeProperty.key}...")
+    .doTry()
+      .to("direct:getCourtCaseIdByKey")
+      .setProperty("originalCaseId", simple("${body}"))
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .setProperty("caseStatus").simple("${body[status]}")
+      .choice()
+        .when(simple("${exchangeProperty.caseStatus} == 'Inactive'"))
+          .log(LoggingLevel.INFO, "Inactive case, lookup primary key")
+          .setProperty("id", simple("${exchangeProperty.caseId}"))
+          .to("direct:getCourtCaseStatusById")
+          .setProperty("primaryRccId",jsonpath("$.primaryAgencyFileId"))
+        .end()
+      .choice()
+        .when(simple("${exchangeProperty.primaryRccId} != '' && ${exchangeProperty.primaryRccId} != null && ${exchangeProperty.primaryRccId} != ${exchangeProperty.key}"))
+          .setProperty("key", simple("${exchangeProperty.primaryRccId}"))
+          .to("direct:getCourtCaseIdByKey")
+        .endChoice()
+        .otherwise()
+          .setBody(simple("${exchangeProperty.originalCaseId}"))
+        .endChoice()
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"General Exception thrown.")
+      .log(LoggingLevel.ERROR,"${exception}")
+      .log(LoggingLevel.ERROR,"${body}")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
+          exchange.getMessage().setBody(exchange.getException().getMessage());
+          throw exchange.getException();
+        }
+      })
+    .end()
+    ;
+  }
+
   private void getCourtCaseDataById() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -1966,7 +2014,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG,"Processing request.  Key = ${header.key} ...")
     .setProperty("key", simple("${header.key}"))
     .setProperty("skipLoop", simple("true"))
-    .to("direct:getCourtCaseIdByKey")
+    .to("direct:getPrimaryCourtCaseIdByKey")
     .unmarshal().json()
     .setProperty("caseId").simple("${body[id]}")
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
