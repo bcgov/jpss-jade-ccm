@@ -2121,7 +2121,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     //.log(LoggingLevel.INFO, "headers: ${headers}")
     .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+    .log(LoggingLevel.INFO,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     // JADE-1489 workaround #2 -- not sure why in this instance the value of ${body} as-is isn't
     //   accessible in the split() block through exchange properties unless converted to String first.
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
@@ -3427,17 +3427,14 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-       // log.info("file note to set : file note id " + fileNote.getFile_note_id());
+        log.info("file note to set : file note id " + fileNote.getFile_note_id());
         exchange.setProperty("primary_rcc_id", fileNote.getRcc_id());
         exchange.setProperty("primary_mdoc_justin_no", fileNote.getMdoc_justin_no());
         exchange.setProperty("storedFileNote", fileNote);
+        log.info("file note rcc_id : " + fileNote.getRcc_id());
       }})
-    //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-    //.log(LoggingLevel.DEBUG, "primary_mdoc_justin_no: ${exchangeProperty.primary_mdoc_justin_no}")
-
-
     .choice()
-      .when(simple("${exchangeProperty.primary_rcc_id} != null && ${exchangeProperty.primary_rcc_id != ''}"))
+      .when(simple("${exchangeProperty.primary_rcc_id} != null && ${exchangeProperty.primary_rcc_id} != ''"))
         .log(LoggingLevel.INFO, "primary_rcc_id not null, trying to get court case details")
         .setHeader("key").simple("${exchangeProperty.primary_rcc_id}")
         .setHeader("event_key",simple("${exchangeProperty.primary_rcc_id}"))
@@ -3459,10 +3456,10 @@ public class CcmNotificationService extends RouteBuilder {
         .setHeader(Exchange.HTTP_METHOD, simple("GET"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-        //.log(LoggingLevel.INFO, "Dems case status: ${body}")
-
-        .unmarshal().json()
-        .setProperty("destinationCaseId").simple("${body[id]}")
+        .log(LoggingLevel.INFO, "Dems case status: ${body}")
+        .setProperty("destinationCaseId",jsonpath("$.id"))
+        .setProperty("caseStatus",jsonpath("$.status"))
+       
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
@@ -3483,15 +3480,12 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .choice()
-    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null"))
+    .when(simple("${exchangeProperty.primary_mdoc_justin_no} != null && ${exchangeProperty.primary_mdoc_justin_no} != ''"))
           //.log(LoggingLevel.INFO, "using mdoc to find related court files")
       .setProperty("mdoc_justin_no", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("event_key", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .setHeader("number", simple("${exchangeProperty.primary_mdoc_justin_no}"))
       .to("direct:compileRelatedCourtFiles")
-  
-     // .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
-      // get list of associated rcc_ids?
 
       // re-set body to the metadata_data json.
       .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -3502,6 +3496,7 @@ public class CcmNotificationService extends RouteBuilder {
         public void process(Exchange exchange) throws Exception {
   
           CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+          exchange.setProperty("agency_file_no", ccd.getPrimary_agency_file().getAgency_file_no());
           exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
         }
       })
@@ -3522,6 +3517,7 @@ public class CcmNotificationService extends RouteBuilder {
       .unmarshal().json()
   
       .setProperty("primary_rcc_id", simple("${body[primaryAgencyFileId]}"))
+      .setProperty("caseStatus",simple("${body[status]}"))
       //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
   
       //JADE-2671 - look-up primary rcc for update.
@@ -3539,19 +3535,14 @@ public class CcmNotificationService extends RouteBuilder {
           .unmarshal().json()
         .endChoice()
       .end()
-  
       .choice()
-        .when(simple("${body[status]} != 'Inactive'"))
-
-          .setBody(simple("${exchangeProperty.metadata_data}"))
-          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+        .when(simple("${exchangeProperty.status} != 'Inactive'"))
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
               FileNote fileNote = (FileNote)exchange.getProperty("storedFileNote");
-              CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
-              fileNote.setOriginal_file_number(bcm.getCourt_file_number_seq_type());
-              //log.info("OriginalFileNumber: "+bcm.getCourt_file_number_seq_type());
+              String agencyFileNo =  (String)exchange.getProperty("agency_file_no");
+              fileNote.setOriginal_file_number(agencyFileNo);
               exchange.getMessage().setBody(fileNote);
             }
           })
@@ -3636,7 +3627,7 @@ public class CcmNotificationService extends RouteBuilder {
     .removeHeaders("x-amz*")
     .to("direct:compileRelatedCourtFiles")
 
-    .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
+    .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
     .log(LoggingLevel.DEBUG, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -3648,15 +3639,20 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+        
+        if (ccd != null && ccd.getPrimary_agency_file() != null) {
+        exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
+        exchange.setProperty("primary_yn", ccd.getPrimary_agency_file().getPrimary_yn());
         exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+        }
       }
     })
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-    .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+    .log(LoggingLevel.INFO, "Court File Primary Rcc: ${body}")
     .setBody(simple("${bodyAs(String)}"))
 
-    .setProperty("rcc_id", jsonpath("$.rcc_id"))
-    .setProperty("primary_yn", jsonpath("$.primary_yn"))
+    //.setProperty("rcc_id", jsonpath("$.rcc_id"))
+    //.setProperty("primary_yn", jsonpath("$.primary_yn"))
 
     .setHeader("key").simple("${exchangeProperty.rcc_id}")
     .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
@@ -3665,7 +3661,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
-    .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+    .log(LoggingLevel.INFO, "Dems case status: ${body}")
     .unmarshal().json()
 
     .setProperty("caseFound").simple("${body[id]}")
@@ -3673,7 +3669,7 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
 
-      .log(LoggingLevel.DEBUG, "CourtCaseData: ${exchangeProperty.metadata_data}")
+      .log(LoggingLevel.INFO, "CourtCaseData: ${exchangeProperty.metadata_data}")
       // re-set body to the metadata_data json.
       .setBody(simple("${exchangeProperty.metadata_data}"))
 

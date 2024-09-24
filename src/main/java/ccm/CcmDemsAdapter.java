@@ -5111,7 +5111,7 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO,"returned case records = ${body}...")
       .setProperty("edtId",jsonpath("$.edtID"))
       .setProperty("recordSource",jsonpath("$.cc_Source"))
-      .log(LoggingLevel.INFO,"Body: ${body}")
+     // .log(LoggingLevel.INFO,"Body: ${body}")
       .doTry()
       .choice()
           .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
