@@ -3643,13 +3643,19 @@ public class CcmNotificationService extends RouteBuilder {
         if (ccd != null && ccd.getPrimary_agency_file() != null) {
         exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
         exchange.setProperty("primary_yn", ccd.getPrimary_agency_file().getPrimary_yn());
-        exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+        //exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+        exchange.setProperty("primary_agency_file", ccd.getPrimary_agency_file());
+
         }
+        else{
+          exchange.setProperty("rcc_id", ccd.getCourt_file_id());
+        }
+        exchange.getMessage().setBody(null);
       }
     })
-    .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-    .log(LoggingLevel.INFO, "Court File Primary Rcc: ${body}")
-    .setBody(simple("${bodyAs(String)}"))
+    //.marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+    //.log(LoggingLevel.INFO, "Court File Primary Rcc: ${body}")
+    //.setBody(simple("${bodyAs(String)}"))
 
     //.setProperty("rcc_id", jsonpath("$.rcc_id"))
     //.setProperty("primary_yn", jsonpath("$.primary_yn"))
@@ -3657,6 +3663,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("key").simple("${exchangeProperty.rcc_id}")
     .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
     .setHeader("number",simple("${exchangeProperty.rcc_id}"))
+    .log(LoggingLevel.INFO,"sending key to courtcaseexists : ${exchangeProperty.rcc_id}")
     //.log(LoggingLevel.INFO,"Retrieve court case status first")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
