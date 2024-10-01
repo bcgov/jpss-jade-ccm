@@ -43,6 +43,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
 import org.apache.camel.support.builder.ValueBuilder;
 import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.HttpHostConnectException;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -166,7 +167,7 @@ public class CcmDemsAdapter extends RouteBuilder {
 
 
     // handle network connectivity errors
-    onException(ConnectException.class, SocketTimeoutException.class)
+    onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
       .maximumRedeliveries(10).redeliveryDelay(45000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))

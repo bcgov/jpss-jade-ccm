@@ -39,6 +39,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.HttpHostConnectException;
 
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
@@ -65,7 +66,7 @@ public class CcmReportsProcessor extends RouteBuilder {
   private void attachExceptionHandlers() {
 
     // handle network connectivity errors
-    onException(ConnectException.class, SocketTimeoutException.class)
+    onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
       .maximumRedeliveries(10).redeliveryDelay(45000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
