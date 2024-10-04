@@ -616,7 +616,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     //.log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
     //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .setProperty("numOfEvents")
+   
       .jsonpath("$.events.length()")
+      .setProperty("disableFileNoteProcess").simple("{{justin-disable-file-notes-processing}}")
     .choice()
       .when(simple("${exchangeProperty.numOfEvents} > 0"))
         .log(LoggingLevel.INFO,"Main event batch count: ${exchangeProperty.numOfEvents}")
@@ -631,6 +633,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .log(LoggingLevel.INFO,"Main event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
@@ -671,17 +674,31 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
-        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
-          .to("direct:processFileNote")
-          .endChoice()
-        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DEL_FNOTE))
-          .to("direct:processDeleteFileNote")
-          .endChoice()
-        .otherwise()
-          .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
-          .to("direct:processUnknownEvent")
-          .endChoice()
+       
+      .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
+      .choice()
+          .when(simple("${exchangeProperty.disableFileNoteProcess} == 'false'"))
+              .log(LoggingLevel.INFO, "going to call process file note")
+              .to("direct:processFileNote")
+          //.endChoice()
+          .otherwise()
+              .log(LoggingLevel.INFO, "file note processing disabled")
+              .to("direct:processUnknownEvent")
         .end()
+      .endChoice()
+  
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DEL_FNOTE)  )
+        .choice()
+          .when(simple("${exchangeProperty.disableFileNoteProcess} == 'false'"))
+            .log(LoggingLevel.INFO, "going to call delete file note")
+            .to("direct:processDeleteFileNote")
+          //.endChoice()
+          .otherwise()
+            .log(LoggingLevel.INFO,"file note processing disabled")
+            .to("direct:processUnknownEvent")
+          .end()
+      .endChoice()
+    .end()
     ;
   }
 
@@ -757,7 +774,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DOCM))
           .to("direct:processReportEvents")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
         .otherwise()
@@ -1823,6 +1840,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
     .log(LoggingLevel.INFO,"Processing File Note event: ${body}")
+    
+    
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
