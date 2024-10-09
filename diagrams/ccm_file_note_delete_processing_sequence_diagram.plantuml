@@ -16,6 +16,8 @@ control j_adapter as "JUSTIN Out Adapter"
 collections inferred_file_note_topic as "File Note Events"
 control notification_service as "Notification Service"
 control lookup_service as "Lookup Service"
+control dems_adapter as "DEMS Adapter"
+boundary d_interface as "DEMS"
 
 title
 CCM File Note Delete Event Processing Sequence Diagram
@@ -36,8 +38,15 @@ activate j_adapter
 j_adapter -> JUSTIN : retrieve file note by id
 activate JUSTIN
 j_adapter->notification_service : return file note
+activate dems_adapter
+notification_service-> dems_adapter : process file note delete
+dems_adapter -> lookup_service : get court case meta data
+lookup_service->dems_adapter : process court case data
+dems_adapter->dems_adapter : get court case status
+dems_adapter->dems_adapter : get file note exists
+dems_adapter->d_interface :  call dems host records method
 
-notification_service-> notification_service : print out file note id
+
 end group
 
 
@@ -45,8 +54,10 @@ deactivate notification_service
 deactivate lookup_service
 deactivate j_adapter
 deactivate j_interface
+deactivate d_interface
+deactivate dems_adapter
 
 caption
-Prepared by Todd Wuolle | Updated August 20, 2024
+Prepared by Todd Wuolle | Updated October 2, 2024
 end caption
 @enduml
