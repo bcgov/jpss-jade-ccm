@@ -197,9 +197,9 @@ public class DemsChargeAssessmentCaseData {
         
 
         Set<String>agencyFileIdSet = new HashSet<>();
-        agencyFileIdSet.add(primaryChargeAssessmentData.getRcc_id());
+        //agencyFileIdSet.add(primaryChargeAssessmentData.getRcc_id());
         Set<String>agencyFileNumberSet = new HashSet<>();
-        agencyFileNumberSet.add(primaryChargeAssessmentData.getAgency_file());
+        //agencyFileNumberSet.add(primaryChargeAssessmentData.getAgency_file());
 
         Set<String>investigatingOfficerSet = new HashSet<>();
         investigatingOfficerSet.add(primaryChargeAssessmentData.getInvestigating_officer());
@@ -323,15 +323,15 @@ public class DemsChargeAssessmentCaseData {
         DemsFieldData accusedFullName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ACCUSED_FULL_NAME.getLabel(), accused_name_list.toString());
 
         // JADE-2954
-        StringBuffer distinctAgencyFileIdBuffer = new StringBuffer("");
-        StringBuilder agencyFileNumberBuilder = new StringBuilder("");
+        StringBuffer distinctAgencyFileIdBuffer = new StringBuffer(primaryChargeAssessmentData.getRcc_id());
+        StringBuilder agencyFileNumberBuilder = new StringBuilder(primaryChargeAssessmentData.getAgency_file());
         StringBuilder investigatingOfficerBuilder = new StringBuilder("");
         StringBuilder proposedProcessTypeBuilder = new StringBuilder("");
         
         if (!agencyFileIdSet.isEmpty()) {
             int elementCounter =0;
             for (String element : agencyFileIdSet) {
-                if (elementCounter > 0) {
+                if (elementCounter > 0 || distinctAgencyFileIdBuffer.length() > 0) {
                     distinctAgencyFileIdBuffer.append(";");
                 }
                 distinctAgencyFileIdBuffer.append(element);    
@@ -341,7 +341,7 @@ public class DemsChargeAssessmentCaseData {
         if (!agencyFileNumberSet.isEmpty()) {
             int elementCounter =0;
             for (String element : agencyFileNumberSet) {
-                if (elementCounter > 0) {
+                if (elementCounter > 0 || agencyFileNumberBuilder.length() > 0) {
                     agencyFileNumberBuilder.append(";");
                 }
                 agencyFileNumberBuilder.append(element);    

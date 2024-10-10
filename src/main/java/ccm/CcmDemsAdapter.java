@@ -153,6 +153,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingParticipantwithOTCV2();
     processParticipantsList();
     updateOtcParticipants();
+    http_destroyCaseRecords();
     destroyCaseRecords();
     activateCase();
     processNoteRecord();
@@ -3203,6 +3204,9 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
           .log(LoggingLevel.DEBUG, "Export report response: '${body}'")
+          // delete source case's records.
+          .setHeader("id", simple("${header.sourceCaseId}"))
+          .toD("direct:destroyCaseRecords")
         .endChoice()
       .end()
 
@@ -4847,13 +4851,24 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void http_destroyCaseRecords() {
+    // IN: header = id (edt case id)
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/destroyCaseRecords")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:destroyCaseRecords");
+  }
+
   private void destroyCaseRecords() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     // IN: header = id
-    from("platform-http:/" + routeId )
+    from("direct:" + routeId )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request id = ${header.id}...")
+    .log(LoggingLevel.INFO,"Destroying records for case id = ${header.id}...")
     .setProperty("dems_case_id", header("id"))
     .setHeader("dems_case_id",simple("${exchangeProperty.id}"))
     .removeHeader("CamelHttpUri")
