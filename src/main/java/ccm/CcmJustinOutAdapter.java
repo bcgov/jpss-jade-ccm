@@ -627,7 +627,14 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .choice()
+    .when(simple("${header.mdocJustinNo} != ''"))
+      .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
+    .when(simple("${header.rccId} != ''"))  
+      .toD("https://{{justin.host}}/fileNote?rcc_id=${header.rccId}")
+    .when(simple("${header.number} !- ''"))
+      .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .endChoice()
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
   
@@ -636,6 +643,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
      
         JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
+        
         if (k != null && !k.getfilenotelist().isEmpty()) {
           JustinFileNote j = k.getfilenotelist().get(0);
           FileNote fileNote = new FileNote(j);

@@ -3414,9 +3414,13 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.DEBUG,"processFileNote event_message_id = ${header[event_key]}")
+    //.setProperty("event_message_id")
+    //.jsonpath("$.event_message_id")
+    .setHeader("mdocJustinNo").jsonpath("$.justin_mdoc_no")
+    .setHeader("rccId").jsonpath("$.justin_rcc_id")
+    .setHeader("number", simple("${header[event_key]}"))
     .setProperty("fileNoteEvent").body()
     // double check that case had not been already created since.
-    .setHeader("number", simple("${header[event_key]}"))
     
     .to("http://ccm-lookup-service/getFileNote")
     //.log(LoggingLevel.INFO,"Lookup response = '${body}'")

@@ -159,6 +159,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     streamNoteRecord();
     processDeleteNoteRecord();
     deleteJustinFileNoteRecord();
+    updateExistingCaseFileNotes();
   }
 
 
@@ -4735,6 +4736,69 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void processCaseList() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+    .setProperty("length",jsonpath("$.items.length()"))
+    .log(LoggingLevel.INFO,"Person count: ${exchangeProperty.length}")
+    .split()
+      .jsonpathWriteAsString("$.items.*")
+      //.setProperty("id", simple("${header.destinationCaseId}"))
+      
+      .setProperty("id",jsonpath("$.id"))
+      .to("direct:getCourtCaseStatusById")
+      .setProperty("demsCaseStatusObj").body()
+      .unmarshal().json(JsonLibrary.Jackson,DemsCaseStatus.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          DemsCaseStatus demsCaseStatus = exchange.getIn().getBody(DemsCaseStatus.class);
+          //  .setProperty("destRccId",jsonpath("$.primaryAgencyFileId"))
+          demsCaseStatus.getCourtFileId();
+          exchange.setProperty("caseRccId", demsCaseStatus.getPrimaryAgencyFileId());
+          exchange.setProperty("status",demsCaseStatus.getStatus());
+          exchange.setProperty("mdoc", demsCaseStatus.getCourtFileId());
+        }})
+    
+      .log(LoggingLevel.DEBUG,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
+      .choice()
+        .when().simple("${exchangeProperty.status} == 'Active'")
+          .setHeader("mdocJustinNo", simple("${exchangeProperty.mdoc}"))
+          .setHeader("rccId", simple("${exchangeProperty.caseRccId}"))
+          
+          .to("http://ccm-lookup-service/getFileNote")
+          .setBody(simple("${body}"))
+
+          .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+              if (fileNote != null) {
+                int fileNoteId = !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
+                if (fileNoteId <= 0) {
+                  exchange.setProperty("addFileNote", true);
+                }
+                else{
+                  exchange.setProperty("addFileNote", false);
+                }
+
+              }
+            }})
+            .choice()
+            .when(simple("${exchangeProperty.addFileNote} == 'true'"  ))
+              // add file note to case
+            .end()
+        .endChoice()
+      .end()
+      .log(LoggingLevel.INFO, "End of loop for case.")
+    .end() // end loop
+    .log(LoggingLevel.INFO,"end of processCaseList.")
+    ;
+  }
   private void processParticipantsList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5178,5 +5242,83 @@ private void getDemsFieldMappingsrccStatus() {
       .end()
     .end()
   .end();
+  }
+  private void updateExistingCaseFileNotes() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+     // IN: header = id
+     from("platform-http:/" + routeId )
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.INFO,"updateExistingCaseFileNotes... pages: ${header.pageFrom} -> ${header.pageTo}")
+     //.setProperty("pageFrom", header("pageFrom"))
+     //.setProperty("pageTo", header("pageTo"))
+ 
+     .setProperty("v2DemsHost", simple("{{dems.host}}"))
+     .process(new Processor() {
+       @Override
+       public void process(Exchange exchange) throws Exception {
+         String v2DemsHost = (String)exchange.getProperty("v2DemsHost");
+         v2DemsHost = v2DemsHost.replace("/v1", "/v2");
+         exchange.setProperty("v2DemsHost", v2DemsHost);
+       }
+     })
+     .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
+ 
+     .setProperty("pageSize").simple("500")
+     .setProperty("maxRecordIncrements").simple("75")
+     .setProperty("incrementCount").simple("1")
+     .setProperty("continueLoop").simple("true")
+ 
+     .choice()
+       .when(simple("${header.pageFrom} != null && ${header.pageFrom} != ''"))
+         .setProperty("incrementCount").simple("${header.pageFrom}")
+       .endChoice()
+     .end()
+ 
+     .choice()
+       .when(simple("${header.pageTo} != null && ${header.pageTo} != ''"))
+         .setProperty("maxRecordIncrements").simple("${header.pageTo}")
+       .endChoice()
+     .end()
+ 
+     // limit the number of times incremented to 250.
+     .loopDoWhile(simple("${exchangeProperty.continueLoop} == 'true' && ${exchangeProperty.incrementCount} <= ${exchangeProperty.maxRecordIncrements}"))
+       .log(LoggingLevel.INFO, "\n\nViewing page: ${exchangeProperty.incrementCount}")
+ 
+       .removeHeader("CamelHttpUri")
+       .removeHeader("CamelHttpBaseUri")
+       .removeHeaders("CamelHttp*")
+       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+       //traverse through all cases in DEMS
+       .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/cases/list?page=${exchangeProperty.incrementCount}&pagesize=${exchangeProperty.pageSize}")
+       //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+       .setProperty("length",jsonpath("$.items.length()"))
+       .log(LoggingLevel.INFO,"Case count: ${exchangeProperty.length}")
+ 
+       .choice()
+         .when(simple("${exchangeProperty.length} < 1"))
+           .log(LoggingLevel.INFO, "End of pages.")
+           .setProperty("continueLoop").simple("false")
+         .endChoice()
+         .when(simple("${header.CamelHttpResponseCode} == 200"))
+           .to("direct:processCaseList")
+         .endChoice()
+       .end()
+ 
+       // increment the loop count.
+       .process(new Processor() {
+         @Override
+         public void process(Exchange ex) {
+           Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+           incrementCount++;
+           ex.setProperty("incrementCount", incrementCount);
+         }
+       })
+     .end() // end loop
+     .log(LoggingLevel.INFO,"end of updateExistingCaseFileNotes.")
+     ;
   }
 }
