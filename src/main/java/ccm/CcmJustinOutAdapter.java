@@ -632,9 +632,9 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
     .when(simple("${header.rccId} != ''"))  
       .toD("https://{{justin.host}}/fileNote?rcc_id=${header.rccId}")
-    .when(simple("${header.number} !- ''"))
+    .when(simple("${header.number} != ''"))
       .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
-    .endChoice()
+    .end()
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
   

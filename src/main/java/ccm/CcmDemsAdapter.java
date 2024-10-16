@@ -160,6 +160,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     processDeleteNoteRecord();
     deleteJustinFileNoteRecord();
     updateExistingCaseFileNotes();
+    processCaseList();
   }
 
 
@@ -4743,7 +4744,7 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
     .setProperty("length",jsonpath("$.items.length()"))
-    .log(LoggingLevel.INFO,"Person count: ${exchangeProperty.length}")
+    .log(LoggingLevel.INFO,"Case count: ${exchangeProperty.length}")
     .split()
       .jsonpathWriteAsString("$.items.*")
       //.setProperty("id", simple("${header.destinationCaseId}"))
@@ -4756,11 +4757,10 @@ private void getDemsFieldMappingsrccStatus() {
         @Override
         public void process(Exchange exchange) {
           DemsCaseStatus demsCaseStatus = exchange.getIn().getBody(DemsCaseStatus.class);
-          //  .setProperty("destRccId",jsonpath("$.primaryAgencyFileId"))
-          demsCaseStatus.getCourtFileId();
           exchange.setProperty("caseRccId", demsCaseStatus.getPrimaryAgencyFileId());
           exchange.setProperty("status",demsCaseStatus.getStatus());
           exchange.setProperty("mdoc", demsCaseStatus.getCourtFileId());
+
         }})
     
       .log(LoggingLevel.DEBUG,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
@@ -4777,20 +4777,34 @@ private void getDemsFieldMappingsrccStatus() {
             @Override
             public void process(Exchange exchange) throws Exception {
               FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+              DemsCaseStatus demsCaseStatusObj = (DemsCaseStatus) exchange.getProperty("demsCaseStatusObj");
+              DemsRecordData demsRecordData = new DemsRecordData(fileNote);
+               
+              exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
               if (fileNote != null) {
                 int fileNoteId = !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
                 if (fileNoteId <= 0) {
                   exchange.setProperty("addFileNote", true);
+                  exchange.getIn().setHeader("number", demsCaseStatusObj.getCourtFileNo());
+                  exchange.getIn().setHeader("caseId", demsCaseStatusObj.getId());
+                  exchange.setProperty("fileNoteToSend", fileNote);
+
                 }
                 else{
                   exchange.setProperty("addFileNote", false);
                 }
-
               }
             }})
+            .to("direct:getCaseDocIdExistsByKey")
+            .log(LoggingLevel.INFO, "returned key: ${body}")
+            .unmarshal().json()
+            .setProperty("recordId").simple("${body[id]}")
+            .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.recordId}'")
             .choice()
             .when(simple("${exchangeProperty.addFileNote} == 'true'"  ))
               // add file note to case
+              .setBody(simple("${exchangeProperty.fileNoteToSend}"))
+              .to("direct:streamNoteRecord")
             .end()
         .endChoice()
       .end()
@@ -5247,7 +5261,7 @@ private void getDemsFieldMappingsrccStatus() {
      // use method name as route id
      String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
      // IN: header = id
-     from("platform-http:/" + routeId )
+     from("platform-http:/" + routeId + "?httpMethodRestrict=PUT" )
      .routeId(routeId)
      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
      .log(LoggingLevel.INFO,"updateExistingCaseFileNotes... pages: ${header.pageFrom} -> ${header.pageTo}")
