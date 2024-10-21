@@ -620,7 +620,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
+    .log(LoggingLevel.INFO,"getFileNote request received. fileNoteId = ${header.number}; mdocJustin=${header.mdocJustinNo}; rccid=${header.rccId}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -628,6 +628,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .choice()
+    //.toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .when(simple("${header.mdocJustinNo} != ''"))
       .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
     .when(simple("${header.rccId} != ''"))  

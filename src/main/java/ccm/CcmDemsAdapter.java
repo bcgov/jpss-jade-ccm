@@ -4745,25 +4745,19 @@ private void getDemsFieldMappingsrccStatus() {
     //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
     .setProperty("length",jsonpath("$.items.length()"))
     .log(LoggingLevel.INFO,"Case count: ${exchangeProperty.length}")
+    .removeProperty("mdoc")
+    .removeProperty("caseRccId")
     .split()
       .jsonpathWriteAsString("$.items.*")
       //.setProperty("id", simple("${header.destinationCaseId}"))
       
       .setProperty("id",jsonpath("$.id"))
       .to("direct:getCourtCaseStatusById")
-      .setProperty("demsCaseStatusObj").body()
-      .unmarshal().json(JsonLibrary.Jackson,DemsCaseStatus.class)
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) {
-          DemsCaseStatus demsCaseStatus = exchange.getIn().getBody(DemsCaseStatus.class);
-          exchange.setProperty("caseRccId", demsCaseStatus.getPrimaryAgencyFileId());
-          exchange.setProperty("status",demsCaseStatus.getStatus());
-          exchange.setProperty("mdoc", demsCaseStatus.getCourtFileId());
-
-        }})
+      .setProperty("status",jsonpath("$.status"))
+      .setProperty("caseRccId",jsonpath("$.key"))
+      .setProperty("mdoc",jsonpath("$.courtFileId"))
     
-      .log(LoggingLevel.DEBUG,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
+      .log(LoggingLevel.INFO,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
       .choice()
         .when().simple("${exchangeProperty.status} == 'Active'")
           .setHeader("mdocJustinNo", simple("${exchangeProperty.mdoc}"))
@@ -4771,24 +4765,22 @@ private void getDemsFieldMappingsrccStatus() {
           
           .to("http://ccm-lookup-service/getFileNote")
           .setBody(simple("${body}"))
-
           .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
               FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
-              DemsCaseStatus demsCaseStatusObj = (DemsCaseStatus) exchange.getProperty("demsCaseStatusObj");
-              DemsRecordData demsRecordData = new DemsRecordData(fileNote);
-               
-              exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
               if (fileNote != null) {
-                int fileNoteId = !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
+                log.info("file not null");
+                DemsRecordData demsRecordData = new DemsRecordData(fileNote);
+                exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
+
+                int fileNoteId = fileNote.getFile_note_id() != null && !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
                 if (fileNoteId <= 0) {
                   exchange.setProperty("addFileNote", true);
-                  exchange.getIn().setHeader("number", demsCaseStatusObj.getCourtFileNo());
-                  exchange.getIn().setHeader("caseId", demsCaseStatusObj.getId());
+                  exchange.getIn().setHeader("number", exchange.getProperty("mdoc"));
+                  exchange.getIn().setHeader("caseId", exchange.getProperty("id"));
                   exchange.setProperty("fileNoteToSend", fileNote);
-
                 }
                 else{
                   exchange.setProperty("addFileNote", false);
@@ -4805,6 +4797,7 @@ private void getDemsFieldMappingsrccStatus() {
               // add file note to case
               .setBody(simple("${exchangeProperty.fileNoteToSend}"))
               .to("direct:streamNoteRecord")
+              .log(LoggingLevel.INFO, "would call create file note here")
             .end()
         .endChoice()
       .end()
@@ -5269,14 +5262,14 @@ private void getDemsFieldMappingsrccStatus() {
      //.setProperty("pageTo", header("pageTo"))
  
      .setProperty("v2DemsHost", simple("{{dems.host}}"))
-     .process(new Processor() {
+     /*.process(new Processor() {
        @Override
        public void process(Exchange exchange) throws Exception {
          String v2DemsHost = (String)exchange.getProperty("v2DemsHost");
          v2DemsHost = v2DemsHost.replace("/v1", "/v2");
          exchange.setProperty("v2DemsHost", v2DemsHost);
        }
-     })
+     })*/
      .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
  
      .setProperty("pageSize").simple("500")

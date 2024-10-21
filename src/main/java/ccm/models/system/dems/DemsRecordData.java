@@ -553,7 +553,12 @@ public class DemsRecordData {
 
     public DemsRecordData(FileNote nrd) {
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
+        if (nrd == null) {
+            
+        } else if (nrd instanceof FileNote == false) {
 
+        }
+        else {
         if(nrd.getNote_txt() != null) {
             DemsFieldData notetxt = new DemsFieldData("Notes", nrd.getNote_txt());
             fieldData.add(notetxt);
@@ -605,14 +610,26 @@ public class DemsRecordData {
             fieldData.add(type);
         }
         StringBuilder notes = new StringBuilder();
-        if(nrd.getNote_txt().length() > 256) {
+        if (nrd != null) {
+            String noteText = nrd.getNote_txt();
+            if (noteText != null && !noteText.isEmpty() && noteText.length() > 256) {
+                String truncatedCaseName = noteText.substring(0, 256);
+                notes.append(truncatedCaseName);
+                notes.append(" ...");
+            }
+            else{
+                notes.append(noteText);
+            }
+        }
+        
+        /*if(nrd != null && !nrd.getNote_txt().isEmpty() && nrd.getNote_txt().length() > 256) {
             String truncatedCaseName = nrd.getNote_txt().substring(0, 256);
             notes.append(truncatedCaseName);
             notes.append(" ...");
         }
         else{
             notes.append(nrd.getNote_txt());
-        }
+        }*/
         setDescriptions(notes.toString());
         if(getDescriptions() != null) {
             DemsFieldData descriptions = new DemsFieldData("Descriptions", getDescriptions());
@@ -631,6 +648,7 @@ public class DemsRecordData {
         if(getFileExtension() != null) {
             DemsFieldData extension = new DemsFieldData("File Extension", getFileExtension());
             fieldData.add(extension);
+        }
         }
         setFields(fieldData);
     }
