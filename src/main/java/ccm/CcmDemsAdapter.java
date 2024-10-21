@@ -153,7 +153,6 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingParticipantwithOTCV2();
     processParticipantsList();
     updateOtcParticipants();
-    http_destroyCaseRecords();
     destroyCaseRecords();
     activateCase();
     processNoteRecord();
@@ -3204,9 +3203,6 @@ private void getDemsFieldMappingsrccStatus() {
           .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
           .toD("https://{{dems.host}}/cases/${header.sourceCaseId}/export-to-case/merge-case/${header.destinationCaseId}")
           .log(LoggingLevel.DEBUG, "Export report response: '${body}'")
-          // delete source case's records.
-          .setHeader("id", simple("${header.sourceCaseId}"))
-          .toD("direct:destroyCaseRecords")
         .endChoice()
       .end()
 
@@ -3336,7 +3332,6 @@ private void getDemsFieldMappingsrccStatus() {
         .endChoice()
       .end()
     .end()
-
     ;
   }
 
@@ -4851,26 +4846,14 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
-  private void http_destroyCaseRecords() {
-    // IN: header = id (edt case id)
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/destroyCaseRecords")
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .to("direct:destroyCaseRecords");
-  }
-
   private void destroyCaseRecords() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
     // IN: header = id
-    from("direct:" + routeId )
+    from("platform-http:/" + routeId )
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Destroying records for case id = ${header.id}...")
     .setProperty("dems_case_id", header("id"))
-    .setHeader("dems_case_id",simple("${exchangeProperty.id}"))
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4879,7 +4862,57 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     .log(LoggingLevel.INFO," DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
-    .log(LoggingLevel.INFO,"DEMS case record deleted. ")
+    .log(LoggingLevel.INFO,"DEMS case record deleted.")
+
+    // Go through list of associated rcc ids and make sure the records are destroyed in them as well.
+    .setProperty("id", simple("${header.id}"))
+    .to("direct:getCourtCaseStatusById")
+    .setProperty("associatedRccIds",jsonpath("$.agencyFileId"))
+
+    .process(new Processor() {
+      public void process(Exchange exchange) {
+        String associatedRccIds = (String)exchange.getProperty("associatedRccIds");
+        String[] rccArray = associatedRccIds.split(";");
+        ArrayList<String> associatedRccIdList = new ArrayList<String>(Arrays.asList(rccArray));
+        exchange.getMessage().setBody(associatedRccIdList);
+      }
+    })
+    .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+    .split().jsonpathWriteAsString("$.*")
+      .setProperty("agencyFileId", simple("${body}"))
+      .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          String agencyFileId = exchange.getProperty("agencyFileId", String.class);
+          log.info("agencyFileId:"+agencyFileId);
+          exchange.setProperty("agencyFileId", agencyFileId.replaceAll("\"", ""));
+        }
+      })
+
+      .choice()
+        .when(simple("${exchangeProperty.agencyFileId} != ''"))
+          .setProperty("key", simple("${exchangeProperty.agencyFileId}"))
+          .to("direct:getCourtCaseIdByKey")
+          .setProperty("dems_case_id", jsonpath("$.id"))
+
+
+          .log(LoggingLevel.INFO,"Destroying records for case id = ${exchangeProperty.dems_case_id}...")
+          .removeHeader("CamelHttpUri")
+          .removeHeader("CamelHttpBaseUri")
+          .removeHeaders("CamelHttp*")
+          .setHeader(Exchange.HTTP_METHOD, simple("DELETE"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+          .log(LoggingLevel.INFO," DEMS case record (dems_case_id = ${exchangeProperty.dems_case_id}) ...")
+          .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/records")
+          .log(LoggingLevel.INFO,"DEMS case record deleted.")
+
+        .endChoice()
+      .end()
+    .end()
+
+
     ;
   }
 
@@ -4900,17 +4933,17 @@ private void getDemsFieldMappingsrccStatus() {
       public void process(Exchange exchange) {
         FileNote demsFileNote = exchange.getIn().getBody(FileNote.class);
         if (demsFileNote != null) {
-        exchange.setProperty("file_note", demsFileNote);
-        
-        log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
-        DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
-        exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-        //log.info("DocId: " + demsRecord.getDocumentId());
-        exchange.getMessage().setBody(demsRecord);
-        exchange.setProperty("primaryRccId", demsFileNote.getRcc_id());
-        exchange.setProperty("primaryMdocNum", demsFileNote.getMdoc_justin_no());
-        // .setHeader("number", simple("${header[rcc_id]}"))
-        exchange.getMessage().setHeader("number", demsFileNote.getRcc_id());
+          exchange.setProperty("file_note", demsFileNote);
+          
+          log.info("file note before making demsrecord data : " + demsFileNote.getFile_note_id());
+          DemsRecordData demsRecord = new DemsRecordData(demsFileNote);
+          exchange.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+          //log.info("DocId: " + demsRecord.getDocumentId());
+          exchange.getMessage().setBody(demsRecord);
+          exchange.setProperty("primaryRccId", demsFileNote.getRcc_id());
+          exchange.setProperty("primaryMdocNum", demsFileNote.getMdoc_justin_no());
+          // .setHeader("number", simple("${header[rcc_id]}"))
+          exchange.getMessage().setHeader("number", demsFileNote.getRcc_id());
         }
       }
     })
@@ -5108,6 +5141,7 @@ private void getDemsFieldMappingsrccStatus() {
    .log(LoggingLevel.INFO,"DEMS case record File Note uploaded.")
     .end();
   }
+
   private void deleteJustinFileNoteRecord() {
       // use method name as route id
       String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
