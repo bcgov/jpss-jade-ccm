@@ -66,5 +66,7 @@
   {
     "name" : "Last JUSTIN Update",
     "value" : null
-  } ]
+  } ],
+  "waitForCaseCompletion" : false,
+  "createdViaUi" : true
 }
