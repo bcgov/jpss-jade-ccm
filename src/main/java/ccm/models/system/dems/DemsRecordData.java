@@ -566,10 +566,10 @@ public class DemsRecordData {
             DemsFieldData date = new DemsFieldData("Date", DateTimeUtils.convertToUtcFromBCDateTimeString(nrd.getEntry_date()));
             fieldData.add(date);
         }
-        if (nrd.getMdoc_justin_no().isEmpty()) {
+        if (nrd.getMdoc_justin_no() != null && nrd.getMdoc_justin_no().isEmpty()) {
             setOriginalFileNumber(nrd.getOriginal_file_number());
         }
-        else{
+        else if (nrd.getMdoc_justin_no() != null){
             setOriginalFileNumber(nrd.getMdoc_justin_no());
         }
         if(getOriginalFileNumber() != null) {
@@ -587,6 +587,10 @@ public class DemsRecordData {
         setFolder("JUSTIN");
         if(getSource() != null) {
             DemsFieldData source = new DemsFieldData("Source", getSource());
+            fieldData.add(source);
+        }
+        else {
+            DemsFieldData source = new DemsFieldData("Source", "");
             fieldData.add(source);
         }
         setCaseNoteCategory("JUSTIN");
