@@ -4026,7 +4026,6 @@ private void getDemsFieldMappingsrccStatus() {
               log.info("Case record not found.");
             }
             exchange.getMessage().setBody(outputStringBuffer.toString());
-
           }
         })
       .endChoice()
@@ -4754,12 +4753,12 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("id",jsonpath("$.id"))
       .to("direct:getCourtCaseStatusById")
       .setProperty("status",jsonpath("$.status"))
-      .setProperty("caseRccId",jsonpath("$.key"))
+      .setProperty("caseRccId",jsonpath("$.agencyFileId"))
       .setProperty("mdoc",jsonpath("$.courtFileId"))
     
       .log(LoggingLevel.INFO,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
       .choice()
-      .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.caseRccId} != '' && ${exchangeProperty.caseRccId}") 
+      .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.caseRccId} != ''") 
       .setHeader("splitRccId", simple("${exchangeProperty.caseRccId}"))
       .split()
       .tokenize(";", "splitRccId", false)
@@ -4767,12 +4766,10 @@ private void getDemsFieldMappingsrccStatus() {
         @Override
         public void process(Exchange ex) {
           String token = ex.getIn().getBody(String.class);
+          token = token.replace(';', ' ');
           ex.getIn().setHeader("rccId", token);
           ex.setProperty("currentRccId", token);
         }})
-    //  .jsonpath("${exchangeProperty.caseRccId}")
-        // .setHeader("rccId", jsonpath("$"))
-        // .setProperty("currentRccId", jsonpath("$"))
          .to("http://ccm-lookup-service/getFileNote")
          .setBody(simple("${body}"))
          .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
@@ -4784,11 +4781,9 @@ private void getDemsFieldMappingsrccStatus() {
                log.info("file not null");
                DemsRecordData demsRecordData = new DemsRecordData(fileNote);
                exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
-
                int fileNoteId = fileNote.getFile_note_id() != null && !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
                if (fileNoteId >= 0) {
                  exchange.setProperty("addFileNote", true);
-                 //exchange.getIn().setHeader("number", exchange.getProperty("mdoc"));
                  exchange.getIn().setHeader("caseId", exchange.getProperty("id"));
                  fileNote.setRcc_id(exchange.getProperty("currentRccId", String.class));
                  exchange.setProperty("fileNoteToSend", fileNote);
@@ -4801,10 +4796,10 @@ private void getDemsFieldMappingsrccStatus() {
              }
            }})
            .to("direct:getCaseDocIdExistsByKey")
-           .log(LoggingLevel.INFO, "returned key: ${body}")
+         //  .log(LoggingLevel.INFO, "returned key: ${body}")
            .unmarshal().json()
            .setProperty("recordId").simple("${body[id]}")
-           .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.recordId}'")
+          // .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.recordId}'")
            .choice()
            .when(simple("${exchangeProperty.addFileNote} == 'true' && ${exchangeProperty.recordId} != ''"   ))
              // add file note to case
@@ -4814,18 +4809,17 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
       .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.mdoc} != ''") 
       .setHeader("splitMdoc", simple("${exchangeProperty.mdoc}"))
+     // .log(LoggingLevel.INFO, "setting splitMdoc to : ${exchangeProperty.mdoc}")
       .split() // look at mdoc
       .tokenize(";", "splitMdoc", false)
       .process(new Processor() {
         @Override
         public void process(Exchange ex) {
           String token = ex.getIn().getBody(String.class);
+          token = token.replace(';', ' ');
           ex.getIn().setHeader("mdocJustinNo", token);
           ex.setProperty("currentMdoc", token);
         }})
-      //.jsonpathWriteAsString("${exchangeProperty.mdoc}")
-        //.setHeader("mdocJustinNo", jsonpath("$"))
-        //.setProperty("currentMdoc", jsonpath("$"))
         .to("http://ccm-lookup-service/getFileNote")
         .setBody(simple("${body}"))
         .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
@@ -4852,10 +4846,10 @@ private void getDemsFieldMappingsrccStatus() {
             }
           }})
           .to("direct:getCaseDocIdExistsByKey")
-          .log(LoggingLevel.INFO, "returned key: ${body}")
+         // .log(LoggingLevel.INFO, "returned key: ${body}")
           .unmarshal().json()
           .setProperty("recordId").simple("${body[id]}")
-          .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.recordId}'")
+         // .log(LoggingLevel.INFO, "existingRecordId: '${exchangeProperty.recordId}'")
           .choice()
           .when(simple("${exchangeProperty.addFileNote} == 'true' && ${exchangeProperty.recordId} != ''"   ))
             // add file note to case
