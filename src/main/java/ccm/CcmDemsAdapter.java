@@ -4878,6 +4878,7 @@ private void getDemsFieldMappingsrccStatus() {
       }
     })
     .log(LoggingLevel.INFO, "Unprocessed agency file list: ${body}")
+    .marshal().json()
     .split().jsonpathWriteAsString("$.*")
       .setProperty("agencyFileId", simple("${body}"))
       .log(LoggingLevel.INFO, "agency file: ${exchangeProperty.agencyFileId}")
@@ -4911,7 +4912,7 @@ private void getDemsFieldMappingsrccStatus() {
         .endChoice()
       .end()
     .end()
-
+    .log(LoggingLevel.INFO, "End of destroy all records.")
 
     ;
   }
