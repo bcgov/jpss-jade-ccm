@@ -34,6 +34,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.HttpHostConnectException;
 
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
@@ -97,7 +98,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
   private void attachExceptionHandlers() {
 
     // handle network connectivity errors
-    onException(ConnectException.class, SocketTimeoutException.class)
+    onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
       .maximumRedeliveries(10).redeliveryDelay(45000)
       .backOffMultiplier(2)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")

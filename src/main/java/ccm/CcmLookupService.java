@@ -32,6 +32,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.HttpHostConnectException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -68,7 +69,7 @@ public class CcmLookupService extends RouteBuilder {
 
 
     // handle network connectivity errors
-    onException(ConnectException.class, SocketTimeoutException.class)
+    onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
       .maximumRedeliveries(10).redeliveryDelay(45000)
       .log(LoggingLevel.ERROR,"onException(ConnectException, SocketTimeoutException) called.")
       .setBody(constant("An unexpected network error occurred"))
