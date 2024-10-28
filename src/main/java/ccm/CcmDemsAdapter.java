@@ -4805,9 +4805,9 @@ private void getDemsFieldMappingsrccStatus() {
              .setBody(simple("${exchangeProperty.fileNoteToSend}"))
              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-               .setHeader("caseId", simple("${exchangeProperty.id}"))
-               .setHeader("recordId", simple("${exchangeProperty.recordId}"))
-               .marshal().json(JsonLibrary.Jackson, FileNote.class)
+             .setHeader("caseId", simple("${exchangeProperty.id}"))
+             .setHeader("recordId", simple("${exchangeProperty.recordId}"))
+             .marshal().json(JsonLibrary.Jackson, FileNote.class)
              .to("direct:streamNoteRecord")
       .end() // end split for rcc-id
       .endChoice()
@@ -4843,7 +4843,7 @@ private void getDemsFieldMappingsrccStatus() {
                 exchange.getIn().setHeader("number", exchange.getProperty("mdoc"));
                 exchange.getIn().setHeader("caseId", exchange.getProperty("id"));
                 exchange.setProperty("fileNoteToSend", fileNote);
-                exchange.getIn().setHeader("number", exchange.getProperty("caseRccId"));
+                //exchange.getIn().setHeader("number", exchange.getProperty("caseRccId"));
                 exchange.setProperty("recordId", "");
               }
               else{
@@ -4852,22 +4852,45 @@ private void getDemsFieldMappingsrccStatus() {
               exchange.getIn().setBody(null);
             }
           }})
-         
-          .to("direct:getCaseDocIdExistsByKey")
-         // .log(LoggingLevel.INFO, "returned key: ${body}")
-          .unmarshal().json()
-          .setProperty("recordId").simple("${body[id]}")
-          .choice()
+          .setProperty("mdoc_justin_no", simple("${exchangeProperty.currentMdoc}"))
+          .setHeader("event_key", simple("${exchangeProperty.currentMdoc}"))
+          .setHeader("number", simple("${exchangeProperty.currentMdoc}"))
+          .to("direct:compileRelatedCourtFiles")
+            // re-set body to the metadata_data json.
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .log(LoggingLevel.DEBUG, "metadata_data: ${body}")
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+  
+            CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+            exchange.setProperty("agency_file_no", ccd.getPrimary_agency_file().getAgency_file_no());
+            exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+        .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+        .setBody(simple("${bodyAs(String)}"))
+        .setProperty("mdoc_rcc_id", jsonpath("$.rcc_id"))
+        .setProperty("primary_yn", jsonpath("$.primary_yn"))
+        .setHeader("key").simple("${exchangeProperty.mdoc_rcc_id}")
+        .setHeader("event_key",simple("${exchangeProperty.mdoc_rcc_id}"))
+        .setHeader("number",simple("${exchangeProperty.mdoc_rcc_id}"))
+        .to("direct:getCaseDocIdExistsByKey")
+        .unmarshal().json()
+        .setProperty("recordId").simple("${body[id]}")
+        .choice()
           .when(simple("${exchangeProperty.addFileNote} == 'true' && ${exchangeProperty.recordId} != ''"   ))
        
             // add file note to case
-            .setBody(simple("${exchangeProperty.fileNoteToSend}"))
-           .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          .setBody(simple("${exchangeProperty.fileNoteToSend}"))
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
           .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-            .setHeader("caseId", simple("${exchangeProperty.id}"))
-            .setHeader("recordId", simple("${exchangeProperty.recordId}"))
-            .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          .setHeader("caseId", simple("${exchangeProperty.id}"))
+          .setHeader("recordId", simple("${exchangeProperty.recordId}"))
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
            
             .to("direct:streamNoteRecord")
           .end() // end choice
