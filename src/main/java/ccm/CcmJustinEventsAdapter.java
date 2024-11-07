@@ -342,7 +342,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header = id
-    from("platform-http:/" + routeId)
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
