@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "scripts"
+		},
+		{
+			"path": "ccm-splunk-adapter-quarkus"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"java.project.referencedLibraries": [
+			"lib/**/*.jar"
+		]
+	}
+}
