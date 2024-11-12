@@ -4,6 +4,7 @@ import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.camel.CamelException;
 
 // To run this integration use:
@@ -28,13 +29,14 @@ import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
 
+
 import ccm.models.common.event.Error;
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.splunk.SplunkEventLog;
 import ccm.utils.DateTimeUtils;
 
-
+@ApplicationScoped
 public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
