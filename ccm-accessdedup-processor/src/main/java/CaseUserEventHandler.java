@@ -110,8 +110,11 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
                 caseUserEvent.getEvent_status(), 
                 (key != null && key.length() > 0) ? " for " + key : "");
 
-            // Produce a KPI event for the case user event.
-            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.partition(), context.offset());
+            // Produce a KPI event for the case user event, if not deprovisioning
+            // JADE-3011 - Removed for ACCESS_REMOVED events, due to excess amount of event messages
+            if(!CaseUserEvent.STATUS.ACCESS_REMOVED.name().equals(caseUserEvent.getEvent_status())) {
+                produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_STARTED, context.topic(), context.partition(), context.offset());
+            }
 
             if (CaseUserEvent.STATUS.EVENT_BATCH_STARTED.name().equals(caseUserEvent.getEvent_status())) {
                 // Start of the batch is detected; update batch count in the store.
@@ -221,7 +224,10 @@ public class CaseUserEventHandler extends AbstractProcessor<String, String> {
             }
             
             // Produce a KPI event for the case user event.
-            produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.partition(), context.offset());
+            // JADE-3011 - Removed for ACCESS_REMOVED events, due to excess amount of event messages
+            if(!CaseUserEvent.STATUS.ACCESS_REMOVED.name().equals(caseUserEvent.getEvent_status())) {
+                produceEventKpi(key, value, null, EventKPI.STATUS.EVENT_PROCESSING_COMPLETED, context.topic(), context.partition(), context.offset());
+            }
         } catch (JsonProcessingException jpe) {
             String errorDetails = "Error processing case user event message for " + key + ". Error message: " + jpe;
             LOG.error(errorDetails);
