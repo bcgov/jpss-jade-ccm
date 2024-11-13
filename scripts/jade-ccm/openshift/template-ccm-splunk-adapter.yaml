@@ -35,7 +35,7 @@ objects:
               - configMapRef:
                   name: ccm-configs
               - secretRef:
-                  name: ccm-secrets
+                  name: ccm-secrets-useraccess-adapter
         imagePullSecrets: []
     strategy:
       type: RollingUpdate
