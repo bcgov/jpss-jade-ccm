@@ -1778,11 +1778,13 @@ public class CcmNotificationService extends RouteBuilder {
               .to("kafka:{{kafka.topic.bulk-caseusers.name}}")
 
               // generate event-created KPI
+              /* JADE-3011 - Removed due to excess amount of event messages
               .setProperty("kpi_event_topic_name", simple("{{kafka.topic.bulk-caseusers.name}}"))
               .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
               .setProperty("kpi_component_route_name", simple(routeId))
               .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
               .to("direct:publishEventKPI")
+              */
 
               .endChoice()
             .otherwise()

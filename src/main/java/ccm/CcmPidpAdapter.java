@@ -22,6 +22,8 @@ import org.apache.camel.CamelException;
 // camel-k: dependency=mvn:io.quarkus:quarkus-apicurio-registry-avro
 // camel-k: dependency=mvn:io.apicurio:apicurio-registry-serdes-avro-serde
 
+
+import java.util.UUID;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -476,6 +478,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"event_key = ${header[event_key]}")
+    .removeHeaders("kafka*")
     // in the following, should create PIDP object to be pushed onto PIDP topic.
     .process(new Processor() {
       @Override
@@ -483,10 +486,13 @@ public class CcmPidpAdapter extends RouteBuilder {
         ParticipantMergeEvent original_event = (ParticipantMergeEvent)exchange.getProperty("kpi_event_object");
         PidpParticipantMergeEvent ppme = new PidpParticipantMergeEvent(original_event);
 
+        UUID uuid = UUID.randomUUID();
+        exchange.getMessage().setHeader("KAFKA.key", uuid.toString());
         exchange.getMessage().setBody(ppme);
       }
     })
     .marshal().json(JsonLibrary.Jackson, PidpParticipantMergeEvent.class)
+    .log(LoggingLevel.DEBUG, "Headers = '${headers}'")
     .log(LoggingLevel.INFO,"Publishing part merge to PIDP topic. ${body}")
 
     .to("kafka:{{pidp.kafka.topic.participantmerge.name}}")

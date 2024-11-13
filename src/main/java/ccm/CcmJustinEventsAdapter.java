@@ -58,8 +58,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     version();
 
     courtFileCreated();
+    http_stopJustinEvents();
     stopJustinEvents();
+    http_startJustinEvents();
     startJustinEvents();
+    cronJustinEventsReconnection();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
@@ -322,12 +325,24 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
   }
 
+  private void http_stopJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/stopJustinEvents?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:stopJustinEvents")
+    ;
+  }
+
   private void stopJustinEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
@@ -350,12 +365,24 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     ;
   }
 
+  private void http_startJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/startJustinEvents?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:startJustinEvents")
+    ;
+  }
+
   private void startJustinEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Restarting pulls from justin queue.")
@@ -378,6 +405,21 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     })
 
     .log(LoggingLevel.INFO,"Justin adapter queue started")
+    ;
+  }
+
+  private void cronJustinEventsReconnection() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")
+    from("cron:tab?schedule=0 00 4 * * ?") // run 4am every day
+    .routeId(routeId)
+    .to("direct:stopJustinEvents")
+    .delay(25000)
+    .to("direct:startJustinEvents")
+
+    .log(LoggingLevel.WARN,"Cron job restart of Justin Events pull completed.")
     ;
   }
 
