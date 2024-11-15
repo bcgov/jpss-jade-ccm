@@ -31,6 +31,12 @@ objects:
                 value: 'Canada/Pacific'
               - name: 'KAFKA-BROKER-URL'
                 value: 'events-kafka-bootstrap:9092'
+              # - name: 'P12ClientKey'
+              #   valueFrom:
+              #     secretKeyRef:
+              #       name: 'ccm-secrets-useraccess-adapter'
+              #       key: 'pidp-kafka-client.p12'
+              
             envFrom:
               - configMapRef:
                   name: ccm-configs
