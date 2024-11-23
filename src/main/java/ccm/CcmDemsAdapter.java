@@ -161,6 +161,8 @@ public class CcmDemsAdapter extends RouteBuilder {
     streamNoteRecord();
     processDeleteNoteRecord();
     deleteJustinFileNoteRecord();
+    updateExistingCaseFileNotes();
+    processCaseList();
   }
 
 
@@ -4073,7 +4075,6 @@ private void getDemsFieldMappingsrccStatus() {
               log.info("Case record not found.");
             }
             exchange.getMessage().setBody(outputStringBuffer.toString());
-
           }
         })
       .endChoice()
@@ -4784,6 +4785,173 @@ private void getDemsFieldMappingsrccStatus() {
     ;
   }
 
+  private void processCaseList() {
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("direct:" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+    .setProperty("length",jsonpath("$.items.length()"))
+    .log(LoggingLevel.INFO,"Case count: ${exchangeProperty.length}")
+    .removeProperty("mdoc")
+    .removeProperty("caseRccId")
+    .split()
+      .jsonpathWriteAsString("$.items.*")
+      .setProperty("id",jsonpath("$.id"))
+      .to("direct:getCourtCaseStatusById")
+      .setProperty("status",jsonpath("$.status"))
+      .setProperty("caseRccId",jsonpath("$.key"))
+      .setProperty("mdoc",jsonpath("$.courtFileId"))    
+      .log(LoggingLevel.INFO,"Case mdoc: ${exchangeProperty.mdoc}, case rcc id : ${exchangeProperty.caseRccId}, status: ${exchangeProperty.status}")
+      .choice()
+      .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.caseRccId} != ''") 
+      .setHeader("splitRccId", simple("${exchangeProperty.caseRccId}"))
+      .split()
+      .tokenize(";", "splitRccId", false)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          String token = ex.getIn().getBody(String.class);
+          token = token.replace(';', ' ');
+          ex.getIn().setHeader("rccId", token);
+          ex.setProperty("currentRccId", token);
+          log.info("current rcc id : " + token);
+        }})
+         .to("http://ccm-lookup-service/getFileNote")
+         .log(LoggingLevel.INFO, "file note in body : ${body}")
+         //.setBody(simple("${body}"))
+         .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+         .process(new Processor() {
+           @Override
+           public void process(Exchange exchange) throws Exception {
+             FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+             if (fileNote != null) {
+               log.info("file not null");
+               DemsRecordData demsRecordData = new DemsRecordData(fileNote);
+               exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
+               int fileNoteId = fileNote.getFile_note_id() != null && !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
+               if (fileNoteId >= 0) {
+                 exchange.setProperty("addFileNote", simple("true"));
+                 exchange.getIn().setHeader("caseId", exchange.getProperty("id"));
+                 fileNote.setRcc_id(exchange.getProperty("currentRccId", String.class));
+                 exchange.setProperty("fileNoteToSend", fileNote);
+                 exchange.setProperty("recordId", "");
+                 exchange.getIn().setHeader("number", exchange.getProperty("currentRccId"));
+               }
+               else{
+                 exchange.setProperty("addFileNote", simple("false"));
+               }
+               exchange.getIn().setBody(null);
+             }
+           }})
+          
+           .to("direct:getCaseDocIdExistsByKey")
+            .unmarshal().json()
+           .setProperty("recordId").simple("${body[id]}")
+           .choice()
+           .when(simple("${exchangeProperty.addFileNote} == 'true' && ${exchangeProperty.recordId} != ''"   ))
+             // add file note to case
+             .setBody(simple("${exchangeProperty.fileNoteToSend}"))
+             .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+             .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+             .setHeader("caseId", simple("${exchangeProperty.id}"))
+             .setHeader("recordId", simple("${exchangeProperty.recordId}"))
+             .marshal().json(JsonLibrary.Jackson, FileNote.class)
+             .to("direct:streamNoteRecord")
+      .end() // end split for rcc-id
+      .endChoice()
+      .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.mdoc} != ''") 
+      .setHeader("splitMdoc", simple("${exchangeProperty.mdoc}"))
+     // .log(LoggingLevel.INFO, "setting splitMdoc to : ${exchangeProperty.mdoc}")
+      .split() // look at mdoc
+      .tokenize(";", "splitMdoc", false)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange ex) {
+          String token = ex.getIn().getBody(String.class);
+          token = token.replace(';', ' ');
+          ex.getIn().setHeader("mdocJustinNo", token);
+          ex.setProperty("currentMdoc", token);
+         log.info("current mdoc : " + token);
+        }})
+        .to("http://ccm-lookup-service/getFileNote")
+        .log(LoggingLevel.INFO, "file note in body : ${body}")
+        //.setBody(simple("${body}"))
+        .unmarshal().json(JsonLibrary.Jackson, FileNote.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            FileNote fileNote = (FileNote)exchange.getIn().getBody(FileNote.class);
+            if (fileNote != null) {
+              log.info("file not null");
+              DemsRecordData demsRecordData = new DemsRecordData(fileNote);
+              exchange.getMessage().setHeader("documentId", demsRecordData.getDocumentId());
+              int fileNoteId = fileNote.getFile_note_id() != null && !fileNote.getFile_note_id().isBlank() ? Integer.parseInt(fileNote.getFile_note_id()) : 0;
+              if (fileNoteId >= 0) {
+                exchange.setProperty("addFileNote", simple("true"));
+                exchange.getIn().setHeader("number", exchange.getProperty("mdoc"));
+                exchange.getIn().setHeader("caseId", exchange.getProperty("id"));
+                exchange.setProperty("fileNoteToSend", fileNote);
+                //exchange.getIn().setHeader("number", exchange.getProperty("caseRccId"));
+                exchange.setProperty("recordId", "");
+              }
+              else{
+                exchange.setProperty("addFileNote", simple("false"));
+              }
+              exchange.getIn().setBody(null);
+            }
+          }})
+          .setProperty("mdoc_justin_no", simple("${exchangeProperty.currentMdoc}"))
+          .setHeader("event_key", simple("${exchangeProperty.currentMdoc}"))
+          .setHeader("number", simple("${exchangeProperty.currentMdoc}"))
+          .to("direct:compileRelatedCourtFiles")
+            // re-set body to the metadata_data json.
+          .setBody(simple("${exchangeProperty.metadata_data}"))
+          .log(LoggingLevel.DEBUG, "metadata_data: ${body}")
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+  
+            CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+            exchange.setProperty("agency_file_no", ccd.getPrimary_agency_file().getAgency_file_no());
+            exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+          }
+        })
+        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+        .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
+        .setBody(simple("${bodyAs(String)}"))
+        .setProperty("mdoc_rcc_id", jsonpath("$.rcc_id"))
+        .setProperty("primary_yn", jsonpath("$.primary_yn"))
+        .setHeader("key").simple("${exchangeProperty.mdoc_rcc_id}")
+        .setHeader("event_key",simple("${exchangeProperty.mdoc_rcc_id}"))
+        .setHeader("number",simple("${exchangeProperty.mdoc_rcc_id}"))
+        .to("direct:getCaseDocIdExistsByKey")
+        .unmarshal().json()
+        .setProperty("recordId").simple("${body[id]}")
+        .choice()
+          .when(simple("${exchangeProperty.addFileNote} == 'true' && ${exchangeProperty.recordId} != ''"   ))
+       
+            // add file note to case
+          .setBody(simple("${exchangeProperty.fileNoteToSend}"))
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
+          .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .setHeader("caseId", simple("${exchangeProperty.id}"))
+          .setHeader("recordId", simple("${exchangeProperty.recordId}"))
+          .marshal().json(JsonLibrary.Jackson, FileNote.class)
+           
+            .to("direct:streamNoteRecord")
+          .end() // end choice
+          .end() // end split for mdoc
+      .end() // end of choice
+      //.end()
+      .end() // end loop
+      .log(LoggingLevel.INFO, "End of loop for case.")
+    .end() // end route
+    .log(LoggingLevel.INFO,"end of processCaseList.")
+    ;
+  }
   private void processParticipantsList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5150,7 +5318,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request streamNoteRecord: ${body}")
+    .log(LoggingLevel.INFO,"Processing request streamNoteRecord: ${body}")
     .setProperty("NoteRecord", simple("${bodyAs(String)}"))
     .setProperty("dems_case_id", simple("${headers[caseId]}"))
     .setProperty("dems_record_id", simple("${headers[recordId]}"))
@@ -5278,5 +5446,83 @@ private void getDemsFieldMappingsrccStatus() {
       .end()
     .end()
   .end();
+  }
+  private void updateExistingCaseFileNotes() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+     // IN: header = id
+     from("platform-http:/" + routeId + "?httpMethodRestrict=PUT" )
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .log(LoggingLevel.INFO,"updateExistingCaseFileNotes... pages: ${header.pageFrom} -> ${header.pageTo}")
+     //.setProperty("pageFrom", header("pageFrom"))
+     //.setProperty("pageTo", header("pageTo"))
+ 
+     .setProperty("v2DemsHost", simple("{{dems.host}}"))
+     /*.process(new Processor() {
+       @Override
+       public void process(Exchange exchange) throws Exception {
+         String v2DemsHost = (String)exchange.getProperty("v2DemsHost");
+         v2DemsHost = v2DemsHost.replace("/v1", "/v2");
+         exchange.setProperty("v2DemsHost", v2DemsHost);
+       }
+     })*/
+     .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
+ 
+     .setProperty("pageSize").simple("500")
+     .setProperty("maxRecordIncrements").simple("75")
+     .setProperty("incrementCount").simple("1")
+     .setProperty("continueLoop").simple("true")
+ 
+     .choice()
+       .when(simple("${header.pageFrom} != null && ${header.pageFrom} != ''"))
+         .setProperty("incrementCount").simple("${header.pageFrom}")
+       .endChoice()
+     .end()
+ 
+     .choice()
+       .when(simple("${header.pageTo} != null && ${header.pageTo} != ''"))
+         .setProperty("maxRecordIncrements").simple("${header.pageTo}")
+       .endChoice()
+     .end()
+ 
+     // limit the number of times incremented to 250.
+     .loopDoWhile(simple("${exchangeProperty.continueLoop} == 'true' && ${exchangeProperty.incrementCount} <= ${exchangeProperty.maxRecordIncrements}"))
+       .log(LoggingLevel.INFO, "\n\nViewing page: ${exchangeProperty.incrementCount}")
+ 
+       .removeHeader("CamelHttpUri")
+       .removeHeader("CamelHttpBaseUri")
+       .removeHeaders("CamelHttp*")
+       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+       //traverse through all cases in DEMS
+       .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/cases/list?page=${exchangeProperty.incrementCount}&pagesize=${exchangeProperty.pageSize}")
+       //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
+       .setProperty("length",jsonpath("$.items.length()"))
+       .log(LoggingLevel.INFO,"Case count: ${exchangeProperty.length}")
+ 
+       .choice()
+         .when(simple("${exchangeProperty.length} < 1"))
+           .log(LoggingLevel.INFO, "End of pages.")
+           .setProperty("continueLoop").simple("false")
+         .endChoice()
+         .when(simple("${header.CamelHttpResponseCode} == 200"))
+           .to("direct:processCaseList")
+         .endChoice()
+       .end()
+ 
+       // increment the loop count.
+       .process(new Processor() {
+         @Override
+         public void process(Exchange ex) {
+           Integer incrementCount = (Integer)ex.getProperty("incrementCount", Integer.class);
+           incrementCount++;
+           ex.setProperty("incrementCount", incrementCount);
+         }
+       })
+     .end() // end loop
+     .log(LoggingLevel.INFO,"end of updateExistingCaseFileNotes.")
+     ;
   }
 }

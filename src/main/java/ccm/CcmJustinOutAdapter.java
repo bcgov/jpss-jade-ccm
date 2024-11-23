@@ -621,14 +621,22 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
+    .log(LoggingLevel.INFO,"getFileNote request received. fileNoteId = ${header.number}; mdocJustin=${header.mdocJustinNo}; rccid=${header.rccId}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .choice()
+    //.toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
+    .when(simple("${header.mdocJustinNo} != null && ${header.mdocJustinNo} != ''"))
+      .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
+    .when(simple("${header.rccId} != null && ${header.rccId} != ''"))  
+      .toD("https://{{justin.host}}/fileNote?rcc_id=${header.rccId}")
+    .when(simple("${header.number} != null && ${header.number} != ''"))
+      .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .end()
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
   
@@ -637,6 +645,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       public void process(Exchange exchange) {
      
         JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
+        
         if (k != null && !k.getfilenotelist().isEmpty()) {
           JustinFileNote j = k.getfilenotelist().get(0);
           FileNote fileNote = new FileNote(j);
