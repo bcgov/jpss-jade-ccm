@@ -21,6 +21,7 @@ data:
   kafka-broker-url: tbd
   pidp-kafa-oauth-client-id: tbd
   pidp-kafka-oauth-token-endpoint-url: tbd
+  justin-disable-file-notes-processing: true
 
   pidp-api-host: tbd
 
