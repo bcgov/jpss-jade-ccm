@@ -42,6 +42,7 @@ import org.apache.http.conn.HttpHostConnectException;
 //import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.commons.codec.binary.StringUtils;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
@@ -840,16 +841,25 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange exchange) {
         String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
         String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
+        
+        String supplementalOnly = exchange.getProperty("triggerSupplementalOnly", String.class);
+        boolean triggerSupplementalOnly = false;
+        if(supplementalOnly != null && StringUtils.equals(supplementalOnly, "true")) {
+          log.info("Trigger supplemental only static report.");
+          triggerSupplementalOnly = true;
+        }
         StringBuilder reportTypesSb = new StringBuilder("");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
-        reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+        if(!triggerSupplementalOnly) {
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.NARRATIVE.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.SYNOPSIS.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.CPIC.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.WITNESS_STATEMENT.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.DV_IPV_RISK.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
+          reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name() + ",");
+        }
+        reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name());
 
         ReportEvent re = new ReportEvent();
         re.setJustin_rcc_id(rcc_id);
@@ -1326,6 +1336,7 @@ public class CcmNotificationService extends RouteBuilder {
                 .log(LoggingLevel.INFO,"Update court case auth list.")
                 .to("direct:processCourtCaseAuthListChanged")
                 .setProperty("triggerStaticReports", simple("true"))
+                .setProperty("triggerSupplementalOnly", simple("true"))
               .endChoice()
                 //jade 2770 fix
               .when(simple("${exchangeProperty.accused_person} == '0'"))
