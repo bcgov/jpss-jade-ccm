@@ -510,8 +510,28 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
+      .setProperty("NoRecordError", simple("false"))
+
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            if(cause != null && cause.getResponseBody() != null) {
+              if(cause.getStatusCode() == 404 || cause.getResponseBody().contains("Downstream service returned status (404)")) {
+                exchange.setProperty("NoRecordError", "true");
+              }
+
+            }
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
       .choice()
-        .when().simple("${exception.statusCode} == 404")
+        .when( simple("${exchangeProperty.NoRecordError} == 'true'"))
           .log(LoggingLevel.WARN, "404 Document not found.")
           .process(new Processor() {
             @Override
@@ -524,27 +544,32 @@ public class CcmJustinOutAdapter extends RouteBuilder {
           .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
         .endChoice()
         .otherwise()
+          .log(LoggingLevel.INFO, "Request body: ${body}")
           .log(LoggingLevel.ERROR,"Exception: ${exception}")
           .log(LoggingLevel.ERROR,"HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.ERROR, "Body: '${exception}'")
           .log(LoggingLevel.ERROR, "${exception.message}")
-
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
               try {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-                exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-                exchange.getMessage().setBody(cause.getResponseBody());
-                log.info("Returned response body : " + cause.getResponseBody());
-                throw exchange.getException();
+                if(cause != null && cause.getResponseBody() != null) {
+                  String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
+                  exchange.getMessage().setBody(body);
+                }
+                log.error("Returned body : " + cause.getResponseBody());
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
             }
           })
           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          .transform().simple("${body}")
+          .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
+          .setHeader("CCMExceptionEncoded", simple("${body}"))
+
         .endChoice()
       .end()
     .end()
@@ -569,7 +594,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "LookupService calling Justin file close")
     .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    
+
     .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
     .process(new Processor() {
       @Override
@@ -632,20 +657,20 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     //.toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .when(simple("${header.mdocJustinNo} != null && ${header.mdocJustinNo} != ''"))
       .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
-    .when(simple("${header.rccId} != null && ${header.rccId} != ''"))  
+    .when(simple("${header.rccId} != null && ${header.rccId} != ''"))
       .toD("https://{{justin.host}}/fileNote?rcc_id=${header.rccId}")
     .when(simple("${header.number} != null && ${header.number} != ''"))
       .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
     .end()
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
-  
+
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-     
+
         JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
-        
+
         if (k != null && !k.getfilenotelist().isEmpty()) {
           JustinFileNote j = k.getfilenotelist().get(0);
           FileNote fileNote = new FileNote(j);
