@@ -555,20 +555,12 @@ public class CcmJustinOutAdapter extends RouteBuilder {
               try {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
 
-                if(cause != null && cause.getResponseBody() != null) {
-                  String body = Base64.getEncoder().encodeToString(cause.getResponseBody().getBytes());
-                  exchange.getMessage().setBody(body);
-                }
-                log.error("Returned body : " + cause.getResponseBody());
+                throw cause;
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
             }
           })
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
-          .transform().simple("${body}")
-          .setHeader("CCMException", simple("{\"error\": \"${exception.message}\"}"))
-          .setHeader("CCMExceptionEncoded", simple("${body}"))
 
         .endChoice()
       .end()
