@@ -29,7 +29,6 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.builder.TemplatedRouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
@@ -52,6 +51,8 @@ public class CcmLookupService extends RouteBuilder {
     getCourtCaseStatusExists();
     getCourtCaseDetails();
     getCourtCaseAuthList();
+    getCourtCaseJustinAuthList();
+    getCourtCasePidpAuthList();
     getCourtCaseMetadata();
     getCourtCaseAppearanceSummaryList();
     getCourtCaseCrownAssignmentList();
@@ -67,7 +68,6 @@ public class CcmLookupService extends RouteBuilder {
 
 
   private void attachExceptionHandlers() {
-
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
@@ -421,6 +421,101 @@ public class CcmLookupService extends RouteBuilder {
         AuthUserList pdipAuthUserList = (AuthUserList)exchange.getProperty("pidpauthlist", AuthUserList.class);
 
         userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+        userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
+
+        exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    // remove the pidp token header, as it causes bad requests from JUSTIN side.
+    .removeHeaders("pidp*")
+    .removeHeaders("Authorization*")
+    .removeHeaders("X-*")
+    .removeHeaders("Content-Security-Policy")
+    .removeHeaders("Referrer-Policy")
+    .removeHeaders("set-cookie")
+    .removeHeaders("Strict-Transport-Security")
+    .removeHeaders("transfer-encoding")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    .end();
+  }
+
+  private void getCourtCaseJustinAuthList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header[number]}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+    .log(LoggingLevel.DEBUG,"Processing request... number = ${header[number]}")
+    .log(LoggingLevel.DEBUG, "Pre-headers: ${headers}")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-justin-out-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("justinauthlist", body())
+
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+        AuthUserList userAuthList = new AuthUserList();
+        String rccId = (String)exchange.getProperty("key", String.class);
+        userAuthList.setRcc_id(rccId);
+        AuthUserList justinUserList = (AuthUserList)exchange.getProperty("justinauthlist", AuthUserList.class);
+        userAuthList.getAuth_user_list().addAll(justinUserList.getAuth_user_list());
+
+        exchange.getIn().setBody(userAuthList, AuthUserList.class);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    // remove the pidp token header, as it causes bad requests from JUSTIN side.
+    .removeHeaders("pidp*")
+    .removeHeaders("Authorization*")
+    .removeHeaders("X-*")
+    .removeHeaders("Content-Security-Policy")
+    .removeHeaders("Referrer-Policy")
+    .removeHeaders("set-cookie")
+    .removeHeaders("Strict-Transport-Security")
+    .removeHeaders("transfer-encoding")
+    .log(LoggingLevel.DEBUG, "headers: ${headers}")
+    .log(LoggingLevel.DEBUG, "Body: ${body}")
+    .end();
+  }
+
+  private void getCourtCasePidpAuthList() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .setProperty("key", simple("${header[number]}"))
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .removeHeader("kafka.HEADERS")
+    .removeHeaders("x-amz*")
+
+    .log(LoggingLevel.DEBUG, "Retreiving list from PIDP...")
+
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-pidp-adapter/getCourtCaseAuthList")
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("pidpauthlist", body())
+
+    .process(new Processor(){
+      public void process(Exchange exchange) throws Exception {
+        AuthUserList userAuthList = new AuthUserList();
+        String rccId = (String)exchange.getProperty("key", String.class);
+        userAuthList.setRcc_id(rccId);
+        AuthUserList pdipAuthUserList = (AuthUserList)exchange.getProperty("pidpauthlist", AuthUserList.class);
         userAuthList.getAuth_user_list().addAll(pdipAuthUserList.getAuth_user_list());
 
         exchange.getIn().setBody(userAuthList, AuthUserList.class);

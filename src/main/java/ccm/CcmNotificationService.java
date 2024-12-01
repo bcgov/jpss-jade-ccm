@@ -1551,15 +1551,25 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
     .setProperty("dems_agency_files").simple("${body[agencyFileId]}")
 
-    // Get list from the primary case.
+    // Get diam list from the primary case.
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("number").simple("${header.event_key}")
-    .to("http://ccm-lookup-service/getCourtCaseAuthList")
-    .log(LoggingLevel.DEBUG, "Initial auth list for rcc: ${header.number}: ${body}")
+    .to("http://ccm-lookup-service/getCourtCasePidpAuthList")
+    .log(LoggingLevel.DEBUG, "Initial diam auth list for rcc: ${header.number}: ${body}")
 
     .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
-    .setProperty("authlist_object", body())
+    .setProperty("pidp_authlist_object", body())
+
+    // Get justin list from the primary case.
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("number").simple("${header.event_key}")
+    .to("http://ccm-lookup-service/getCourtCaseJustinAuthList")
+    .log(LoggingLevel.DEBUG, "Initial justin auth list for rcc: ${header.number}: ${body}")
+
+    .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+    .setProperty("justin_authlist_object", body())
 
     .process(new Processor() {
       @Override
@@ -1600,12 +1610,13 @@ public class CcmNotificationService extends RouteBuilder {
       .choice()
         .when(simple("${exchangeProperty.agencyFileId} != ''"))
           .log(LoggingLevel.DEBUG, "agency file updated: ${exchangeProperty.agencyFileId}")
+
           .setHeader("number").simple("${exchangeProperty.agencyFileId}")
           .setHeader(Exchange.HTTP_METHOD, simple("GET"))
           .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
           .removeHeader(Exchange.CONTENT_ENCODING)
-          .log(LoggingLevel.INFO,"Retrieve court case auth list of ${exchangeProperty.agencyFileId}")
-          .to("http://ccm-lookup-service/getCourtCaseAuthList")
+          .log(LoggingLevel.INFO,"Retrieve court case diam auth list of ${exchangeProperty.agencyFileId}")
+          .to("http://ccm-lookup-service/getCourtCasePidpAuthList")
           .log(LoggingLevel.DEBUG, "auth list for rcc: ${header.number}: ${body}")
 
           .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
@@ -1613,7 +1624,43 @@ public class CcmNotificationService extends RouteBuilder {
             @Override
             public void process(Exchange exchange) {
               AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
-              AuthUserList paul = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
+              AuthUserList paul = (AuthUserList)exchange.getProperty("pidp_authlist_object", AuthUserList.class);
+
+              log.info("original authlist size: "+paul.getAuth_user_list().size());
+              log.info("comparing authlist size: "+aul.getAuth_user_list().size());
+              List<AuthUser> intersectingAuthList = new ArrayList<AuthUser>();
+              List<AuthUser> primaryAuthList = paul.getAuth_user_list();
+              if(primaryAuthList == null) {
+                primaryAuthList = new ArrayList<AuthUser>();
+              }
+              // go through list of aul.getAuth_user_list(), and if it is not found in primaryAuthList then add it
+              if(aul.getAuth_user_list() != null) {
+                for(AuthUser pAuthUser : aul.getAuth_user_list()) {
+                  if(!primaryAuthList.stream().filter(o -> o.getKey().equals(pAuthUser.getKey())).findFirst().isPresent()) {
+                    //log.info("found intersecting part id: "+pAuthUser.getKey());
+                    primaryAuthList.add(pAuthUser);
+                  }
+                }
+              }
+              paul.setAuth_user_list(primaryAuthList);
+              exchange.setProperty("pidp_authlist_object", paul);
+            }
+          })
+
+          .setHeader("number").simple("${exchangeProperty.agencyFileId}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
+          .log(LoggingLevel.INFO,"Retrieve court case justin auth list of ${exchangeProperty.agencyFileId}")
+          .to("http://ccm-lookup-service/getCourtCaseJustinAuthList")
+          .log(LoggingLevel.DEBUG, "auth list for rcc: ${header.number}: ${body}")
+
+          .unmarshal().json(JsonLibrary.Jackson, AuthUserList.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              AuthUserList aul = exchange.getIn().getBody(AuthUserList.class);
+              AuthUserList paul = (AuthUserList)exchange.getProperty("justin_authlist_object", AuthUserList.class);
 
               log.info("original authlist size: "+paul.getAuth_user_list().size());
               log.info("comparing authlist size: "+aul.getAuth_user_list().size());
@@ -1633,7 +1680,7 @@ public class CcmNotificationService extends RouteBuilder {
                 }
               }
               paul.setAuth_user_list(intersectingAuthList);
-              exchange.setProperty("authlist_object", paul);
+              exchange.setProperty("justin_authlist_object", paul);
             }
           })
         .endChoice()
@@ -1646,10 +1693,15 @@ public class CcmNotificationService extends RouteBuilder {
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        AuthUserList metadata = (AuthUserList)exchange.getProperty("authlist_object", AuthUserList.class);
-        log.info("final authlist size: "+metadata.getAuth_user_list().size());
+        AuthUserList justindata = (AuthUserList)exchange.getProperty("justin_authlist_object", AuthUserList.class);
+        AuthUserList pidpdata = (AuthUserList)exchange.getProperty("pidp_authlist_object", AuthUserList.class);
+        log.info("final justin authlist size: "+justindata.getAuth_user_list().size());
+        log.info("final diam authlist size: "+pidpdata.getAuth_user_list().size());
+        if(pidpdata != null) {
+          justindata.getAuth_user_list().addAll(pidpdata.getAuth_user_list());
+        }
 
-        exchange.getMessage().setBody(metadata, AuthUserList.class);
+        exchange.getMessage().setBody(justindata, AuthUserList.class);
       }
     })
     .marshal().json(JsonLibrary.Jackson, AuthUserList.class)
