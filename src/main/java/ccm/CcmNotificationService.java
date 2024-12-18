@@ -103,6 +103,7 @@ public class CcmNotificationService extends RouteBuilder {
     http_createBatchEndEvent();
     createBatchEndEventPaused();
     createBatchEndEvent();
+    cronEndBatchEvents();
 
     processUnknownStatus();
     preprocessAndPublishEventCreatedKPI();
@@ -841,7 +842,7 @@ public class CcmNotificationService extends RouteBuilder {
       public void process(Exchange exchange) {
         String event_message_id = exchange.getMessage().getHeader("event_message_id", String.class);
         String rcc_id = exchange.getMessage().getHeader("event_key", String.class);
-        
+
         String supplementalOnly = exchange.getProperty("triggerSupplementalOnly", String.class);
         boolean triggerSupplementalOnly = false;
         if(supplementalOnly != null && StringUtils.equals(supplementalOnly, "true")) {
@@ -1868,6 +1869,26 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("kpi_component_route_name", simple(routeId))
     .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
     .to("direct:publishEventKPI")
+    ;
+  }
+
+  private void cronEndBatchEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")
+    from("cron:tab?schedule=0 05 4 * * ?") // run 2:30am every day
+    .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron ensure batch end events kick-off any pending accessdedup events.")
+    .to("direct:createBatchEndEvent")
+    .delay(5000)
+    .to("direct:createBatchEndEvent")
+    .delay(5000)
+    .to("direct:createBatchEndEvent")
+    .delay(5000)
+    .to("direct:createBatchEndEvent")
+
+    .log(LoggingLevel.WARN,"Cron job batch end events kick-off any pending accessdedup events.")
     ;
   }
 
@@ -3434,7 +3455,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader("number", simple("${header[event_key]}"))
     .setProperty("fileNoteEvent").body()
     // double check that case had not been already created since.
-    
+
     .to("http://ccm-lookup-service/getFileNote")
     //.log(LoggingLevel.INFO,"Lookup response = '${body}'")
     .setBody(simple("${body}"))
@@ -3476,7 +3497,7 @@ public class CcmNotificationService extends RouteBuilder {
         .log(LoggingLevel.INFO, "Dems case status: ${body}")
         .setProperty("destinationCaseId",jsonpath("$.id"))
         .setProperty("caseStatus",jsonpath("$.status"))
-       
+
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
@@ -3511,7 +3532,7 @@ public class CcmNotificationService extends RouteBuilder {
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
-  
+
           CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
           exchange.setProperty("agency_file_no", ccd.getPrimary_agency_file().getAgency_file_no());
           exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
@@ -3522,7 +3543,7 @@ public class CcmNotificationService extends RouteBuilder {
       .setBody(simple("${bodyAs(String)}"))
       .setProperty("rcc_id", jsonpath("$.rcc_id"))
       .setProperty("primary_yn", jsonpath("$.primary_yn"))
-  
+
       .setHeader("key").simple("${exchangeProperty.rcc_id}")
       .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
       .setHeader("number",simple("${exchangeProperty.rcc_id}"))
@@ -3532,11 +3553,11 @@ public class CcmNotificationService extends RouteBuilder {
       .to("http://ccm-lookup-service/getCourtCaseStatusExists")
       .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
       .unmarshal().json()
-  
+
       .setProperty("primary_rcc_id", simple("${body[primaryAgencyFileId]}"))
       .setProperty("caseStatus",simple("${body[status]}"))
       //.log(LoggingLevel.INFO, "primary_rcc_id: ${exchangeProperty.primary_rcc_id}")
-  
+
       //JADE-2671 - look-up primary rcc for update.
       .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
         .when(simple("${body[status]} == 'Inactive' && ${exchangeProperty.primary_rcc_id} != ${header.event_key}"))
@@ -3587,7 +3608,7 @@ public class CcmNotificationService extends RouteBuilder {
      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
      .log(LoggingLevel.INFO,"processFileNoteDelete event_message_id = ${header[event_key]}")
      .setProperty("fileNoteEvent").body()
-     
+
      .setHeader("number", simple("${header[event_key]}"))
      .to("http://ccm-lookup-service/getFileNote")
      .log(LoggingLevel.INFO,"Lookup response = '${body}'")
@@ -3607,21 +3628,21 @@ public class CcmNotificationService extends RouteBuilder {
         if (fileNote != null && fileNoteId > 0) {
           log.info("File note id to from delete : " + fileNote.getFile_note_id());
            exchange.setProperty("fileNote", fileNote);
-           
+
         }
         else {
           log.info("File Note not found for event_message_id.");
         }
       }})
       .choice()
-      
+
       .when(simple("${exchangeProperty.fileNote} != null && ${exchangeProperty.fileNoteId} > 0"))
         .log(LoggingLevel.INFO, "received file note")
         .marshal().json(JsonLibrary.Jackson,FileNote.class)
         .setHeader(Exchange.HTTP_METHOD, simple("POST"))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
         .to("http://ccm-dems-adapter/processDeleteNoteRecord")
-      
+
       .endChoice()
 
      .end();
@@ -3657,7 +3678,7 @@ public class CcmNotificationService extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
-        
+
         if (ccd != null && ccd.getPrimary_agency_file() != null) {
         exchange.setProperty("rcc_id", ccd.getPrimary_agency_file().getRcc_id());
         exchange.setProperty("primary_yn", ccd.getPrimary_agency_file().getPrimary_yn());
@@ -3670,7 +3691,7 @@ public class CcmNotificationService extends RouteBuilder {
         exchange.getMessage().setBody(null);
       }
     })
-    
+
     .setHeader("key").simple("${exchangeProperty.rcc_id}")
     .setHeader("event_key",simple("${exchangeProperty.rcc_id}"))
     .setHeader("number",simple("${exchangeProperty.rcc_id}"))
