@@ -62,6 +62,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     stopJustinEvents();
     http_startJustinEvents();
     startJustinEvents();
+    cronJustinEventsWeekdayShutdown();
+    cronJustinEventsWeekendShutdown();
     cronJustinEventsReconnection();
     requeueJustinEvent();
     requeueJustinEventRange();
@@ -302,6 +304,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         exchange.getMessage().setBody(Version.V1_0.toString());
+        String version = System.getProperty("java.version");
+        log.info("Java version:"+version);
       }
     })
     ;
@@ -408,13 +412,42 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     ;
   }
 
+  private void cronJustinEventsWeekdayShutdown() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")
+    from("cron:weekday?schedule=0 58 19 ? * MON-FRI") // run 8pm (7:58pm) every weekday
+    .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron job weekday pause of Justin Events pull started.")
+    .to("direct:stopJustinEvents")
+
+    .log(LoggingLevel.WARN,"Cron job weekday pause of Justin Events pull completed.")
+    ;
+  }
+
+  private void cronJustinEventsWeekendShutdown() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")//0 0 14-6 ? * FRI-MON
+    from("cron:weekend?schedule=0 58 16 ? * SAT-SUN") // run 5pm every weekend
+    .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron job weekend pause of Justin Events pull started.")
+    .to("direct:stopJustinEvents")
+
+    .log(LoggingLevel.WARN,"Cron job weekend pause of Justin Events pull completed.")
+    ;
+  }
+
   private void cronJustinEventsReconnection() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //from("cron:tab?schedule=0/1+1+*+*+*+?")
-    from("cron:tab?schedule=0 00 4 * * ?") // run 4am every day
+    from("cron:tab?schedule=0 05 4 * * ?") // run 4am every day
     .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron job restart of Justin Events pull started.")
     .to("direct:stopJustinEvents")
     .delay(25000)
     .to("direct:startJustinEvents")

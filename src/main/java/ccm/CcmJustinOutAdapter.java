@@ -10,10 +10,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.LinkedHashMap;
-import java.util.List;
 
 import org.apache.camel.CamelException;
 
@@ -554,6 +551,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
             public void process(Exchange exchange) throws Exception {
               try {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                log.error("Response: " + cause.getResponseBody());
 
                 throw cause;
               } catch(Exception ex) {
