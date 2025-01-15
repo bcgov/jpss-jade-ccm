@@ -11,12 +11,11 @@ public class DemsPersonData {
 
     private String id;
     private String key;
-    private String name;
+    //private String name;
     private String firstName;
     private String lastName;
     private List<DemsFieldData> fields;
     private DemsAddressData address;
-    private List<DemsOrganisationData> orgs;
 
     public DemsPersonData() {
     }
@@ -53,7 +52,7 @@ public class DemsPersonData {
 
         fieldData.add(fullName);
 
-        setName(fullGivenNamesAndLastNameString);
+        //setName(fullGivenNamesAndLastNameString);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
     }
@@ -74,13 +73,13 @@ public class DemsPersonData {
         this.key = key;
     }
 
-    public String getName() {
+    /*public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
-    }
+    }*/
 
     public String getFirstName() {
         return firstName;
@@ -112,14 +111,6 @@ public class DemsPersonData {
 
     public void setAddress(DemsAddressData address) {
         this.address = address;
-    }
-
-    public List<DemsOrganisationData> getOrgs() {
-        return orgs;
-    }
-
-    public void setOrgs(List<DemsOrganisationData> orgs) {
-        this.orgs = orgs;
     }
 
     public static String generateFullGivenNamesAndLastNameFromAccused(CaseAccused accused) {

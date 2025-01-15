@@ -1485,7 +1485,7 @@ public class CcmNotificationService extends RouteBuilder {
             .log(LoggingLevel.INFO, "This is checking for return.")
             //BCPSDEMS-1518, JADE-1751
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return'"))
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
                 .setHeader("case_id").simple("${exchangeProperty.caseId}")
                 .to("http://ccm-dems-adapter/inactivateCase")
                 .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
@@ -3718,7 +3718,7 @@ public class CcmNotificationService extends RouteBuilder {
     .removeHeaders("x-amz*")
     .to("direct:compileRelatedCourtFiles")
 
-    .log(LoggingLevel.INFO, "CourtCaseData: ${body}")
+    .log(LoggingLevel.DEBUG, "CourtCaseData: ${body}")
     .log(LoggingLevel.DEBUG, "metadata: ${body}")
     // re-set body to the metadata_data json.
     .setBody(simple("${exchangeProperty.metadata_data}"))
@@ -3758,7 +3758,7 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.caseFound} != ''"))
 
-      .log(LoggingLevel.INFO, "CourtCaseData: ${exchangeProperty.metadata_data}")
+      .log(LoggingLevel.DEBUG, "CourtCaseData: ${exchangeProperty.metadata_data}")
       // re-set body to the metadata_data json.
       .setBody(simple("${exchangeProperty.metadata_data}"))
       .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)

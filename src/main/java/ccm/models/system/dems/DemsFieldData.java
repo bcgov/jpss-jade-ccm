@@ -79,7 +79,7 @@ public class DemsFieldData {
         FIRST_TRIAL_DT("First Trial"),
         FIRST_TRIAL_REASON("First Trial Rsn"),
         ASSIGNED_CROWN_NAME("Assigned Crown Name"),
-        PERSON_DATE_OF_BIRTH("Date Of Birth"),
+        PERSON_DATE_OF_BIRTH("Date of Birth"),
         PERSON_GIVEN_NAME_2("Given Name 2"),
         PERSON_GIVEN_NAME_3("Given Name 3"),
         PERSON_FULL_NAME("Full Name"),

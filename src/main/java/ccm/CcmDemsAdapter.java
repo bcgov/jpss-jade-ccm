@@ -2842,11 +2842,7 @@ private void getDemsFieldMappingsrccStatus() {
         CaseAccused b = exchange.getIn().getBody(CaseAccused.class);
         DemsPersonData d = new DemsPersonData(b);
         String personId = exchange.getProperty("personId", String.class);
-        String organizationId = exchange.getProperty("organizationId", String.class);
         d.setId(personId);
-        DemsOrganisationData o = new DemsOrganisationData(organizationId);
-        d.setOrgs(new ArrayList<DemsOrganisationData>());
-        d.getOrgs().add(o);
         exchange.getMessage().setBody(d);
       }
     })
@@ -4173,10 +4169,11 @@ private void getDemsFieldMappingsrccStatus() {
       .jsonpathWriteAsString("$.items")
       .setProperty("edtId",jsonpath("$.edtID"))
       .setProperty("recordSource",jsonpath("$.cc_Source"))
+      .setProperty("recordSourceText",jsonpath("$.cc_Source_Text"))
       .log(LoggingLevel.INFO,"Body: ${body}")
       .doTry()
         .choice()
-          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
+          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work' && ${exchangeProperty.recordSourceText} !contains 'BCPS Work'"))
             // As per BCPSDEMS-415, only delete the native/pdf, leave the metadata
             .process(new Processor() {
               @Override
@@ -5379,10 +5376,11 @@ private void getDemsFieldMappingsrccStatus() {
       .log(LoggingLevel.INFO,"returned case records = ${body}...")
       .setProperty("edtId",jsonpath("$.edtID"))
       .setProperty("recordSource",jsonpath("$.cc_Source"))
+      .setProperty("recordSourceText",jsonpath("$.cc_Source_Text"))
      // .log(LoggingLevel.INFO,"Body: ${body}")
       .doTry()
       .choice()
-          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work'"))
+          .when(simple("${exchangeProperty.recordSource} !contains 'BCPS Work' && ${exchangeProperty.recordSourceText} !contains 'BCPS Work'"))
             // As per BCPSDEMS-415, only delete the native/pdf, leave the metadata
             .process(new Processor() {
               @Override
