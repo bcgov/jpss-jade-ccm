@@ -14,6 +14,7 @@ public class DemsPersonData {
     //private String name;
     private String firstName;
     private String lastName;
+    private String dob;
     private List<DemsFieldData> fields;
     private DemsAddressData address;
 
@@ -29,6 +30,7 @@ public class DemsPersonData {
         
         // BCPSDEMS-602 - workaround to not provide the field data if date is null
         if (ca.getBirth_date() != null) {
+            setDob(ca.getBirth_date());
             DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
             fieldData.add(dob);
         }
@@ -97,6 +99,14 @@ public class DemsPersonData {
         this.lastName = lastName;
     }
 
+    public String getDob() {
+        return dob;
+    }
+
+    public void setDob(String dob) {
+        this.dob = dob;
+    }
+
     public List<DemsFieldData> getFields() {
         return fields;
     }
@@ -150,4 +160,5 @@ public class DemsPersonData {
         fieldData.add(otc);
         
     }
+
 }
