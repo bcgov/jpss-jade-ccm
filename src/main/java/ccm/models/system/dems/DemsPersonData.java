@@ -25,12 +25,12 @@ public class DemsPersonData {
         setKey(ca.getIdentifier());
         setLastName(ca.getSurname());
         setFirstName(ca.getGiven_1_name());
+        setDob(ca.getBirth_date());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
         
         // BCPSDEMS-602 - workaround to not provide the field data if date is null
         if (ca.getBirth_date() != null) {
-            setDob(ca.getBirth_date());
             DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
             fieldData.add(dob);
         }

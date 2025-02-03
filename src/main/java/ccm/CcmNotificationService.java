@@ -1331,11 +1331,7 @@ public class CcmNotificationService extends RouteBuilder {
                 .log(LoggingLevel.DEBUG,"courtcase_data : ${bodyAs(String)}")
                 .setProperty("courtcase_data", simple("${bodyAs(String)}"))
                 .setBody(simple("${exchangeProperty.courtcase_data}"))
-                .setHeader(Exchange.HTTP_METHOD, simple("POST"))
-                .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .to("http://ccm-dems-adapter/updateCourtCase")
-                .log(LoggingLevel.INFO,"Update court case auth list.")
-                .to("direct:processCourtCaseAuthListChanged")
+                .to("direct:updateChargeAssessment")
                 .setProperty("triggerStaticReports", simple("true"))
                 .setProperty("triggerSupplementalOnly", simple("true"))
               .endChoice()
@@ -3066,7 +3062,7 @@ public class CcmNotificationService extends RouteBuilder {
       // if the non primary dems case is still active, make call which will export the records over to the primary rcc
       // and then set the non primary case to no longer be active.
       .choice()
-        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${body[status]} == 'Active' && ${exchangeProperty.sourceCaseId} != '' && ${exchangeProperty.destinationCaseId} != ''"))
+        .when(simple("${exchangeProperty.primary_rcc_id} != ${exchangeProperty.rcc_id} && ${exchangeProperty.sourceCaseStatus} == 'Active' && ${exchangeProperty.sourceCaseId} != '' && ${exchangeProperty.destinationCaseId} != '' && ${exchangeProperty.destinationCasesStatus} == 'Active'"))
           // make call to merge docs and inactivate the non primary one
           .setHeader("sourceCaseId").simple("${exchangeProperty.sourceCaseId}")
           .setHeader("destinationCaseId").simple("${exchangeProperty.destinationCaseId}")
