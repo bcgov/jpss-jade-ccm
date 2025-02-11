@@ -1481,7 +1481,7 @@ public class CcmNotificationService extends RouteBuilder {
             .log(LoggingLevel.INFO, "This is checking for return.")
             //BCPSDEMS-1518, JADE-1751
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus.toUpperCase()} == 'RETURN' || ${exchangeProperty.justinCourtCaseStatus.toUpperCase()} == 'CLOSE'"))
+                 .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
                 .setHeader("case_id").simple("${exchangeProperty.caseId}")
                 .log(LoggingLevel.INFO, "justinCourtCaseStatus : ${exchangeProperty.justinCourtCaseStatus}")
                 .to("http://ccm-dems-adapter/inactivateCase")
