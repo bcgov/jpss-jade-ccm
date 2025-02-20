@@ -519,7 +519,7 @@ private void getDemsFieldMappingsrccStatus() {
 
                   caseStatus.setId(caseId);
                   caseStatus.setKey(caseKey);
-                  caseStatus.setName(caseName);
+                  //caseStatus.setName(caseName);
                   caseStatus.setCaseState(caseState);
                   caseStatus.setPrimaryAgencyFileId(primaryAgencyFileId);
                   caseStatus.setPrimaryAgencyFileNo(primaryAgencyFileNo);
@@ -994,176 +994,177 @@ private void getDemsFieldMappingsrccStatus() {
   }
 
   private void processNonStaticDocuments() throws HttpOperationFailedException {
-   // use method name as route id
-   String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-   // IN
-   // header: mdoc_justin_no and/or primary_rcc_id
-   // property: court_case_document or image_document
-   from("direct:" + routeId)
-    .routeId(routeId)
-    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-
-    .setHeader("number", simple("${header[mdoc_justin_no]}"))
-    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    //.log(LoggingLevel.INFO, "headers: ${headers}")
-    .to("http://ccm-lookup-service/getCourtCaseMetadata")
-    .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
-    .setProperty("metadata_data", simple("${bodyAs(String)}"))
-    .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
-    .setProperty("CourtCaseMetadata").body()
-    .process(new Processor() {
-      @Override
-      public void process(Exchange ex) {
-        CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
-        ImageDocumentData idd = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
-        CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
-        DemsRecordData demsRecord = null;
-        if(ccdd != null) { // This is an mdoc based report
-          ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
-          // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
-          demsRecord = new DemsRecordData(ccdd);
-        } else if(idd != null) { // This is a primary_rcc_id based report
-          idd.setCourt_file_number(cdd.getCourt_file_number_seq_type());
-          log.info("CourtFileNumber:"+idd.getCourt_file_number());
-          // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
-          demsRecord = new DemsRecordData(idd);
-          ex.getMessage().setHeader("imageId", idd.getImage_id());
-        }
-        ex.setProperty("reportType", demsRecord.getDescriptions());
-        ex.setProperty("reportTitle", demsRecord.getTitle());
-        if(demsRecord != null) {
-          ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
-          ex.setProperty("drd", demsRecord);
-        }
-        ex.getMessage().setBody(demsRecord);
-      }
-
-    })
-    .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-    .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
-    // 2 possible cases, this is an mdoc based record, or a primary_rcc_id one.
-    // in case of mdoc, go through list of rcc_ids returned from metadata, and add file to each.
-    // in case of the primary_rcc_id on, just call for that particular record.
-    .choice()
-      .when(simple("${header.primary_rcc_id} != null"))
-        .log(LoggingLevel.INFO,"Primary RCC based report")
-
-        // BCPSDEMS-1401 make sure primary rcc is active
-        .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
-        .setHeader("number", simple("${header[rcc_id]}"))
-
-        .doTry()
-          // look for current status of the dems case, and grab the primary agency file
-          .to("direct:getCourtCaseStatusByKey")
-          .unmarshal().json()
-          .setProperty("caseId").simple("${body[id]}")
-          .setProperty("caseStatus").simple("${body[status]}")
-          .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
-          .setProperty("agencyRccId").simple("${body[agencyFileId]}")
-          .choice()
-            .when(simple("${exchangeProperty.caseRccId} != ''"))
-              .setHeader("rcc_id", simple("${exchangeProperty.caseRccId}"))
-              .setHeader("number", simple("${exchangeProperty.caseRccId}"))
-            .endChoice()
-            .otherwise()
-              .log(LoggingLevel.INFO, "Skipped adding image document.  One with image id already exists.")
-            .endChoice()
-          .end()
-
-          // look-up the image id and do a check if it already exists.  If so, then skip.
-          .to("direct:getCaseRecordImageExistsByKey")
-          .unmarshal().json()
-          .choice()
-            .when(simple("${body[id]} == ''"))
-              // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
-              .setProperty("maxRecordIncrements").simple("10")
-              .to("direct:checkIncrementRecordDocId")
-              // set back body to dems record
-              .setBody(simple("${exchangeProperty.dems_record}"))
-              .log(LoggingLevel.DEBUG, "${body}")
-              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-              .to("direct:createDocumentRecord")
-            .endChoice()
-            .otherwise()
-              .log(LoggingLevel.WARN, "Skipped adding image document.  One with image id already exists.")
-            .endChoice()
-          .end()
-        .endDoTry()
-        .doCatch(HttpOperationFailedException.class)
-          .log(LoggingLevel.ERROR,"Exception in processNonStaticDocuments call")
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
-          .setHeader("CCMException", simple("${exception.statusCode}"))
-
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-              try {
-                ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
-                if(errorList == null) {
-                  errorList = new ArrayList<Exception>();
-                }
-
-
-                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
-                exchange.getMessage().setBody(cause.getResponseBody());
-
-                log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
-
-                exchange.setProperty("exception", cause);
-
-                if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
-                  String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
-                  exchange.getIn().setHeader("CCMExceptionEncoded", body);
-                }
-
-                errorList.add(cause);
-                exchange.setProperty("errorList", errorList);
-              } catch(Exception ex) {
-                ex.printStackTrace();
-              }
-            }
-          })
-
-          .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
-          .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
-        .end()
-        .log(LoggingLevel.INFO, "Completed primary rcc id based call.")
-      .endChoice()
-      .otherwise()
-        .log(LoggingLevel.INFO,"Traverse through metadata to retrieve the rcc_ids to process.")
-        .setBody(simple("${exchangeProperty.metadata_data}"))
-
-
-        .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
-            exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
-          }
-        })
-        .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
-        .setBody(simple("${bodyAs(String)}"))
-
-        .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
-        .setProperty("rcc_id",jsonpath("$.rcc_id"))
-        .setProperty("primary_yn",jsonpath("$.primary_yn"))
-        .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id} primary_yn: ${exchangeProperty.primary_yn}")
-        .setHeader("number", simple("${exchangeProperty.rcc_id}"))
-        .setHeader("reportType", simple("${exchangeProperty.reportType}"))
-        .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
-        .setBody(simple("${exchangeProperty.dems_record}"))
-        .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
-        .to("direct:changeDocumentRecord")
-      .endChoice()
-    .end()
-
-   .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
-   ;
-  }
-
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+ 
+    // IN
+    // header: mdoc_justin_no and/or primary_rcc_id
+    // property: court_case_document or image_document
+    from("direct:" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+ 
+     .setHeader("number", simple("${header[mdoc_justin_no]}"))
+     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+     //.log(LoggingLevel.INFO, "headers: ${headers}")
+     .to("http://ccm-lookup-service/getCourtCaseMetadata")
+     .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
+     .setProperty("metadata_data", simple("${bodyAs(String)}"))
+     .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+     .setProperty("CourtCaseMetadata").body()
+     .process(new Processor() {
+       @Override
+       public void process(Exchange ex) {
+         CourtCaseDocumentData ccdd = (CourtCaseDocumentData)ex.getProperty("court_case_document", CourtCaseDocumentData.class);
+         ImageDocumentData idd = (ImageDocumentData)ex.getProperty("image_document", ImageDocumentData.class);
+         CourtCaseData cdd = ex.getIn().getBody(CourtCaseData.class);
+         DemsRecordData demsRecord = null;
+         if(ccdd != null) { // This is an mdoc based report
+           ccdd.setCourt_file_no(cdd.getCourt_file_number_seq_type());
+           // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+           demsRecord = new DemsRecordData(ccdd);
+         } else if(idd != null) { // This is a primary_rcc_id based report
+           idd.setCourt_file_number(cdd.getCourt_file_number_seq_type());
+           log.info("CourtFileNumber:"+idd.getCourt_file_number());
+           // need to re-create the Dems record object, as we didn't have the Court File No before querying court file.
+           demsRecord = new DemsRecordData(idd);
+           ex.getMessage().setHeader("imageId", idd.getImage_id());
+           log.info("imageId:"+idd.getImage_id());
+         }
+         ex.setProperty("reportType", demsRecord.getDescriptions());
+         ex.setProperty("reportTitle", demsRecord.getTitle());
+         if(demsRecord != null) {
+           ex.getMessage().setHeader("documentId", demsRecord.getDocumentId());
+           ex.setProperty("drd", demsRecord);
+         }
+         ex.getMessage().setBody(demsRecord);
+       }
+ 
+     })
+     .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+     .setProperty("dems_record").simple("${bodyAs(String)}") // save to properties, to parse through list of records
+     // 2 possible cases, this is an mdoc based record, or a primary_rcc_id one.
+     // in case of mdoc, go through list of rcc_ids returned from metadata, and add file to each.
+     // in case of the primary_rcc_id on, just call for that particular record.
+     .choice()
+       .when(simple("${header.primary_rcc_id} != null"))
+         .log(LoggingLevel.INFO,"Primary RCC based report")
+ 
+         // BCPSDEMS-1401 make sure primary rcc is active
+         .setHeader("rcc_id", simple("${header[primary_rcc_id]}"))
+         .setHeader("number", simple("${header[rcc_id]}"))
+ 
+         .doTry()
+           // look for current status of the dems case, and grab the primary agency file
+           .to("direct:getCourtCaseStatusByKey")
+           .unmarshal().json()
+           .setProperty("caseId").simple("${body[id]}")
+           .setProperty("caseStatus").simple("${body[status]}")
+           .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+           .setProperty("agencyRccId").simple("${body[agencyFileId]}")
+           .choice()
+             .when(simple("${exchangeProperty.caseRccId} != ''"))
+               .setHeader("rcc_id", simple("${exchangeProperty.caseRccId}"))
+               .setHeader("number", simple("${exchangeProperty.caseRccId}"))
+             .endChoice()
+             .otherwise()
+               .log(LoggingLevel.INFO, "Skipped adding image document.  One with image id already exists.")
+             .endChoice()
+           .end()
+ 
+           // look-up the image id and do a check if it already exists.  If so, then skip.
+           .to("direct:getCaseRecordImageExistsByKey")
+           .unmarshal().json()
+           .choice()
+             .when(simple("${body[id]} == ''"))
+               // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
+               .setProperty("maxRecordIncrements").simple("10")
+               .to("direct:checkIncrementRecordDocId")
+               // set back body to dems record
+               .setBody(simple("${exchangeProperty.dems_record}"))
+               .log(LoggingLevel.DEBUG, "${body}")
+               .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+               .to("direct:createDocumentRecord")
+             .endChoice()
+             .otherwise()
+               .log(LoggingLevel.WARN, "Skipped adding image document.  One with image id already exists.")
+             .endChoice()
+           .end()
+         .endDoTry()
+         .doCatch(HttpOperationFailedException.class)
+           .log(LoggingLevel.ERROR,"Exception in processNonStaticDocuments call")
+           .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+           .setHeader("CCMException", simple("${exception.statusCode}"))
+ 
+           .process(new Processor() {
+             @Override
+             public void process(Exchange exchange) throws Exception {
+               try {
+                 ArrayList<Exception> errorList = (ArrayList<Exception>)exchange.getProperty("errorList", ArrayList.class);
+                 if(errorList == null) {
+                   errorList = new ArrayList<Exception>();
+                 }
+ 
+ 
+                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                 exchange.getMessage().setBody(cause.getResponseBody());
+ 
+                 log.error("HttpOperationFailedException returned body : " + exchange.getMessage().getBody(String.class));
+ 
+                 exchange.setProperty("exception", cause);
+ 
+                 if(exchange != null && exchange.getMessage() != null && exchange.getMessage().getBody() != null) {
+                   String body = Base64.getEncoder().encodeToString(exchange.getMessage().getBody(String.class).getBytes());
+                   exchange.getIn().setHeader("CCMExceptionEncoded", body);
+                 }
+ 
+                 errorList.add(cause);
+                 exchange.setProperty("errorList", errorList);
+               } catch(Exception ex) {
+                 ex.printStackTrace();
+               }
+             }
+           })
+ 
+           .log(LoggingLevel.WARN, "Failed report: ${exchangeProperty.exception}")
+           .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
+         .end()
+         .log(LoggingLevel.INFO, "Completed primary rcc id based call.")
+       .endChoice()
+       .otherwise()
+         .log(LoggingLevel.INFO,"Traverse through metadata to retrieve the rcc_ids to process.")
+         .setBody(simple("${exchangeProperty.metadata_data}"))
+ 
+ 
+         .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+         .process(new Processor() {
+           @Override
+           public void process(Exchange exchange) throws Exception {
+             CourtCaseData ccd = exchange.getIn().getBody(CourtCaseData.class);
+             exchange.getMessage().setBody(ccd.getPrimary_agency_file(), ChargeAssessmentDataRef.class);
+           }
+         })
+         .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
+         .setBody(simple("${bodyAs(String)}"))
+ 
+         .log(LoggingLevel.INFO, "get related_agency_file rcc_id")
+         .setProperty("rcc_id",jsonpath("$.rcc_id"))
+         .setProperty("primary_yn",jsonpath("$.primary_yn"))
+         .log(LoggingLevel.INFO, "rcc_id: ${exchangeProperty.rcc_id} primary_yn: ${exchangeProperty.primary_yn}")
+         .setHeader("number", simple("${exchangeProperty.rcc_id}"))
+         .setHeader("reportType", simple("${exchangeProperty.reportType}"))
+         .setHeader("reportTitle", simple("${exchangeProperty.reportTitle}"))
+         .setBody(simple("${exchangeProperty.dems_record}"))
+         .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+         .to("direct:changeDocumentRecord")
+       .endChoice()
+     .end()
+ 
+    .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
+    ;
+   }
+ 
   private void checkIncrementRecordDocId() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3776,7 +3777,8 @@ private void getDemsFieldMappingsrccStatus() {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
-    //.log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+    .log(LoggingLevel.INFO,"imageId = ${header.imageId}...")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -3785,7 +3787,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200"))
