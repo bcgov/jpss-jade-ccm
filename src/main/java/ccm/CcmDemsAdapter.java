@@ -519,7 +519,7 @@ private void getDemsFieldMappingsrccStatus() {
 
                   caseStatus.setId(caseId);
                   caseStatus.setKey(caseKey);
-                  //caseStatus.setName(caseName);
+                  caseStatus.setName(caseName);
                   caseStatus.setCaseState(caseState);
                   caseStatus.setPrimaryAgencyFileId(primaryAgencyFileId);
                   caseStatus.setPrimaryAgencyFileNo(primaryAgencyFileNo);
