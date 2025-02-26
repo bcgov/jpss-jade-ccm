@@ -38,6 +38,7 @@ import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.data.ChargeAssessmentStatus;
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.FileDisposition;
@@ -48,6 +49,7 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAgencyFileStatus;
 import ccm.models.system.justin.JustinAuthUsersList;
 import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtFile;
@@ -77,6 +79,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getFileDisp();
     getFileNote();
     getFileCloseData();
+    getAgencyFileStatus() ;
   }
 
   private void attachExceptionHandlers() {
@@ -675,5 +678,53 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
     .end()
     ;
+  }
+  private void getAgencyFileStatus() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .log(LoggingLevel.INFO, "agencyIdCode : ${header.agencyIdCode}  agencyFileNumber : ${header.agencyFileNumber}")
+    .toD("https://{{justin.host}}/agencyFileStatus?agency_identifier_cd=${header.agencyIdCode}&agency_file_number=${header.agencyFileNumber}")
+    .choice()
+    .when().simple("${header.CamelHttpResponseCode} == 200")
+      // person found
+      .setProperty("agencyFileStatus", jsonpath("$.agencyFileStatus"))
+      .setProperty("rccId", jsonpath("$.rccId"))
+     
+    //.endChoice()
+    .otherwise()
+      .log(LoggingLevel.INFO, "Agency File status call, 200 not returned.")
+    .end()
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        String agencyFileStatus = (String) ex.getProperty("agencyFileStatus");
+        String rccId = (String) ex.getProperty("rccId");
+        String messsage = "Agency File Not Found";
+        ChargeAssessmentStatus chargeAssessmentStatus =  null;
+        if (!agencyFileStatus.isEmpty() && !rccId.isEmpty() ) {
+          chargeAssessmentStatus = new ChargeAssessmentStatus(
+            new JustinAgencyFileStatus(agencyFileStatus,"", rccId)
+          );
+        }
+        else{
+          chargeAssessmentStatus = new ChargeAssessmentStatus();
+          chargeAssessmentStatus.setMessage(messsage);
+        }
+        ex.getMessage().setBody(chargeAssessmentStatus);
+      }})
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentStatus.class)
+      .log(LoggingLevel.INFO, "sending msg body :  ${bodyAs(String)}" )
+      .log(LoggingLevel.INFO, "Complete call to agencyFileStatus")
+    .end();
   }
 }
