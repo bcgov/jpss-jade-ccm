@@ -692,29 +692,29 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .log(LoggingLevel.INFO, "agencyIdCode : ${header.agencyIdCode}  agencyFileNumber : ${header.agencyFileNumber}")
+    .log(LoggingLevel.INFO, "retrieving agency file info....")
     .doTry()
-    .toD("https://{{justin.host}}/agencyFileStatus?agency_identifier_cd=${header.agencyIdCode}&agency_file_number=${header.agencyFileNumber}")
+    .toD("https://{{justin.host}}/agencyFileStatus?throwExceptionOnFailure=false&agency_identifier_cd=${header.agencyIdCode}&agency_file_number=${header.agencyFileNumber}")
     .choice()
     .when().simple("${header.CamelHttpResponseCode} == 200")
-      // person found
+      // file found
       .setProperty("agencyFileStatus", jsonpath("$.agencyFileStatus"))
       .setProperty("rccId", jsonpath("$.rccId"))
-      //.setProperty("message", jsonpath("$.message"))
-      .log(LoggingLevel.INFO, "http status 200, parsing response...")
+      .log(LoggingLevel.INFO, "agency file found, parsing response...")
     //.endChoice()
     .otherwise()
         .setProperty("message", jsonpath("$.message"))
-      .log(LoggingLevel.INFO, "Agency File status call, 200 not returned.")
+      .log(LoggingLevel.INFO, "Agency File not found")
     .end()
     .process(new Processor() {
       @Override
       public void process(Exchange ex) {
         String agencyFileStatus = (String) ex.getProperty("agencyFileStatus");
+        //log.info("in processor....");
         String rccId = (String) ex.getProperty("rccId");
         String messsage = (String) ex.getProperty("message");
         ChargeAssessmentStatus chargeAssessmentStatus =  null;
-        if (!agencyFileStatus.isEmpty() && !rccId.isEmpty() ) {
+        if ((agencyFileStatus != null && !agencyFileStatus.isEmpty() ) && (rccId != null && !rccId.isEmpty() )) {
           chargeAssessmentStatus = new ChargeAssessmentStatus(
             new JustinAgencyFileStatus(agencyFileStatus,"", rccId)
           );
@@ -722,12 +722,13 @@ public class CcmJustinOutAdapter extends RouteBuilder {
         else{
           chargeAssessmentStatus = new ChargeAssessmentStatus();
           chargeAssessmentStatus.setMessage(messsage);
+          //log.info("setting message");
         }
         ex.getMessage().setBody(chargeAssessmentStatus);
       }})
       .marshal().json(JsonLibrary.Jackson, ChargeAssessmentStatus.class)
-      .log(LoggingLevel.INFO, "sending msg body :  ${bodyAs(String)}" )
-      .log(LoggingLevel.INFO, "Complete call to agencyFileStatus")
+      //.log(LoggingLevel.DEBUG, "sending msg body :  ${bodyAs(String)}" )
+      //.log(LoggingLevel.INFO, "Complete call to agencyFileStatus")
     .endDoTry()
     
     .doCatch(HttpOperationFailedException.class)

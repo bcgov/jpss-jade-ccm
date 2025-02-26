@@ -4,30 +4,28 @@ import ccm.models.system.justin.JustinAgencyFileStatus;
 
 public class ChargeAssessmentStatus {
     
-    private String agencyFileStatus ;
+    private String initiatingAgency ;
     private String message;
     private String rccId;
 
     public ChargeAssessmentStatus(JustinAgencyFileStatus justinAgencyFileStatus) {
         if (   justinAgencyFileStatus != null ) {
-        this.agencyFileStatus = justinAgencyFileStatus.getAgencyFileStatus();
-        this.message = justinAgencyFileStatus.getMessage();
-        this.rccId = justinAgencyFileStatus.getRccId();
+            setInitiatingAgency(justinAgencyFileStatus.getAgencyFileStatus());
+            setRccId(justinAgencyFileStatus.getRccId());
         }
     }
     public ChargeAssessmentStatus() {
         
     }
 
-    public String getAgencyFileStatus() {
-        return agencyFileStatus;
+    public String getInitiatingAgency() {
+        return initiatingAgency;
+    }
+    public void setInitiatingAgency(String initiatingAgency) {
+        this.initiatingAgency = initiatingAgency;
     }
 
-
-    public void setAgencyFileStatus(String agencyFileStatus) {
-        this.agencyFileStatus = agencyFileStatus;
-    }
-
+   
     public String getMessage() {
         return message;
     }
