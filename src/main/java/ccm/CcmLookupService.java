@@ -64,14 +64,13 @@ public class CcmLookupService extends RouteBuilder {
     getFileDisp();
     getFileNote();
     getFileCloseData();
-    getAgencyFileStatus();
-      }
-    
-    
-      
-    
-    
-      private void attachExceptionHandlers() {
+     getAgencyFileStatus();
+     getPrimaryCourtCaseExists();
+
+
+
+  private void attachExceptionHandlers() {
+
 
     // handle network connectivity errors
     onException(ConnectException.class, SocketTimeoutException.class, HttpHostConnectException.class)
@@ -782,6 +781,7 @@ public class CcmLookupService extends RouteBuilder {
     ;
   }
 
+
   private void getAgencyFileStatus() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -798,6 +798,26 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-out-adapter/getAgencyFileStatus?throwExceptionOnFailure=false")
     .log(LoggingLevel.INFO,"response from JUSTIN: ${body}");
+
+  // need to call dems adapter
+  private void getPrimaryCourtCaseExists() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    
+     from("platform-http:/" + routeId)
+   
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .removeHeader("CamelHttpUri")
+     .removeHeader("CamelHttpBaseUri")
+     .removeHeaders("CamelHttp*")
+     .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
+     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+     .to("http://ccm-dems-adapter/getPrimaryCourtCaseExists")
+     .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
+     ;
+
   }
  
 }
