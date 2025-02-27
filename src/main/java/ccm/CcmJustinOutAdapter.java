@@ -38,6 +38,7 @@ import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
+import ccm.models.common.data.ChargeAssessmentStatus;
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileCloseData;
 import ccm.models.common.data.FileDisposition;
@@ -48,6 +49,7 @@ import ccm.models.common.event.Error;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.versioning.Version;
 import ccm.models.system.justin.JustinAgencyFile;
+import ccm.models.system.justin.JustinAgencyFileStatus;
 import ccm.models.system.justin.JustinAuthUsersList;
 import ccm.models.system.justin.JustinCourtAppearanceSummaryList;
 import ccm.models.system.justin.JustinCourtFile;
@@ -77,6 +79,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     getFileDisp();
     getFileNote();
     getFileCloseData();
+    getAgencyFileStatus() ;
   }
 
   private void attachExceptionHandlers() {
@@ -675,5 +678,96 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
     .end()
     ;
+  }
+  private void getAgencyFileStatus() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId)
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
+    .log(LoggingLevel.INFO, "retrieving agency file info....")
+    .doTry()
+    .toD("https://{{justin.host}}/agencyFileStatus?throwExceptionOnFailure=false&agency_identifier_cd=${header.agencyIdCode}&agency_file_number=${header.agencyFileNumber}")
+    .choice()
+    .when().simple("${header.CamelHttpResponseCode} == 200")
+      // file found
+      .setProperty("agencyFileStatus", jsonpath("$.agencyFileStatus"))
+      .setProperty("rccId", jsonpath("$.rccId"))
+      .log(LoggingLevel.INFO, "agency file found, parsing response...")
+    //.endChoice()
+    .otherwise()
+        .setProperty("message", jsonpath("$.message"))
+      .log(LoggingLevel.INFO, "Agency File not found")
+    .end()
+    .process(new Processor() {
+      @Override
+      public void process(Exchange ex) {
+        String agencyFileStatus = (String) ex.getProperty("agencyFileStatus");
+        //log.info("in processor....");
+        String rccId = (String) ex.getProperty("rccId");
+        String messsage = (String) ex.getProperty("message");
+        ChargeAssessmentStatus chargeAssessmentStatus =  null;
+        if ((agencyFileStatus != null && !agencyFileStatus.isEmpty() ) && (rccId != null && !rccId.isEmpty() )) {
+          chargeAssessmentStatus = new ChargeAssessmentStatus(
+            new JustinAgencyFileStatus(agencyFileStatus,"", rccId)
+          );
+        }
+        else{
+          chargeAssessmentStatus = new ChargeAssessmentStatus();
+          chargeAssessmentStatus.setMessage(messsage);
+          //log.info("setting message");
+        }
+        ex.getMessage().setBody(chargeAssessmentStatus);
+      }})
+      .marshal().json(JsonLibrary.Jackson, ChargeAssessmentStatus.class)
+      //.log(LoggingLevel.DEBUG, "sending msg body :  ${bodyAs(String)}" )
+      //.log(LoggingLevel.INFO, "Complete call to agencyFileStatus")
+    .endDoTry()
+    
+    .doCatch(HttpOperationFailedException.class)
+      .log(LoggingLevel.INFO,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .choice()
+        .when().simple("${exception.statusCode} >= 400")
+          .log(LoggingLevel.INFO,"Client side error.  HTTP response code = ${exception.statusCode}")
+          .log(LoggingLevel.INFO, "Body: '${exception}'")
+          .log(LoggingLevel.INFO, "${exception.message}")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              try {
+                HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                String messsage = "Agency File Not Found";
+                ChargeAssessmentStatus chargeAssessmentStatus =  new ChargeAssessmentStatus();
+                chargeAssessmentStatus.setMessage(messsage);
+                if (cause.getHttpResponseStatus() == "404" ) {
+                  exchange.getMessage().setBody(chargeAssessmentStatus);
+                
+                }
+                else{
+                  exchange.getMessage().setBody(cause.getResponseBody());
+                }
+              } catch(Exception ex) {
+                ex.printStackTrace();
+              }
+            }
+          })
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+          //.transform(exceptionMessage())
+          .stop()
+        .endChoice()
+      .end()
+    .end()
+    //.log(LoggingLevel.INFO, "sending msg body :  ${bodyAs(String)}" )
+    
+  .end()
+  .log(LoggingLevel.INFO, "Complete call to agencyFileStatus");
   }
 }

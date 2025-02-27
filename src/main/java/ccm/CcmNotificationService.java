@@ -1255,7 +1255,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-lookup-service/getCourtCaseStatusExists")
     .unmarshal().json()
-
+    .log(LoggingLevel.INFO, "body status : ${body[status]}")
     //JADE-2671 - look-up primary rcc for update.
     .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
       .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ${header.event_key}"))
@@ -1481,8 +1481,9 @@ public class CcmNotificationService extends RouteBuilder {
             .log(LoggingLevel.INFO, "This is checking for return.")
             //BCPSDEMS-1518, JADE-1751
             .choice()
-              .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
+                 .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
                 .setHeader("case_id").simple("${exchangeProperty.caseId}")
+                .log(LoggingLevel.INFO, "justinCourtCaseStatus : ${exchangeProperty.justinCourtCaseStatus}")
                 .to("http://ccm-dems-adapter/inactivateCase")
                 .log(LoggingLevel.INFO,"Inactivated Returned or No Charge case")
             .end()
