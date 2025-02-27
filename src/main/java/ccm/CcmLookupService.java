@@ -67,7 +67,7 @@ public class CcmLookupService extends RouteBuilder {
      getAgencyFileStatus();
      getPrimaryCourtCaseExists();
 
-
+  }
 
   private void attachExceptionHandlers() {
 
@@ -798,7 +798,7 @@ public class CcmLookupService extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .to("http://ccm-justin-out-adapter/getAgencyFileStatus?throwExceptionOnFailure=false")
     .log(LoggingLevel.INFO,"response from JUSTIN: ${body}");
-
+  }
   // need to call dems adapter
   private void getPrimaryCourtCaseExists() {
      // use method name as route id
