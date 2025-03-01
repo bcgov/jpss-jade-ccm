@@ -727,8 +727,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
         ex.getMessage().setBody(chargeAssessmentStatus);
       }})
       .marshal().json(JsonLibrary.Jackson, ChargeAssessmentStatus.class)
-      //.log(LoggingLevel.DEBUG, "sending msg body :  ${bodyAs(String)}" )
-      //.log(LoggingLevel.INFO, "Complete call to agencyFileStatus")
+      
     .endDoTry()
     
     .doCatch(HttpOperationFailedException.class)

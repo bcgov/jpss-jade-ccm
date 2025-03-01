@@ -21,6 +21,7 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.system.justin.*;
 import ccm.models.common.data.CaseHyperlinkData;
 import ccm.models.common.data.CaseHyperlinkDataList;
+import ccm.models.common.data.ChargeAssessmentStatus;
 import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.versioning.Version;
 
@@ -31,9 +32,13 @@ public class CcmJustinInAdapter extends RouteBuilder {
     getCaseHyperlink();
     //as part of jade 2425
     getCaseListHyperlink();
-  }
-
-  private void version() {
+    // part of JADE-3025
+    getPrimaryCaseByAgencyNo();
+      }
+    
+    
+    
+      private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
@@ -269,5 +274,92 @@ public class CcmJustinInAdapter extends RouteBuilder {
  .marshal().json(JsonLibrary.Jackson, JustinCaseHyperlinkDataList.class)
  .log(LoggingLevel.DEBUG, "Body: ${body}")
   ;
+  }
+
+  private void getPrimaryCaseByAgencyNo() {
+      // use method name as route id
+      String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    
+      from("platform-http:/" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      // .log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header.agencyIdCode} agnecyFileNumber= ${header.agencyFileNumber}}")
+      .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          String agencyIdCode = (String)exchange.getIn().getHeader("agencyIdCode");
+          String agencyFileNumber = (String)exchange.getIn().getHeader("agencyFileNumber");
+          if (agencyFileNumber.isEmpty() && agencyIdCode.isBlank()){
+            exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
+            exchange.getMessage().setBody("Required parameters are empty or missing", String.class);
+            log.info("required header parameters empty, returning 404");
+            exchange.getContext().stop();
+          }
+        }})
+      .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      //.setHeader(routeId)
+      .to("http://ccm-lookup-service/getAgencyFileStatus")
+      .choice()
+      .when().simple("${header.CamelHttpResponseCode} == 200")
+        //.setProperty("rccId", simple())
+        .setProperty("agencyFileStatus").body()
+        .unmarshal().json(JsonLibrary.Jackson, ChargeAssessmentStatus.class)
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) {
+            ChargeAssessmentStatus status = exchange.getIn().getBody(ChargeAssessmentStatus.class);
+            boolean throw404 = false;
+            if (status.getRccId().isEmpty()) {
+              throw404 = true;
+            }
+            
+            if (throw404) {
+              exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
+              exchange.getMessage().setBody("Required parameters are empty or missing", String.class);
+              log.info("required header parameters empty, returning 404");
+              exchange.getContext().stop();
+            }
+            else{
+              exchange.setProperty("rccId", status.getRccId());
+            }
+          }})
+          .setHeader("rcc_id",simple("${exchangeProperty.rccId}"))
+          .toD("http://ccm-lookup-service/getPrimaryCourtCaseExists")
+          .unmarshal().json()
+          .setProperty("caseId").simple("${body[id]}")
+          .setProperty("caseStatus").simple("$body[status]")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              boolean throw404 = false;
+              String caseStatus = (String) exchange.getProperty("caseStatus");
+              String caseId = (String) exchange.getProperty("caseId");
+
+              if (caseStatus == null || caseStatus.isEmpty()) {
+                throw404 = true;
+              }
+              else if (caseStatus != "Active") {
+                throw404 = true;
+              }
+              if (throw404) {
+                exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
+                exchange.getMessage().setBody("Inactive case returned", String.class);
+                log.info("Inactive case found, returning 404");
+                exchange.getContext().stop();
+              }
+              else{
+                exchange.getMessage().setBody(caseId);
+              }
+            }})
+      .endChoice()
+      .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
+      .end()
+      ;
+
   }
 }
