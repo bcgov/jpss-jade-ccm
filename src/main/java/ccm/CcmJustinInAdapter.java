@@ -286,7 +286,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
-      // .log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header.agencyIdCode} agnecyFileNumber= ${header.agencyFileNumber}}")
+       .log(LoggingLevel.INFO,"Processing request primary case agency no lookup... ")
       //.log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header[agencyIdCode]}")
       .process(new Processor() {
         @Override
@@ -313,6 +313,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
           @Override
           public void process(Exchange exchange) {
             ChargeAssessmentStatus status = exchange.getIn().getBody(ChargeAssessmentStatus.class);
+
             boolean throw404 = false;
             if (status.getRccId().isEmpty()) {
               throw404 = true;
@@ -322,7 +323,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
               exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
               exchange.getMessage().setBody("Required parameters are empty or missing", String.class);
               log.info("required header parameters empty, returning 404");
-              exchange.getContext().stop();
+              //exchange.getContext().stop();
             }
             else{
               exchange.setProperty("rccId", status.getRccId());
@@ -352,16 +353,23 @@ public class CcmJustinInAdapter extends RouteBuilder {
                 exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
                 exchange.getMessage().setBody("Inactive case returned", String.class);
                 log.info("Inactive case found, returning 404");
-                exchange.getContext().stop();
+                //exchange.getContext().stop();
               }
               else{
                 exchange.getMessage().setBody(caseId);
               }
             }})
+      .otherwise()
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404));
+          exchange.getMessage().setBody("Inactive case returned", String.class);
+          log.info("response not 200, returning 404");
+          //exchange.getContext().stop();
+        }})
       .end()
-      .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
-      .end()
+      .log(LoggingLevel.INFO,"Complete get primary case by agency no.")
       ;
-
   }
 }
