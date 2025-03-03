@@ -693,6 +693,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
     .log(LoggingLevel.INFO, "retrieving agency file info....")
+    .log(LoggingLevel.INFO,"params : agency id : ${header.agencyIdCode} file num : ${header.agencyFileNumber}")
     .doTry()
     .toD("https://{{justin.host}}/agencyFileStatus?throwExceptionOnFailure=false&agency_identifier_cd=${header.agencyIdCode}&agency_file_number=${header.agencyFileNumber}")
     .choice()

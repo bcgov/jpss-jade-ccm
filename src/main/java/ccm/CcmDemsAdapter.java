@@ -1854,7 +1854,7 @@ private void getDemsFieldMappingsrccStatus() {
       // .log(LoggingLevel.DEBUG,"Before delay call...")
       // .delay(10000)
       // .log(LoggingLevel.DEBUG,"After delay call.")
-      .log(LoggingLevel.DEBUG,"Processing request.  Key = ${header.key} ...")
+      .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
       .setProperty("key", simple("${header.key}"))
       .to("direct:getPrimaryCourtCaseIdByKey")
     ;

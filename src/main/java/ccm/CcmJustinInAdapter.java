@@ -287,7 +287,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
       .removeHeader("CamelHttpBaseUri")
       .removeHeaders("CamelHttp*")
       // .log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header.agencyIdCode} agnecyFileNumber= ${header.agencyFileNumber}}")
-      .log(LoggingLevel.INFO,"Processing request... number = ${header[number]}")
+      //.log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header[agencyIdCode]}")
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -303,7 +303,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       //.setHeader(routeId)
-      .to("http://ccm-lookup-service/getAgencyFileStatus")
+      .to("http://ccm-lookup-service/getAgencyFileStatus?throwExceptionOnFailure=false")
       .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
         //.setProperty("rccId", simple())
@@ -329,21 +329,23 @@ public class CcmJustinInAdapter extends RouteBuilder {
             }
           }})
           .setHeader("rcc_id",simple("${exchangeProperty.rccId}"))
-          .toD("http://ccm-lookup-service/getPrimaryCourtCaseExists")
+          .toD("http://ccm-lookup-service/getPrimaryCourtCaseExists?throwExceptionOnFailure=false")
           .unmarshal().json()
           .setProperty("caseId").simple("${body[id]}")
-          .setProperty("caseStatus").simple("$body[status]")
+          .setProperty("caseStatus").simple("${body[status]}")
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) {
               boolean throw404 = false;
               String caseStatus = (String) exchange.getProperty("caseStatus");
               String caseId = (String) exchange.getProperty("caseId");
-
-              if (caseStatus == null || caseStatus.isEmpty()) {
+              
+              if (caseStatus.isEmpty()) {
                 throw404 = true;
+                log.info("case status empty");
               }
-              else if (caseStatus != "Active") {
+              else if (!caseStatus.equalsIgnoreCase("Active")) {
+                log.info("case status not Active");
                 throw404 = true;
               }
               if (throw404) {
@@ -356,7 +358,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
                 exchange.getMessage().setBody(caseId);
               }
             }})
-      .endChoice()
+      .end()
       .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
       .end()
       ;
