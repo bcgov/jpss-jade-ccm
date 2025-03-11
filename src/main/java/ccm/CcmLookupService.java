@@ -64,8 +64,8 @@ public class CcmLookupService extends RouteBuilder {
     getFileDisp();
     getFileNote();
     getFileCloseData();
-     getAgencyFileStatus();
-     getPrimaryCourtCaseExists();
+    getAgencyFileStatus();
+    getPrimaryCourtCaseExists();
 
   }
 
