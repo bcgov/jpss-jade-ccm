@@ -37,6 +37,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.jackson.ListJacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
@@ -1798,7 +1799,8 @@ private void getDemsFieldMappingsrccStatus() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    // IN: exchangeProperty.id
+    // IN: exchangeProperty.key
+    // IN: exchangeProperty.skipLoop
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -2073,7 +2075,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${body} ...")
+    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
@@ -2099,8 +2101,61 @@ private void getDemsFieldMappingsrccStatus() {
     .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/lookup-ids")
     .log(LoggingLevel.DEBUG, "Returned body from lookup id: '${body}'")
     .log(LoggingLevel.DEBUG,"rcc_ids: ${exchangeProperty.key}")
+
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        List<DemsLookupSearchData> items = new ArrayList<DemsLookupSearchData>();
+        exchange.setProperty("lookup_results", items);
+      }
+    })
+
+
+    .setProperty("length",jsonpath("$.length()"))
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+        // Loop through list and update the primary id
+        .split()
+          .jsonpathWriteAsString("$.*")
+          .setProperty("caseId",jsonpath("$.id"))
+          .setProperty("caseKey",jsonpath("$.key"))
+          .setProperty("caseStatus",jsonpath("$.status"))
+
+          .choice()
+            .when(simple("${exchangeProperty.caseStatus} == 'Inactive'"))
+
+              .setProperty("key", simple("${exchangeProperty.caseKey}"))
+              .setProperty("skipLoop", simple("true"))
+              .to("direct:getPrimaryCourtCaseIdByKey")
+              .unmarshal().json()
+              .setProperty("caseId").simple("${body[id]}")
+            .endChoice()
+          .end()
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              Integer id = exchange.getProperty("caseId", Integer.class);
+              String key = exchange.getProperty("caseKey", String.class);
+              String status = exchange.getProperty("caseStatus", String.class);
+              DemsLookupSearchData item = new DemsLookupSearchData(id, key, status);
+              List<DemsLookupSearchData> items = (List<DemsLookupSearchData>)exchange.getProperty("lookup_results", ArrayList.class);
+              items.add(item);
+              exchange.setProperty("lookup_results", items);
+            }
+          })
+
+        .end()
+      .endChoice()
+      .otherwise()
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
+        .stop()
+      .endChoice()
+    .end()
+
     .choice()
       .when().simple("${header.CamelHttpResponseCode} == 200")
+        //.unmarshal(new ListJacksonDataFormat(DemsLookupSearchData.class))
         .unmarshal().json(JsonLibrary.Jackson, List.class)
         .setProperty("hyperlinkPrefix", simple("{{dems.case.hyperlink.prefix}}"))
         .setProperty("hyperlinkSuffix", simple("{{dems.case.hyperlink.list.suffix}}"))
@@ -2109,16 +2164,16 @@ private void getDemsFieldMappingsrccStatus() {
         .process(new Processor() {
           @Override
           public void process(Exchange exchange) throws Exception {
-            List<Map<String, Object>> items = exchange.getIn().getBody(List.class);
+            List<DemsLookupSearchData> items = (List<DemsLookupSearchData>)exchange.getProperty("lookup_results", ArrayList.class);
             CaseHyperlinkDataList metadata = (CaseHyperlinkDataList)exchange.getProperty("metadata_object", CaseHyperlinkDataList.class);
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-            //log.info("originalList size: "+metadata.getcase_hyperlinks().size());
-            metadata.processHyperlinks(prefix, suffix, items);
-            //log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
-            //for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
-              //log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
-            //}
+            log.info("originalList size: "+metadata.getcase_hyperlinks().size());
+            metadata.processCaseHyperlinks(prefix, suffix, items);
+            log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
+            for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
+              log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
+            }
 
             exchange.setProperty("metadata_object", metadata);
             exchange.getIn().setBody(metadata);
@@ -2126,11 +2181,8 @@ private void getDemsFieldMappingsrccStatus() {
         })
         .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
       .endChoice()
-      .otherwise()
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
-        .stop()
-      .endChoice()
     .end()
+
     .log(LoggingLevel.DEBUG, "Final body: ${body}")
     ;
   }
@@ -2858,7 +2910,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[key]}")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
     .log(LoggingLevel.INFO,"Person updated.")
     ;
   }
