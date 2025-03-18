@@ -2110,7 +2110,6 @@ private void getDemsFieldMappingsrccStatus() {
       }
     })
 
-
     .setProperty("length",jsonpath("$.length()"))
     .choice()
       .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
@@ -2147,7 +2146,7 @@ private void getDemsFieldMappingsrccStatus() {
 
         .end()
       .endChoice()
-      .otherwise()
+      .when(simple("${header.CamelHttpResponseCode} != 200"))
         .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${header.CamelHttpResponseCode}"))
         .stop()
       .endChoice()
@@ -2168,17 +2167,17 @@ private void getDemsFieldMappingsrccStatus() {
             CaseHyperlinkDataList metadata = (CaseHyperlinkDataList)exchange.getProperty("metadata_object", CaseHyperlinkDataList.class);
             String prefix = exchange.getProperty("hyperlinkPrefix", String.class);
             String suffix = exchange.getProperty("hyperlinkSuffix", String.class);
-            log.info("originalList size: "+metadata.getcase_hyperlinks().size());
+            //log.info("originalList size: "+metadata.getcase_hyperlinks().size());
             metadata.processCaseHyperlinks(prefix, suffix, items);
-            log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
-            for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
-              log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
-            }
+            //log.info("postprocessList size: "+metadata.getcase_hyperlinks().size());
+            //for(CaseHyperlinkData data : metadata.getcase_hyperlinks()) {
+            //  log.info("RCC: " + data.getRcc_id() + " " +data.getHyperlink());
+            //}
 
             exchange.setProperty("metadata_object", metadata);
-            exchange.getIn().setBody(metadata);
           }
         })
+        .setBody(simple("${exchangeProperty.metadata_object}"))
         .marshal().json(JsonLibrary.Jackson, CaseHyperlinkDataList.class)
       .endChoice()
     .end()
