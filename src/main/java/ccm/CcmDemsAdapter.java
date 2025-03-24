@@ -164,6 +164,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     deleteJustinFileNoteRecord();
     updateExistingCaseFileNotes();
     processCaseList();
+    getPrimaryCourtCaseExists();
   }
 
 
@@ -1840,6 +1841,24 @@ private void getDemsFieldMappingsrccStatus() {
         }
       })
     .end()
+    ;
+  }
+
+  private void getPrimaryCourtCaseExists() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //IN: header.number
+
+    from("platform-http:/" + routeId)
+      .routeId(routeId)
+      .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+      // .log(LoggingLevel.DEBUG,"Before delay call...")
+      // .delay(10000)
+      // .log(LoggingLevel.DEBUG,"After delay call.")
+      .log(LoggingLevel.INFO,"Processing request.  Key = ${header.key} ...")
+      .setProperty("key", simple("${header.key}"))
+      .to("direct:getPrimaryCourtCaseIdByKey")
     ;
   }
 
