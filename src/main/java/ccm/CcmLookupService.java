@@ -799,6 +799,7 @@ public class CcmLookupService extends RouteBuilder {
     .to("http://ccm-justin-out-adapter/getAgencyFileStatus?throwExceptionOnFailure=false")
     .log(LoggingLevel.INFO,"response from JUSTIN: ${body}");
   }
+
   // need to call dems adapter
   private void getPrimaryCourtCaseExists() {
      // use method name as route id

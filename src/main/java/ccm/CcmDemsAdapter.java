@@ -37,7 +37,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
-import org.apache.camel.component.jackson.ListJacksonDataFormat;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import java.nio.charset.StandardCharsets;
@@ -82,7 +81,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -480,7 +478,7 @@ private void getDemsFieldMappingsrccStatus() {
   private void getCourtCaseStatusById() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-    //IN: header.number
+    //IN: exchangeProperty.id
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
@@ -4824,7 +4822,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.HTTP_METHOD, simple("GET"))
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-      //traverse through all cases in DEMS
+      //traverse through all persons in DEMS
       .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/persons?page=${exchangeProperty.incrementCount}&pagesize=${exchangeProperty.pageSize}")
       //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
       .setProperty("length",jsonpath("$.items.length()"))

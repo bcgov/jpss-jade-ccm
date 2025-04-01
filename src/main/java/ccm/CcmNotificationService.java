@@ -46,6 +46,7 @@ import org.apache.commons.codec.binary.StringUtils;
 
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
+import ccm.models.common.data.CaseAccused;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
@@ -1884,7 +1885,7 @@ public class CcmNotificationService extends RouteBuilder {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .delay(35000)
+    .delay(350000)
     .to("direct:createBatchEndEvent");
   }
 
@@ -3472,7 +3473,7 @@ public class CcmNotificationService extends RouteBuilder {
 
   private void processAccusedPersons() {
     // input params:
-    // List<CaseAccused>, rcc_id
+    // List<CaseAccused>, number(rcc_id)
 
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3482,6 +3483,116 @@ public class CcmNotificationService extends RouteBuilder {
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
+    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .setProperty("participantList", simple("${body}"))
+
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+    .unmarshal().json()
+
+    //JADE-2671 - look-up primary rcc for update.
+    .choice() // If this is an inactive case, look for the primary, if it exists.  That one should have all agency files listed.
+      .when(simple("${body[status]} == 'Inactive' && ${body[primaryAgencyFileId]} != ${header.event_key}"))
+        .setHeader("key").simple("${body[primaryAgencyFileId]}")
+        .setHeader("event_key",simple("${body[primaryAgencyFileId]}"))
+        .setHeader("number",simple("${body[primaryAgencyFileId]}"))
+        .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .to("http://ccm-lookup-service/getCourtCaseStatusExists")
+        .log(LoggingLevel.DEBUG, "Dems case status: ${body}")
+        .unmarshal().json()
+      .endChoice()
+    .end()
+    .log(LoggingLevel.INFO, "primary rcc_id : ${body[primaryAgencyFileId]}")
+
+    .setProperty("courtFileIds", simple("${body[courtFileId]}"))
+    .log(LoggingLevel.INFO, "courtFileIds : ${exchangeProperty.courtFileIds}")
+
+    // BCPSDEMS-2217 - Accused persons should be a union of accused from all associated court files, or agency file, if it is not a merged case.
+    //CourtFileId
+    .setProperty("dems_court_files").simple("${body[courtFileId]}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String demsCourtFiles = (String)exchange.getProperty("dems_court_files", String.class);
+        log.info("get court files: " + demsCourtFiles);
+        String[] demsCourtFileList = demsCourtFiles.split("; ");
+        ArrayList<String> courtFileList = new ArrayList<String>();
+        if(demsCourtFileList != null && demsCourtFileList.length > 0) {
+          log.info("court list size: " + demsCourtFileList.length);
+          for(String demsCourtFileId : demsCourtFileList) {
+            if(demsCourtFileId.length() > 1) {
+              log.info("for court file id: "+demsCourtFileId);
+              courtFileList.add(demsCourtFileId);
+            }
+          }
+          if(courtFileList.size() > 0) {
+            // clear-out the participant list in prep to replace with court file accused lists.
+            ArrayList<CaseAccused> participantList = new ArrayList<CaseAccused>();
+            exchange.setProperty("participantList", participantList);
+          }
+        }
+
+        exchange.getMessage().setBody(courtFileList);
+      }
+    })
+
+    .log(LoggingLevel.INFO, "Unprocessed court file list: ${body}")
+    .split().jsonpathWriteAsString("$.*")
+      .setProperty("courtFileId", simple("${body}"))
+      .log(LoggingLevel.DEBUG, "court file: ${exchangeProperty.courtFileId}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          String courtFileId = exchange.getProperty("courtFileId", String.class);
+          //log.info("courtFileId:"+courtFileId);
+          exchange.setProperty("courtFileId", courtFileId.replaceAll("\"", ""));
+        }
+      })
+
+      .choice()
+        .when(simple("${exchangeProperty.courtFileId} != ''"))
+          .log(LoggingLevel.DEBUG, "court file updated: ${exchangeProperty.courtFileId}")
+          .setHeader("number").simple("${exchangeProperty.courtFileId}")
+          .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+          .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+          .removeHeader(Exchange.CONTENT_ENCODING)
+          .to("http://ccm-lookup-service/getCourtCaseMetadata")
+
+          //.log(LoggingLevel.DEBUG,"Retrieved related Court Case Metadata from JUSTIN: ${body}")
+          .unmarshal().json(JsonLibrary.Jackson, CourtCaseData.class)
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) {
+              CourtCaseData bcm = exchange.getIn().getBody(CourtCaseData.class);
+              exchange.setProperty("accused_person", bcm.getAccused_persons().size());
+              exchange.setProperty("accusedList", bcm.getAccused_persons());
+              ArrayList<CaseAccused> participantList = (ArrayList<CaseAccused>)exchange.getProperty("participantList", ArrayList.class);
+              for(CaseAccused accused : bcm.getAccused_persons()) {
+                log.info("part_id: " + accused.getIdentifier());
+                boolean dupeFound = false;
+                for(CaseAccused existingParticipant : participantList) {
+                  if(existingParticipant.getIdentifier().equalsIgnoreCase(accused.getIdentifier())) {
+                    dupeFound = true; // Accused is already in the participant list.
+                  }
+                }
+                if(!dupeFound) {
+                  log.info("added participant");
+                  participantList.add(accused);
+                }
+              }
+              exchange.setProperty("participantList", participantList);
+            }
+          })
+        .endChoice()
+      .end()
+    .end()
+
+    .log(LoggingLevel.DEBUG, "set new participant list")
+    .setBody(simple("${exchangeProperty.participantList}"))
+    .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
@@ -3489,7 +3600,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end();
   }
 
-    private void processFileNote(){
+  private void processFileNote(){
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
