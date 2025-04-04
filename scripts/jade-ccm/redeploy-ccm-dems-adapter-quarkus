@@ -1,0 +1,177 @@
+echo "Redeploying ccm-dems-adapter-quarkus to $1 ..."
+
+####################################################################################################
+# 0. Validate environment
+
+echo "Step 0: Validating environment ..."
+
+ns_set="cef5dd"
+image_registry_url=$(oc registry info)
+app="ccm-dems-adapter-quarkus"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+elif [ "$1" = "local" ]; then
+    env="local"
+else
+    env=""
+fi
+
+if [ "$env" = "" ]; then
+   echo "Error.  Invalid environment specified: $1"
+   exit 1
+else
+   ns="$ns_set-$env"
+fi
+
+if [ "$env" != "local" ]; then
+    # Check if logged in to OpenShift
+    oc whoami > /dev/null 2> /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error.  You are not logged in to OpenShift."
+        exit 1
+    fi
+fi
+
+# Capture the build / deployment labels
+deployer="`oc whoami | cut -d "@" -f 1`"
+version_file="../../src/main/java/ccm/models/common/versioning/Version.java"
+if [ ! -f $version_file ]; then
+    echo "Error.  Version file not found: $version_file"
+    exit 1
+fi
+version=`cat $version_file | grep V1_0 | cut -d'"' -f2`
+
+
+####################################################################################################
+# 1. Set default logging level
+
+echo "Step 1: Setting default logging level ..."
+
+logging_level="INFO"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        ns=""
+        exit 1
+    fi
+
+    # Override logging level for Prod deployment
+    logging_level="INFO"
+
+fi
+
+
+####################################################################################################
+# 2. Un-deploy existing adapter
+
+echo "Step 2: Un-deploying existing adapter ..."
+
+if [ "$env" = "local" ]; then
+    # handle local deployment
+    docker stop $app
+    docker rm $app
+else
+    # handle OpenShift deployment
+
+    # remove the deployment from the OpenShift namespace
+    oc -n $ns delete deployment $app
+
+    # remove the image stream from the OpenShift namespace
+    oc -n $ns delete imagestream $app
+
+    # remove the OpenShift tagged image from the local docker registry
+    docker rmi $image_registry_url/$ns/$app
+fi
+
+# remove the image from the local docker registry
+docker rmi $app
+
+
+####################################################################################################
+# 3. Build the processor
+
+echo "Step 3: Building processor ..."
+
+pushd ../../$app
+mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level
+
+if [ $env = "local" ]; then
+    # build the image for local deployment
+    docker build -t $app .
+else
+    # build the image for OpenShift deployment
+    ## make sure it is build for the linux x64 platform
+    docker build --platform linux/amd64 -t $app .
+fi
+
+if [ "$?" -ne 0 ]; then
+    echo "Error.  Build failed."
+    exit 1
+fi
+popd
+
+if [ "$env" != "local" ]; then
+    # create the image stream in the OpenShift namespace
+    ## tag image for OpenShift
+    docker tag $app $image_registry_url/$ns/$app
+    ## login to OpenShift image registry
+    echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
+    if [ $? -ne 0 ]; then
+        echo "Error.  Login to OpenShift image registry failed."
+        exit 1
+    fi
+    ## push image to OpenShift
+    docker push $image_registry_url/$ns/$app
+    ## logout of OpenShift image registry
+    docker logout $image_registry_url
+
+    # add image stream labels
+    oc -n $ns label imagestream $app deployer="$deployer" version="$version"
+fi
+
+####################################################################################################
+# 4. Deploy the dems adapter
+
+echo "Step 4: Deploying dems adapter ..."
+
+if [ "$env" = "local" ]; then
+    # handle local deployment
+
+    echo "Deploying $app to $env ..."
+
+    docker run --name $app --network jade-events_default -d $app
+
+    echo "Deployment complete."
+else
+    # handle OpenShift deployment
+
+    echo "Deploying $app to $ns ..."
+
+    # create the deployment in the OpenShift namespace
+    oc -n $ns process -f "openshift/template-$app.yaml" -p NAMESPACE=$ns | oc -n $ns apply -f -
+
+    # wait for the deployment to complete
+    echo "Waiting for deployment to complete..."
+    while [ `oc -n $ns get pods | grep $app | grep -v deploy | grep -v build | grep -v Running | wc -l` -gt 0 ]; do
+        sleep 5
+    done
+
+    oc -n $ns rollout status deployment/$app
+    if [ $? -ne 0 ]; then
+        echo "Error.  Deployment failed."
+        exit 1
+    fi
+
+    # add deployment labels
+    oc -n $ns label deployment $app deployer="$deployer" version="$version"
+
+    echo "Deployment complete."  
+fi
