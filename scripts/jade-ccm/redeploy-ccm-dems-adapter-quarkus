@@ -1,4 +1,4 @@
-echo "Redeploying ccm-dems-adapter-quarkus to $1 ..."
+echo "Redeploying ccm-dems-adapter to $1 ..."
 
 ####################################################################################################
 # 0. Validate environment
@@ -7,7 +7,7 @@ echo "Step 0: Validating environment ..."
 
 ns_set="cef5dd"
 image_registry_url=$(oc registry info)
-app="ccm-dems-adapter-quarkus"
+app="ccm-dems-adapter"
 
 if [ "$1" = "dev" ]; then
     env="dev"

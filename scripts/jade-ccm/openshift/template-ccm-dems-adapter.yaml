@@ -11,7 +11,7 @@ objects:
   kind: Deployment
   metadata:
     namespace: ${NAMESPACE}
-    name: 'ccm-dems-adapter-quarkus'
+    name: 'ccm-dems-adapter'
   spec:
     selector:
       matchLabels:
@@ -25,7 +25,7 @@ objects:
         containers:
           - name: container
             image: >-
-              image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-dems-adapter-quarkus:latest
+              image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-dems-adapter:latest
             env:
               - name: 'TZ'
                 value: 'Canada/Pacific'

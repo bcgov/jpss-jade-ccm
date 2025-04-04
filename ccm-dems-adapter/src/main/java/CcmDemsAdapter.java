@@ -4486,7 +4486,8 @@ private void getDemsFieldMappingsrccStatus() {
       }})
 
     .choice()
-    .when(simple("${header.number}!= '' && ${body} != '' "))
+    .when(simple("${header.number} != '' && ${body} != '' "))
+
       // get the primary rcc, based on the dems primary agency file id
 
       //.setHeader("number", simple("${header[rcc_id]}"))
