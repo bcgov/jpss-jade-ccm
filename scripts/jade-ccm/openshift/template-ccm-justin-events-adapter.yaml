@@ -1,0 +1,46 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: deployment-template
+parameters:
+- name: NAMESPACE
+  description: The namespace for the deployment
+  required: true
+objects:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    namespace: ${NAMESPACE}
+    name: 'ccm-justin-events-adapter'
+  spec:
+    selector:
+      matchLabels:
+        app: jade-ccm
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: jade-ccm
+      spec:
+        containers:
+          - name: container
+            image: >-
+              image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-justin-events-adapter:latest
+            env:
+              - name: 'TZ'
+                value: 'Canada/Pacific'
+              - name: 'KAFKA-BROKER-URL'
+                value: events-kafka-bootstrap:9092
+              
+            envFrom:
+              - configMapRef:
+                  name: ccm-configs
+              - secretRef:
+                  name: ccm-secrets-useraccess-adapter
+        imagePullSecrets: []
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+    paused: false
