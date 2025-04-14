@@ -5,6 +5,25 @@ import java.util.List;
 
 import org.apache.camel.CamelException;
 
+// camel-k: language=java
+// camel-k: dependency=mvn:org.apache.camel.quarkus
+// camel-k: dependency=mvn:org.apache.camel.component.kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
+// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
+// camel-k: dependency=mvn:org.apache.camel.camel-jackson
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
+// camel-k: dependency=mvn:org.apache.camel.camel-splunk
+// camel-k: dependency=mvn:org.apache.camel.camel-http
+// camel-k: dependency=mvn:org.apache.camel.camel-http-common
+// camel-k: dependency=mvn:org.apache.camel.camel-cron
+// camel-k: dependency=mvn:io.strimzi:kafka-oauth-client:0.10.0
+// camel-k: dependency=mvn:io.strimzi:kafka-oauth-common:0.10.0
+// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-kafka
+// camel-k: dependency=mvn:io.quarkus:quarkus-apicurio-registry-avro
+// camel-k: dependency=mvn:io.apicurio:apicurio-registry-serdes-avro-serde
+
+
+import java.util.UUID;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -16,7 +35,14 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 
-
+/*
+import org.apache.camel.component.kafka.KafkaComponent;
+import org.apache.camel.component.kafka.KafkaConfiguration;
+//import org.apache.camel.http.base.HttpOperationFailedException;
+import org.apache.camel.support.jsse.KeyManagersParameters;
+import org.apache.camel.support.jsse.KeyStoreParameters;
+import org.apache.camel.support.jsse.SSLContextParameters;
+*/
 
 import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.CaseUserEvent;
@@ -28,8 +54,8 @@ import ccm.models.system.pidp.PidpUserModificationEvent;
 import ccm.models.system.pidp.PidpUserProcessStatusEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
-import jakarta.enterprise.context.ApplicationScoped; 
-import java.util.UUID;
+import jakarta.enterprise.context.ApplicationScoped; // Example
+//import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 
 @ApplicationScoped
 public class CcmPidpAdapter extends RouteBuilder {
