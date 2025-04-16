@@ -7,7 +7,7 @@ echo "Step 0: Validating environment ..."
 
 ns_set="cef5dd"
 image_registry_url=$(oc registry info)
-app="ccm-pidp-adapter"
+app="ccm-pidp-adapter-quarkus"
 
 if [ "$1" = "dev" ]; then
     env="dev"
@@ -101,7 +101,7 @@ docker rmi $app
 echo "Step 3: Building processor ..."
 
 pushd ../../$app
-mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level
+mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level 
 
 if [ $env = "local" ]; then
     # build the image for local deployment

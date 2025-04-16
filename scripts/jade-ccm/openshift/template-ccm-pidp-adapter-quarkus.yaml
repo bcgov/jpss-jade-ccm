@@ -11,7 +11,7 @@ objects:
   kind: Deployment
   metadata:
     namespace: ${NAMESPACE}
-    name: ccm-pidp-adapter
+    name: ccm-pidp-adapter-quarkus
   spec:
     selector:
       matchLabels:
