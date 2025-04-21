@@ -21,6 +21,8 @@ objects:
       metadata:
         labels:
           app: jade-ccm
+          pod-name: ccm-lookup-service 
+        name: ccm-lookup-service
       spec:
         containers:
           - name: container
