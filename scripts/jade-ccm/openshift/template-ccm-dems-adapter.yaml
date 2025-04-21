@@ -11,7 +11,7 @@ objects:
   kind: Deployment
   metadata:
     namespace: ${NAMESPACE}
-    name: 'ccm-dems-adapter'
+    name: ccm-dems-adapter
   spec:
     selector:
       matchLabels:
@@ -21,17 +21,17 @@ objects:
       metadata:
         labels:
           app: jade-ccm
+          pod-name: ccm-dems-adapter # Added for identification
+        name: ccm-dems-adapter # Optional: Attempt to set pod name (may not work as expected)
       spec:
         containers:
           - name: container
-            image: >-
-              image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-dems-adapter:latest
+            image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-dems-adapter:latest
             env:
-              - name: 'TZ'
-                value: 'Canada/Pacific'
-              - name: 'KAFKA-BROKER-URL'
-                value: 'events-kafka-bootstrap:9092'
-              
+              - name: TZ
+                value: Canada/Pacific
+              - name: KAFKA-BROKER-URL
+                value: events-kafka-bootstrap:9092
             envFrom:
               - configMapRef:
                   name: ccm-configs
