@@ -15,12 +15,13 @@ objects:
   spec:
     selector:
       matchLabels:
-        app: jade-ccm
+        app.kubernetes.io/name: ccm-splunk-adapter  # Unique selector for the deployment
     replicas: 1
     template:
       metadata:
         labels:
-          app: jade-ccm
+          app: jade-ccm  # Existing label for broader grouping
+          app.kubernetes.io/name: ccm-splunk-adapter  # Unique label for this service
           pod-name: ccm-splunk-adapter
         name: ccm-splunk-adapter
       spec:
@@ -32,13 +33,14 @@ objects:
               - name: 'TZ'
                 value: 'Canada/Pacific'
               - name: 'KAFKA-BROKER-URL'
-                value: 'events-kafka-bootstrap:9092'
-              
+                value: events-kafka-bootstrap:9092
+              - name: POD_NAME
+                value: ccm-splunk-adapter
             envFrom:
               - configMapRef:
                   name: ccm-configs
               - secretRef:
-                  name: ccm-secrets-useraccess-adapter
+                  name: ccm-secrets
         imagePullSecrets: []
     strategy:
       type: RollingUpdate
@@ -46,3 +48,16 @@ objects:
         maxSurge: 25%
         maxUnavailable: 25%
     paused: false
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: ${NAMESPACE}
+    name: ccm-splunk-adapter
+  spec:
+    selector:
+      app.kubernetes.io/name: ccm-splunk-adapter  # Match the unique label
+    ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080  # Adjust to your container's port
+    type: ClusterIP

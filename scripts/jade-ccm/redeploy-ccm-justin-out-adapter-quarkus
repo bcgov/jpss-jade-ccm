@@ -101,7 +101,7 @@ docker rmi $app
 echo "Step 3: Building processor ..."
 
 pushd ../../$app
-mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level -Dquarkus.kubernetes.deploy=true -Dquarkus.openshift.route.expose=true
+mvn clean package -Dquarkus.package.type=uber-jar -Dquarkus.log.level=$logging_level 
 
 if [ $env = "local" ]; then
     # build the image for local deployment

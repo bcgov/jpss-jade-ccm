@@ -15,13 +15,14 @@ objects:
   spec:
     selector:
       matchLabels:
-        app: jade-ccm
+        app.kubernetes.io/name: ccm-notification-service  # Unique selector for the deployment
     replicas: 1
     template:
       metadata:
         labels:
-          app: jade-ccm
-          pod-name: ccm-notification-service 
+          app: jade-ccm  # Existing label for broader grouping
+          app.kubernetes.io/name: ccm-notification-service  # Unique label for this service
+          pod-name: ccm-notification-service
         name: ccm-notification-service
       spec:
         containers:
@@ -33,7 +34,8 @@ objects:
                 value: 'Canada/Pacific'
               - name: 'KAFKA-BROKER-URL'
                 value: events-kafka-bootstrap:9092
-              
+              - name: POD_NAME
+                value: ccm-notification-service
             envFrom:
               - configMapRef:
                   name: ccm-configs
@@ -46,3 +48,16 @@ objects:
         maxSurge: 25%
         maxUnavailable: 25%
     paused: false
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: ${NAMESPACE}
+    name: ccm-notification-service
+  spec:
+    selector:
+      app.kubernetes.io/name: ccm-notification-service  # Match the unique label
+    ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080  # Adjust to your container's port
+    type: ClusterIP
