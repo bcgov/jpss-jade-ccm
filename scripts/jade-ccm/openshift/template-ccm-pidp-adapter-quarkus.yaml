@@ -11,22 +11,23 @@ objects:
   kind: Deployment
   metadata:
     namespace: ${NAMESPACE}
-    name: ccm-pidp-adapter-quarkus
+    name: ccm-pidp-adapter
   spec:
     selector:
       matchLabels:
-        app: jade-ccm
+        app.kubernetes.io/name: ccm-pidp-adapter
     replicas: 1
     template:
       metadata:
         labels:
           app: jade-ccm
-          pod-name: ccm-pidp-adapter-quarkus 
-        name: ccm-pidp-adapter-quarkus
+          app.kubernetes.io/name: ccm-pidp-adapter
+          pod-name: ccm-pidp-adapter
+        name: ccm-pidp-adapter
       spec:
         containers:
         - name: container
-          image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-pidp-adapter-quarkus:latest
+          image: image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-pidp-adapter:latest
           imagePullPolicy: Always
           env:
           - name: TZ
@@ -59,3 +60,16 @@ objects:
         maxSurge: 25%
         maxUnavailable: 25%
     paused: false
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: ${NAMESPACE}
+    name: ccm-pidp-adapter
+  spec:
+    selector:
+      app.kubernetes.io/name: ccm-pidp-adapter
+    ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+    type: ClusterIP

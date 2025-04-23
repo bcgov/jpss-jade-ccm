@@ -7,7 +7,7 @@ echo "Step 0: Validating environment ..."
 
 ns_set="cef5dd"
 image_registry_url=$(oc registry info)
-app="ccm-pidp-adapter-quarkus"
+app="ccm-pidp-adapter"
 
 if [ "$1" = "dev" ]; then
     env="dev"
