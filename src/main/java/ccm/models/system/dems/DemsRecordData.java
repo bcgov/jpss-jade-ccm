@@ -296,6 +296,10 @@ public class DemsRecordData {
             DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
             fieldData.add(location);
         }
+        if(getImage_id() != null){
+            DemsFieldData imageID = new DemsFieldData("JUSTIN Image ID", getImage_id());
+            fieldData.add(imageID);
+        }
         if(getLastApiRecordUpdate() != null) {
             DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
             fieldData.add(lastUpdate);
