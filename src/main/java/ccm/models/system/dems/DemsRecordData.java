@@ -200,6 +200,12 @@ public class DemsRecordData {
                 setTitle(nrd.getAgency_file_no());
             }
             setOriginalFileNumber(nrd.getAgency_file_no());
+            if(nrd.getSequence_nos() != null) {
+                StringBuffer imageId = new StringBuffer(nrd.getAgency_file_no());
+                imageId.append("-");
+                imageId.append(nrd.getSequence_nos());
+                setImage_id(imageId.toString());
+            }
 
 
             if(report.equals(REPORT_TYPES.NARRATIVE)) {
