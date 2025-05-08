@@ -62,7 +62,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     stopJustinEvents();
     http_startJustinEvents();
     startJustinEvents();
-    cronJustinEventsReconnection();
+    //cronJustinEventsReconnection();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
