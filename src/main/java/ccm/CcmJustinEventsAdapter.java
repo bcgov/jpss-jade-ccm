@@ -62,8 +62,6 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     stopJustinEvents();
     http_startJustinEvents();
     startJustinEvents();
-    //cronJustinEventsWeekdayShutdown();
-    //cronJustinEventsWeekendShutdown();
     //cronJustinEventsReconnection();
     requeueJustinEvent();
     requeueJustinEventRange();
@@ -409,34 +407,6 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     })
 
     .log(LoggingLevel.INFO,"Justin adapter queue started")
-    ;
-  }
-
-  private void cronJustinEventsWeekdayShutdown() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //from("cron:tab?schedule=0/1+1+*+*+*+?")
-    from("cron:weekday?schedule=0 58 19 ? * MON-FRI") // run 8pm (7:58pm) every weekday
-    .routeId(routeId)
-    .log(LoggingLevel.WARN,"Cron job weekday pause of Justin Events pull started.")
-    .to("direct:stopJustinEvents")
-
-    .log(LoggingLevel.WARN,"Cron job weekday pause of Justin Events pull completed.")
-    ;
-  }
-
-  private void cronJustinEventsWeekendShutdown() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    //from("cron:tab?schedule=0/1+1+*+*+*+?")//0 0 14-6 ? * FRI-MON
-    from("cron:weekend?schedule=0 58 16 ? * SAT-SUN") // run 5pm every weekend
-    .routeId(routeId)
-    .log(LoggingLevel.WARN,"Cron job weekend pause of Justin Events pull started.")
-    .to("direct:stopJustinEvents")
-
-    .log(LoggingLevel.WARN,"Cron job weekend pause of Justin Events pull completed.")
     ;
   }
 

@@ -15,6 +15,7 @@ public class ChargeAssessmentData {
     private String initiating_agency_name;
     private String investigating_officer;
     private String proposed_crown_office;
+    private String proposed_crown_office_subtype_cd;
     private String rcc_submit_date;
 
     private String assessment_crown_name;
@@ -65,6 +66,7 @@ public class ChargeAssessmentData {
 
             setProposed_crown_office(jaf.getCrn_decision_agency_identifier() + ": " + crn_decision_agency_name);
         }
+        setProposed_crown_office_subtype_cd(jaf.getCrn_decision_agency_subtype_cd());
 
         setAssessment_crown_name(jaf.getAssessment_crown_name());
         setCase_decision_cd(jaf.getCase_decision_cd());
@@ -283,6 +285,14 @@ public class ChargeAssessmentData {
 
     public void setProposed_crown_office(String proposed_crown_office) {
         this.proposed_crown_office = proposed_crown_office;
+    }
+
+    public String getProposed_crown_office_subtype_cd() {
+        return proposed_crown_office_subtype_cd;
+    }
+
+    public void setProposed_crown_office_subtype_cd(String proposed_crown_office_subtype_cd) {
+        this.proposed_crown_office_subtype_cd = proposed_crown_office_subtype_cd;
     }
 
     public String getEarliest_proposed_appearance_date() {

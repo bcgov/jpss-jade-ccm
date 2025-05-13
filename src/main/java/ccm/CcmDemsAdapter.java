@@ -123,6 +123,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     syncCaseGroupMembers();
     getCaseListByUserKey();
     processDocumentRecord();
+    processStaticDocuments();
     processNonStaticDocuments();
     checkIncrementRecordDocId();
     changeDocumentRecord();
@@ -741,7 +742,7 @@ private void getDemsFieldMappingsrccStatus() {
                 }
               }
             })
-            .to("direct:createDocumentRecord")
+            .to("direct:processStaticDocuments")
             .log(LoggingLevel.INFO,"End of RCC based report")
           .endChoice()
           .when(simple("${header.mdoc_justin_no} != null"))
@@ -837,7 +838,7 @@ private void getDemsFieldMappingsrccStatus() {
                 })
               .endDoTry()
               .doCatch(HttpOperationFailedException.class)
-                .log(LoggingLevel.ERROR,"Exception in createDocumentRecord call")
+                .log(LoggingLevel.ERROR,"Exception in processDocumentRecord call")
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
                 .setHeader("CCMException", simple("${exception.statusCode}"))
 
@@ -920,7 +921,7 @@ private void getDemsFieldMappingsrccStatus() {
             .log(LoggingLevel.INFO, "Completed parsing through list of rcc_ids")
           .endChoice()
           .otherwise()
-            .log(LoggingLevel.INFO,"No identifying values, so skipped.")
+            .log(LoggingLevel.ERROR,"No identifying values, so skipped.")
           .endChoice()
 
         .end() // end choice
@@ -992,6 +993,65 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO, "end of processDocumentRecord")
     ;
   }
+
+  
+  private void processStaticDocuments() throws HttpOperationFailedException {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+ 
+    // IN
+    // header: rcc_id
+    // property: drd
+    from("direct:" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .choice()
+        .when(simple("${exchangeProperty.caseId} != ''"))
+
+          // IN: header.reportType
+          // IN: header.reportTitle
+          // IN: header.imageId
+          .process(new Processor() {
+            @Override
+            public void process(Exchange ex) {
+              DemsRecordData demsRecordObj = (DemsRecordData)ex.getProperty("drd", DemsRecordData.class);
+              String courtCaseId = (String)ex.getProperty("caseId");
+
+              ex.getMessage().setHeader("imageId", demsRecordObj.getImage_id());
+              ex.getMessage().setHeader("reportType", demsRecordObj.getDescriptions());
+              ex.getMessage().setHeader("reportTitle", demsRecordObj.getTitle());
+              ex.getMessage().setHeader("documentId", demsRecordObj.getDocumentId());
+              ex.setProperty("courtCaseId", courtCaseId);
+              ex.setProperty("drd", demsRecordObj);
+            }
+
+          })
+
+          .to("direct:getCaseRecordIdByDescriptionImageId")
+          .unmarshal().json()
+          .choice()
+            .when(simple("${body[id]} == ''"))
+              // BCPSDEMS-1141 - Send all INFORMATION docs. If there is a doc id collision, increment.
+              .setProperty("maxRecordIncrements").simple("10")
+              .to("direct:checkIncrementRecordDocId")
+              // set back body to dems record
+              .setBody(simple("${exchangeProperty.dems_record}"))
+              .log(LoggingLevel.DEBUG, "${body}")
+              .marshal().json(JsonLibrary.Jackson, DemsRecordData.class)
+              .to("direct:createDocumentRecord")
+            .endChoice()
+            .otherwise()
+              .log(LoggingLevel.WARN, "Skipped adding image document.  One with image id already exists.")
+            .endChoice()
+
+
+      .end()
+
+     .log(LoggingLevel.INFO, "end of processStaticDocuments")
+     ;
+    }
+  
+
 
   private void processNonStaticDocuments() throws HttpOperationFailedException {
     // use method name as route id
@@ -1164,7 +1224,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO, "end of processNonStaticDocuments")
     ;
    }
- 
+
   private void checkIncrementRecordDocId() throws HttpOperationFailedException {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -3815,7 +3875,7 @@ private void getDemsFieldMappingsrccStatus() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
-    //IN: header.number
+    //IN: header.number (rcc_id)
     //IN: header.documentId
     from("direct:" + routeId)
       .routeId(routeId)

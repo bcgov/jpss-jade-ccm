@@ -72,7 +72,7 @@ public class CcmPidpAdapter extends RouteBuilder {
     publishEventKPI();
     stopPidpKafkaConnection();
     startPidpKafkaConnection();
-    cronPidpReconnection();
+    //cronPidpReconnection();
   }
 
   private void attachExceptionHandlers() {

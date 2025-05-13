@@ -19,6 +19,7 @@ public class ReportDocument {
   private String index;
   private String data;
   private String report_title;
+  private String sequence_nos;
 
   private String witness_name;
   private String pin_number;
@@ -73,6 +74,7 @@ public class ReportDocument {
     setIndex(jd.getIndex());
     setData(jd.getData());
     setReport_title(jd.getReport_title());
+    setSequence_nos(jd.getSequence_nos());
 
     setWitness_name(jd.getWitness_name());
     setPin_number(jd.getPin_number());
@@ -233,6 +235,14 @@ public class ReportDocument {
 
   public void setReport_title(String report_title) {
     this.report_title = report_title;
+  }
+
+  public String getSequence_nos() {
+    return sequence_nos;
+  }
+
+  public void setSequence_nos(String sequence_nos) {
+    this.sequence_nos = sequence_nos;
   }
 
   public String getWitness_name() {

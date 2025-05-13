@@ -200,6 +200,12 @@ public class DemsRecordData {
                 setTitle(nrd.getAgency_file_no());
             }
             setOriginalFileNumber(nrd.getAgency_file_no());
+            if(nrd.getSequence_nos() != null) {
+                StringBuffer imageId = new StringBuffer(nrd.getAgency_file_no());
+                imageId.append("-");
+                imageId.append(nrd.getSequence_nos());
+                setImage_id(imageId.toString());
+            }
 
 
             if(report.equals(REPORT_TYPES.NARRATIVE)) {
@@ -289,6 +295,10 @@ public class DemsRecordData {
         if(nrd.getLocation() != null) {
             DemsFieldData location = new DemsFieldData("ISL Event", nrd.getLocation());
             fieldData.add(location);
+        }
+        if(getImage_id() != null){
+            DemsFieldData imageID = new DemsFieldData("JUSTIN Image ID", getImage_id());
+            fieldData.add(imageID);
         }
         if(getLastApiRecordUpdate() != null) {
             DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());

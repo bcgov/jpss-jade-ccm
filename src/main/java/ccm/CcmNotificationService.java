@@ -719,11 +719,16 @@ public class CcmNotificationService extends RouteBuilder {
                   // jade 2770 fix
                   if(chargeAssessmentdata.getAccused_persons().size() == 0) {
                     ex.setProperty("allowCreateCase", "false");
-                    log.info("No accused associated with the rcc.");
+                    log.warn("No accused associated with the rcc.");
                   }
                   if(submitDateTime == null || submitDateTime.isBefore(maxSubmitDateTime)) {
                     ex.setProperty("allowCreateCase", "false");
-                    log.info("Submit date is beyond "+autoCreateMaxDays+" days ago.");
+                    log.warn("Submit date is beyond "+autoCreateMaxDays+" days ago.");
+                  }
+                  //JADE-3044 Ignore federal files.
+                  if(chargeAssessmentdata.getProposed_crown_office_subtype_cd() != null && chargeAssessmentdata.getProposed_crown_office_subtype_cd().equalsIgnoreCase("FED")) {
+                    ex.setProperty("allowCreateCase", "false");
+                    log.warn("Federal file, so skip creation.");
                   }
                 }
               } catch(Exception error) {
@@ -1482,7 +1487,7 @@ public class CcmNotificationService extends RouteBuilder {
             .log(LoggingLevel.INFO, "This is checking for return.")
             //BCPSDEMS-1518, JADE-1751
             .choice()
-                 .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
+              .when(simple("${exchangeProperty.justinCourtCaseStatus} == 'Return' || ${exchangeProperty.justinCourtCaseStatus} == 'Close'"))
                 .setHeader("case_id").simple("${exchangeProperty.caseId}")
                 .log(LoggingLevel.INFO, "justinCourtCaseStatus : ${exchangeProperty.justinCourtCaseStatus}")
                 .to("http://ccm-dems-adapter/inactivateCase")
