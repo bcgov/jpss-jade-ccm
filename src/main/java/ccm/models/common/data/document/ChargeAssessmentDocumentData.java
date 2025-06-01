@@ -13,6 +13,7 @@ public class ChargeAssessmentDocumentData extends BaseDocumentData {
   private String participant_name;
   private String officer_pin_number;
   private String participants;
+  private String sequence_nos;
 
 
   public ChargeAssessmentDocumentData() {
@@ -32,6 +33,7 @@ public class ChargeAssessmentDocumentData extends BaseDocumentData {
     setParticipant_name(rd.getParticipant_name());
     setOfficer_pin_number(rd.getOfficer_pin_number());
     setParticipants(rd.getParticipants());
+    setSequence_nos(rd.getSequence_nos());
   }
 
   public String getRcc_id() {
@@ -128,6 +130,14 @@ public class ChargeAssessmentDocumentData extends BaseDocumentData {
 
   public void setParticipants(String participants) {
     this.participants = participants;
+  }
+
+  public String getSequence_nos() {
+    return sequence_nos;
+  }
+
+  public void setSequence_nos(String sequence_nos) {
+    this.sequence_nos = sequence_nos;
   }
 
 }

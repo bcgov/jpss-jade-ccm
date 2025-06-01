@@ -22,6 +22,7 @@
 | pidp-kafka-oauth-client-id | PIDP Oauth Client Id | string |
 | pidp-api-oauth-token-endpoint-url | PIDP API Oauth Token URI | Host URI (with HTTP prefix) |
 | pidp-api-oauth-client-id | PIDP API OAuth client id | string |
+| justin-disable-file-notes-processing | Disable JUSTIN File Notes processing | true / false |
 
 # JADE-CCM Secret Object Definition (ccm-secrets)
 

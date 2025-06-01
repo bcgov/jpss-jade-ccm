@@ -29,6 +29,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.builder.TemplatedRouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.NoHttpResponseException;
@@ -666,8 +667,9 @@ public class CcmLookupService extends RouteBuilder {
   private void getFileNote() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
+    
     from("platform-http:/" + routeId)
+  
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .removeHeader("CamelHttpUri")
@@ -680,5 +682,5 @@ public class CcmLookupService extends RouteBuilder {
     .log(LoggingLevel.INFO,"response from JUSTIN: ${body}")
     ;
   }
-
+ 
 }

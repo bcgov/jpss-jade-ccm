@@ -58,8 +58,11 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     version();
 
     courtFileCreated();
+    http_stopJustinEvents();
     stopJustinEvents();
+    http_startJustinEvents();
     startJustinEvents();
+    //cronJustinEventsReconnection();
     requeueJustinEvent();
     requeueJustinEventRange();
     processJustinEventsMainTimer();
@@ -80,6 +83,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     processUnknownEvent();
     processFileClose();
     processFileNote();
+    processDeleteFileNote();
     processPartMergeEvents();
 
     confirmEventProcessed();
@@ -298,6 +302,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       @Override
       public void process(Exchange exchange) throws Exception {
         exchange.getMessage().setBody(Version.V1_0.toString());
+        String version = System.getProperty("java.version");
+        log.info("Java version:"+version);
       }
     })
     ;
@@ -321,12 +327,24 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
 
   }
 
+  private void http_stopJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/stopJustinEvents?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:stopJustinEvents")
+    ;
+  }
+
   private void stopJustinEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Pausing Justin pulls from justin queue.")
@@ -349,12 +367,24 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     ;
   }
 
+  private void http_startJustinEvents() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    // IN: header = id
+    from("platform-http:/startJustinEvents?httpMethodRestrict=PUT")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .to("direct:startJustinEvents")
+    ;
+  }
+
   private void startJustinEvents() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     // IN: header = id
-    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT")
+    from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"Restarting pulls from justin queue.")
@@ -377,6 +407,22 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     })
 
     .log(LoggingLevel.INFO,"Justin adapter queue started")
+    ;
+  }
+
+  private void cronJustinEventsReconnection() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    //from("cron:tab?schedule=0/1+1+*+*+*+?")
+    from("cron:tab?schedule=0 05 4 * * ?") // run 4am every day
+    .routeId(routeId)
+    .log(LoggingLevel.WARN,"Cron job restart of Justin Events pull started.")
+    .to("direct:stopJustinEvents")
+    .delay(25000)
+    .to("direct:startJustinEvents")
+
+    .log(LoggingLevel.WARN,"Cron job restart of Justin Events pull completed.")
     ;
   }
 
@@ -616,7 +662,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     //.log(LoggingLevel.DEBUG,"Processing new JUSTIN events: ${body}")
     //.unmarshal().json(JsonLibrary.Jackson, JustinEventBatch.class)
     .setProperty("numOfEvents")
+   
       .jsonpath("$.events.length()")
+      .setProperty("disableFileNoteProcess").simple("{{justin-disable-file-notes-processing}}")
     .choice()
       .when(simple("${exchangeProperty.numOfEvents} > 0"))
         .log(LoggingLevel.INFO,"Main event batch count: ${exchangeProperty.numOfEvents}")
@@ -631,6 +679,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       .setProperty("event_message_id")
         .jsonpath("$.event_message_id")
       .log(LoggingLevel.INFO,"Main event batch record: (id=${exchangeProperty.event_message_id}, type=${exchangeProperty.message_event_type_cd})")
+      
       .choice()
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.AGEN_FILE))
           .to("direct:processAgenFileEvent")
@@ -671,9 +720,26 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
-        /*.when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
-          .to("direct:processFileNote")
-          .endChoice()*/
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_NOTE))
+          .choice()
+            .when(simple("${exchangeProperty.disableFileNoteProcess} == 'false'"))
+              .log(LoggingLevel.INFO, "going to call process file note")
+              .to("direct:processFileNote")
+            .otherwise()
+              .log(LoggingLevel.INFO, "file note processing disabled")
+              .to("direct:processUnknownEvent")
+            .end()
+          .endChoice()
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DEL_FNOTE)  )
+          .choice()
+            .when(simple("${exchangeProperty.disableFileNoteProcess} == 'false'"))
+              .log(LoggingLevel.INFO, "going to call delete file note")
+              .to("direct:processDeleteFileNote")
+            .otherwise()
+              .log(LoggingLevel.INFO,"file note processing disabled")
+              .to("direct:processUnknownEvent")
+            .end()
+          .endChoice()
         .otherwise()
           .log(LoggingLevel.INFO,"message_event_type_cd = ${exchangeProperty.message_event_type_cd}")
           .to("direct:processUnknownEvent")
@@ -754,7 +820,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.DOCM))
           .to("direct:processReportEvents")
           .endChoice()
-          .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
+        .when(header("message_event_type_cd").isEqualTo(JustinEvent.STATUS.FILE_CLOSE))
           .to("direct:processFileClose")
           .endChoice()
         .otherwise()
@@ -1799,12 +1865,12 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       })
     .doFinally()
     .choice()
-    .when(exchangeProperty("kpi_event_topic_name").isNotNull())
-    .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
-      .setBody(simple("${exchangeProperty.justin_event}"))
-      .setProperty("event_message_id")
-        .jsonpath("$.event_message_id")
-      .to("direct:confirmEventProcessed")
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
       .end()
     .end()
     ;
@@ -1819,7 +1885,8 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .setProperty("justin_event").body()
     .setProperty("kpi_component_route_name", simple(routeId))
-    .log(LoggingLevel.INFO,"Processing File Note event: ${body}")
+    .log(LoggingLevel.DEBUG,"Processing File Note event: ${body}")
+
     .doTry()
       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
       .process(new Processor() {
@@ -1838,7 +1905,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
         }})
       .setProperty("kpi_event_object", body())
       .marshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
-      .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+      .log(LoggingLevel.DEBUG,"Generate converted business event: ${body}")
       .to("kafka:{{kafka.topic.file.notes}}")
       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.file.notes}}"))
       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
@@ -1862,14 +1929,77 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       })
     .doFinally()
     .choice()
-    .when(exchangeProperty("kpi_event_topic_name").isNotNull())
-    .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
-      .setBody(simple("${exchangeProperty.justin_event}"))
-      .setProperty("event_message_id")
-        .jsonpath("$.event_message_id")
-      .to("direct:confirmEventProcessed")
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.DEBUG,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
       .end()
     .end()
     ;
+  }
+
+  private void processDeleteFileNote() {
+     // use method name as route id
+     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+     from("direct:" + routeId)
+     .routeId(routeId)
+     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+     .setProperty("justin_event").body()
+     .setProperty("kpi_component_route_name", simple(routeId))
+     .log(LoggingLevel.DEBUG,"Processing Delete File Note event: ${body}")
+     .doTry()
+       .unmarshal().json(JsonLibrary.Jackson, JustinEvent.class)
+       .process(new Processor() {
+         @Override
+         public void process(Exchange exchange) throws Exception {
+           // Insert code that gets executed *before* delegating
+           // to the next processor in the chain.
+ 
+           JustinEvent je = exchange.getIn().getBody(JustinEvent.class);
+ 
+           FileNoteEvent be = new FileNoteEvent(je);
+           
+           exchange.getMessage().setBody(be, FileNoteEvent.class);
+           exchange.getMessage().setHeader("kafka.KEY", be.getEvent_key());
+ 
+         }})
+       .setProperty("kpi_event_object", body())
+       .marshal().json(JsonLibrary.Jackson, FileNoteEvent.class)
+       .log(LoggingLevel.INFO,"Generate converted business event: ${body}")
+       .to("kafka:{{kafka.topic.file.notes}}")
+       .setProperty("kpi_event_topic_name", simple("{{kafka.topic.file.notes}}"))
+       .setProperty("kpi_event_topic_recordmetadata", simple("${headers[org.apache.kafka.clients.producer.RecordMetadata]}"))
+       .setProperty("kpi_component_route_name", simple(routeId))
+       .setProperty("kpi_status", simple(EventKPI.STATUS.EVENT_CREATED.name()))
+       .to("direct:preprocessAndPublishEventCreatedKPI")
+     .doCatch(Exception.class)
+       .log(LoggingLevel.DEBUG,"General Exception thrown.")
+       .log(LoggingLevel.DEBUG,"${exception}")
+       .setProperty("error_event_object", body())
+       .to("kafka:{{kafka.topic.justin-event-retry.name}}")
+       .setProperty("kpi_event_topic_name",simple("{{kafka.topic.justin-event-retry.name}}"))
+       .log(LoggingLevel.DEBUG, "${exchangeProperty.kpi_event_topic_name}")
+       //.setProperty("kpi_event_topic_name",simple("{{kafka.topic.general-errors.name}}"))
+       .to("direct:publishJustinEventKPIError")
+       .process(new Processor() {
+         public void process(Exchange exchange) throws Exception {
+ 
+           throw exchange.getException();
+         }
+       })
+     .doFinally()
+     .choice()
+      .when(exchangeProperty("kpi_event_topic_name").isNotNull())
+        .log(LoggingLevel.INFO,"finally, send confirmation for justin event")
+        .setBody(simple("${exchangeProperty.justin_event}"))
+        .setProperty("event_message_id")
+          .jsonpath("$.event_message_id")
+        .to("direct:confirmEventProcessed")
+       .end()
+     .end()
+     ;
   }
 }

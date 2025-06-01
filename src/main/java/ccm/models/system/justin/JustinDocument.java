@@ -17,6 +17,7 @@ public class JustinDocument {
   private String index;
   private String data;
   private String report_title;
+  private String sequence_nos;
 
   private String witness_name;
   private String pin_number;
@@ -418,6 +419,14 @@ public class JustinDocument {
 
   public void setHttp_response_code(String http_response_code) {
     this.http_response_code = http_response_code;
+  }
+
+  public String getSequence_nos() {
+    return sequence_nos;
+  }
+
+  public void setSequence_nos(String sequence_nos) {
+    this.sequence_nos = sequence_nos;
   }
 
 }

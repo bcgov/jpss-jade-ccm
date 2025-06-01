@@ -17,6 +17,7 @@ public class JustinAgencyFile {
   private String chi1;
   private String crn_decision_agency_identifier;
   private String crn_decision_agency_name;
+  private String crn_decision_agency_subtype_cd;
   private String assessment_crown_name;
   private String assessment_crown_part_id;
   private String case_decision_cd;
@@ -133,6 +134,14 @@ public class JustinAgencyFile {
 
   public void setCrn_decision_agency_name(String crn_decision_agency_name) {
     this.crn_decision_agency_name = crn_decision_agency_name;
+  }
+
+  public String getCrn_decision_agency_subtype_cd() {
+    return crn_decision_agency_subtype_cd;
+  }
+
+  public void setCrn_decision_agency_subtype_cd(String crn_decision_agency_subtype_cd) {
+    this.crn_decision_agency_subtype_cd = crn_decision_agency_subtype_cd;
   }
 
   public String getAssessment_crown_name() {

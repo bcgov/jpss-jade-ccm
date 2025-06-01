@@ -13,6 +13,9 @@ public class FileNoteEvent extends BaseEvent{
   private String justin_guid;
   private String justin_mdoc_no;
   private String file_note_id;
+  private String justin_rcc_id;
+
+ 
 
   public static final String GUID = "GUID";
   public static final String FILE_NOTE_ID = "FILE_NOTE_ID";
@@ -22,7 +25,8 @@ public class FileNoteEvent extends BaseEvent{
   }
 
   public enum STATUS {
-    FILE_NOTE
+    FILE_NOTE,
+    DEL_FNOTE
   }
 
   public FileNoteEvent(JustinEvent je) {
@@ -32,11 +36,14 @@ public class FileNoteEvent extends BaseEvent{
     setJustin_event_message_id(je.getEvent_message_id());
     setJustin_message_event_type_cd(je.getMessage_event_type_cd());
     setJustin_event_dtm(je.getEvent_dtm());
-
+    
     switch(JustinEvent.STATUS.valueOf(je.getMessage_event_type_cd())) {
       
       case FILE_NOTE:
         setEvent_status(STATUS.FILE_NOTE.toString());
+        break;
+        case DEL_FNOTE:
+        setEvent_status(STATUS.DEL_FNOTE.toString());
         break;
       default:
         // unknown status
@@ -121,5 +128,13 @@ public class FileNoteEvent extends BaseEvent{
 
   public void setFile_note_id(String file_note_id) {
     this.file_note_id = file_note_id;
+  }
+
+  public String getJustin_rcc_id() {
+    return justin_rcc_id;
+  }
+
+  public void setJustin_rcc_id(String justin_rcc_id) {
+    this.justin_rcc_id = justin_rcc_id;
   }
 }

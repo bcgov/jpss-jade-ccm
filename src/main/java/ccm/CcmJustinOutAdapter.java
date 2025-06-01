@@ -56,6 +56,7 @@ import ccm.models.system.justin.JustinDocumentList;
 import ccm.models.system.justin.JustinFileClose;
 import ccm.models.system.justin.JustinFileDisposition;
 import ccm.models.system.justin.JustinFileNote;
+import ccm.models.system.justin.JustinFileNoteList;
 import ccm.utils.DateTimeUtils;
 
 public class CcmJustinOutAdapter extends RouteBuilder {
@@ -506,8 +507,28 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
     .endDoTry()
     .doCatch(HttpOperationFailedException.class)
+      .setProperty("NoRecordError", simple("false"))
+
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          try {
+            HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+
+            if(cause != null && cause.getResponseBody() != null) {
+              if(cause.getStatusCode() == 404 || cause.getResponseBody().contains("Downstream service returned status (404)")) {
+                exchange.setProperty("NoRecordError", "true");
+              }
+
+            }
+          } catch(Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+      })
+
       .choice()
-        .when().simple("${exception.statusCode} == 404")
+        .when( simple("${exchangeProperty.NoRecordError} == 'true'"))
           .log(LoggingLevel.WARN, "404 Document not found.")
           .process(new Processor() {
             @Override
@@ -520,27 +541,25 @@ public class CcmJustinOutAdapter extends RouteBuilder {
           .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
         .endChoice()
         .otherwise()
+          .log(LoggingLevel.INFO, "Request body: ${body}")
           .log(LoggingLevel.ERROR,"Exception: ${exception}")
           .log(LoggingLevel.ERROR,"HTTP response code = ${exception.statusCode}")
           .log(LoggingLevel.ERROR, "Body: '${exception}'")
           .log(LoggingLevel.ERROR, "${exception.message}")
-
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
               try {
                 HttpOperationFailedException cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, HttpOperationFailedException.class);
+                log.error("Response: " + cause.getResponseBody());
 
-                exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exchange.getMessage().getHeader("CamelHttpResponseCode"));
-                exchange.getMessage().setBody(cause.getResponseBody());
-                log.info("Returned response body : " + cause.getResponseBody());
-                throw exchange.getException();
+                throw cause;
               } catch(Exception ex) {
                 ex.printStackTrace();
               }
             }
           })
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, simple("${exception.statusCode}"))
+
         .endChoice()
       .end()
     .end()
@@ -565,7 +584,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO, "LookupService calling Justin file close")
     .toD("https://{{justin.host}}/fileClose?mdoc_justin_no=${header.number}")
     .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
-    
+
     .unmarshal().json(JsonLibrary.Jackson, JustinFileClose.class)
     .process(new Processor() {
       @Override
@@ -617,26 +636,44 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"getFileNote request received. mdoc_justin_no = ${header.number}; body=${body}")
+    .log(LoggingLevel.INFO,"getFileNote request received. fileNoteId = ${header.number}; mdocJustin=${header.mdocJustinNo}; rccid=${header.rccId}")
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
     .setHeader(Exchange.HTTP_METHOD, simple("GET"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .choice()
+    //.toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
+    .when(simple("${header.mdocJustinNo} != null && ${header.mdocJustinNo} != ''"))
+      .toD("https://{{justin.host}}/fileNote?mdoc_justin_no=${header.mdocJustinNo}")
+    .when(simple("${header.rccId} != null && ${header.rccId} != ''"))
+      .toD("https://{{justin.host}}/fileNote?rcc_id=${header.rccId}")
+    .when(simple("${header.number} != null && ${header.number} != ''"))
+      .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
+    .end()
     .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
-    .unmarshal().json(JsonLibrary.Jackson, JustinFileNote.class)
+    .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
+
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        JustinFileNote j = exchange.getIn().getBody(JustinFileNote.class);
-        FileNote fileNote = new FileNote(j.getFile_note_id(), j.getUser_name(),j.getEntry_date(),j.getNote_txt(),j.getRcc_id(),j.getMdoc_justin_no());
-        exchange.getMessage().setBody(fileNote);
+
+        JustinFileNoteList k = exchange.getIn().getBody(JustinFileNoteList.class);
+
+        if (k != null && !k.getfilenotelist().isEmpty()) {
+          JustinFileNote j = k.getfilenotelist().get(0);
+          FileNote fileNote = new FileNote(j);
+          exchange.getMessage().setBody(fileNote);
+        }
+        else{
+          exchange.getMessage().setBody(new FileNote());
+        }
       }
     })
     .marshal().json(JsonLibrary.Jackson, FileNote.class)
     .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .end()
     ;
   }
 }
