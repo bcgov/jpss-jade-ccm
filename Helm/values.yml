@@ -1,0 +1,24 @@
+replicaCount: 1
+image:
+  repository: myregistry/ccm-app
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  type: ClusterIP
+  port: 80
+ingress:
+  enabled: false
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - /
+  tls: []
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+config:
+  key1: value1
+secret:
+  key1: secretValue
