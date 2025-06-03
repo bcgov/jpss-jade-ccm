@@ -1525,7 +1525,7 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
       //.to("https://{{justin.host}}/eventStatus")
       .toD("https://{{justin.host}}/eventStatus?event_message_id=${exchangeProperty.event_message_id}&is_success=T")
     .doCatch(Exception.class)
-      .log(LoggingLevel.DEBUG,"Exception: ${exception}")
+      .log(LoggingLevel.ERROR,"Message Id: ${exchangeProperty.event_message_id} Exception: ${exception}")
       .log(LoggingLevel.DEBUG,"Exchange Context: ${exchange.context}")
       .choice()
         //.when(header(Exchange.HTTP_RESPONSE_CODE).isEqualTo("404"))
