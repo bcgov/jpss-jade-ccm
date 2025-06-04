@@ -1,0 +1,58 @@
+name: ccm-dems-adapter
+replicas: 1
+image:
+  registry: image-registry.openshift-image-registry.svc:5000
+  namespace: <PLACEHOLDER_NAMESPACE>
+  name: camel-k-kit-ctb4a3nmil8713q5olj0
+  tag: sha256:24246e44d42dd5de44619ecfd4424cbdb26239d51f19ab52ae84417072cd044d
+  pullPolicy: IfNotPresent
+
+container:
+  name: integration
+  command:
+    - /bin/sh
+    - -c
+  args:
+    - echo exec java -Xmx525M -cp ... # (trimmed for Helm)
+  resources:
+    requests:
+      cpu: 5m
+      memory: 500Mi
+    limits:
+      cpu: 200m
+      memory: 1000Mi
+
+env:
+  - name: TZ
+    value: Canada/Pacific
+  - name: QUARKUS_LOG_LEVEL
+    value: INFO
+  - name: QUARKUS_LOG_CONSOLE_JSON
+    value: "false"
+  - name: QUARKUS_LOG_CONSOLE_COLOR
+    value: "true"
+
+volumeMounts:
+  - name: user-properties
+    mountPath: /etc/camel/conf.d/user.properties
+    subPath: user.properties
+  - name: ccm-configs
+    mountPath: /etc/camel/conf.d/_configmaps/ccm-configs
+
+volumes:
+  - name: user-properties
+    configMap:
+      name: ccm-dems-adapter-user-properties
+      items:
+        - key: application.properties
+          path: user.properties
+  - name: ccm-configs
+    configMap:
+      name: ccm-configs
+
+labels:
+  integration: ccm-dems-adapter
+  camel_generation: "1"
+
+annotations:
+  camel_operator_id: camel-k

@@ -1,0 +1,5 @@
+echo "building ccm model and adding to local Maven"
+
+. ./repackage-ccm-models 
+
+mvn install:install-file -Dfile=\target\\classes\\ccm-models.jar -DgroupId=ccm -DartifactId=ccm-models -Dversion=0.0.1-SNAPSHOT -Dpackaging=jar
