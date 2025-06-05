@@ -4856,7 +4856,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
 
     .setProperty("pageSize").simple("500")
-    .setProperty("maxRecordIncrements").simple("75")
+    .setProperty("maxRecordIncrements").simple("250")
     .setProperty("incrementCount").simple("1")
     .setProperty("continueLoop").simple("true")
 
