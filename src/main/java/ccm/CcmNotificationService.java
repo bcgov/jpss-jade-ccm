@@ -2419,6 +2419,7 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
+          log.warn("processCourtCaseChanged: Court file does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
@@ -3227,7 +3228,7 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
-          
+          log.warn("processCourtCaseAppearanceChanged: Court file does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
@@ -3369,7 +3370,7 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
-          
+          log.warn("processCourtCaseCrownAssignmentChanged: Court file does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
