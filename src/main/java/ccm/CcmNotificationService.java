@@ -2419,7 +2419,8 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
-          log.warn("processCourtCaseChanged: Court file does not have a related rcc");
+          String courtFileId = exchange.getProperty("court_file_id", String.class);
+          log.warn("processCourtCaseChanged: Court file " + courtFileId + " does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
@@ -3175,6 +3176,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("appearance_list_object", body())
 
     .setHeader("number", simple("${header[event_key]}"))
+    .setProperty("court_file_id").simple("${header[event_key]}")
     .to("direct:compileRelatedCourtFiles")
     .log(LoggingLevel.DEBUG,"Retrieved Court Case Metadata from JUSTIN: ${body}")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
@@ -3228,7 +3230,8 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
-          log.warn("processCourtCaseAppearanceChanged: Court file does not have a related rcc");
+          String courtFileId = exchange.getProperty("court_file_id", String.class);
+          log.warn("processCourtCaseAppearanceChanged: Court file " + courtFileId + " does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
@@ -3316,6 +3319,7 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("assignment_list_object", body())
 
     .setHeader("number", simple("${header[event_key]}"))
+    .setProperty("court_file_id").simple("${header[event_key]}")
     .to("direct:compileRelatedCourtFiles")
     .setProperty("metadata_data", simple("${bodyAs(String)}"))
 
@@ -3370,7 +3374,8 @@ public class CcmNotificationService extends RouteBuilder {
           exchange.setProperty("primary_rcc_id", cadr.getRcc_id());
           exchange.setProperty("primary_agency_file", cadr.getAgency_file_no());
         } else {
-          log.warn("processCourtCaseCrownAssignmentChanged: Court file does not have a related rcc");
+          String courtFileId = exchange.getProperty("court_file_id", String.class);
+          log.warn("processCourtCaseCrownAssignmentChanged: Court file " + courtFileId + " does not have a related rcc");
           exchange.setProperty("primary_rcc_id", "");
           exchange.setProperty("primary_agency_file", "");
         }
