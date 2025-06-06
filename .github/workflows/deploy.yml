@@ -78,3 +78,4 @@ jobs:
           else
             echo "No deployment method found for $APP"
             exit 1
+          fi
