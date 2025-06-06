@@ -60,10 +60,9 @@ jobs:
           oc project $OCP_PROJECT
 
       - name: Build ccm-models and install to local Maven
-        working-directory: build-install-ccm-models
         run: |
-          chmod +x ./repackage-ccm-models
-          ./repackage-ccm-models
+          chmod +x ./build-install-ccm-models
+          ./build-install-ccm-models
 
       - name: Deploy ${{ github.event.inputs.app }} to ${{ github.event.inputs.env }}
         run: |
