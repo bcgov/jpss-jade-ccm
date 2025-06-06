@@ -31,6 +31,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
 
     env:
       HELM_RELEASE: ${{ github.event.inputs.app }}
