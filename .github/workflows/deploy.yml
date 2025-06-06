@@ -17,7 +17,6 @@ on:
           - ccm-pidp-adapter
           - ccm-notification-service
           - ccm-justin-events-adapter
-
       env:
         description: 'Select the environment'
         required: true
@@ -34,39 +33,38 @@ jobs:
     environment: ${{ github.event.inputs.env }}
 
     env:
-      HELM_RELEASE: ${{ github.event.inputs.app }}
+      APP: ${{ github.event.inputs.app }}
+      ENV: ${{ github.event.inputs.env }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: v3.13.0
-
-      - name: Install oc CLI
-        run: |
-          curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
-          tar -xzf oc.tar.gz
-          sudo mv oc kubectl /usr/local/bin/
 
       - name: Login to OpenShift
         run: |
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $OCP_PROJECT
 
-      - name: Build ccm-models and install to local Maven
+      - name: Install Camel K CLI
         run: |
-          chmod +x ./build-install-ccm-models
-          ./build-install-ccm-models
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/
 
-      - name: Deploy ${{ github.event.inputs.app }} to ${{ github.event.inputs.env }}
+      - name: Deploy with script or kamel
         run: |
-          helm upgrade --install $HELM_RELEASE ./Helm \
-            --namespace $OCP_PROJECT \
-            --create-namespace \
-            -f Helm/values-${{ github.event.inputs.app }}.yml
+          if [[ -f ./redeploy-$APP.sh ]]; then
+            echo "Found script: redeploy-$APP.sh"
+            chmod +x ./redeploy-$APP.sh
+            ./redeploy-$APP.sh $ENV
+          elif [[ -f integrations/$APP.java ]]; then
+            echo "Running Camel K integration: $APP"
+            kamel run integrations/$APP.java \
+              --name=$APP \
+              --namespace=$OCP_PROJECT
+          else
+            echo "No deployment method found for $APP"
+            exit 1
