@@ -60,7 +60,7 @@ jobs:
           oc project $OCP_PROJECT
 
       - name: Build ccm-models and install to local Maven
-        working-directory: ../build-install-ccm-models
+        working-directory: build-install-ccm-models
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
