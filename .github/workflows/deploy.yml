@@ -66,16 +66,18 @@ jobs:
 
       - name: Deploy with script or kamel
         run: |
-          if [[ -f ./redeploy-$APP.sh ]]; then
-            echo "Found script: redeploy-$APP.sh"
-            chmod +x ./redeploy-$APP.sh
-            ./redeploy-$APP.sh $ENV
+          echo "Checking for deployment script: ./redeploy-$APP"
+          if [[ -f ./redeploy-$APP ]]; then
+            echo "Found script: redeploy-$APP"
+            chmod +x ./redeploy-$APP
+            ./redeploy-$APP $ENV
           elif [[ -f integrations/$APP.java ]]; then
-            echo "Running Camel K integration: $APP"
-            kamel run integrations/$APP.java \
-              --name=$APP \
-              --namespace=$OCP_PROJECT
+             echo "Running Camel K integration: $APP"
+             kamel run integrations/$APP.java \
+               --name=$APP \
+               --namespace=$OCP_PROJECT
           else
             echo "No deployment method found for $APP"
             exit 1
           fi
+
