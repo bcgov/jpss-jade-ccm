@@ -61,8 +61,8 @@ jobs:
 
       - name: Build and install CCM models
         run: |
-          chmod +x ./build-install-ccm-models.sh
-          ./build-install-ccm-models.sh
+          chmod +x ./build-install-ccm-models
+          ./build-install-ccm-models
 
       - name: Deploy with script or kamel
         run: |
