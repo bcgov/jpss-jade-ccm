@@ -54,6 +54,11 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/
 
+      - name: Build and install CCM models
+        run: |
+          chmod +x ./build-install-ccm-models.sh
+          ./build-install-ccm-models.sh
+
       - name: Deploy with script or kamel
         run: |
           if [[ -f ./redeploy-$APP.sh ]]; then
