@@ -1,0 +1,54 @@
+#!/bin/bash
+
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+agencyIdCode="$2"
+agencyFileNumber="$3"
+
+if [ -z "$env" ]; then
+    echo "Error. Invalid environment specified: '$1'"
+    exit 1
+fi
+
+ns="$ns_set-$env"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING: You are about to request events in PRODUCTION. Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        exit 1
+    fi
+fi
+
+if [ -z "$agencyFileNumber" ]; then
+    echo "Error: agencyFileNumber not specified."
+    echo "Usage: $0 env agencyFileNumber agencyIdCode"
+    echo "E.g., $0 dev 1 15"
+    exit 1
+fi
+
+if [ -z "$agencyIdCode" ]; then
+    echo "Error: agencyIdCode not specified."
+    echo "Usage: $0 env agencyFileNumber agencyIdCode"
+    echo "E.g., $0 dev 1 15"
+    exit 1
+fi
+
+echo "$(basename $0) to $ns ..."
+
+oc -n "$ns" exec -i service/ccm-justin-in-adapter -- curl \
+    -H "agencyIdCode: $agencyIdCode" \
+    -H "agencyFileNumber: $agencyFileNumber" \
+    -X GET \
+    "http://ccm-justin-in-adapter/getPrimaryCaseByAgencyNo"

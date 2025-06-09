@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import ccm.models.system.dems.DemsLookupSearchData;
+
 
 public class CaseHyperlinkDataList {
     private List<CaseHyperlinkData> case_hyperlinks ;
@@ -44,13 +46,28 @@ public class CaseHyperlinkDataList {
                 data.setMessage("Case not found.");
             }
         }
-        /*for(Map<String, Object> record : rccList) {
-            System.out.println(record.values());
-            //record.get
-        }*/
-
     }
-       
+
+    public void processCaseHyperlinks(String prefix, String suffix, List<DemsLookupSearchData> rccList) {
+        for(CaseHyperlinkData data : case_hyperlinks) {
+            String key = data.getRcc_id();
+            for (DemsLookupSearchData item : rccList) {
+                String itemKey = item.getKey();
+                if (key.equals(itemKey)) {
+                    Integer id = (Integer) item.getId();
+
+                    data.setHyperlink(prefix + id + suffix);
+                    data.setRcc_id(key.toString());
+                    data.setMessage("Case found.");
+                    break;
+                }
+            }
+            if(data.getMessage() == null) {
+                data.setMessage("Case not found.");
+            }
+        }
+    }
+
     public List<CaseHyperlinkData> getcase_hyperlinks() {
         return case_hyperlinks;
     }

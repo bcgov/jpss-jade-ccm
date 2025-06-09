@@ -1,0 +1,48 @@
+#!/bin/bash
+
+ns_set="cef5dd"
+
+if [ "$1" = "dev" ]; then
+    env="dev"
+elif [ "$1" = "test" ]; then
+    env="test"
+elif [ "$1" = "prod" ]; then
+    env="prod"
+else
+    env=""
+fi
+
+caseKey="$2"
+
+
+if [ -z "$env" ]; then
+    echo "Error. Invalid environment specified: '$1'"
+    exit 1
+fi
+
+ns="$ns_set-$env"
+
+if [ "$env" = "prod" ]; then
+    echo "WARNING: You are about to request events in PRODUCTION. Are you sure? (y/n)"
+    read answer
+    if [ "$answer" != "y" ]; then
+        echo "Aborting deployment."
+        exit 1
+    fi
+fi
+
+if [ -z "$caseKey" ]; then
+    echo "Error: caseKey not specified."
+    echo "Usage: $0 env caseKey"
+    echo "E.g., $0 dev 1 15"
+    exit 1
+fi
+
+
+
+echo "$(basename $0) to $ns ..."
+
+oc -n "$ns" exec -i service/ccm-lookup-service -- curl \
+    -H "key: $caseKey" \
+    -X GET \
+    "http://ccm-lookup-service/getPrimaryCourtCaseExists"
