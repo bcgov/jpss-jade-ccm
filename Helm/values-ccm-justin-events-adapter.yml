@@ -40,7 +40,7 @@ container:
 
 env:
   - name: CAMEL_K_DIGEST
-    value: vrlsjEOVXWEsxpsam9aSUiKIAXdKycoxM2pwYJWazS4E
+    value: <PLACEHOLDER_DIGEST>
   - name: CAMEL_K_CONF
     value: /etc/camel/application.properties
   - name: CAMEL_K_CONF_D
