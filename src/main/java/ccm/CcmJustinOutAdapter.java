@@ -655,7 +655,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
     .when(simple("${header.number} != null && ${header.number} != ''"))
       .toD("https://{{justin.host}}/fileNote?file_note_id=${header.number}")
     .end()
-    .log(LoggingLevel.INFO,"Received response from JUSTIN: '${body}'")
+    .log(LoggingLevel.DEBUG,"Received response from JUSTIN: '${body}'")
     .unmarshal().json(JsonLibrary.Jackson,JustinFileNoteList.class)
 
     .process(new Processor() {
@@ -675,7 +675,7 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       }
     })
     .marshal().json(JsonLibrary.Jackson, FileNote.class)
-    .log(LoggingLevel.INFO,"Converted response (from JUSTIN to Business model): '${body}'")
+    .log(LoggingLevel.DEBUG,"Converted response (from JUSTIN to Business model): '${body}'")
     .end()
     ;
   }
