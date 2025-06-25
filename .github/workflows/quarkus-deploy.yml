@@ -18,6 +18,7 @@ on:
           - ccm-notification-service
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
+          - redeploy-camel-simple
       env:
         description: 'Select the environment'
         required: true
@@ -61,9 +62,9 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/
 
-      - name: Clean up old Camel K integration
-        run: |
-          kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
+      # - name: Clean up old Camel K integration
+      #   run: |
+      #     kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
 
       - name: Build Quarkus app
         run: |
