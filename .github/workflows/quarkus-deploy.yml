@@ -1,0 +1,81 @@
+name: Deploy Quarkus App to OpenShift
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Select the application to deploy'
+        required: true
+        type: choice
+        options:
+          - ccm-justin-in-adapter
+          - ccm-dems-adapter
+          - ccm-lookup-service
+          - ccm-splunk-adapter
+          - ccm-accessdedup-processor
+          - ccm-reports-processor
+          - ccm-pidp-adapter
+          - ccm-notification-service
+          - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
+      env:
+        description: 'Select the environment'
+        required: true
+        type: choice
+        default: 'dev'
+        options:
+          - dev
+          - test
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
+
+    env:
+      APP: ${{ github.event.inputs.app }}
+      ENV: ${{ github.event.inputs.env }}
+      NS: cef5dd-${{ github.event.inputs.env }}
+      OCP_SERVER: ${{ secrets.OCP_SERVER }}
+      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install OpenShift CLI (oc)
+        run: |
+          curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
+          tar -xzf oc.tar.gz
+          sudo mv oc /usr/local/bin/
+
+      - name: Login to OpenShift
+        run: |
+          oc login $OCP_SERVER --token=$OCP_TOKEN
+          oc project $NS
+
+      - name: Install Camel K CLI
+        run: |
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/
+
+      - name: Clean up old Camel K integration
+        run: |
+          kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
+
+      - name: Build Quarkus app
+        run: |
+          ./mvnw clean package -DskipTests
+
+      - name: Deploy via Quarkus deploy
+        run: |
+          if [ "${{ env.ENV }}" = "prod" ]; then
+            echo "WARNING: You are deploying to PRODUCTION. Skipping confirmation in automation."
+          fi
+
+          quarkus build -Dquarkus.kubernetes.deploy=true || {
+            echo "Quarkus CLI not found, falling back to mvn"
+            ./mvnw clean package -Dquarkus.kubernetes.deploy=true
+          }
