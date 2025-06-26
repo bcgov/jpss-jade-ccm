@@ -50,6 +50,7 @@ jobs:
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/
+          oc version --client
 
       - name: Login to OpenShift
         run: |
@@ -58,18 +59,19 @@ jobs:
 
       - name: Install Camel K CLI
         run: |
-          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
-          chmod +x kamel
+          curl -LO https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-amd64.tar.gz
+          tar -xzf camel-k-client-1.10.0-linux-amd64.tar.gz
           sudo mv kamel /usr/local/bin/
+          kamel version
 
-      - name: Run redeploy-camel-simple if selected
+      - name: Build Quarkus app (redeploy-camel-simple only)
         if: env.APP == 'redeploy-camel-simple'
         working-directory: QuarkusInvestigation/camel-simple
         run: |
           chmod +x mvnw
           ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-      - name: Deploy Camel K integration (optional)
+      - name: Deploy Camel K integration (redeploy-camel-simple only)
         if: env.APP == 'redeploy-camel-simple'
         run: |
           kamel run QuarkusInvestigation/camel-simple/src/main/java/CamelSimple.java \
