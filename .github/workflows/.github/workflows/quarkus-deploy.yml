@@ -1,0 +1,39 @@
+name: Deploy Quarkus App to OpenShift
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Select the application to deploy'
+        required: true
+        type: choice
+        options:
+          - ccm-justin-in-adapter
+          - ccm-dems-adapter
+          - ccm-lookup-service
+          - ccm-splunk-adapter
+          - ccm-accessdedup-processor
+          - ccm-reports-processor
+          - ccm-pidp-adapter
+          - ccm-notification-service
+          - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
+          - redeploy-camel-simple
+      env:
+        description: 'Select the environment'
+        required: true
+        type: choice
+        default: 'dev'
+        options:
+          - dev
+          - test
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
+
+    
+            ./mvnw clean package -Dquarkus.kubernetes.deploy=true
+          }
