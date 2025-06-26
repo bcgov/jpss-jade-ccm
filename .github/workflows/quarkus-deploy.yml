@@ -70,7 +70,7 @@ jobs:
         working-directory: QuarkusInvestigation/camel-simple
         run: |
          chmod +x ./mvnw
-         ./mvnw clean package -DskipTests
+         ./mvnw clean package -Dquarkus.kubernetes.deploy=true
 
 
       - name: Deploy via Quarkus deploy
