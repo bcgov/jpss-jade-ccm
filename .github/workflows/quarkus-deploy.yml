@@ -62,24 +62,16 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/
 
-      # - name: Clean up old Camel K integration
-      #   run: |
-      #     kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
-
-      - name: Build Quarkus app
+      - name: Run redeploy-camel-simple if selected
+        if: env.APP == 'redeploy-camel-simple'
         working-directory: QuarkusInvestigation/camel-simple
         run: |
-         chmod +x ./mvnw
-         ./mvnw clean package -Dquarkus.kubernetes.deploy=true
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-
-      - name: Deploy via Quarkus deploy
+      - name: Deploy Camel K integration (optional)
+        if: env.APP == 'redeploy-camel-simple'
         run: |
-          if [ "${{ env.ENV }}" = "prod" ]; then
-            echo "WARNING: You are deploying to PRODUCTION. Skipping confirmation in automation."
-          fi
-
-          quarkus build -Dquarkus.kubernetes.deploy=true || {
-            echo "Quarkus CLI not found, falling back to mvn"
-            ./mvnw clean package -Dquarkus.kubernetes.deploy=true
-          }
+          kamel run QuarkusInvestigation/camel-simple/src/main/java/CamelSimple.java \
+            --name=camel-simple \
+            --namespace=$NS
