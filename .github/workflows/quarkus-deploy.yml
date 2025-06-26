@@ -68,7 +68,8 @@ jobs:
 
       - name: Build Quarkus app
         run: |
-          ./mvnw clean package -DskipTests
+         cd QuarkusInvestigation/camel-simple
+           ./mvnw clean package -DskipTests
 
       - name: Deploy via Quarkus deploy
         run: |
