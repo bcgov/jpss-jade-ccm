@@ -67,9 +67,11 @@ jobs:
       #     kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
 
       - name: Build Quarkus app
+        working-directory: QuarkusInvestigation/camel-simple
         run: |
-         cd QuarkusInvestigation/camel-simple
-           ./mvnw clean package -DskipTests
+         chmod +x ./mvnw
+         ./mvnw clean package -DskipTests
+
 
       - name: Deploy via Quarkus deploy
         run: |
