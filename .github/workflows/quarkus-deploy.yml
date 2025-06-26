@@ -59,8 +59,8 @@ jobs:
 
       - name: Install Camel K CLI
         run: |
-          curl -LO https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-amd64.tar.gz
-          tar -xzf camel-k-client-1.10.0-linux-amd64.tar.gz
+          curl -LO https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit.tar.gz
+          tar -xzf camel-k-client-1.10.0-linux-64bit.tar.gz
           sudo mv kamel /usr/local/bin/
           kamel version
 
