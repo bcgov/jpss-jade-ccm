@@ -17,6 +17,7 @@ on:
           - ccm-pidp-adapter
           - ccm-notification-service
           - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
 
       env:
         description: 'Select the environment'
