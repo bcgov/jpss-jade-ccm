@@ -69,7 +69,8 @@ jobs:
       - name: Build Quarkus app - DemsUserAccessAdapter
         if: env.APP == 'redeploy-dems-useraccess-adapter'
         run: |
-          mvn -f QuarkusInvestigation/DemsUserAccessAdapter/pom.xml clean package -DskipTests -Dquarkus.kubernetes.deploy=true
+          mvn -f QuarkusInvestigation/DemsUserAccessAdapter/pom.xml clean package -DskipTests -Dquarkus.kubernetes.deploy=true -Dimpsort.skip=true
+
 
       - name: Deploy Kubernetes manifests - DemsUserAccessAdapter
         if: env.APP == 'redeploy-dems-useraccess-adapter'
