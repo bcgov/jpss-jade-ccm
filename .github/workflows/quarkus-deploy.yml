@@ -48,7 +48,9 @@ jobs:
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $NS
 
-      # Build for camel-simple
+      ########################################
+      # Build camel-simple (uses mvnw)
+      ########################################
       - name: Build Quarkus app - camel-simple
         if: env.APP == 'redeploy-camel-simple'
         working-directory: QuarkusInvestigation/camel-simple
@@ -56,21 +58,19 @@ jobs:
           chmod +x mvnw
           ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-      # Deploy for camel-simple
       - name: Deploy Kubernetes manifests - camel-simple
         if: env.APP == 'redeploy-camel-simple'
         run: |
           oc apply -f QuarkusInvestigation/camel-simple/target/kubernetes/kubernetes.yml -n $NS
 
-      # Build for dems-useraccess-adapter
+      ########################################
+      # Build DemsUserAccessAdapter (uses system mvn)
+      ########################################
       - name: Build Quarkus app - DemsUserAccessAdapter
         if: env.APP == 'redeploy-dems-useraccess-adapter'
-        working-directory: QuarkusInvestigation/DemsUserAccessAdapter
         run: |
-          chmod +x mvnw
-          ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
+          mvn -f QuarkusInvestigation/DemsUserAccessAdapter/pom.xml clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-      # Deploy for dems-useraccess-adapter
       - name: Deploy Kubernetes manifests - DemsUserAccessAdapter
         if: env.APP == 'redeploy-dems-useraccess-adapter'
         run: |
