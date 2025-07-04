@@ -8,17 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - ccm-justin-in-adapter
-          - ccm-dems-adapter
-          - ccm-lookup-service
-          - ccm-splunk-adapter
-          - ccm-accessdedup-processor
-          - ccm-reports-processor
-          - ccm-pidp-adapter
-          - ccm-notification-service
-          - ccm-justin-events-adapter
-          - ccm-justin-out-adapter
           - redeploy-camel-simple
+          - redeploy-dems-useraccess-adapter
       env:
         description: 'Select the environment'
         required: true
@@ -57,23 +48,30 @@ jobs:
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $NS
 
-      - name: Install Camel K CLI
-        run: |
-          curl -LO https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit.tar.gz
-          tar -xzf camel-k-client-1.10.0-linux-64bit.tar.gz
-          sudo mv kamel /usr/local/bin/
-          kamel version
-
-      - name: Build Quarkus app (redeploy-camel-simple only)
+      # Build for camel-simple
+      - name: Build Quarkus app - camel-simple
         if: env.APP == 'redeploy-camel-simple'
         working-directory: QuarkusInvestigation/camel-simple
         run: |
           chmod +x mvnw
           ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-      - name: Deploy Camel K integration (redeploy-camel-simple only)
+      # Deploy for camel-simple
+      - name: Deploy Kubernetes manifests - camel-simple
         if: env.APP == 'redeploy-camel-simple'
         run: |
-          kamel run QuarkusInvestigation/camel-simple/src/main/java/CamelSimple.java \
-            --name=camel-simple \
-            --namespace=$NS
+          oc apply -f QuarkusInvestigation/camel-simple/target/kubernetes/kubernetes.yml -n $NS
+
+      # Build for dems-useraccess-adapter
+      - name: Build Quarkus app - DemsUserAccessAdapter
+        if: env.APP == 'redeploy-dems-useraccess-adapter'
+        working-directory: QuarkusInvestigation/DemsUserAccessAdapter
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
+
+      # Deploy for dems-useraccess-adapter
+      - name: Deploy Kubernetes manifests - DemsUserAccessAdapter
+        if: env.APP == 'redeploy-dems-useraccess-adapter'
+        run: |
+          oc apply -f QuarkusInvestigation/DemsUserAccessAdapter/target/kubernetes/kubernetes.yml -n $NS
