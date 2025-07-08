@@ -479,7 +479,8 @@ public class CcmReportsProcessor extends RouteBuilder {
             reportTypesSb.append(ReportEvent.REPORT_TYPES.DM_ATTACHMENT.name() + ",");
             reportTypesSb.append(ReportEvent.REPORT_TYPES.SUPPLEMENTAL.name() + ",");
             reportTypesSb.append(ReportEvent.REPORT_TYPES.ACCUSED_INFO.name() + ",");
-            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name());
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.VEHICLE.name() + ",");
+            reportTypesSb.append(ReportEvent.REPORT_TYPES.WILL_SAY.name());
 
             ReportEvent re = new ReportEvent();
             re.setEvent_key(rcc_id);

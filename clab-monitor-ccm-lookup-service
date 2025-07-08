@@ -1,8 +1,0 @@
-ns="ac13ae-dev"
-
-echo "`basename $0` to $ns ..."
-
-export TITLEPREFIX="Lookup Service $ns "
-echo -ne "\e]0;Lookup Service $ns\a"
-
-kamel -n $ns log ccm-lookup-service

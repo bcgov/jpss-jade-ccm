@@ -35,7 +35,7 @@ public class DemsRecordData {
     private String image_id;
     private String caseNoteCategory;
 
-    public String DescriptipnShortFormValue(String formTypeDescription) {
+    public String DescriptionShortFormValue(String formTypeDescription) {
         Map<String, String> map = new HashMap<>();
         
         map.put("11.1 UTA - POLICE", "UTA P");
@@ -445,7 +445,7 @@ public class DemsRecordData {
         String descriptionShortForm = getDescriptions();
         if(report != null) {
             //descriptionShortForm = report.getLabel();
-            descriptionShortForm =  DescriptipnShortFormValue(nrd.getForm_type_description().toUpperCase());
+            descriptionShortForm =  DescriptionShortFormValue(nrd.getForm_type_description().toUpperCase());
             if(descriptionShortForm == null){
                 descriptionShortForm = nrd.getForm_type_description().toUpperCase().replaceAll("[\\\\/:*?\",<>|]", "");
             }
