@@ -202,7 +202,9 @@ public class DemsChargeAssessmentCaseData {
         //agencyFileNumberSet.add(primaryChargeAssessmentData.getAgency_file());
 
         Set<String>investigatingOfficerSet = new HashSet<>();
-        investigatingOfficerSet.add(primaryChargeAssessmentData.getInvestigating_officer());
+        if(primaryChargeAssessmentData.getInvestigating_officer() != null) {
+          investigatingOfficerSet.add(primaryChargeAssessmentData.getInvestigating_officer());
+        }
 
         Set<String>proposedProcessTypeSet = new HashSet<>();
         proposedProcessTypeSet.add(primaryChargeAssessmentData.getProposed_process_type_list());
@@ -370,7 +372,6 @@ public class DemsChargeAssessmentCaseData {
         }
         DemsFieldData agencyFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_ID.getLabel(), distinctAgencyFileIdBuffer.toString());
         DemsFieldData agencyFileNo = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.AGENCY_FILE_NO.getLabel(), agencyFileNumberBuilder.toString());
-        DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), investigatingOfficerBuilder.toString());
         DemsFieldData proposedProcessType = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_PROCESS_TYPE.getLabel(), proposedProcessTypeBuilder.toString());
 
         fieldData.add(agencyFileId);
@@ -381,7 +382,13 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(proposedCharges);
         fieldData.add(initiatingAgency);
         fieldData.add(initiatingAgencyName);
-        fieldData.add(investigatingOfficer);
+        if(!investigatingOfficerBuilder.toString().isBlank()){
+            DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), investigatingOfficerBuilder.toString());
+            fieldData.add(investigatingOfficer);
+        } else {
+            DemsFieldData investigatingOfficer = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INVESTIGATING_OFFICER.getLabel(), null);
+            fieldData.add(investigatingOfficer);
+        }
         fieldData.add(caseFlags);
         fieldData.add(offenceDate);
         fieldData.add(proposedAppDate);
