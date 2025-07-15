@@ -8,17 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - ccm-justin-in-adapter
-          - ccm-dems-adapter
-          - ccm-lookup-service
-          - ccm-splunk-adapter
-          - ccm-accessdedup-processor
-          - ccm-reports-processor
-          - ccm-pidp-adapter
-          - ccm-notification-service
-          - ccm-justin-events-adapter
-          - ccm-justin-out-adapter
           - redeploy-camel-simple
+          - redeploy-dems-useraccess-adapter
       env:
         description: 'Select the environment'
         required: true
@@ -50,33 +41,38 @@ jobs:
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/
+          oc version --client
 
       - name: Login to OpenShift
         run: |
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $NS
 
-      - name: Install Camel K CLI
+      ########################################
+      # Build camel-simple (uses mvnw)
+      ########################################
+      - name: Build Quarkus app - camel-simple
+        if: env.APP == 'redeploy-camel-simple'
+        working-directory: QuarkusInvestigation/camel-simple
         run: |
-          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
-          chmod +x kamel
-          sudo mv kamel /usr/local/bin/
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 
-      # - name: Clean up old Camel K integration
-      #   run: |
-      #     kamel -n $NS delete ccm-dems-useraccess-adapter || echo "Nothing to delete"
-
-      - name: Build Quarkus app
+      - name: Deploy Kubernetes manifests - camel-simple
+        if: env.APP == 'redeploy-camel-simple'
         run: |
-          ./mvnw clean package -DskipTests
+          oc apply -f QuarkusInvestigation/camel-simple/target/kubernetes/kubernetes.yml -n $NS
 
-      - name: Deploy via Quarkus deploy
+      ########################################
+      # Build DemsUserAccessAdapter (uses system mvn)
+      ########################################
+      - name: Build Quarkus app - DemsUserAccessAdapter
+        if: env.APP == 'redeploy-dems-useraccess-adapter'
         run: |
-          if [ "${{ env.ENV }}" = "prod" ]; then
-            echo "WARNING: You are deploying to PRODUCTION. Skipping confirmation in automation."
-          fi
+          mvn -f QuarkusInvestigation/DemsUserAccessAdapter/pom.xml clean package -DskipTests -Dquarkus.kubernetes.deploy=true -Dimpsort.skip=true
 
-          quarkus build -Dquarkus.kubernetes.deploy=true || {
-            echo "Quarkus CLI not found, falling back to mvn"
-            ./mvnw clean package -Dquarkus.kubernetes.deploy=true
-          }
+
+      - name: Deploy Kubernetes manifests - DemsUserAccessAdapter
+        if: env.APP == 'redeploy-dems-useraccess-adapter'
+        run: |
+          oc apply -f QuarkusInvestigation/DemsUserAccessAdapter/target/kubernetes/kubernetes.yml -n $NS

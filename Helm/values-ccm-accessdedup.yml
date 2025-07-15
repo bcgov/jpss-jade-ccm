@@ -1,0 +1,21 @@
+name: ccm-accessdedup-processor
+app: jade-ccm
+version: 1.6-1
+
+replicas: 1
+
+container:
+  name: container
+
+image:
+  repository: image-registry.openshift-image-registry.svc:5000/cef5dd-test/ccm-accessdedup-processor
+  tag: latest
+  pullPolicy: Always
+
+env:
+  timezone: Canada/Pacific
+  kafkaBroker: events-kafka-bootstrap:9092
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
