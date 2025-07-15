@@ -11,12 +11,12 @@ public class DemsPersonData {
 
     private String id;
     private String key;
-    private String name;
+    //private String name;
     private String firstName;
     private String lastName;
+    private String dob;
     private List<DemsFieldData> fields;
     private DemsAddressData address;
-    private List<DemsOrganisationData> orgs;
 
     public DemsPersonData() {
     }
@@ -25,14 +25,9 @@ public class DemsPersonData {
         setKey(ca.getIdentifier());
         setLastName(ca.getSurname());
         setFirstName(ca.getGiven_1_name());
+        setDob(ca.getBirth_date());
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
-        
-        // BCPSDEMS-602 - workaround to not provide the field data if date is null
-        if (ca.getBirth_date() != null) {
-            DemsFieldData dob = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_DATE_OF_BIRTH.getLabel(), ca.getBirth_date());
-            fieldData.add(dob);
-        }
 
         DemsFieldData given2 = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PERSON_GIVEN_NAME_2.getLabel(), ca.getGiven_2_name());
         fieldData.add(given2);
@@ -53,7 +48,7 @@ public class DemsPersonData {
 
         fieldData.add(fullName);
 
-        setName(fullGivenNamesAndLastNameString);
+        //setName(fullGivenNamesAndLastNameString);
         setFields(fieldData);
         setAddress(new DemsAddressData(null));
     }
@@ -74,13 +69,13 @@ public class DemsPersonData {
         this.key = key;
     }
 
-    public String getName() {
+    /*public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
-    }
+    }*/
 
     public String getFirstName() {
         return firstName;
@@ -98,6 +93,14 @@ public class DemsPersonData {
         this.lastName = lastName;
     }
 
+    public String getDob() {
+        return dob;
+    }
+
+    public void setDob(String dob) {
+        this.dob = dob;
+    }
+
     public List<DemsFieldData> getFields() {
         return fields;
     }
@@ -112,14 +115,6 @@ public class DemsPersonData {
 
     public void setAddress(DemsAddressData address) {
         this.address = address;
-    }
-
-    public List<DemsOrganisationData> getOrgs() {
-        return orgs;
-    }
-
-    public void setOrgs(List<DemsOrganisationData> orgs) {
-        this.orgs = orgs;
     }
 
     public static String generateFullGivenNamesAndLastNameFromAccused(CaseAccused accused) {
@@ -159,4 +154,5 @@ public class DemsPersonData {
         fieldData.add(otc);
         
     }
+
 }
