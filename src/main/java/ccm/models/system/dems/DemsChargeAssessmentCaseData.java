@@ -25,36 +25,8 @@ public class DemsChargeAssessmentCaseData {
     private boolean waitForCaseCompletion;
     private boolean createdViaUi;
 
-    public DemsChargeAssessmentCaseData() {
-    }
-
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList) 
-    {
-        createdViaUi = true;
+    public static String generateCaseName(List<CaseAccused> caseAccusedList) {
         StringBuilder case_name = new StringBuilder();
-        List<CaseAccused> caseAccusedList = new ArrayList<CaseAccused>();
-
-        if (primaryChargeAssessmentData.getAccused_persons() != null) {
-            for (CaseAccused caseAccused : primaryChargeAssessmentData.getAccused_persons()) {
-            
-                if (!caseAccusedList.contains(caseAccused)){
-                    caseAccusedList.add(caseAccused);
-                }
-            }
-        }
-        if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()) {
-            
-            for (ChargeAssessmentData chargeData : chargeAssessmentDataList) {
-                if (chargeData.getAccused_persons() != null) {
-                    for (CaseAccused caseAccused :  chargeData.getAccused_persons()) {
-                        if (!caseAccusedList.stream().filter(o -> o.getIdentifier().equals(caseAccused.getIdentifier())).findFirst().isPresent()) {
-                            caseAccusedList.add(caseAccused);
-                        }
-                    }
-                }      
-            }
-        }
-
         for (CaseAccused ba : caseAccusedList) {
             // Map 87
             if(case_name.length() > 0) {
@@ -81,7 +53,39 @@ public class DemsChargeAssessmentCaseData {
             case_name.append(truncatedCaseName);
             case_name.append(" ...");
         }
-        setName(case_name.toString());
+        return case_name.toString();
+    }
+
+    public DemsChargeAssessmentCaseData() {
+    }
+
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList) 
+    {
+        createdViaUi = true;
+        List<CaseAccused> caseAccusedList = new ArrayList<CaseAccused>();
+
+        if (primaryChargeAssessmentData.getAccused_persons() != null) {
+            for (CaseAccused caseAccused : primaryChargeAssessmentData.getAccused_persons()) {
+            
+                if (!caseAccusedList.contains(caseAccused)){
+                    caseAccusedList.add(caseAccused);
+                }
+            }
+        }
+        if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()) {
+            
+            for (ChargeAssessmentData chargeData : chargeAssessmentDataList) {
+                if (chargeData.getAccused_persons() != null) {
+                    for (CaseAccused caseAccused :  chargeData.getAccused_persons()) {
+                        if (!caseAccusedList.stream().filter(o -> o.getIdentifier().equals(caseAccused.getIdentifier())).findFirst().isPresent()) {
+                            caseAccusedList.add(caseAccused);
+                        }
+                    }
+                }      
+            }
+        }
+
+        setName(generateCaseName(caseAccusedList));
         
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(primaryChargeAssessmentData.getRcc_id());

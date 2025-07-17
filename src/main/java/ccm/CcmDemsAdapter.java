@@ -55,6 +55,7 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
+import ccm.models.common.data.CaseAccusedList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
@@ -4573,21 +4574,28 @@ private void getDemsFieldMappingsrccStatus() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //IN: property =number - primary rcc_id
-    //IN: property =accused - List<CaseAccused>
+    //IN: property =accused - CaseAccusedList
 
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .unmarshal().json(JsonLibrary.Jackson, CaseAccusedList.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
-        exchange.setProperty("accusedPersons", bodyInput);
-      }})
+        CaseAccusedList accusedPersonsList = exchange.getIn().getBody(CaseAccusedList.class);
+        List<CaseAccused> accusedPersons = accusedPersonsList.getCaseAccused();
+        exchange.setProperty("accusedPersons", accusedPersons);
 
+        // BCPSDEMS-2313 - append all accused persons names to be set as new case name.
+        String newCaseName = DemsChargeAssessmentCaseData.generateCaseName(accusedPersons);
+        exchange.setProperty("newCaseName", newCaseName);
+      }}
+    )
+
+    // Update with the new case name.
     .choice()
     .when(simple("${header.number}!= '' && ${body} != '' "))
       // get the primary rcc, based on the dems primary agency file id
@@ -4596,13 +4604,33 @@ private void getDemsFieldMappingsrccStatus() {
       // look for current status of the dems case.
       // and set the rcc to the primary rcc
       .to("direct:getCourtCaseStatusByKey")
+      .log(LoggingLevel.DEBUG, "Status: ${body}")
       .unmarshal().json()
       .setProperty("caseId").simple("${body[id]}")
+      .setProperty("rccId").simple("${body[key]}")
       .setProperty("caseStatus").simple("${body[status]}")
       .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+
       .choice()
       // if there is a case, delete participants
       .when(simple("${exchangeProperty.caseId} != ''"))
+        .log(LoggingLevel.INFO, "Update case name")
+        .setProperty("caseName",jsonpath("$.name"))
+        .setProperty("rccId",jsonpath("$.key"))
+        .log(LoggingLevel.DEBUG, "Old case name: ${exchangeProperty.caseName}")
+        .log(LoggingLevel.DEBUG, "New case name: ${exchangeProperty.newCaseName}")
+
+        .setBody(simple("{\"name\": \"${exchangeProperty.newCaseName}\",\"key\": \"${exchangeProperty.rccId}\"}"))
+        .log(LoggingLevel.DEBUG, "${body}")
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+        .log(LoggingLevel.INFO, "Case name updated.")
+
         .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
         .setProperty("ParticipantTypeFilter", simple("Accused"))
         .setProperty("Participants",simple(""))
