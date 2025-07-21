@@ -29,6 +29,8 @@ public class DemsRecordData {
     private String primaryDateUtc;
     private String type;
     private String lastApiRecordUpdate;
+    private String approvedForDisclosure;
+    private String reviewedBy;
     private List<DemsFieldData> fields;
     private String reportType;
     private int incrementalDocCount = 1;
@@ -185,6 +187,7 @@ public class DemsRecordData {
                     setTitle(nrd.getWitness_name().toUpperCase());
                 }
             } else if(report.equals(REPORT_TYPES.ACCUSED_HISTORY_REPORT)) {
+                setApprovedForDisclosure("No");
                 if(nrd.getParticipant_name() != null) {
                     setTitle(nrd.getParticipant_name().toUpperCase());
                 } else {
@@ -203,7 +206,11 @@ public class DemsRecordData {
             if(nrd.getSequence_nos() != null) {
                 StringBuffer imageId = new StringBuffer(nrd.getAgency_file_no());
                 imageId.append("-");
-                imageId.append(nrd.getSequence_nos());
+                if(report.equals(REPORT_TYPES.ACCUSED_INFO)) {
+                    imageId.append(nrd.getRcc_id());
+                } else {
+                    imageId.append(nrd.getSequence_nos());
+                }
                 setImage_id(imageId.toString());
             }
 
@@ -228,6 +235,14 @@ public class DemsRecordData {
                 setType("OPERATIONAL");
             } else if(report.equals(REPORT_TYPES.ACCUSED_INFO)) {
                 setType("BIOGRAPHICAL");
+                setApprovedForDisclosure("No");
+                setReviewedBy("System set - Review required");
+            } else if(report.equals(REPORT_TYPES.POLICE_WILL_SAY)) {
+                setType("NOTES AND WILL SAYS");
+            } else if(report.equals(REPORT_TYPES.WITNESS_WILL_SAY)) {
+                setType("NOTES AND WILL SAYS");
+                setApprovedForDisclosure("No");
+                setReviewedBy("System set - Review required");
             }
 
         }
@@ -300,6 +315,14 @@ public class DemsRecordData {
             DemsFieldData imageID = new DemsFieldData("JUSTIN Image ID", getImage_id());
             fieldData.add(imageID);
         }
+        if(getApprovedForDisclosure() != null){
+            DemsFieldData approvedForDisclosure = new DemsFieldData("Approved for Disclosure", getApprovedForDisclosure());
+            fieldData.add(approvedForDisclosure);
+        }
+        if(getReviewedBy() != null){
+            DemsFieldData reviewedBy = new DemsFieldData("Reviewed By", getReviewedBy());
+            fieldData.add(reviewedBy);
+        }
         if(getLastApiRecordUpdate() != null) {
             DemsFieldData lastUpdate = new DemsFieldData("Last API Record Update", getLastApiRecordUpdate());
             fieldData.add(lastUpdate);
@@ -341,6 +364,14 @@ public class DemsRecordData {
                 setTitle(nrd.getParticipant_name().toUpperCase() + " " + nrd.getCourt_file_no());
             } else if(report.equals(REPORT_TYPES.FILE_SUMMARY_REPORT)) {
                 setTitle(nrd.getCourt_file_no());
+            } else if(report.equals(REPORT_TYPES.ACCUSED_HISTORY_REPORT)) {
+                setApprovedForDisclosure("No");
+                setReviewedBy("System set - Review required");
+                if(nrd.getParticipant_name() != null) {
+                    setTitle(nrd.getParticipant_name().toUpperCase());
+                } else {
+                    setTitle(report.getDescription());
+                }
             } else {
                 setTitle(nrd.getParticipant_name().toUpperCase());
             }
@@ -429,6 +460,14 @@ public class DemsRecordData {
         if(getOriginalFileNumber() != null){
             DemsFieldData originalFileNumber = new DemsFieldData("Original File Number", getOriginalFileNumber());
             fieldData.add(originalFileNumber);
+        }
+        if(getApprovedForDisclosure() != null){
+            DemsFieldData approvedForDisclosure = new DemsFieldData("Approved for Disclosure", getApprovedForDisclosure());
+            fieldData.add(approvedForDisclosure);
+        }
+        if(getReviewedBy() != null){
+            DemsFieldData reviewedBy = new DemsFieldData("Reviewed By", getReviewedBy());
+            fieldData.add(reviewedBy);
         }
         DemsFieldData ledger = new DemsFieldData("Is Ledger", "false");
         fieldData.add(ledger);
@@ -806,6 +845,22 @@ public class DemsRecordData {
 
     public void setLastApiRecordUpdate(String lastApiRecordUpdate) {
         this.lastApiRecordUpdate = lastApiRecordUpdate;
+    }
+
+    public String getApprovedForDisclosure() {
+        return approvedForDisclosure;
+    }
+
+    public void setApprovedForDisclosure(String approvedForDisclosure) {
+        this.approvedForDisclosure = approvedForDisclosure;
+    }
+
+    public String getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(String reviewedBy) {
+        this.reviewedBy = reviewedBy;
     }
 
     public int getIncrementalDocCount() {

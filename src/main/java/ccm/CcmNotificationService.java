@@ -47,6 +47,7 @@ import org.apache.commons.codec.binary.StringUtils;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
+import ccm.models.common.data.CaseAccusedList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.ChargeAssessmentData;
@@ -66,7 +67,6 @@ import ccm.models.common.event.ParticipantMergeEvent;
 import ccm.models.common.event.ReportEvent;
 import ccm.models.system.dems.DemsListItemFieldData;
 import ccm.models.system.dems.DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS;
-
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
@@ -3665,9 +3665,32 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .log(LoggingLevel.DEBUG, "set new participant list")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        CaseAccusedList accusedList = new CaseAccusedList();
+        exchange.setProperty("accusedList", accusedList);
+      }
+    })
     .setBody(simple("${exchangeProperty.participantList}"))
     .marshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .split()
+      .jsonpathWriteAsString("$.*")
+      .unmarshal().json(JsonLibrary.Jackson, CaseAccused.class)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          CaseAccusedList accusedList = exchange.getProperty("accusedList", CaseAccusedList.class);
+          CaseAccused b = exchange.getIn().getBody(CaseAccused.class);
+          accusedList.getCaseAccused().add(b);
+          exchange.setProperty("accusedList", accusedList);
+        }
+      })
 
+    .end()
+
+    .setBody(simple("${exchangeProperty.accusedList}"))
+    .marshal().json(JsonLibrary.Jackson, CaseAccusedList.class)
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
