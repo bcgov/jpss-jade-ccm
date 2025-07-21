@@ -46,7 +46,6 @@ import org.apache.http.conn.HttpHostConnectException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URLEncoder;
 
 import ccm.models.common.data.CourtCaseData;
 import ccm.models.common.data.FileNote;
@@ -73,7 +72,6 @@ import ccm.models.system.dems.*;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.JsonParseUtils;
 
-import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
@@ -167,6 +165,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingCaseFileNotes();
     processCaseList();
     getPrimaryCourtCaseExists();
+    inactivateActiveReturnedCases();
   }
 
 
@@ -5120,6 +5119,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"end of processCaseList.")
     ;
   }
+
   private void processParticipantsList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5616,6 +5616,7 @@ private void getDemsFieldMappingsrccStatus() {
     .end()
   .end();
   }
+
   private void updateExistingCaseFileNotes() {
      // use method name as route id
      String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5694,4 +5695,62 @@ private void getDemsFieldMappingsrccStatus() {
      .log(LoggingLevel.INFO,"end of updateExistingCaseFileNotes.")
      ;
   }
+
+  private void inactivateActiveReturnedCases() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT" )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"inactivateActiveReturnedCases...")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    //traverse through all cases in DEMS
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Return/id")
+    .split()
+      .jsonpathWriteAsString("$.*")
+      .setProperty("caseId",jsonpath("$.id"))
+      .setProperty("caseKey",jsonpath("$.key"))
+      .setProperty("status",jsonpath("$.status"))
+
+      .choice()
+        .when(simple("${exchangeProperty.status} == 'Active'"))
+          .log(LoggingLevel.INFO, "Active Returned Case: ${exchangeProperty.caseId} Key: ${exchangeProperty.caseKey} Status: ${exchangeProperty.status}")
+          .choice()
+            .when(simple("${header.testMode} != 'true'"))
+
+              .log(LoggingLevel.INFO, "Inactivate case")
+              // inactivate the case.
+              .setProperty("id", simple("${exchangeProperty.caseId}"))
+              .to("direct:getCourtCaseStatusById")
+              .setProperty("caseName",jsonpath("$.name"))
+              .setProperty("rccId",jsonpath("$.key"))
+
+              .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Inactive\"}"))
+
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+              .log(LoggingLevel.INFO, "Case inactivated.")
+
+            .endChoice()
+          .log(LoggingLevel.INFO, "--------------------------------------------------")
+        .endChoice()
+      .end()
+    .end()
+
+    .log(LoggingLevel.INFO,"end of inactivateActiveReturnedCases.")
+    ;
+  }
+
 }
