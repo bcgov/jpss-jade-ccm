@@ -3930,6 +3930,17 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .log(LoggingLevel.INFO,"imageId = ${header.imageId}...")
 
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4044,6 +4055,18 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

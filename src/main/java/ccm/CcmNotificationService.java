@@ -2482,7 +2482,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .choice()
-      .when(simple("${exchangeProperty.caseId} != '' && ${exchangeProperty.caseStatus} != 'Inactive'"))
+      .when(simple("${exchangeProperty.caseStatus} != 'Inactive'"))
         .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
         .to("direct:processPrimaryCourtCaseChanged")
