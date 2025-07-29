@@ -1461,7 +1461,6 @@ public class CcmNotificationService extends RouteBuilder {
               .log(LoggingLevel.WARN, "Failed Case Update: ${exchangeProperty.exception}")
               .log(LoggingLevel.ERROR,"CCMException: ${header.CCMException}")
             .end()
-            .log(LoggingLevel.INFO, "End of do try catch call")
 
             // set the updated accusedList object to be the body to use it to retrieve all the accused
             .process(new Processor() {
@@ -2428,6 +2427,12 @@ public class CcmNotificationService extends RouteBuilder {
         }
       }
     })
+    .choice()
+      .when(simple("${exchangeProperty.primary_rcc_id} == ''"))
+        .log(LoggingLevel.WARN, "Court file mdoc ${header.number} does not have related rcc, so skip.")
+        .stop()
+      .endChoice()
+    .end()
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
     .log(LoggingLevel.DEBUG, "Court File Primary Rcc: ${body}")
     .setBody(simple("${bodyAs(String)}"))

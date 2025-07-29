@@ -2155,7 +2155,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
+    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
