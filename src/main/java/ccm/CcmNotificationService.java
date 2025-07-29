@@ -2697,11 +2697,11 @@ public class CcmNotificationService extends RouteBuilder {
     .setProperty("event_key_orig", simple("${header[event_key]}"))
     .setHeader("number", simple("${exchangeProperty.rcc_id}"))
     .setHeader("event_key", simple("${exchangeProperty.rcc_id}"))
+    .log(LoggingLevel.INFO,"key: ${header.number}")
     .to("http://ccm-lookup-service/getCourtCaseExists")
     .unmarshal().json()
     .setProperty("caseFound").simple("${body[id]}")
     .setProperty("autoCreateFlag").simple("{{dems.case.auto.creation}}")
-    .log(LoggingLevel.INFO,"key: ${header.number}")
     .process(new Processor() {
       @Override
         public void process(Exchange ex) {

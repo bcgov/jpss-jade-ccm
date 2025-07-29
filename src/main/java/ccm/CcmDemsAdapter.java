@@ -82,6 +82,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -2995,9 +2996,20 @@ private void getDemsFieldMappingsrccStatus() {
     .doCatch(Exception.class)
       .log(LoggingLevel.ERROR,"Exception: ${exception}")
       .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
-      .log(LoggingLevel.WARN,"Initial person update failed, pausing to retry.")
-      // Wait 10 seconds to retry updating the person record.
-      .delay(10000)
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          Random r = new Random();
+          int low = 3;
+          int high = 12;
+          int random = r.nextInt(high-low) + low;
+          random = random*1000;
+          exchange.setProperty("waitTime", random);
+        }
+      })
+      .log(LoggingLevel.WARN,"Initial person update failed, pausing to retry. In ${exchangeProperty.waitTime} ms")
+      // Wait 3-12 seconds to retry updating the person record (randomly generated wait time).
+      .delay(simple("${exchangeProperty.waitTime}"))
       .setBody(simple("${exchangeProperty.update_data}"))
       .removeHeader("CamelHttpUri")
       .removeHeader("CamelHttpBaseUri")
