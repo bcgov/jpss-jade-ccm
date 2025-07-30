@@ -30,6 +30,7 @@ if [ "$env" = "prod" ]; then
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
+        ns=""
         return 1
     fi
 fi
@@ -38,6 +39,7 @@ if [ "$pageFrom" = "" ]; then
    echo "Error.  pageFrom not specified.\n"
    echo "$0 env pageFrom pageTo"
    echo "E.g., $0 dev 1 15\n"
+   ns=""
    return 1
 fi
 
@@ -45,6 +47,7 @@ if [ "$pageTo" = "" ]; then
    echo "Error.  pageTo not specified.\n"
    echo "$0 env pageFrom pageTo"
    echo "E.g., $0 dev 1 15\n"
+   ns=""
    return 1
 fi
 

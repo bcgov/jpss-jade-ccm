@@ -18,6 +18,7 @@ if [ "$env" = "" ]; then
    echo "$0 env justin_event_id_range_start justin_event_id_range_end"
    echo "E.g., $0 dev 100"
    echo "      $0 dev 100 105\n"
+   ns=""
    return 1
 else
    ns="$ns_set-$env"
@@ -28,6 +29,7 @@ if [ "$env" = "prod" ]; then
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
+        ns=""
         return 1
     fi
 fi
