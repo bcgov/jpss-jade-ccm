@@ -10,10 +10,14 @@ else
     env=""
 fi
 
+testMode="$2"
+
 if [ "$env" = "" ]; then
    echo "Error.  Invalid environment specified: '$1'"
-   echo "$0 env "
-   echo "E.g., $0 dev \n"
+   echo "$0 env justin_event_id"
+   echo "$0 env justin_event_id_range_start justin_event_id_range_end"
+   echo "E.g., $0 dev 100"
+   echo "      $0 dev 100 105\n"
    ns=""
    return 1
 else
@@ -21,7 +25,7 @@ else
 fi
 
 if [ "$env" = "prod" ]; then
-    echo "WARNING:  You are about to stop event pulls in PRODUCTION.  Are you sure? (y/n)"
+    echo "WARNING:  You are about to requeue events in PRODUCTION.  Are you sure? (y/n)"
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
@@ -30,10 +34,13 @@ if [ "$env" = "prod" ]; then
     fi
 fi
 
+
 echo "`basename $0` to $ns ..."
 
-if [ "$ns" != "" ]; then
-    oc -n $ns exec service/ccm-justin-events-adapter -- curl \
+if [ "$idEnd" = "" ]; then
+    oc -n $ns exec service/ccm-dems-adapter -- curl \
     -X PUT \
-    "http://ccm-justin-events-adapter/stopJustinEvents"
+    "http://ccm-dems-adapter/inactivateActiveReturnedCases?testMode=$testMode"
+else
+  echo "Unable to execute script"
 fi

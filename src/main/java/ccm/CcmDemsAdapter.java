@@ -54,6 +54,7 @@ import ccm.models.common.event.EventKPI;
 import ccm.models.common.data.AuthUser;
 import ccm.models.common.data.AuthUserList;
 import ccm.models.common.data.CaseAccused;
+import ccm.models.common.data.CaseAccusedList;
 import ccm.models.common.data.CaseAppearanceSummaryList;
 import ccm.models.common.data.CaseCrownAssignmentList;
 import ccm.models.common.data.CaseHyperlinkData;
@@ -81,6 +82,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -164,6 +166,7 @@ public class CcmDemsAdapter extends RouteBuilder {
     updateExistingCaseFileNotes();
     processCaseList();
     getPrimaryCourtCaseExists();
+    inactivateActiveReturnedCases();
   }
 
 
@@ -2152,7 +2155,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
+    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
@@ -2979,15 +2982,45 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // update case
-    .setBody(simple("${exchangeProperty.update_data}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
-    .log(LoggingLevel.INFO,"Person updated.")
+    .doTry()
+      .setBody(simple("${exchangeProperty.update_data}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
+      .log(LoggingLevel.INFO,"Person updated.")
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          Random r = new Random();
+          int low = 3;
+          int high = 12;
+          int random = r.nextInt(high-low) + low;
+          random = random*1000;
+          exchange.setProperty("waitTime", random);
+        }
+      })
+      .log(LoggingLevel.WARN,"Initial person update failed, pausing to retry. In ${exchangeProperty.waitTime} ms")
+      // Wait 3-12 seconds to retry updating the person record (randomly generated wait time).
+      .delay(simple("${exchangeProperty.waitTime}"))
+      .setBody(simple("${exchangeProperty.update_data}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
+      .log(LoggingLevel.INFO,"Retry of person updated.")
+    .end()
+
     ;
   }
 
@@ -3903,10 +3936,23 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .log(LoggingLevel.INFO,"imageId = ${header.imageId}...")
+
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -3915,6 +3961,8 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
+    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc"))
+    .log(LoggingLevel.DEBUG,"Query URL: ${exchangeProperty.queryUrl}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
     .choice()
@@ -4015,9 +4063,22 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4026,6 +4087,8 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
+    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc"))
+    .log(LoggingLevel.DEBUG,"Query URL: ${exchangeProperty.queryUrl}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=descriptions:\"${header.reportType}\" AND title:\"${header.reportTitle}\" AND SaveVersion:NOT Yes&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId&sort=cc_SaveVersion desc")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
     .choice()
@@ -4143,8 +4206,10 @@ private void getDemsFieldMappingsrccStatus() {
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"documentId = ${header.documentId}...")
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4153,6 +4218,8 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
+    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId"))
+    .log(LoggingLevel.DEBUG,"Query URL: ${exchangeProperty.queryUrl}")
     .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
@@ -4560,21 +4627,28 @@ private void getDemsFieldMappingsrccStatus() {
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
 
     //IN: property =number - primary rcc_id
-    //IN: property =accused - List<CaseAccused>
+    //IN: property =accused - CaseAccusedList
 
     from("direct:" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
     .log(LoggingLevel.INFO,"syncAccusedPersons ${header.number}")
     .log(LoggingLevel.DEBUG,"Processing request: ${body}")
-    .unmarshal().json(JsonLibrary.Jackson, ArrayList.class)
+    .unmarshal().json(JsonLibrary.Jackson, CaseAccusedList.class)
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) {
-        ArrayList<CaseAccused> bodyInput = (ArrayList<CaseAccused>) exchange.getIn().getBody(ArrayList.class);
-        exchange.setProperty("accusedPersons", bodyInput);
-      }})
+        CaseAccusedList accusedPersonsList = exchange.getIn().getBody(CaseAccusedList.class);
+        List<CaseAccused> accusedPersons = accusedPersonsList.getCaseAccused();
+        exchange.setProperty("accusedPersons", accusedPersons);
 
+        // BCPSDEMS-2313 - append all accused persons names to be set as new case name.
+        String newCaseName = DemsChargeAssessmentCaseData.generateCaseName(accusedPersons);
+        exchange.setProperty("newCaseName", newCaseName);
+      }}
+    )
+
+    // Update with the new case name.
     .choice()
     .when(simple("${header.number}!= '' && ${body} != '' "))
       // get the primary rcc, based on the dems primary agency file id
@@ -4583,13 +4657,33 @@ private void getDemsFieldMappingsrccStatus() {
       // look for current status of the dems case.
       // and set the rcc to the primary rcc
       .to("direct:getCourtCaseStatusByKey")
+      .log(LoggingLevel.DEBUG, "Status: ${body}")
       .unmarshal().json()
       .setProperty("caseId").simple("${body[id]}")
+      .setProperty("rccId").simple("${body[key]}")
       .setProperty("caseStatus").simple("${body[status]}")
       .setProperty("caseRccId").simple("${body[primaryAgencyFileId]}")
+
       .choice()
       // if there is a case, delete participants
       .when(simple("${exchangeProperty.caseId} != ''"))
+        .log(LoggingLevel.INFO, "Update case name")
+        .setProperty("caseName",jsonpath("$.name"))
+        .setProperty("rccId",jsonpath("$.key"))
+        .log(LoggingLevel.DEBUG, "Old case name: ${exchangeProperty.caseName}")
+        .log(LoggingLevel.DEBUG, "New case name: ${exchangeProperty.newCaseName}")
+
+        .setBody(simple("{\"name\": \"${exchangeProperty.newCaseName}\",\"key\": \"${exchangeProperty.rccId}\"}"))
+        .log(LoggingLevel.DEBUG, "${body}")
+        .removeHeader("CamelHttpUri")
+        .removeHeader("CamelHttpBaseUri")
+        .removeHeaders("CamelHttp*")
+        .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+        .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+        .log(LoggingLevel.INFO, "Case name updated.")
+
         .log(LoggingLevel.INFO,"Call SyncCaseParticipants")
         .setProperty("ParticipantTypeFilter", simple("Accused"))
         .setProperty("Participants",simple(""))
@@ -5079,6 +5173,7 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"end of processCaseList.")
     ;
   }
+
   private void processParticipantsList() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5575,6 +5670,7 @@ private void getDemsFieldMappingsrccStatus() {
     .end()
   .end();
   }
+
   private void updateExistingCaseFileNotes() {
      // use method name as route id
      String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -5653,4 +5749,62 @@ private void getDemsFieldMappingsrccStatus() {
      .log(LoggingLevel.INFO,"end of updateExistingCaseFileNotes.")
      ;
   }
+
+  private void inactivateActiveReturnedCases() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+
+    from("platform-http:/" + routeId + "?httpMethodRestrict=PUT" )
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+    .log(LoggingLevel.INFO,"inactivateActiveReturnedCases...")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+    //traverse through all cases in DEMS
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Return/id")
+    .split()
+      .jsonpathWriteAsString("$.*")
+      .setProperty("caseId",jsonpath("$.id"))
+      .setProperty("caseKey",jsonpath("$.key"))
+      .setProperty("status",jsonpath("$.status"))
+
+      .choice()
+        .when(simple("${exchangeProperty.status} == 'Active'"))
+          .log(LoggingLevel.INFO, "Active Returned Case: ${exchangeProperty.caseId} Key: ${exchangeProperty.caseKey} Status: ${exchangeProperty.status}")
+          .choice()
+            .when(simple("${header.testMode} != 'true'"))
+
+              .log(LoggingLevel.INFO, "Inactivate case")
+              // inactivate the case.
+              .setProperty("id", simple("${exchangeProperty.caseId}"))
+              .to("direct:getCourtCaseStatusById")
+              .setProperty("caseName",jsonpath("$.name"))
+              .setProperty("rccId",jsonpath("$.key"))
+
+              .setBody(simple("{\"name\": \"${exchangeProperty.caseName}\",\"key\": \"${exchangeProperty.rccId}\",\"status\": \"Inactive\"}"))
+
+              .removeHeader("CamelHttpUri")
+              .removeHeader("CamelHttpBaseUri")
+              .removeHeaders("CamelHttp*")
+              .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+              .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+              .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+              .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+              .log(LoggingLevel.INFO, "Case inactivated.")
+
+            .endChoice()
+          .log(LoggingLevel.INFO, "--------------------------------------------------")
+        .endChoice()
+      .end()
+    .end()
+
+    .log(LoggingLevel.INFO,"end of inactivateActiveReturnedCases.")
+    ;
+  }
+
 }

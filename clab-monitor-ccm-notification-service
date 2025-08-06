@@ -1,8 +1,0 @@
-ns="ac13ae-dev"
-
-echo "`basename $0` to $ns ..."
-
-export TITLEPREFIX="Notification Service $ns "
-echo -ne "\e]0;Notification Service $ns\a"
-
-kamel -n $ns log ccm-notification-service

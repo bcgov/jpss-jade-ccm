@@ -14,6 +14,8 @@ import ccm.models.common.data.document.ChargeAssessmentDocumentData;
 import ccm.models.common.data.document.ReportDocument;
 import ccm.models.common.data.document.ReportDocumentList;
 import ccm.models.system.dems.DemsRecordData;
+import ccm.utils.JsonParseUtils;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JustinDocumentTest {
@@ -177,6 +179,99 @@ public class JustinDocumentTest {
         }
 
         assertEquals("909.23-12345.STMT-POL_SMITH-JASON-JAY-PIN123456_240203", demsFile.getDocumentId());
+
+    }
+
+    @Test
+    public void testWitnessStatement2() {
+        JustinDocumentList documentList = getTestJustinWitnessFile();
+        ReportDocumentList rd = new ReportDocumentList(documentList);
+
+        ReportDocument commonDocument = rd.getDocuments().get(1);
+        ChargeAssessmentDocumentData businessFile = new ChargeAssessmentDocumentData("123456", documentList.getCreate_date(), commonDocument);
+
+        DemsRecordData demsFile = new DemsRecordData(businessFile);
+        //create ObjectMapper instance
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+        try {
+
+            StringWriter stringFile = new StringWriter();
+            objectMapper.writeValue(stringFile, documentList.getDocuments().get(1));
+            //System.out.println("JustinDocument JSON is\n"+stringFile);
+
+            StringWriter stringFile2 = new StringWriter();
+            objectMapper.writeValue(stringFile2, commonDocument);
+            //System.out.println("\n\nReportDocument JSON is\n"+stringFile2);
+
+            StringWriter stringFile3 = new StringWriter();
+            objectMapper.writeValue(stringFile3, businessFile);
+            //System.out.println("\n\nCourtCaseDocumentData JSON is\n"+stringFile3);
+
+            StringWriter stringFile4 = new StringWriter();
+            objectMapper.writeValue(stringFile4, demsFile);
+            //System.out.println("\n\nDemsRecordData JSON is\n"+stringFile4);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            String titleEncoded = JsonParseUtils.encodeUrlSensitiveChars(demsFile.getTitle());
+            //System.out.println("Pre-Title:"+ demsFile.getTitle());
+            //System.out.println("Post-Title:"+ titleEncoded);
+            assertEquals("THE STORY CAFE - EATERY %26 BAR", titleEncoded);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+
+    }
+
+    @Test
+    public void testWitnessStatement3() {
+        JustinDocumentList documentList = getTestJustinWitnessFile();
+        ReportDocumentList rd = new ReportDocumentList(documentList);
+
+        ReportDocument commonDocument = rd.getDocuments().get(2);
+        ChargeAssessmentDocumentData businessFile = new ChargeAssessmentDocumentData("123456", documentList.getCreate_date(), commonDocument);
+
+        DemsRecordData demsFile = new DemsRecordData(businessFile);
+        //create ObjectMapper instance
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+        try {
+
+            StringWriter stringFile = new StringWriter();
+            objectMapper.writeValue(stringFile, documentList.getDocuments().get(2));
+            //System.out.println("JustinDocument JSON is\n"+stringFile);
+
+            StringWriter stringFile2 = new StringWriter();
+            objectMapper.writeValue(stringFile2, commonDocument);
+            //System.out.println("\n\nReportDocument JSON is\n"+stringFile2);
+
+            StringWriter stringFile3 = new StringWriter();
+            objectMapper.writeValue(stringFile3, businessFile);
+            //System.out.println("\n\nCourtCaseDocumentData JSON is\n"+stringFile3);
+
+            StringWriter stringFile4 = new StringWriter();
+            objectMapper.writeValue(stringFile4, demsFile);
+            //System.out.println("\n\nDemsRecordData JSON is\n"+stringFile4);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            String titleEncoded = JsonParseUtils.encodeUrlSensitiveChars(demsFile.getTitle());
+            //System.out.println("Pre-Title:"+ demsFile.getTitle());
+            //System.out.println("Post-Title:"+ titleEncoded);
+            assertEquals("%3C%3E%25%21%23%5E*%3B%40%3D%7B%7D%7E%5C%24%26", titleEncoded);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
     }
 

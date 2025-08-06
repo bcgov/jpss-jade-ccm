@@ -6,6 +6,7 @@ public class JustinDocument {
   private String document_type;
   private String rcc_id;
   private String part_id;
+  private String part_ids;
   private String participant_name;
   private String mdoc_justin_no;
   private String primary_rcc_id;
@@ -20,6 +21,7 @@ public class JustinDocument {
   private String sequence_nos;
 
   private String witness_name;
+  private String witnesses;
   private String pin_number;
   private String officer_pin_number;
   private String witness_yn;
@@ -91,6 +93,14 @@ public class JustinDocument {
 
   public void setPart_id(String part_id) {
     this.part_id = part_id;
+  }
+
+  public String getPart_ids() {
+    return part_ids;
+  }
+
+  public void setPart_ids(String part_ids) {
+    this.part_ids = part_ids;
   }
 
   public String getParticipant_name() {
@@ -187,6 +197,14 @@ public class JustinDocument {
 
   public void setWitness_name(String witness_name) {
     this.witness_name = witness_name;
+  }
+
+  public String getWitnesses() {
+    return witnesses;
+  }
+
+  public void setWitnesses(String witnesses) {
+    this.witnesses = witnesses;
   }
 
   public String getPin_number() {
