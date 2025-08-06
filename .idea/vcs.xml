@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_DemsAdapter" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_JustinAdapter" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_LookupService" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_NotificationService" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_PidpAdapter" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Quarkus_SplunkAdapter" vcs="Git" />
+  </component>
+</project>

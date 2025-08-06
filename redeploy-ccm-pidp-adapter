@@ -41,7 +41,7 @@ version=`cat src/main/java/ccm/models/common/versioning/Version.java | grep V1_0
 
 pushd src/main/java/ccm
 if [ "$env" = "local" ]; then 
-    camel run  --properties=ccmPidpAdapter.properties --deps=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmPidpAdapter.java --port 4417 local/local.properties 
+    camel run  --properties=ccmPidpAdapter.properties --dep=ccm:ccm-models:0.0.1-SNAPSHOT --fresh --health --console CcmPidpAdapter.java --port 4417 local/local.properties 
 else
 kamel -n $ns delete ccm-pidp-adapter
 kamel -n $ns run \

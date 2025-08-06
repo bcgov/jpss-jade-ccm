@@ -1,0 +1,63 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: deployment-template
+parameters:
+- name: NAMESPACE
+  description: The namespace for the deployment
+  required: true
+objects:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    namespace: ${NAMESPACE}
+    name: 'ccm-splunk-adapter'
+  spec:
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: ccm-splunk-adapter  # Unique selector for the deployment
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: jade-ccm  # Existing label for broader grouping
+          app.kubernetes.io/name: ccm-splunk-adapter  # Unique label for this service
+          pod-name: ccm-splunk-adapter
+        name: ccm-splunk-adapter
+      spec:
+        containers:
+          - name: container
+            image: >-
+              image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/ccm-splunk-adapter:latest
+            env:
+              - name: 'TZ'
+                value: 'Canada/Pacific'
+              - name: 'KAFKA-BROKER-URL'
+                value: events-kafka-bootstrap:9092
+              - name: POD_NAME
+                value: ccm-splunk-adapter
+            envFrom:
+              - configMapRef:
+                  name: ccm-configs
+              - secretRef:
+                  name: ccm-secrets
+        imagePullSecrets: []
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+    paused: false
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: ${NAMESPACE}
+    name: ccm-splunk-adapter
+  spec:
+    selector:
+      app.kubernetes.io/name: ccm-splunk-adapter  # Match the unique label
+    ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080  # Adjust to your container's port
+    type: ClusterIP

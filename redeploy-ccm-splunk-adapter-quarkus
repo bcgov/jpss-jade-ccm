@@ -1,0 +1,5 @@
+pushd scripts/jade-ccm
+
+./redeploy-ccm-splunk-adapter-quarkus $1
+
+popd
