@@ -23,6 +23,7 @@ if [ "$env" = "prod" ]; then
     read answer
     if [ "$answer" != "y" ]; then
         echo "Aborting deployment."
+        ns=""
         return 1
     fi
 fi

@@ -82,6 +82,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 
 
 public class CcmDemsAdapter extends RouteBuilder {
@@ -2154,7 +2155,7 @@ private void getDemsFieldMappingsrccStatus() {
     from("platform-http:/" + routeId)
     .routeId(routeId)
     .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
-    .log(LoggingLevel.INFO,"Processing request.  Key = ${body} ...")
+    .log(LoggingLevel.DEBUG,"Processing request.  Key = ${body} ...")
     .setProperty("key", simple("${body}"))
 
     .unmarshal().json(JsonLibrary.Jackson, CommonCaseList.class)
@@ -2981,15 +2982,45 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.DEBUG,"DEMS-bound request data: '${body}'")
     .setProperty("update_data", simple("${body}"))
     // update case
-    .setBody(simple("${exchangeProperty.update_data}"))
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
-    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-    .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
-    .log(LoggingLevel.INFO,"Person updated.")
+    .doTry()
+      .setBody(simple("${exchangeProperty.update_data}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
+      .log(LoggingLevel.INFO,"Person updated.")
+    .endDoTry()
+    .doCatch(Exception.class)
+      .log(LoggingLevel.ERROR,"Exception: ${exception}")
+      .log(LoggingLevel.INFO,"Exchange Context: ${exchange.context}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          Random r = new Random();
+          int low = 3;
+          int high = 12;
+          int random = r.nextInt(high-low) + low;
+          random = random*1000;
+          exchange.setProperty("waitTime", random);
+        }
+      })
+      .log(LoggingLevel.WARN,"Initial person update failed, pausing to retry. In ${exchangeProperty.waitTime} ms")
+      // Wait 3-12 seconds to retry updating the person record (randomly generated wait time).
+      .delay(simple("${exchangeProperty.waitTime}"))
+      .setBody(simple("${exchangeProperty.update_data}"))
+      .removeHeader("CamelHttpUri")
+      .removeHeader("CamelHttpBaseUri")
+      .removeHeaders("CamelHttp*")
+      .setHeader(Exchange.HTTP_METHOD, simple("PUT"))
+      .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+      .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
+      .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/persons/${header[personId]}")
+      .log(LoggingLevel.INFO,"Retry of person updated.")
+    .end()
+
     ;
   }
 
@@ -3911,6 +3942,17 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
     .log(LoggingLevel.INFO,"imageId = ${header.imageId}...")
 
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4025,6 +4067,18 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"reportType = ${header.reportType}...")
     .log(LoggingLevel.INFO,"reportTitle = ${header.reportTitle}...")
+
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String title = exchange.getMessage().getHeader("reportTitle", String.class);
+        if(title != null) {
+          exchange.getMessage().setHeader("reportTitle", JsonParseUtils.encodeUrlSensitiveChars(title));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")

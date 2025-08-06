@@ -87,4 +87,33 @@ public class JsonParseUtils {
     }
     return "";
   }
+
+  static public String encodeUrlSensitiveChars(String key) {
+    String replacement = key;
+    if (replacement != null) {
+      replacement = replacement.replace("%","%25");
+      replacement = replacement.replace("<","%3C");
+      replacement = replacement.replace(">","%3E");
+      replacement = replacement.replace("!","%21");
+      replacement = replacement.replace("#","%23");
+      replacement = replacement.replace("^","%5E");
+      replacement = replacement.replace(";","%3B");
+      replacement = replacement.replace("@","%40");
+      replacement = replacement.replace("=","%3D");
+      replacement = replacement.replace("{","%7B");
+      replacement = replacement.replace("}","%7D");
+      replacement = replacement.replace("~","%7E");
+      replacement = replacement.replace("\\","%5C");
+      replacement = replacement.replace("$","%24");
+      replacement = replacement.replace("&","%26");
+
+//    <>%!#^*;@={}~\\$&
+//    %3C%3E%25%21%23%5E*%3B%40%3D%7B%7D%7E%5C%24%26
+
+
+
+    }
+
+    return replacement;
+  }
 }
