@@ -1,0 +1,85 @@
+name: Deploy to OpenShift
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Select the application to deploy'
+        required: true
+        type: choice
+        options:
+          - ccm-justin-in-adapter
+          - ccm-dems-adapter
+          - ccm-lookup-service
+          - ccm-splunk-adapter
+          - ccm-accessdedup-processor
+          - ccm-reports-processor
+          - ccm-pidp-adapter
+          - ccm-notification-service
+          - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
+      env:
+        description: 'Select the environment'
+        required: true
+        type: choice
+        default: 'dev'
+        options:
+          - dev
+          - test
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
+
+    env:
+      APP: ${{ github.event.inputs.app }}
+      ENV: ${{ github.event.inputs.env }}
+      OCP_SERVER: ${{ secrets.OCP_SERVER }}
+      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install OpenShift CLI (oc)
+        run: |
+          curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
+          tar -xzf oc.tar.gz
+          sudo mv oc /usr/local/bin/
+
+      - name: Login to OpenShift
+        run: |
+          oc login $OCP_SERVER --token=$OCP_TOKEN
+          oc project $OCP_PROJECT
+
+      - name: Install Camel K CLI
+        run: |
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/
+
+      - name: Build and install CCM models
+        run: |
+          chmod +x ./build-install-ccm-models
+          ./build-install-ccm-models
+
+      - name: Deploy with script or kamel
+        run: |
+          echo "Checking for deployment script: ./redeploy-$APP"
+          if [[ -f ./redeploy-$APP ]]; then
+            echo "Found script: redeploy-$APP"
+            chmod +x ./redeploy-$APP
+            ./redeploy-$APP $ENV
+          elif [[ -f integrations/$APP.java ]]; then
+             echo "Running Camel K integration: $APP"
+             kamel run integrations/$APP.java \
+               --name=$APP \
+               --namespace=$OCP_PROJECT
+          else
+            echo "No deployment method found for $APP"
+            exit 1
+          fi
+
+
