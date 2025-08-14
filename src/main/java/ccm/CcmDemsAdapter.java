@@ -4947,9 +4947,9 @@ private void getDemsFieldMappingsrccStatus() {
         exchange.setProperty("v2DemsHost", v2DemsHost);
       }
     })
-    .log(LoggingLevel.INFO, "New URL: ${exchangeProperty.v2DemsHost}")
+    .log(LoggingLevel.DEBUG, "New URL: ${exchangeProperty.v2DemsHost}")
 
-    .setProperty("pageSize").simple("500")
+    .setProperty("pageSize").simple("5000")
     .setProperty("maxRecordIncrements").simple("250")
     .setProperty("incrementCount").simple("1")
     .setProperty("continueLoop").simple("true")
@@ -4977,7 +4977,7 @@ private void getDemsFieldMappingsrccStatus() {
       .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
       .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
       //traverse through all persons in DEMS
-      .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/persons?page=${exchangeProperty.incrementCount}&pagesize=${exchangeProperty.pageSize}")
+      .toD("https://${exchangeProperty.v2DemsHost}/org-units/{{dems.org-unit.id}}/persons?page=${exchangeProperty.incrementCount}&pagesize=${exchangeProperty.pageSize}&sort=id")
       //.log(LoggingLevel.DEBUG,"Person list: '${body}'")
       .setProperty("length",jsonpath("$.items.length()"))
       .log(LoggingLevel.INFO,"Person count: ${exchangeProperty.length}")
@@ -4991,6 +4991,8 @@ private void getDemsFieldMappingsrccStatus() {
           .to("direct:processParticipantsList")
         .endChoice()
       .end()
+
+      .log(LoggingLevel.INFO, "\n\nEnd of page: ${exchangeProperty.incrementCount}")
 
       // increment the loop count.
       .process(new Processor() {
@@ -5018,6 +5020,7 @@ private void getDemsFieldMappingsrccStatus() {
     .removeProperty("caseRccId")
     .split()
       .jsonpathWriteAsString("$.items.*")
+      .stopOnException()
       .setProperty("id",jsonpath("$.id"))
       .to("direct:getCourtCaseStatusById")
       .setProperty("status",jsonpath("$.status"))
@@ -5188,13 +5191,16 @@ private void getDemsFieldMappingsrccStatus() {
       .setProperty("personId",jsonpath("$.id"))
       .setProperty("personKey",jsonpath("$.key"))
       .setProperty("status",jsonpath("$.status"))
-      .log(LoggingLevel.DEBUG,"Person Id: ${exchangeProperty.personId}, status: ${exchangeProperty.status}")
+      .setProperty("existingOtc",jsonpath("$.fields[?(@.name == '12')]"))
       .choice()
-        .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.personKey} != null")
+        .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.personKey} != null && ${exchangeProperty.existingOtc} == '[]'")
           .to("direct:updateOtcParticipants")
         .endChoice()
+        .otherwise()
+          .log(LoggingLevel.INFO,"Person Id: ${exchangeProperty.personId}, status: ${exchangeProperty.status}, OTC: ${exchangeProperty.existingOtc}")
+        .endChoice()
       .end()
-      .log(LoggingLevel.INFO, "End of loop for person.")
+      .log(LoggingLevel.DEBUG, "End of loop for person.")
     .end() // end loop
     .log(LoggingLevel.INFO,"end of processParticipantsList.")
     ;
@@ -5222,9 +5228,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setProperty("caselength",jsonpath("$.cases.length()"))
     .setProperty("existingOtc",jsonpath("$.fields[?(@.name == 'OTC')]"))
     .unmarshal().json()
-    .log(LoggingLevel.INFO, "Participant case length: ${exchangeProperty.caselength}")
-
-    .log(LoggingLevel.INFO, "existingOtc: ${exchangeProperty.existingOtc}")
+    .log(LoggingLevel.DEBUG, "Participant ${exchangeProperty.personId} case length: ${exchangeProperty.caselength} existingOtc: ${exchangeProperty.existingOtc}")
     .process(new Processor() {
       @Override
       public void process(Exchange exchange) throws Exception {
@@ -5249,8 +5253,7 @@ private void getDemsFieldMappingsrccStatus() {
           }
         }
         if(!present) {
-          log.info("Generating OTC for person.");
-          personData.generateOTC();
+          log.info("Generating OTC for person id: "+personData.getId() + " generated: " +personData.generateOTC());
         }
 
         exchange.getMessage().setBody(personData, DemsPersonData.class);
@@ -5258,15 +5261,16 @@ private void getDemsFieldMappingsrccStatus() {
     })
     .marshal().json(JsonLibrary.Jackson, DemsPersonData.class)
     .setProperty("update_data", simple("${body}"))
-    .log(LoggingLevel.INFO, "Check otc exist: ${exchangeProperty.otcfieldexist}")
+    .log(LoggingLevel.DEBUG, "Check otc exist: ${exchangeProperty.otcfieldexist}")
     .choice()
       .when(simple("${exchangeProperty.otcfieldexist} == 'false'"))
-        .log(LoggingLevel.INFO,"DEMS-bound person data: '${body}'")
+        .log(LoggingLevel.DEBUG,"DEMS-bound person data: '${body}'")
         // update case
         .setBody(simple("${exchangeProperty.update_data}"))
+        .log(LoggingLevel.INFO,"DEMS-bound person data: '${body}'")
         .setHeader("key", jsonpath("$.key"))
         .setHeader("id", jsonpath("$.id"))
-        .log(LoggingLevel.INFO,"DEMS-bound person id: '${header[id]}' key: '${header[key]}'")
+        .log(LoggingLevel.DEBUG,"DEMS-bound person id: '${header[id]}' key: '${header[key]}' case count: '${exchangeProperty.caselength}'")
         .setHeader("key").simple("${header.key}")
         .setHeader("id").simple("${header.id}")
         .removeHeader("CamelHttpUri")
@@ -5279,7 +5283,7 @@ private void getDemsFieldMappingsrccStatus() {
         .log(LoggingLevel.INFO,"Person updated.")
       .endChoice()
       .otherwise()
-        .log(LoggingLevel.INFO,"OTC data already exists, skip updating person id: ${header[id]}.")
+        .log(LoggingLevel.INFO,"OTC data already exists, skip updating person id: ${exchangeProperty.personId}.")
       .endChoice()
     .end()
     ;

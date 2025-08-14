@@ -135,7 +135,7 @@ public class DemsPersonData {
         }
     }
 
-    public void generateOTC() {
+    public String generateOTC() {
         Random r = new Random();
         int low = 0000;
         int high = 999999;
@@ -146,6 +146,7 @@ public class DemsPersonData {
         List<DemsFieldData> fieldData = getFields();
         DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),formatted);
         fieldData.add(otc);
+        return formatted;
     }
 
     public void generateMergedParticipantKeys(String participantKeys) {

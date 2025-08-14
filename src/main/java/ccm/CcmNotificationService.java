@@ -2430,7 +2430,6 @@ public class CcmNotificationService extends RouteBuilder {
     .choice()
       .when(simple("${exchangeProperty.primary_rcc_id} == ''"))
         .log(LoggingLevel.WARN, "Court file mdoc ${header.number} does not have related rcc, so skip.")
-        .stop()
       .endChoice()
     .end()
     .marshal().json(JsonLibrary.Jackson, ChargeAssessmentDataRef.class)
@@ -2487,7 +2486,7 @@ public class CcmNotificationService extends RouteBuilder {
     .end()
 
     .choice()
-      .when(simple("${exchangeProperty.caseStatus} != 'Inactive'"))
+      .when(simple("${exchangeProperty.primary_rcc_id} != '' && ${exchangeProperty.caseStatus} != 'Inactive'"))
         .setHeader("key", simple("${exchangeProperty.event_key_orig}"))
         .setHeader("event_key", simple("${exchangeProperty.event_key_orig}"))
         .to("direct:processPrimaryCourtCaseChanged")
