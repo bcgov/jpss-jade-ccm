@@ -11,15 +11,6 @@ import java.net.UnknownHostException;
 // curl -H "user_id: 2" -H "court_case_number: 6" http://ccm-lookup-service/getCourtCaseDetails
 //
 
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,7 +32,9 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.common.event.Error;
 import ccm.utils.DateTimeUtils;
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class CcmLookupService extends RouteBuilder {
   @Override
   public void configure() throws Exception {

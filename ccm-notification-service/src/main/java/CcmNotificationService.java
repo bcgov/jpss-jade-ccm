@@ -27,19 +27,7 @@ import org.apache.http.conn.HttpHostConnectException;
 
 // To run this integration use:
 // kamel run CcmNotificationService.java --property file:ccmNotificationService.properties --profile openshift
-//
-
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http4
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
-//import org.apache.camel.Exchange;
+////import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.commons.codec.binary.StringUtils;
@@ -69,7 +57,9 @@ import ccm.models.system.dems.DemsListItemFieldData;
 import ccm.models.system.dems.DemsListItemFieldData.RMS_PROCESSING_STATUS_MAPPINGS;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class CcmNotificationService extends RouteBuilder {
   @Override
   public void configure() throws Exception {

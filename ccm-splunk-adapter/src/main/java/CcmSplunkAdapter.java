@@ -6,20 +6,6 @@ import java.net.SocketTimeoutException;
 
 import org.apache.camel.CamelException;
 
-// To run this integration use:
-// kamel run CcmSplunkAdapter.java --property file:ccmSplunkAdapter.properties --profile openshift
-// 
-
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
-
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -33,8 +19,9 @@ import ccm.models.common.event.BaseEvent;
 import ccm.models.common.event.EventKPI;
 import ccm.models.system.splunk.SplunkEventLog;
 import ccm.utils.DateTimeUtils;
+import jakarta.enterprise.context.ApplicationScoped;
 
-
+@ApplicationScoped
 public class CcmSplunkAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {

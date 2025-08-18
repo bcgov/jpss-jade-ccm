@@ -15,17 +15,6 @@ import java.util.List;
 
 import org.apache.camel.CamelException;
 
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.component.kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -50,6 +39,9 @@ import ccm.models.system.justin.JustinEvent;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
 public class CcmJustinEventsAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
@@ -1624,9 +1616,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
+    .log(LoggingLevel.INFO,"Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
     .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
-    .log("User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
+    .log(LoggingLevel.INFO,"User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
 
     // publish event KPI - processing completed
     .process(new Processor() {

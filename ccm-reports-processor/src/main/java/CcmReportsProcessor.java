@@ -1,28 +1,5 @@
 package ccm;
 
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-// camel-k: dependency=mvn:org.slf4j.slf4j-api
-// camel-k: dependency=mvn:org.apache.httpcomponents.httpcore
-// camel-k: dependency=mvn:org.apache.httpcomponents.httpmime
-// camel-k: dependency=mvn:org.apache.camel.quarkus:camel-quarkus-mail
-// camel-k: dependency=mvn:org.apache.camel:camel-kamelet
-// camel-k: dependency=mvn:org.apache.camel:camel-java-joor-dsl
-// camel-k: dependency=mvn:org.apache.camel:camel-endpointdsl
-// camel-k: dependency=mvn:org.apache.camel:camel-rest
-// camel-k: dependency=mvn:org.apache.camel:camel-http
-// camel-k: dependency=mvn:org.apache.camel:camel-kafka
-// camel-k: dependency=mvn:org.apache.camel:camel-core-languages
-// camel-k: dependency=mvn:org.apache.camel:camel-mail
-// camel-k: dependency=mvn:org.apache.camel:camel-attachments
-// camel-k:dependency=mvn:org.apache.camel:camel-jaxb
-
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 
@@ -48,7 +25,9 @@ import ccm.models.system.justin.JustinDocumentKeyList;
 import ccm.utils.DateTimeUtils;
 import ccm.utils.KafkaComponentUtils;
 import ccm.models.common.event.Error;
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class CcmReportsProcessor extends RouteBuilder {
 
   @Override

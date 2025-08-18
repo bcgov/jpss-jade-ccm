@@ -14,17 +14,6 @@ import java.util.Base64;
 
 import org.apache.camel.CamelException;
 
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.component.kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -60,7 +49,9 @@ import ccm.models.system.justin.JustinFileDisposition;
 import ccm.models.system.justin.JustinFileNote;
 import ccm.models.system.justin.JustinFileNoteList;
 import ccm.utils.DateTimeUtils;
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class CcmJustinOutAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {

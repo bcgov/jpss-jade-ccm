@@ -1,16 +1,5 @@
 package ccm;
 
-// camel-k: language=java
-// camel-k: dependency=mvn:org.apache.camel.quarkus
-// camel-k: dependency=mvn:org.apache.camel.component.kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-kafka
-// camel-k: dependency=mvn:org.apache.camel.camel-quarkus-jsonpath
-// camel-k: dependency=mvn:org.apache.camel.camel-jackson
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk-hec
-// camel-k: dependency=mvn:org.apache.camel.camel-splunk
-// camel-k: dependency=mvn:org.apache.camel.camel-http
-// camel-k: dependency=mvn:org.apache.camel.camel-http-common
-
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Processor;
@@ -24,7 +13,9 @@ import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.ChargeAssessmentStatus;
 import ccm.models.common.data.CommonCaseList;
 import ccm.models.common.versioning.Version;
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class CcmJustinInAdapter extends RouteBuilder {
   @Override
   public void configure() throws Exception {
