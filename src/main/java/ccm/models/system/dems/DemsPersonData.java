@@ -24,6 +24,9 @@ public class DemsPersonData {
     public DemsPersonData(CaseAccused ca) {
         setKey(ca.getIdentifier());
         setLastName(ca.getSurname());
+        if(ca.getSurname() == null) {
+            setLastName(ca.getFull_name());
+        }
         setFirstName(ca.getGiven_1_name());
         setDob(ca.getBirth_date());
 
