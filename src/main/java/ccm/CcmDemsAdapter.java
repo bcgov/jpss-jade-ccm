@@ -4746,7 +4746,7 @@ private void getDemsFieldMappingsrccStatus() {
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
               .setBody(simple("{\"ParticipantTypeFilter\":\"${exchangeProperty.ParticipantTypeFilter}\",\"Participants\":[]}"))
-              .log(LoggingLevel.INFO,"ParticipantTypeFilter: ${body}")
+              .log(LoggingLevel.DEBUG,"ParticipantTypeFilter: ${body}")
               .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}/participants/sync")
               .log(LoggingLevel.INFO,"Cleared-out existing participants from case ${exchangeProperty.caseId}")
 
