@@ -1624,9 +1624,9 @@ public class CcmJustinEventsAdapter extends RouteBuilder {
     .setHeader(Exchange.HTTP_METHOD, simple("POST"))
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{justin.token}}")
-    .log("Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
+    .log(LoggingLevel.INFO,"Setting user DEMS flag (${exchangeProperty.event_key}) in JUSTIN ...")
     .toD("https://{{justin.host}}/demsUserSet?part_id=${exchangeProperty.event_key}")
-    .log("User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
+    .log(LoggingLevel.INFO,"User DEMS flag updated in JUSTIN. Return code: ${header.CamelHttpResponseCode}")
 
     // publish event KPI - processing completed
     .process(new Processor() {

@@ -45,6 +45,8 @@ public class DemsChargeAssessmentCaseData {
                     case_name.append(SPACE_STRING);
                     case_name.append(ba.getGiven_3_name());
                 }
+           } else if(ba.getFull_name() != null && !ba.getFull_name().isEmpty()) {
+                case_name.append(ba.getFull_name().toUpperCase());
            }
         }
         if(case_name.length() > 251) {
