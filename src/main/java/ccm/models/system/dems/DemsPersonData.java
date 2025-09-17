@@ -24,6 +24,9 @@ public class DemsPersonData {
     public DemsPersonData(CaseAccused ca) {
         setKey(ca.getIdentifier());
         setLastName(ca.getSurname());
+        if(ca.getSurname() == null) {
+            setLastName(ca.getFull_name());
+        }
         setFirstName(ca.getGiven_1_name());
         setDob(ca.getBirth_date());
 
@@ -118,6 +121,10 @@ public class DemsPersonData {
     }
 
     public static String generateFullGivenNamesAndLastNameFromAccused(CaseAccused accused) {
+        if(accused.getSurname() == null) {
+            return accused.getFull_name();
+        }
+
         String concatenated_name_string = accused.getGiven_1_name() + 
             (accused.getGiven_2_name() != null && accused.getGiven_2_name().length() > 0 ? " " + accused.getGiven_2_name() : "" ) +
             (accused.getGiven_3_name() != null && accused.getGiven_3_name().length() > 0 ? " " + accused.getGiven_3_name() : "" ) + 
@@ -135,7 +142,7 @@ public class DemsPersonData {
         }
     }
 
-    public void generateOTC() {
+    public String generateOTC() {
         Random r = new Random();
         int low = 0000;
         int high = 999999;
@@ -146,6 +153,7 @@ public class DemsPersonData {
         List<DemsFieldData> fieldData = getFields();
         DemsFieldData otc = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OTC_PIN.getLabel(),formatted);
         fieldData.add(otc);
+        return formatted;
     }
 
     public void generateMergedParticipantKeys(String participantKeys) {
