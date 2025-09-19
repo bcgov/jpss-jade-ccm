@@ -83,7 +83,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-core</artifactId>
-            <version>3.16.0</version>
+            <version>3.21.4</version>
         </dependency>
 <!--<dependency>
     <groupId>org.apache.camel</groupId>
