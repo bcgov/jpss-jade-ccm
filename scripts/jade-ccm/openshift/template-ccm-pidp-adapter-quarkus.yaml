@@ -36,9 +36,9 @@ objects:
             value: events-kafka-bootstrap:9092
           envFrom:
           - configMapRef:
-              name: ccm-configs
+              name: ccm-quarkus-configs
           - secretRef:
-              name: ccm-secrets
+              name: ccm-quarkus-secrets
           volumeMounts:
           - name: pidp-kafka-client-p12-volume
             mountPath: /etc/keystore/pidp-kafka-client.p12
@@ -50,10 +50,10 @@ objects:
         volumes:
         - name: pidp-kafka-client-p12-volume
           configMap:
-            name: ccm-configs
+            name: ccm-quarkus-configs
         - name: pidp-kafka-server-p12-volume
           configMap:
-            name: ccm-configs
+            name: ccm-quarkus-configs
     strategy:
       type: RollingUpdate
       rollingUpdate:

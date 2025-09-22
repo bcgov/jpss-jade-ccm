@@ -38,9 +38,9 @@ objects:
                 value: ccm-justin-out-adapter 
             envFrom:
               - configMapRef:
-                  name: ccm-configs
+                  name: ccm-quarkus-configs
               - secretRef:
-                  name: ccm-secrets
+                  name: ccm-quarkus-secrets
         imagePullSecrets: []
     strategy:
       type: RollingUpdate

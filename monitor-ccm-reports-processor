@@ -20,4 +20,4 @@ fi
 export TITLEPREFIX="Reports Processor $ns "
 
 echo -ne "\e]0;Reports Processor $ns\a"
-kamel -n $ns log ccm-reports-processor
+oc -n $ns logs -f deployment/ccm-reports-processor

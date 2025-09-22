@@ -4622,7 +4622,7 @@ private void getDemsFieldMappingsrccStatus() {
 
     // Update with the new case name.
     .choice()
-    .when(simple("${header.number}!= '' && ${body} != '' "))
+    .when(simple("${header.number} != '' && ${body} != '' "))
       // get the primary rcc, based on the dems primary agency file id
 
       //.setHeader("number", simple("${header[rcc_id]}"))
@@ -5043,8 +5043,9 @@ private void getDemsFieldMappingsrccStatus() {
       .choice()
       .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.caseRccId} != ''") 
       .setHeader("splitRccId", simple("${exchangeProperty.caseRccId}"))
+      .setBody(simple("${exchangeProperty.caseRccId}"))
       .split()
-      .tokenize(";", "splitRccId", false)
+      .tokenize(";")
       .process(new Processor() {
         @Override
         public void process(Exchange ex) {
@@ -5099,9 +5100,10 @@ private void getDemsFieldMappingsrccStatus() {
       .endChoice()
       .when().simple("${exchangeProperty.status} == 'Active' && ${exchangeProperty.mdoc} != ''") 
       .setHeader("splitMdoc", simple("${exchangeProperty.mdoc}"))
+      .setBody(simple("${exchangeProperty.mdoc}"))
      // .log(LoggingLevel.INFO, "setting splitMdoc to : ${exchangeProperty.mdoc}")
       .split() // look at mdoc
-      .tokenize(";", "splitMdoc", false)
+      .tokenize(";")
       .process(new Processor() {
         @Override
         public void process(Exchange ex) {
