@@ -1,10 +1,4 @@
 package ccm;
-// To run this integration use:
-// kamel run CcmJustinAdapter.java --property file:application.properties --profile openshift
-//
-// recover the service location. If you're running on minikube, minikube service platform-http-server --url=true
-// curl -d '{}' http://ccm-justin-adapter/courtFileCreated
-//
 
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;

@@ -7,7 +7,9 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
-import ccm.models.system.justin.*;
+import ccm.models.system.justin.JustinCaseHyperlinkData;
+import ccm.models.system.justin.JustinCaseHyperlinkDataList;
+import ccm.models.system.justin.JustinRccCaseList;
 import ccm.models.common.data.CaseHyperlinkData;
 import ccm.models.common.data.CaseHyperlinkDataList;
 import ccm.models.common.data.ChargeAssessmentStatus;
@@ -26,9 +28,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
     // part of JADE-3025
     getPrimaryCaseByAgencyNo();
   }
-    
-    
-    
+
   private void version() {
     // use method name as route id
     String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
