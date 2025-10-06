@@ -53,7 +53,6 @@ public class CcmJustinOutAdapter extends RouteBuilder {
 
     version();
 
-    courtFileCreated();
     healthCheck();
     getCourtCaseDetails();
     getCourtCaseAuthList();
@@ -276,22 +275,6 @@ public class CcmJustinOutAdapter extends RouteBuilder {
       }
     })
     ;
-  }
-
-  private void courtFileCreated() {
-    // use method name as route id
-    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
-
-    from("platform-http:/" + routeId + "?httpMethodRestrict=POST")
-    .routeId(routeId)
-    .removeHeader("CamelHttpUri")
-    .removeHeader("CamelHttpBaseUri")
-    .removeHeaders("CamelHttp*")
-    .log(LoggingLevel.DEBUG,"body (before unmarshalling): '${body}'")
-    .unmarshal().json()
-    .transform(simple("{\"number\": \"${body[number]}\", \"status\": \"created\", \"sensitive_content\": \"${body[sensitive_content]}\", \"public_content\": \"${body[public_content]}\", \"created_datetime\": \"${body[created_datetime]}\"}"))
-    .log(LoggingLevel.DEBUG,"body (after unmarshalling): '${body}'")
-    .to("kafka:{{kafka.topic.chargeassessments.name}}");
   }
 
   private void healthCheck() {
