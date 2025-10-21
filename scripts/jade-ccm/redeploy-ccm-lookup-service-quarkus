@@ -80,6 +80,7 @@ if [ "$env" = "local" ]; then
     docker rm $app
 else
     # handle OpenShift deployment
+    oc project $ns
 
     # remove the deployment from the OpenShift namespace
     oc -n $ns delete deployment $app
