@@ -61,3 +61,16 @@ objects:
       port: 80
       targetPort: 8080  # Adjust to your container's port
     type: ClusterIP
+- apiVersion: v1
+  kind: Route
+  metadata:
+    namespace: ${NAMESPACE}
+    name: ccm-justin-in-adapter 
+  spec:
+    host: jade-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca
+    to:
+      kind: Service
+      name: ccm-justin-in-adapter
+    tls:
+      termination: edge
+      insecure-edge-termination-policy: Redirect

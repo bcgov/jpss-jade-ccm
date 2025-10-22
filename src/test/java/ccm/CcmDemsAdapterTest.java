@@ -50,11 +50,11 @@ public class CcmDemsAdapterTest extends CamelQuarkusTestSupport {
 	}
 
 	
-	@Override
+	/*@Override
 	protected RoutesBuilder createRouteBuilder() {
 		return new CcmDemsAdapter(); 
 		
-	}
+	}*/
 
 	//@Test
 	public void testPublishEventKPI() throws Exception {
