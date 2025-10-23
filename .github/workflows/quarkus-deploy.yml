@@ -1,5 +1,8 @@
 name: Deploy Quarkus App to OpenShift
 
+permissions:
+  contents: read
+  
 on:
   workflow_dispatch:
     inputs:
@@ -75,4 +78,5 @@ jobs:
       - name: Deploy Kubernetes manifests - DemsUserAccessAdapter
         if: env.APP == 'redeploy-dems-useraccess-adapter'
         run: |
+
           oc apply -f QuarkusInvestigation/DemsUserAccessAdapter/target/kubernetes/kubernetes.yml -n $NS
