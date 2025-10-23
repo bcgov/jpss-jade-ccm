@@ -76,4 +76,4 @@ objects:
       name: ccm-justin-in-adapter
     tls:
       termination: edge
-      insecure-edge-termination-policy: Redirect
+      insecureEdgeTerminationPolicy: Redirect
