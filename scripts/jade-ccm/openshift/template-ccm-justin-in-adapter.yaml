@@ -6,6 +6,9 @@ parameters:
 - name: NAMESPACE
   description: The namespace for the deployment
   required: true
+- name: ENV
+  description: The environment for the deployment
+  required: true
 objects:
 - apiVersion: apps/v1
   kind: Deployment
@@ -67,7 +70,7 @@ objects:
     namespace: ${NAMESPACE}
     name: ccm-justin-in-adapter 
   spec:
-    host: jade-ccm-justin-adapter-dev.apps.silver.devops.gov.bc.ca
+    host: jade-ccm-justin-adapter-${ENV}.apps.silver.devops.gov.bc.ca
     to:
       kind: Service
       name: ccm-justin-in-adapter
