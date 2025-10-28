@@ -1,0 +1,5 @@
+redeploy-ccm-reports-processor to cef5dd-local ...
+/c/dev_projects/parc/justice/dems/code/jpss-jade-ccm/src/main/java/ccm /c/dev_projects/parc/justice/dems/code/jpss-jade-ccm
+2024-02-08 15:20:03.779  INFO 24344 --- [           main] org.apache.camel.main.MainSupport   : Apache Camel (JBang) 4.3.0 is starting
+2024-02-08 15:20:03.963  INFO 24344 --- [           main] org.apache.camel.main.MainSupport   : Using Java 17.0.8.1 with PID 24344. Started by vicgu in C:\dev_projects\parc\justice\dems\code\jpss-jade-ccm\src\main\java\ccm
+/c/dev_projects/parc/justice/dems/code/jpss-jade-ccm

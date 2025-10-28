@@ -1,0 +1,1296 @@
+{
+	"info": {
+		"_postman_id": "87079c23-5457-48d5-8f0b-d53c5cf53f50",
+		"name": "DEMS Integration APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "DEMS",
+			"item": [
+				{
+					"name": "Case",
+					"item": [
+						{
+							"name": "GetCaseIdByKey",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/173297.0877/id",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"cases",
+										"173297.0877",
+										"id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseList",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/list",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"cases",
+										"list"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseDataById",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/28",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"28"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseDataById Copy",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/28",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"28"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "CreateCase - PST",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"name\":\"\",\"key\":\"171441.0877\",\"description\":\"\",\"timeZoneId\":\"Pacific Standard Time\",\"templateCase\":\"4\",\"fields\":[{\"name\":\"Agency File ID\",\"value\":\"171441.0877\"},{\"name\":\"Agency File No.\",\"value\":\"401: 20-999999901\"},{\"name\":\"Submit Date\",\"value\":\"2020-05-25 07:00:00\"},{\"name\":\"Assessment Crown\",\"value\":\"Walsh, David Joe\"},{\"name\":\"Case Decision\",\"value\":null},{\"name\":\"Proposed Charges\",\"value\":\"\"},{\"name\":\"Initiating Agency\",\"value\":\"401: Vancouver Police Department\"},{\"name\":\"Investigating Officer\",\"value\":\"Jewett, Jhanna Lex VA2214\"},{\"name\":\"Case Flags\",\"value\":[]},{\"name\":\"Offence Date (earliest)\",\"value\":\"2019-12-19 08:00:00\"},{\"name\":\"Proposed Appr. Date (earliest)\",\"value\":null},{\"name\":\"Proposed Process Type\",\"value\":\"\"},{\"name\":\"Proposed Crown Office\",\"value\":\"C202: Vancouver Provincial\"},{\"name\":\"Limitation Date\",\"value\":null},{\"name\":\"Accused Full Name\",\"value\":\"\"},{\"name\":\"RCC Status\",\"value\":null},{\"name\":\"Last JUSTIN Update\",\"value\":\"2022-11-09 00:54:46\"}]}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"cases"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddParticipantToCase",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"personIdOrKey\" : \"DA.accused.4\",\r\n  \"participantType\": \"Accused\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/91/participants",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"91",
+										"participants"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdateCase - PST",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"name\":\"FARRIS, Ann\",\"key\":\"173256.0877\",\"fields\":[{\"name\":\"Initial Appr.\",\"value\":\"2022-11-23 17:30:00.000\"},{\"name\":\"Initial Appr. Rsn\",\"value\":\"FA\"},{\"name\":\"Next Appr.\",\"value\":\"2022-11-23 17:30:00.000\"},{\"name\":\"Next Appr. Rsn\",\"value\":\"FA\"},{\"name\":\"First Trial\",\"value\":null},{\"name\":\"First Trial Rsn\",\"value\":null}]}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/28",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"28"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GroupMembersSync",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"keyField\":\"key\",\"values\":[\"122204.0734\",\"122205.0734\",\"122206.0734\"]}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/148/groups/8/sync",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"148",
+										"groups",
+										"8",
+										"sync"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetGroups",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/110/groups",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"110",
+										"groups"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "CaseUsersSync",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"userKeys\": [\r\n    \"85064.0734\"\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/58/case-users/sync",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"58",
+										"case-users",
+										"sync"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseSchema",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/28/schema",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"28",
+										"schema"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCaseParticipants",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/91/participants?participantType=Accused",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"91",
+										"participants"
+									],
+									"query": [
+										{
+											"key": "participantType",
+											"value": "Accused"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteCase",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/96",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"96"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "FindCaseIdsByCustomFields",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/cases/45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder/id",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"cases",
+										"45:CCC%20344(1)(b)%20Robbery,%20CCC%20231%201%20St%20Murder",
+										"id"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Person",
+					"item": [
+						{
+							"name": "CreatePerson",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"key\": \"DA.accused.8\",\r\n  \"name\": \"Accused The Eighth Person 1900-01-08\",\r\n  \"firstName\": \"Accused\",\r\n  \"lastName\": \"Person\",\r\n  \"address\": {\r\n      \"email\": null\r\n  },\r\n  \"fields\": [\r\n    {\r\n      \"name\": \"Date of Birth\",\r\n      \"value\": \"1900-01-08\"\r\n    },\r\n    {\r\n      \"name\": \"Given Name 2\",\r\n      \"value\": \"The\"\r\n    },\r\n    {\r\n      \"name\": \"Given Name 3\",\r\n      \"value\": \"Eighth\"\r\n    },\r\n    {\r\n      \"name\": \"Full Name\",\r\n      \"value\": \"Accused The Eighth Person\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"persons"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdatePerson",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"id\":\"25\",\"key\":\"170069.0877\",\"name\":\"Bill Jackson\",\"firstName\":\"Bill\",\"lastName\":\"Jackson\",\"fields\":[{\"name\":\"Given Name 2\",\"value\":null},{\"name\":\"Given Name 3\",\"value\":null},{\"name\":\"Full Name\",\"value\":\"Bill Jackson  ()\"}],\"address\":{\"email\":null},\"orgs\":[{\"organisationId\":\"25\"}]}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons/170069.0877",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"persons",
+										"170069.0877"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetPerson",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/persons/170069.0877",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"persons",
+										"170069.0877"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Record",
+					"item": [
+						{
+							"name": "GetRecord",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/243/records/",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"243",
+										"records",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetRecord Copy",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteRecord",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records/2",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records",
+										"2"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddRecord",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"descriptions\": \"NARRATIVE\",\r\n  \"title\": \"105: 21-1510\",\r\n  \"startDate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"originalFileNumber\": \"105: 21-1510\",\r\n  \"dateToCrown\": \"2023-03-07T07:03:07.089Z\",\r\n  \"source\": \"JUSTIN\",\r\n  \"folder\": \"JUSTIN\",\r\n  \"documentId\": \"NARRATIVE105: 21-15102023-03-15T07:03:07.089Z\",\r\n  \"fileExtension\": \".pdf\",\r\n  \"primaryDateUtc\": \"2023-03-07T07:03:07.089Z\",\r\n  \"type\": \"NARRATIVE\",\r\n  \"lastApiRecordUpdate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"fields\": [\r\n    {\r\n      \"name\": \"Descriptions\",\r\n      \"value\": \"NARRATIVE\"\r\n    },\r\n    {\r\n      \"name\": \"Start Date\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Date to Crown\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Source\",\r\n      \"value\": \"JUSTIN\"\r\n    },\r\n    {\r\n      \"name\": \"File Extension\",\r\n      \"value\": \".pdf\"\r\n    },\r\n    {\r\n      \"name\": \"Document ID\",\r\n      \"value\": \"NARRATIVE105: 21-15102023-03-15T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Title\",\r\n      \"value\": \"105: 21-1510\"\r\n    },\r\n    {\r\n      \"name\": \"Type\",\r\n      \"value\": \"\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/251/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"251",
+										"records"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AttachDocument",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "filepdf",
+											"type": "file",
+											"src": "/D:/dev/justice/dems/decodedFile.pdf"
+										}
+									],
+									"options": {
+										"raw": {
+											"language": "text"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/251/records/1/Native",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"251",
+										"records",
+										"1",
+										"Native"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddRecord Copy",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"title\": \"Test document\",\r\n  \"documentId\": \"TEST-001\",\r\n  \"fileExtension\": \".pdf\",\r\n  \"primaryDateUtc\": \"2023-03-07T07:03:07.089Z\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/84/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"84",
+										"records"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "AddRecord Copy 2",
+							"protocolProfileBehavior": {
+								"disabledSystemHeaders": {}
+							},
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"descriptions\": \"NARRATIVE\",\r\n  \"title\": \"105: 21-1510\",\r\n  \"startDate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"originalFileNumber\": \"105: 21-1510\",\r\n  \"dateToCrown\": \"2023-03-07T07:03:07.089Z\",\r\n  \"source\": \"JUSTIN\",\r\n  \"folder\": \"JUSTIN\",\r\n  \"documentId\": \"NARRATIVE105: 21-15102023-03-15T07:03:07.089Z\",\r\n  \"fileExtension\": \".pdf\",\r\n  \"primaryDateUtc\": \"2023-03-07T07:03:07.089Z\",\r\n  \"type\": \"NARRATIVE\",\r\n  \"lastApiRecordUpdate\": \"2023-03-07T07:03:07.089Z\",\r\n  \"fields\": [\r\n    {\r\n      \"name\": \"Descriptions\",\r\n      \"value\": \"NARRATIVE\"\r\n    },\r\n    {\r\n      \"name\": \"Start Date\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Date to Crown\",\r\n      \"value\": \"2023-03-07T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Source\",\r\n      \"value\": \"JUSTIN\"\r\n    },\r\n    {\r\n      \"name\": \"File Extension\",\r\n      \"value\": \".pdf\"\r\n    },\r\n    {\r\n      \"name\": \"Document ID\",\r\n      \"value\": \"NARRATIVE105: 21-15102023-03-15T07:03:07.089Z\"\r\n    },\r\n    {\r\n      \"name\": \"Title\",\r\n      \"value\": \"105: 21-1510\"\r\n    },\r\n    {\r\n      \"name\": \"Type\",\r\n      \"value\": \"\"\r\n    }\r\n  ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{DEMS-API-URI}}/cases/251/records",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"cases",
+										"251",
+										"records"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "User",
+					"item": [
+						{
+							"name": "GetUserCases",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{DEMS-API-URI}}/org-units/1/users/key:122201.0734/cases",
+									"host": [
+										"{{DEMS-API-URI}}"
+									],
+									"path": [
+										"org-units",
+										"1",
+										"users",
+										"key:122201.0734",
+										"cases"
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"auth": {
+						"type": "bearer",
+						"bearer": [
+							{
+								"key": "token",
+								"value": "{{DEMS-Token}}",
+								"type": "string"
+							}
+						]
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "GetVersion",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/version",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetHealth",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/health",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetSwagger",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/swagger/index.html",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"swagger",
+								"index.html"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCustomFields-old",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/site/fields?organisationalUnitId=1",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"site",
+								"fields"
+							],
+							"query": [
+								{
+									"key": "organisationalUnitId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCustomFields",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{DEMS-API-URI}}/org-units/1/fields",
+							"host": [
+								"{{DEMS-API-URI}}"
+							],
+							"path": [
+								"org-units",
+								"1",
+								"fields"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "ISL-DEMS-Adapter",
+			"item": [
+				{
+					"name": "GetVersion",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "WQBI1PxcVbgTSklhLljJE92SY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ccm-dems-edge-adapter-dev.apps.silver.devops.gov.bc.ca/v1/version",
+							"protocol": "https",
+							"host": [
+								"ccm-dems-edge-adapter-dev",
+								"apps",
+								"silver",
+								"devops",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetDEMSVersionViaAdapter",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "WQBI1PxcVbgTSklhLljJE92SY",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ccm-dems-edge-adapter-dev.apps.silver.devops.gov.bc.ca/dems/v1/version",
+							"protocol": "https",
+							"host": [
+								"ccm-dems-edge-adapter-dev",
+								"apps",
+								"silver",
+								"devops",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"dems",
+								"v1",
+								"version"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "JUSTIN",
+			"item": [
+				{
+					"name": "health",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{DEMS-Token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{JUSTIN-API-URI}}/health",
+							"host": [
+								"{{JUSTIN-API-URI}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "newEventsBatch",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/newEventsBatch",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"newEventsBatch"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "inProgressEvents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/inProgressEvents",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"inProgressEvents"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "eventStatus",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"event_message_id\":\"2005\",\r\n \"is_success\":\"F\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/eventStatus",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"eventStatus"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "queueEvents",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/queueEvents",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"queueEvents"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "eventByIdOrGuid",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "event",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventById",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventById?id=2753",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventById"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "2753",
+									"description": "event_message_id"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventsLast1Hour",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"system\":\"DEMS\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast1Hour",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsLast1Hour"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "2003",
+									"description": "event_message_id",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventsLast24Hours",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"system\":\"DEMS\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsLast24Hours",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsLast24Hours"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "requeueEventSByDateRange Copy",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"from_dt\":\"18-MAY-2022\",\r\n \"to_dt\":\"19-MAY-2022\",\r\n \"system\":\"DEMS\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://dev.jag.gov.bc.ca/ords/devj/justinords/dems/v1/requeueEventsByDtRange",
+							"protocol": "https",
+							"host": [
+								"dev",
+								"jag",
+								"gov",
+								"bc",
+								"ca"
+							],
+							"path": [
+								"ords",
+								"devj",
+								"justinords",
+								"dems",
+								"v1",
+								"requeueEventsByDtRange"
+							],
+							"query": [
+								{
+									"key": "from_dt",
+									"value": "2022-05-18 00:00:00",
+									"disabled": true
+								},
+								{
+									"key": "to_dt",
+									"value": "2022-05-19 00:00:00",
+									"disabled": true
+								},
+								{
+									"key": "system",
+									"value": "DEMS",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{DEMS-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

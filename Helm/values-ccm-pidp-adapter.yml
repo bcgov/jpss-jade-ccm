@@ -1,0 +1,122 @@
+name: ccm-pidp-adapter
+namespace: <PLACEHOLDER_NAMESPACE>
+replicas: 1
+labels:
+  integration: ccm-pidp-adapter
+  camel_generation: '1'
+annotations:
+  operator_id: camel-k
+image:
+  registry: image-registry.openshift-image-registry.svc:5000
+  namespace: <PLACEHOLDER_NAMESPACE>
+  name: camel-k-kit-ctb4a3nmil8713q5oljg
+  tag: sha256:4c9bb36f09f0bcaf0d171876ead6a545c860a7920dd5931138f74a94aa00b10b
+  pullPolicy: IfNotPresent
+container:
+  name: integration
+  command:
+  - /bin/sh
+  - -c
+  args:
+  - echo exec java -Xmx525M -cp ./resources:/etc/camel/application.properties:/etc/camel/conf.d/_configmaps/ccm-configs:/etc/camel/conf.d/user.properties:/etc/camel/resources:/etc/camel/resources/ccm-models.jar:/etc/camel/sources/CcmPidpAdapter.java:dependencies/app/camel-k-integration-1.10.8.jar
+  workingDir: /deployments
+  resources:
+    requests:
+      cpu: 5m
+      memory: 500Mi
+    limits:
+      cpu: 200m
+      memory: 1000Mi
+  ports:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+env:
+- name: CAMEL_K_DIGEST
+  value: vzbMnRKpRWwrdsWb_B25RvpD2pVenB_2LY6Y1g1K6o6E
+- name: CAMEL_K_CONF
+  value: /etc/camel/application.properties
+- name: CAMEL_K_CONF_D
+  value: /etc/camel/conf.d
+- name: CAMEL_K_VERSION
+  value: 1.10.8
+- name: CAMEL_K_OPERATOR_ID
+  value: camel-k
+- name: CAMEL_K_INTEGRATION
+  value: ccm-pidp-adapter
+- name: CAMEL_K_RUNTIME_VERSION
+  value: 1.15.6.redhat-00051
+- name: CAMEL_K_MOUNT_PATH_CONFIGMAPS
+  value: /etc/camel/conf.d/_configmaps
+- name: CAMEL_K_MOUNT_PATH_SECRETS
+  value: /etc/camel/conf.d/_secrets
+- name: NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: TZ
+  value: Canada/Pacific
+- name: QUARKUS_LOG_LEVEL
+  value: INFO
+- name: QUARKUS_LOG_CONSOLE_JSON
+  value: 'false'
+- name: QUARKUS_LOG_CONSOLE_COLOR
+  value: 'true'
+volumes:
+- name: i-source-000
+  configMap:
+    name: ccm-pidp-adapter-source-000
+    items:
+    - key: content
+      path: CcmPidpAdapter.java
+- name: user-properties
+  configMap:
+    name: ccm-pidp-adapter-user-properties
+    items:
+    - key: application.properties
+      path: user.properties
+- name: application-properties
+  configMap:
+    name: ccm-pidp-adapter-application-properties
+    items:
+    - key: application.properties
+      path: application.properties
+- name: ccm-configs
+  configMap:
+    name: ccm-configs
+- name: ccm-secrets
+  secret:
+    secretName: ccm-secrets
+- name: cm-d68cdb7dcfac17c4be9fdc29aa57520db5d564a9
+  configMap:
+    name: cm-d68cdb7dcfac17c4be9fdc29aa57520db5d564a9
+    items:
+    - key: ccm-models.jar
+      path: ccm-models.jar
+volumeMounts:
+- name: i-source-000
+  mountPath: /etc/camel/sources/CcmPidpAdapter.java
+  subPath: CcmPidpAdapter.java
+  readOnly: true
+- name: user-properties
+  mountPath: /etc/camel/conf.d/user.properties
+  subPath: user.properties
+  readOnly: true
+- name: application-properties
+  mountPath: /etc/camel/application.properties
+  subPath: application.properties
+  readOnly: true
+- name: ccm-configs
+  mountPath: /etc/camel/conf.d/_configmaps/ccm-configs
+  readOnly: true
+- name: ccm-secrets
+  mountPath: /etc/camel/conf.d/_secrets/ccm-secrets
+  readOnly: true
+- name: cm-d68cdb7dcfac17c4be9fdc29aa57520db5d564a9
+  mountPath: /etc/camel/resources/ccm-models.jar
+  subPath: ccm-models.jar
+  readOnly: true

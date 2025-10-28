@@ -22,4 +22,4 @@ echo "`basename $0` to $ns ..."
 export TITLEPREFIX="PIDP Adapter $ns "
 echo -ne "\e]0;PIDP Adapter $ns\a"
 
-kamel -n $ns log ccm-pidp-adapter
+oc -n $ns logs -f deployment/ccm-pidp-adapter

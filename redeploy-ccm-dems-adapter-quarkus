@@ -1,0 +1,5 @@
+pushd scripts/jade-ccm
+
+./redeploy-ccm-dems-adapter-quarkus $1
+
+popd
