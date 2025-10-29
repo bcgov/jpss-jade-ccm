@@ -1,5 +1,0 @@
-pushd scripts/jade-ccm
-
-./redeploy-ccm-lookup-service-quarkus $1
-
-popd

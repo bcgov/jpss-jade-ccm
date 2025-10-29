@@ -1,5 +1,0 @@
-pushd scripts/jade-ccm
-
-./redeploy-ccm-justin-events-adapter-quarkus $1
-
-popd
