@@ -71,28 +71,29 @@ jobs:
       - name: 🧱 Build and install CCM models
         run: |
           set -e
-          echo "🏗️ Building and installing CCM models..."
+          echo "🏗️ Building and installing CCM models (and utils)..."
           mkdir -p target/classes
-          if [ -d "src/main/java/ccm/models" ]; then
-            echo "Compiling model classes..."
-            find src/main/java/ccm/models -name "*.java" > /tmp/models.txt
-            if [ -s /tmp/models.txt ]; then
-              javac --release 17 -d target/classes @/tmp/models.txt
-              echo "Creating ccm-models.jar..."
-              (cd target/classes && jar cf ccm-models.jar ccm/models)
-              mvn -q install:install-file \
-                -Dfile=target/classes/ccm-models.jar \
-                -DgroupId=src.main.resources \
-                -DartifactId=ccm-models \
-                -Dversion=1.0 \
-                -Dpackaging=jar
-              echo "✅ Installed ccm-models.jar to local Maven repo"
-            else
-              echo "❌ No model sources found under src/main/java/ccm/models"
-              exit 1
-            fi
+      
+          # Collect model and utils sources
+          find src/main/java/ccm/models src/main/java/ccm/utils -name "*.java" > /tmp/models.txt || true
+      
+          if [ -s /tmp/models.txt ]; then
+            echo "Compiling model + utils classes..."
+            javac --release 17 -d target/classes @/tmp/models.txt
+      
+            echo "Creating ccm-models.jar..."
+            (cd target/classes && jar cf ccm-models.jar ccm/models ccm/utils)
+      
+            mvn -q install:install-file \
+              -Dfile=target/classes/ccm-models.jar \
+              -DgroupId=src.main.resources \
+              -DartifactId=ccm-models \
+              -Dversion=1.0 \
+              -Dpackaging=jar
+      
+            echo "✅ Installed ccm-models.jar with models + utils"
           else
-            echo "❌ Missing src/main/java/ccm/models directory"
+            echo "❌ No model or utils sources found!"
             exit 1
           fi
 
