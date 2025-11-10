@@ -70,7 +70,7 @@ jobs:
           set -e
           echo "Building and installing CCM models..."
           chmod +x ./build-install-ccm-models
-          ./build-install-ccm-models
+          ./build-install-ccm-models $APP $ENV
 
       - name: 🚀 Deploy Quarkus Service
         run: |
