@@ -71,18 +71,19 @@ jobs:
       - name: 🧱 Build and install CCM models
         run: |
           set -e
-          echo "🏗️ Building and installing CCM models (and utils)..."
+          echo "🏗️ Building and installing CCM models (all shared CCM packages)..."
+      
           mkdir -p target/classes
       
-          # Collect model and utils sources
-          find src/main/java/ccm/models src/main/java/ccm/utils -name "*.java" > /tmp/models.txt || true
+          # compile every CCM Java source file
+          find src/main/java/ccm -name "*.java" > /tmp/ccm_sources.txt || true
       
-          if [ -s /tmp/models.txt ]; then
-            echo "Compiling model + utils classes..."
-            javac --release 17 -d target/classes @/tmp/models.txt
+          if [ -s /tmp/ccm_sources.txt ]; then
+            echo "Compiling all CCM shared sources..."
+            javac --release 17 -d target/classes @/tmp/ccm_sources.txt
       
-            echo "Creating ccm-models.jar..."
-            (cd target/classes && jar cf ccm-models.jar ccm/models ccm/utils)
+            echo "Creating ccm-models.jar (full shared classes)..."
+            (cd target/classes && jar cf ccm-models.jar ccm)
       
             mvn -q install:install-file \
               -Dfile=target/classes/ccm-models.jar \
@@ -91,11 +92,12 @@ jobs:
               -Dversion=1.0 \
               -Dpackaging=jar
       
-            echo "✅ Installed ccm-models.jar with models + utils"
+            echo "✅ Installed ccm-models.jar containing all ccm/* packages"
           else
-            echo "❌ No model or utils sources found!"
+            echo "❌ No CCM sources found under src/main/java/ccm"
             exit 1
           fi
+
 
       # ------------------------------------------------------------
       # STEP 2: Build the selected app (ccm-xxx-adapter)
