@@ -1,12 +1,38 @@
 #!/bin/bash
 set -e
 
-echo "Building CCM Quarkus modules..."
+APP=$1
+ENV=$2
 
-# Always run from repo root
-cd "$(dirname "$0")/.."
+if [ -z "$APP" ]; then
+  echo " No application name provided. Please pass the app name as the first argument."
+  exit 1
+fi
 
-# Clean and build all modules without tests
-mvn clean package -DskipTests
+echo "Building Quarkus module for: $APP (environment: ${ENV:-not specified})"
 
-echo "CCM modules built successfully. No manual ccm-models.jar installation required."
+# Go to repo root
+cd "$(dirname "$0")"
+
+# Check if folder exists
+if [ ! -d "$APP" ]; then
+  echo "Application folder not found: $APP"
+  echo "   Available folders:"
+  find . -maxdepth 1 -type d -name "ccm-*"
+  exit 1
+fi
+
+# Check for pom.xml
+if [ ! -f "$APP/pom.xml" ]; then
+  echo "No pom.xml found in $APP"
+  exit 1
+fi
+
+# Build the selected app
+echo "--------------------------------------------"
+echo "Running: mvn -f $APP/pom.xml clean package -DskipTests"
+echo "--------------------------------------------"
+
+mvn -f "$APP/pom.xml" clean package -DskipTests
+
+echo "✅ Successfully built module: $APP"
