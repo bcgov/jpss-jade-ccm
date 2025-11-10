@@ -1,5 +1,27 @@
-echo "building ccm model and adding to local Maven"
+#!/bin/bash
+set -e
 
-. ./repackage-ccm-models 
+echo "Building and installing CCM models to local Maven..."
 
-mvn install:install-file -Dfile=\target\\classes\\ccm-models.jar -DgroupId=ccm -DartifactId=ccm-models -Dversion=0.0.1-SNAPSHOT -Dpackaging=jar 
+#Build the ccm-models module
+mvn -f ccm-models/pom.xml clean package -DskipTests
+
+#Find the built JAR
+MODEL_JAR=$(find ccm-models/target -name "ccm-models*.jar" | head -1)
+
+if [ ! -f "$MODEL_JAR" ]; then
+  echo "Could not find ccm-models jar after build."
+  exit 1
+fi
+
+echo "Found model jar: $MODEL_JAR"
+
+#Install into local Maven repo
+mvn install:install-file \
+  -Dfile="$MODEL_JAR" \
+  -DgroupId=ccm \
+  -DartifactId=ccm-models \
+  -Dversion=0.0.1-SNAPSHOT \
+  -Dpackaging=jar
+
+echo "CCM models successfully installed to local Maven."
