@@ -1,22 +1,24 @@
 #!/bin/bash
 set -e
+echo "Building CCM model and adding to local Maven..."
 
-echo "Building and installing CCM models to local Maven..."
+# Ensure any previous build is clean
+mvn clean package -DskipTests
 
-#Build the ccm-models module
-mvn -f ccm-models/pom.xml clean package -DskipTests
+# Path to the built classes
+MODEL_JAR="target/classes/ccm-models.jar"
 
-#Find the built JAR
-MODEL_JAR=$(find ccm-models/target -name "ccm-models*.jar" | head -1)
-
+# If Quarkus changed the structure, try fallback location
 if [ ! -f "$MODEL_JAR" ]; then
-  echo "Could not find ccm-models jar after build."
+  MODEL_JAR=$(find . -name "ccm-models*.jar" | head -1)
+fi
+
+if [ -z "$MODEL_JAR" ] || [ ! -f "$MODEL_JAR" ]; then
+  echo "Could not find ccm-models.jar after build!"
   exit 1
 fi
 
-echo "Found model jar: $MODEL_JAR"
-
-#Install into local Maven repo
+echo "Installing $MODEL_JAR into local Maven..."
 mvn install:install-file \
   -Dfile="$MODEL_JAR" \
   -DgroupId=ccm \
