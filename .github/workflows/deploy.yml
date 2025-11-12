@@ -71,33 +71,8 @@ jobs:
       - name: 🧱 Build and install CCM models
         run: |
           set -e
-          echo "🏗️ Building and installing CCM models (all shared CCM packages)..."
-      
-          mkdir -p target/classes
-      
-          # compile every CCM Java source file
-          find src/main/java/ccm -name "*.java" > /tmp/ccm_sources.txt || true
-      
-          if [ -s /tmp/ccm_sources.txt ]; then
-            echo "Compiling all CCM shared sources..."
-            javac --release 17 -d target/classes @/tmp/ccm_sources.txt
-      
-            echo "Creating ccm-models.jar (full shared classes)..."
-            (cd target/classes && jar cf ccm-models.jar ccm)
-      
-            mvn -q install:install-file \
-              -Dfile=target/classes/ccm-models.jar \
-              -DgroupId=src.main.resources \
-              -DartifactId=ccm-models \
-              -Dversion=1.0 \
-              -Dpackaging=jar
-      
-            echo "✅ Installed ccm-models.jar containing all ccm/* packages"
-          else
-            echo "❌ No CCM sources found under src/main/java/ccm"
-            exit 1
-          fi
-
+          echo "🏗️ Building CCM models using existing POM..."
+          mvn -f pom.xml clean install -DskipTests -q
 
       # ------------------------------------------------------------
       # STEP 2: Build the selected app (ccm-xxx-adapter)
