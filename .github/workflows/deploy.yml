@@ -71,8 +71,13 @@ jobs:
       - name: 🧱 Build and install CCM models
         run: |
           set -e
-          echo "🏗️ Building CCM models using existing POM..."
-          mvn -f pom.xml clean install -DskipTests
+          echo "🏗️ Building CCM models..."
+          if [ -d "src/main/java/ccm" ]; then
+            mvn -B -f pom.xml clean install -DskipTests
+            echo "✅ Installed CCM shared models JAR"
+          else
+            echo "⚠️ No CCM source folder found. Skipping shared model build."
+          fi
 
       # ------------------------------------------------------------
       # STEP 2: Build the selected app (ccm-xxx-adapter)
