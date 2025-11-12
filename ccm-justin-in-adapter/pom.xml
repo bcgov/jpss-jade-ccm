@@ -84,7 +84,7 @@
         <!-- CCM Models -->
         <dependency>
           <groupId>ccm</groupId>
-          <artifactId>ccm</artifactId>
+          <artifactId>ccm-models</artifactId>
           <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
