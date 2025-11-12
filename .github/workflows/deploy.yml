@@ -72,7 +72,7 @@ jobs:
         run: |
           set -e
           echo "🏗️ Building CCM models using existing POM..."
-          mvn -f pom.xml clean install -DskipTests -q
+          mvn -f pom.xml clean install -DskipTests
 
       # ------------------------------------------------------------
       # STEP 2: Build the selected app (ccm-xxx-adapter)
