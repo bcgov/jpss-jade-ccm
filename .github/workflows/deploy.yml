@@ -75,7 +75,18 @@ jobs:
           set -e
           echo "Building selected app: $APP ..."
           mvn -B -f "$APP/pom.xml" clean package -DskipTests
-          
+      - name: 🚀 Deploy Quarkus Service
+        run: |
+          set -e
+          echo "Checking for redeploy script: ./redeploy-$APP"
+          if [[ -f ./redeploy-$APP ]]; then
+            echo "Found script: redeploy-$APP"
+            chmod +x ./redeploy-$APP
+            ./redeploy-$APP "$ENV"
+          else
+            echo "❌ Redeploy script not found for $APP"
+            exit 1
+          fi
       - name: ✅ Deployment Summary
         if: success()
         run: |
