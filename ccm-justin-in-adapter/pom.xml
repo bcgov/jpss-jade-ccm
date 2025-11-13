@@ -87,7 +87,7 @@
           <groupId>ccm</groupId>
           <artifactId>ccm-models</artifactId>
           <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+        </dependency>    
 
         <dependency>
             <groupId>io.quarkus</groupId>
