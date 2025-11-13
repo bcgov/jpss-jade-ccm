@@ -65,10 +65,10 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      # - name: Build and install CCM models
-      #   run: |
-      #     chmod +x ./build-install-ccm-models
-      #     ./build-install-ccm-models
+      - name: Build and install CCM models
+        run: |
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
       
       - name: 🧩 Build selected Quarkus app
         run: |
