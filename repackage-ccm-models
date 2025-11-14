@@ -8,7 +8,7 @@ mvn clean compile -DskipTests
 
 # Step 2: Create the JAR if compilation succeeded
 if [ ! -d "target/classes" ]; then
-  echo "❌ No compiled classes found. Build failed."
+  echo " No compiled classes found. Build failed."
   exit 1
 fi
 
@@ -19,4 +19,4 @@ jar cvf ccm-models.jar ccm/models/*/*/*.class ccm/models/*/*/*/*.class ccm/utils
 
 popd > /dev/null
 
-echo "✅ ccm-models.jar created successfully at target/classes/"
+echo " ccm-models.jar created successfully at target/classes/"
