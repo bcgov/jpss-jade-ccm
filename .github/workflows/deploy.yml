@@ -38,7 +38,7 @@ jobs:
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
-      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      OCP_TOKEN: ${{ secrets.OCP_DEV_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
 
     steps:
@@ -66,14 +66,6 @@ jobs:
           set -e
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
-
-      - name: 🔑 Login Docker to OpenShift image registry
-        run: |
-          set -e
-          echo "Logging Docker into internal OpenShift registry..."
-          REGISTRY=image-registry.apps.silver.devops.gov.bc.ca
-          TOKEN=$(oc whoami -t)
-          docker login -u "$(oc whoami)" -p "$TOKEN" "$REGISTRY"
 
       # ------------------------------------------------------------
       # STEP 1: Repackage CCM models into target/classes/ccm-models.jar
