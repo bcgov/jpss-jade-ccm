@@ -45,36 +45,81 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
+      - name: ☕ Set up Java 17 (Temurin) + Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'maven'
+
       - name: 🔧 Install OpenShift CLI (oc)
         run: |
           set -e
-          echo "Installing OpenShift CLI..."
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/
+          rm -f oc.tar.gz
           oc version --client
 
       - name: 🔐 Login to OpenShift
         run: |
           set -e
-          echo "Logging into OpenShift..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      - name: 🧱 Repackage CCM Models
+      # ------------------------------------------------------------
+      # STEP 1: Repackage CCM models into target/classes/ccm-models.jar
+      # (Adapters' POMs reference ../target/classes/ccm-models.jar with system scope)
+      # ------------------------------------------------------------
+      - name: 🧱 Repackage CCM models (compile & jar)
         run: |
           set -e
-          echo "🏗️ Compiling and packaging CCM shared models..."
-          chmod +x ./repackage-ccm-models
-          ./repackage-ccm-models
+          echo "📦 Preparing CCM models jar at target/classes/ccm-models.jar"
 
+          # Ensure Java 17 is active
+          java -version
+          mvn -version
+
+          # Resolve compile classpath from root POM (has the deps like Jackson, javax.json)
+          mkdir -p target/classes
+          mvn -q -f pom.xml dependency:build-classpath -DincludeScope=compile -Dmdep.outputFile=target/cp.txt
+
+          CP=$(cat target/cp.txt)
+          echo "Classpath length: ${#CP}"
+
+          # Collect only CCM model sources (these live under src/main/java/ccm/**)
+          # Some repos include properties under src/main/java/ccm; javac safely ignores non-.java
+          find src/main/java/ccm -type f -name '*.java' > target/ccm_sources.txt
+
+          if [ ! -s target/ccm_sources.txt ]; then
+            echo "❌ No CCM Java sources found under src/main/java/ccm"
+            exit 1
+          fi
+
+          # Compile with classpath
+          javac --release 17 -cp "$CP" -d target/classes @target/ccm_sources.txt
+
+          # Create the jar exactly where module POMs expect it
+          (cd target/classes && jar cf ccm-models.jar ccm)
+
+          # Sanity check
+          ls -l target/classes/ccm-models.jar
+
+      # ------------------------------------------------------------
+      # STEP 2: Build selected Quarkus adapter
+      # (Relies on ../target/classes/ccm-models.jar via <scope>system</scope> dep)
+      # ------------------------------------------------------------
       - name: 🧩 Build selected Quarkus app
         run: |
           set -e
           echo "Building selected app: $APP ..."
+          test -f "$APP/pom.xml" || { echo "❌ No pom.xml in $APP"; exit 1; }
+          # Because adapters reference a system-scoped jar, nothing to install to local .m2 is required
           mvn -B -f "$APP/pom.xml" clean package -DskipTests
-          echo "✅ Build successful for $APP"
 
+      # ------------------------------------------------------------
+      # STEP 3: Deploy via the repo's existing redeploy script
+      # ------------------------------------------------------------
       - name: 🚀 Deploy Quarkus Service
         run: |
           set -e
@@ -90,4 +135,4 @@ jobs:
       - name: ✅ Deployment Summary
         if: success()
         run: |
-          echo "✅ Successfully built and deployed $APP to environment: $ENV (namespace: $OCP_PROJECT)"
+          echo "✅ Successfully built and deployed $APP to $ENV (namespace: $OCP_PROJECT)"
