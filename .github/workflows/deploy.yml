@@ -26,10 +26,7 @@ on:
         required: true
         type: choice
         default: dev
-        options:
-          - dev
-          - test
-          - prod
+        options: [dev, test, prod]
 
 jobs:
   deploy:
@@ -55,7 +52,6 @@ jobs:
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/
-          rm -f oc.tar.gz
           oc version --client
 
       - name: 🔐 Login to OpenShift
@@ -65,62 +61,25 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      # ------------------------------------------------------------
-      # STEP 1: Repackage CCM Models (build shared JAR)
-      # ------------------------------------------------------------
       - name: 🧱 Repackage CCM Models
         run: |
           set -e
-          echo "🏗️ Compiling and repackaging CCM models into JAR..."
+          echo "🏗️ Compiling and packaging CCM shared models..."
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
 
-          # Force compilation of CCM Java classes
-          mvn -q clean compile -DskipTests
-
-          # Check if compiled classes exist
-          if [ ! -d "target/classes/ccm" ]; then
-            echo "⚠️ No compiled CCM classes found, skipping jar creation."
-            exit 0
-          fi
-
-          echo "📦 Creating ccm-models.jar..."
-          pushd target/classes/ > /dev/null
-          jar cf ccm-models.jar $(find ccm -name "*.class") || true
-          popd > /dev/null
-
-          if [ -f target/classes/ccm-models.jar ]; then
-            echo "✅ ccm-models.jar created successfully."
-          else
-            echo "⚠️ No classes found to package, skipping."
-          fi
-
-
-      # ------------------------------------------------------------
-      # STEP 2: Build the selected Quarkus app
-      # ------------------------------------------------------------
       - name: 🧩 Build selected Quarkus app
         run: |
           set -e
-          echo "🏗️ Building selected app: $APP ..."
-          if [ ! -d "$APP" ]; then
-            echo "❌ Directory for $APP not found!"
-            exit 1
-          fi
-          if [ ! -f "$APP/pom.xml" ]; then
-            echo "❌ No pom.xml found in $APP directory!"
-            exit 1
-          fi
+          echo "Building selected app: $APP ..."
           mvn -B -f "$APP/pom.xml" clean package -DskipTests
           echo "✅ Build successful for $APP"
 
-      # ------------------------------------------------------------
-      # STEP 3: Deploy the built app to OpenShift
-      # ------------------------------------------------------------
       - name: 🚀 Deploy Quarkus Service
         run: |
           set -e
           echo "Checking for redeploy script: ./redeploy-$APP"
           if [[ -f "./redeploy-$APP" ]]; then
-            echo "Found script: redeploy-$APP"
             chmod +x "./redeploy-$APP"
             ./redeploy-$APP "$ENV"
           else
@@ -128,9 +87,6 @@ jobs:
             exit 1
           fi
 
-      # ------------------------------------------------------------
-      # STEP 4: Summary
-      # ------------------------------------------------------------
       - name: ✅ Deployment Summary
         if: success()
         run: |
