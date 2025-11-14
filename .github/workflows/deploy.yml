@@ -50,7 +50,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: 'maven'
+          cache: maven
 
       - name: 🔧 Install OpenShift CLI (oc)
         run: |
@@ -67,67 +67,58 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
+      - name: 🔑 Login Docker to OpenShift image registry
+        run: |
+          set -e
+          echo "Logging Docker into internal OpenShift registry..."
+          REGISTRY=image-registry.apps.silver.devops.gov.bc.ca
+          TOKEN=$(oc whoami -t)
+          docker login -u "$(oc whoami)" -p "$TOKEN" "$REGISTRY"
+
       # ------------------------------------------------------------
       # STEP 1: Repackage CCM models into target/classes/ccm-models.jar
-      # (Adapters' POMs reference ../target/classes/ccm-models.jar with system scope)
       # ------------------------------------------------------------
       - name: 🧱 Repackage CCM models (compile & jar)
         run: |
           set -e
           echo "📦 Preparing CCM models jar at target/classes/ccm-models.jar"
 
-          # Ensure Java 17 is active
           java -version
           mvn -version
 
-          # Resolve compile classpath from root POM (has the deps like Jackson, javax.json)
           mkdir -p target/classes
           mvn -q -f pom.xml dependency:build-classpath -DincludeScope=compile -Dmdep.outputFile=target/cp.txt
-
           CP=$(cat target/cp.txt)
-          echo "Classpath length: ${#CP}"
 
-          # Collect only CCM model sources (these live under src/main/java/ccm/**)
-          # Some repos include properties under src/main/java/ccm; javac safely ignores non-.java
           find src/main/java/ccm -type f -name '*.java' > target/ccm_sources.txt
-
           if [ ! -s target/ccm_sources.txt ]; then
             echo "❌ No CCM Java sources found under src/main/java/ccm"
             exit 1
           fi
 
-          # Compile with classpath
           javac --release 17 -cp "$CP" -d target/classes @target/ccm_sources.txt
-
-          # Create the jar exactly where module POMs expect it
           (cd target/classes && jar cf ccm-models.jar ccm)
-
-          # Sanity check
-          ls -l target/classes/ccm-models.jar
+          ls -lh target/classes/ccm-models.jar
 
       # ------------------------------------------------------------
       # STEP 2: Build selected Quarkus adapter
-      # (Relies on ../target/classes/ccm-models.jar via <scope>system</scope> dep)
       # ------------------------------------------------------------
       - name: 🧩 Build selected Quarkus app
         run: |
           set -e
-          echo "Building selected app: $APP ..."
+          echo "🏗️ Building selected app: $APP ..."
           test -f "$APP/pom.xml" || { echo "❌ No pom.xml in $APP"; exit 1; }
-          # Because adapters reference a system-scoped jar, nothing to install to local .m2 is required
           mvn -B -f "$APP/pom.xml" clean package -DskipTests
 
       # ------------------------------------------------------------
-      # STEP 3: Deploy via the repo's existing redeploy script
+      # STEP 3: Deploy via existing script
       # ------------------------------------------------------------
       - name: 🚀 Deploy Quarkus Service
         run: |
           set -e
           echo "Checking for redeploy script: ./redeploy-$APP"
           if [[ -f "./redeploy-$APP" ]]; then
-            echo "Found script: redeploy-$APP"
             chmod +x "./redeploy-$APP"
-            # recursively make all internal redeploy scripts executable
             chmod -R +x ./scripts/jade-ccm/
             ./redeploy-$APP "$ENV"
           else
@@ -135,7 +126,12 @@ jobs:
             exit 1
           fi
 
-      - name: ✅ Deployment Summary
+      # ------------------------------------------------------------
+      # STEP 4: Verify rollout
+      # ------------------------------------------------------------
+      - name: ✅ Verify rollout status
         if: success()
         run: |
-          echo "✅ Successfully built and deployed $APP to $ENV (namespace: $OCP_PROJECT)"
+          echo "⏳ Waiting for rollout of $APP in $OCP_PROJECT..."
+          oc rollout status deployment/$APP -n $OCP_PROJECT --timeout=180s || \
+          (echo "⚠️ Rollout may have failed. Listing pods:" && oc get pods -n $OCP_PROJECT | grep $APP)
