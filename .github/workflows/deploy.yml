@@ -125,7 +125,10 @@ jobs:
           set -e
           echo "Checking for redeploy script: ./redeploy-$APP"
           if [[ -f "./redeploy-$APP" ]]; then
+            echo "Found script: redeploy-$APP"
             chmod +x "./redeploy-$APP"
+            # recursively make all internal redeploy scripts executable
+            chmod -R +x ./scripts/jade-ccm/
             ./redeploy-$APP "$ENV"
           else
             echo "❌ Redeploy script not found for $APP"
