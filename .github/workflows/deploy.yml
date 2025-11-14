@@ -70,6 +70,14 @@ jobs:
       # ------------------------------------------------------------
       # STEP 1: Repackage CCM models into target/classes/ccm-models.jar
       # ------------------------------------------------------------
+      - name: 🔑 Login Docker to OpenShift image registry
+        run: |
+          set -e
+          echo "Logging Docker client into OpenShift internal registry..."
+          REGISTRY=image-registry.apps.silver.devops.gov.bc.ca
+          docker login -u "serviceaccount" -p "${{ secrets.OCP_DEPLOY_TOKEN }}" "$REGISTRY"
+          echo "✅ Authenticated as deploy service account for $OCP_PROJECT"
+          
       - name: 🧱 Repackage CCM models (compile & jar)
         run: |
           set -e
