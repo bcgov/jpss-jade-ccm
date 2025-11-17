@@ -25,12 +25,14 @@ on:
         description: 'Select the environment'
         required: true
         type: choice
-        default: dev
-        options: [dev, test, prod]
+        default: 'dev'
+        options:
+          - dev
+          - test
+          - prod
 
 jobs:
   deploy:
-    name: Deploy ${{ github.event.inputs.app }} to ${{ github.event.inputs.env }}
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.env }}
 
@@ -42,96 +44,45 @@ jobs:
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
 
     steps:
-      - name: 🧾 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: ☕ Set up Java 17 (Temurin) + Maven cache
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-
-      - name: 🔧 Install OpenShift CLI (oc)
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install OpenShift CLI (oc)
         run: |
-          set -e
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/
-          rm -f oc.tar.gz
-          oc version --client
 
-      - name: 🔐 Login to OpenShift
+      - name: Login to OpenShift
         run: |
-          set -e
-          oc login "$OCP_SERVER" --token="$OCP_TOKEN"
-          oc project "$OCP_PROJECT"
+          oc login $OCP_SERVER --token=$OCP_TOKEN
+          oc project $OCP_PROJECT
 
-      # ------------------------------------------------------------
-      # STEP 1: Repackage CCM models into target/classes/ccm-models.jar
-      # ------------------------------------------------------------
-      - name: 🔑 Login Docker to OpenShift image registry
+      - name: Install Camel K CLI
         run: |
-          set -e
-          echo "Logging Docker client into OpenShift internal registry..."
-          REGISTRY=image-registry.apps.silver.devops.gov.bc.ca
-          docker login -u "nikhil" -p "${{ secrets.OCP_DEPLOY_TOKEN }}" "$REGISTRY"
-          echo "✅ Authenticated as deploy service account for $OCP_PROJECT"
-          
-      - name: 🧱 Repackage CCM models (compile & jar)
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/
+
+      - name: Build and install CCM models
         run: |
-          set -e
-          echo "📦 Preparing CCM models jar at target/classes/ccm-models.jar"
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
 
-          java -version
-          mvn -version
-
-          mkdir -p target/classes
-          mvn -q -f pom.xml dependency:build-classpath -DincludeScope=compile -Dmdep.outputFile=target/cp.txt
-          CP=$(cat target/cp.txt)
-
-          find src/main/java/ccm -type f -name '*.java' > target/ccm_sources.txt
-          if [ ! -s target/ccm_sources.txt ]; then
-            echo "❌ No CCM Java sources found under src/main/java/ccm"
-            exit 1
-          fi
-
-          javac --release 17 -cp "$CP" -d target/classes @target/ccm_sources.txt
-          (cd target/classes && jar cf ccm-models.jar ccm)
-          ls -lh target/classes/ccm-models.jar
-
-      # ------------------------------------------------------------
-      # STEP 2: Build selected Quarkus adapter
-      # ------------------------------------------------------------
-      - name: 🧩 Build selected Quarkus app
+      - name: Deploy with script or kamel
         run: |
-          set -e
-          echo "🏗️ Building selected app: $APP ..."
-          test -f "$APP/pom.xml" || { echo "❌ No pom.xml in $APP"; exit 1; }
-          mvn -B -f "$APP/pom.xml" clean package -DskipTests
-
-      # ------------------------------------------------------------
-      # STEP 3: Deploy via existing script
-      # ------------------------------------------------------------
-      - name: 🚀 Deploy Quarkus Service
-        run: |
-          set -e
-          echo "Checking for redeploy script: ./redeploy-$APP"
-          if [[ -f "./redeploy-$APP" ]]; then
-            chmod +x "./redeploy-$APP"
-            chmod -R +x ./scripts/jade-ccm/
-            ./redeploy-$APP "$ENV"
+          cd scripts/jade-ccm
+          chmod +x ./redeploy-$APP
+          echo "Checking for deployment script: ./redeploy-$APP"
+          if [[ -f ./redeploy-$APP ]]; then
+            echo "Found script: redeploy-$APP"
+            chmod +x ./redeploy-$APP
+            ./redeploy-$APP $ENV
+          elif [[ -f integrations/$APP.java ]]; then
+             echo "Running Camel K integration: $APP"
+             kamel run integrations/$APP.java \
+               --name=$APP \
+               --namespace=$OCP_PROJECT
           else
-            echo "❌ Redeploy script not found for $APP"
+            echo "No deployment method found for $APP"
             exit 1
           fi
-
-      # ------------------------------------------------------------
-      # STEP 4: Verify rollout
-      # ------------------------------------------------------------
-      - name: ✅ Verify rollout status
-        if: success()
-        run: |
-          echo "⏳ Waiting for rollout of $APP in $OCP_PROJECT..."
-          oc rollout status deployment/$APP -n $OCP_PROJECT --timeout=180s || \
-          (echo "⚠️ Rollout may have failed. Listing pods:" && oc get pods -n $OCP_PROJECT | grep $APP)
