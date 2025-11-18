@@ -1,13 +1,13 @@
 name: Deploy to OpenShift
 
-permissions:
-  contents: read
-
+permissions: 
+  id-token: write  
+  contents: read 
 on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'Select the application to deploy'
+        description: "Select the application to deploy"
         required: true
         type: choice
         options:
@@ -21,11 +21,12 @@ on:
           - ccm-notification-service
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
+
       env:
-        description: 'Select the environment'
+        description: "Environment"
         required: true
         type: choice
-        default: 'dev'
+        default: "dev"
         options:
           - dev
           - test
@@ -47,53 +48,90 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # ---------------------------
+      # Install OC CLI
+      # ---------------------------
       - name: Install OpenShift CLI
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
-          sudo mv oc /usr/local/bin/
+          sudo mv oc /usr/local/bin/oc
 
+      # ---------------------------
+      # Login to OpenShift
+      # ---------------------------
       - name: Login to OpenShift
         run: |
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $OCP_PROJECT
 
-      #######################################################################
-      # 1. BUILD THE APPLICATION (same as you do locally)
-      #######################################################################
-      - name: Maven build (Quarkus)
+      # ---------------------------
+      # Repackage CCM MODELS
+      # (this recreates ccm-models.jar exactly like your local box)
+      # ---------------------------
+      - name: Repackage CCM models
         run: |
+          echo "🏗️ Repackaging CCM models..."
+
+          mkdir -p target/classes
+          find src/main/java/ccm/models src/main/java/ccm/utils -type f -name "*.java" > target/model_sources.txt
+
+          if [ ! -s target/model_sources.txt ]; then
+            echo "❌ No model classes found!"
+            exit 1
+          fi
+
+          javac --release 17 -d target/classes @target/model_sources.txt
+          jar cf target/classes/ccm-models.jar -C target/classes ccm/models -C target/classes ccm/utils
+
+          echo "📦 ccm-models.jar built:"
+          ls -lh target/classes/ccm-models.jar
+
+      # ---------------------------
+      # Build selected CCM app
+      # ---------------------------
+      - name: Build selected CCM app
+        run: |
+          echo "Building $APP ..."
           mvn -q -f $APP/pom.xml clean package -DskipTests
 
-      #######################################################################
-      # 2. BUILD DOCKER IMAGE (same as local)
-      #######################################################################
+      # ---------------------------
+      # Build Container Image
+      # ---------------------------
       - name: Build Docker image
         run: |
-          docker build -t $APP -f $APP/Dockerfile .
+          IMAGE="image-registry.openshift-image-registry.svc:5000/$OCP_PROJECT/$APP:latest"
+          echo "Building image: $IMAGE"
+          docker build -t $IMAGE -f $APP/Dockerfile .
 
-      #######################################################################
-      # 3. LOGIN TO OPENSHIFT INTERNAL REGISTRY
-      #######################################################################
-      - name: Login to internal OpenShift registry
+      # ---------------------------
+      # Push Image to OpenShift Internal Registry
+      # ---------------------------
+      - name: Push image to OpenShift internal registry
         run: |
-          oc registry login --to=/tmp/ocp-auth.json
-          REGISTRY=$(oc get route -n openshift-image-registry default-route -o jsonpath='{.spec.host}')
-          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          IMAGE="image-registry.openshift-image-registry.svc:5000/$OCP_PROJECT/$APP:latest"
 
-      #######################################################################
-      # 4. PUSH IMAGE TO IMAGESTREAM
-      #######################################################################
-      - name: Tag and push image
-        run: |
-          docker tag $APP ${REGISTRY}/${OCP_PROJECT}/${APP}:latest
-          docker push ${REGISTRY}/${OCP_PROJECT}/${APP}:latest
+          echo "🔐 Logging into image registry..."
+          docker login -u kubeadmin -p "$OCP_TOKEN" image-registry.openshift-image-registry.svc:5000
 
-      #######################################################################
-      # 5. TRIGGER ROLLOUT / APPLY DEPLOYMENT YAML
-      #######################################################################
-      - name: Deploy to OpenShift
+          echo "⬆️ Pushing image..."
+          docker push $IMAGE
+
+      # ---------------------------
+      # Run redeploy script
+      # ---------------------------
+      - name: Deploy using jade-ccm scripts
         run: |
-          oc rollout restart deploy/${APP} || echo "Deployment not found — skipping rollout"
-          sleep 5
-          oc rollout status deploy/${APP} || echo "Rollout may still be progressing"
+          echo "🚀 Running redeploy script for $APP ..."
+          cd scripts/jade-ccm
+
+          if [[ -f "./redeploy-$APP" ]]; then
+            chmod +x ./redeploy-$APP
+            ./redeploy-$APP $ENV
+          else
+            echo "❌ No redeploy script found for $APP"
+            exit 1
+          fi
+
+      - name: Deployment Complete
+        run: echo "🎉 Deployment completed successfully!"
