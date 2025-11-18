@@ -1,4 +1,4 @@
-name: Deploy to OpenShift (Full Build Mode)
+name: Deploy to OpenShift
 
 permissions:
   contents: read
