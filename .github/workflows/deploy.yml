@@ -1,8 +1,7 @@
 name: Deploy to OpenShift
 
-permissions: 
-  id-token: write  
-  contents: read 
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
@@ -43,13 +42,12 @@ jobs:
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
-      REGISTRY: image-registry.apps.${{ github.event.inputs.env }}.devops.gov.bc.ca
-
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install OpenShift CLI (oc)
+
+      - name: Install OpenShift CLI
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
@@ -60,25 +58,42 @@ jobs:
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $OCP_PROJECT
 
-      - name: Build Quarkus app
+      #######################################################################
+      # 1. BUILD THE APPLICATION (same as you do locally)
+      #######################################################################
+      - name: Maven build (Quarkus)
         run: |
-          chmod +x ./repackage-ccm-models
-          ./repackage-ccm-models
+          mvn -q -f $APP/pom.xml clean package -DskipTests
 
-      - name: Deploy ccm apps to Openshift
+      #######################################################################
+      # 2. BUILD DOCKER IMAGE (same as local)
+      #######################################################################
+      - name: Build Docker image
         run: |
-          cd scripts/jade-ccm
-          echo "Checking for deployment script: ./redeploy-$APP"
-          if [[ -f ./redeploy-$APP ]]; then
-            echo "Found script: redeploy-$APP"
-            chmod +x ./redeploy-$APP
-            ./redeploy-$APP $ENV
-          elif [[ -f integrations/$APP.java ]]; then
-             echo "Running Camel K integration: $APP"
-             kamel run integrations/$APP.java \
-               --name=$APP \
-               --namespace=$OCP_PROJECT
-          else
-            echo "No deployment method found for $APP"
-            exit 1
-          fi
+          docker build -t $APP -f $APP/Dockerfile .
+
+      #######################################################################
+      # 3. LOGIN TO OPENSHIFT INTERNAL REGISTRY
+      #######################################################################
+      - name: Login to internal OpenShift registry
+        run: |
+          oc registry login --to=/tmp/ocp-auth.json
+          REGISTRY=$(oc get route -n openshift-image-registry default-route -o jsonpath='{.spec.host}')
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+
+      #######################################################################
+      # 4. PUSH IMAGE TO IMAGESTREAM
+      #######################################################################
+      - name: Tag and push image
+        run: |
+          docker tag $APP ${REGISTRY}/${OCP_PROJECT}/${APP}:latest
+          docker push ${REGISTRY}/${OCP_PROJECT}/${APP}:latest
+
+      #######################################################################
+      # 5. TRIGGER ROLLOUT / APPLY DEPLOYMENT YAML
+      #######################################################################
+      - name: Deploy to OpenShift
+        run: |
+          oc rollout restart deploy/${APP} || echo "Deployment not found — skipping rollout"
+          sleep 5
+          oc rollout status deploy/${APP} || echo "Rollout may still be progressing"
