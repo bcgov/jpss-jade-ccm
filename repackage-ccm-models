@@ -1,24 +1,23 @@
 #!/bin/bash
 set -e
 
-echo "🏗️ Repackaging CCM models..."
+echo "🏗️ Repackaging CCM models using Maven..."
 
-# Compile ONLY model classes
-mkdir -p target/classes
+# Step 1 — full compile so dependencies (Jackson, javax.json) are available
+mvn -q -e -DskipTests clean package
 
-# Find all model + utils classes
-find src/main/java/ccm/models src/main/java/ccm/utils -type f -name "*.java" > target/model_sources.txt
-
-if [ ! -s target/model_sources.txt ]; then
-  echo "❌ No model classes found"
+# Step 2 — verify compiled classes exist
+if [ ! -d "target/classes/ccm/models" ]; then
+  echo "❌ Models not found in target/classes/ccm/models"
   exit 1
 fi
 
-echo "📦 Compiling model classes..."
-javac --release 17 -d target/classes @target/model_sources.txt
+# Step 3 — create jar file EXACTLY where systemPath expects it
+mkdir -p target/classes
 
-echo "📦 Packaging ccm-models.jar..."
+echo "📦 Creating ccm-models.jar ..."
+
 jar cf target/classes/ccm-models.jar -C target/classes ccm/models -C target/classes ccm/utils
 
-echo "✅ ccm-models.jar built at: target/classes/ccm-models.jar"
+echo "✅ Successfully built target/classes/ccm-models.jar"
 ls -lh target/classes/ccm-models.jar
