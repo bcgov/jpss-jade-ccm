@@ -8,30 +8,34 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: "Application"
-        type: choice
+        description: 'Select the application to deploy'
         required: true
+        type: choice
         options:
-          - ccm-lookup-service
-          - ccm-dems-adapter
-          - ccm-splunk-adapter
           - ccm-justin-in-adapter
-          - ccm-justin-out-adapter
-          - ccm-pidp-adapter
-          - ccm-reports-processor
+          - ccm-dems-adapter
+          - ccm-lookup-service
+          - ccm-splunk-adapter
           - ccm-accessdedup-processor
+          - ccm-reports-processor
+          - ccm-pidp-adapter
           - ccm-notification-service
           - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
       env:
-        description: "Environment"
-        type: choice
+        description: 'Select the environment'
         required: true
-        default: dev
-        options: [dev, test, prod]
+        type: choice
+        default: 'dev'
+        options:
+          - dev
+          - test
+          - prod
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
 
     env:
       APP: ${{ github.event.inputs.app }}
@@ -41,16 +45,11 @@ jobs:
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
       REGISTRY: image-registry.apps.${{ github.event.inputs.env }}.devops.gov.bc.ca
 
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure Java & Maven
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Install oc CLI
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install OpenShift CLI (oc)
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
