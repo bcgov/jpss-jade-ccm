@@ -71,21 +71,9 @@ jobs:
       # ---------------------------
       - name: Repackage CCM models
         run: |
-          echo "🏗️ Repackaging CCM models..."
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
 
-          mkdir -p target/classes
-          find src/main/java/ccm/models src/main/java/ccm/utils -type f -name "*.java" > target/model_sources.txt
-
-          if [ ! -s target/model_sources.txt ]; then
-            echo "❌ No model classes found!"
-            exit 1
-          fi
-
-          javac --release 17 -d target/classes @target/model_sources.txt
-          jar cf target/classes/ccm-models.jar -C target/classes ccm/models -C target/classes ccm/utils
-
-          echo "📦 ccm-models.jar built:"
-          ls -lh target/classes/ccm-models.jar
 
       # ---------------------------
       # Build selected CCM app
