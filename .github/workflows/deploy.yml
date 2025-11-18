@@ -1,4 +1,4 @@
-name: Deploy to OpenShift
+name: Deploy to OpenShift (Full Build Mode)
 
 permissions:
   contents: read
@@ -7,34 +7,30 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'Select the application to deploy'
-        required: true
+        description: "Application"
         type: choice
+        required: true
         options:
-          - ccm-justin-in-adapter
-          - ccm-dems-adapter
           - ccm-lookup-service
+          - ccm-dems-adapter
           - ccm-splunk-adapter
-          - ccm-accessdedup-processor
-          - ccm-reports-processor
+          - ccm-justin-in-adapter
+          - ccm-justin-out-adapter
           - ccm-pidp-adapter
+          - ccm-reports-processor
+          - ccm-accessdedup-processor
           - ccm-notification-service
           - ccm-justin-events-adapter
-          - ccm-justin-out-adapter
       env:
-        description: 'Select the environment'
-        required: true
+        description: "Environment"
         type: choice
-        default: 'dev'
-        options:
-          - dev
-          - test
-          - prod
+        required: true
+        default: dev
+        options: [dev, test, prod]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.env }}
 
     env:
       APP: ${{ github.event.inputs.app }}
@@ -42,11 +38,18 @@ jobs:
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
+      REGISTRY: image-registry.apps.${{ github.event.inputs.env }}.devops.gov.bc.ca
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Install OpenShift CLI (oc)
+      - uses: actions/checkout@v4
+
+      - name: Configure Java & Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install oc CLI
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
@@ -57,20 +60,36 @@ jobs:
           oc login $OCP_SERVER --token=$OCP_TOKEN
           oc project $OCP_PROJECT
 
-      - name: Install Camel K CLI
+      - name: Login to internal image registry
         run: |
-          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
-          chmod +x kamel
-          sudo mv kamel /usr/local/bin/
+          docker login -u serviceaccount -p ${{ secrets.OCP_DEPLOY_TOKEN }} $REGISTRY
 
-      - name: Run repackage CCM models
+      - name: Build CCM Models JAR
         run: |
-          chmod +x ./repackage-ccm-models
-          ./repackage-ccm-models
+          mkdir -p target/classes
+          mvn -q dependency:build-classpath -Dmdep.outputFile=target/cp.txt
+          CP=$(cat target/cp.txt)
+          find src/main/java/ccm -name "*.java" > target/ccm_sources.txt
+          javac --release 17 -cp "$CP" -d target/classes @target/ccm_sources.txt
+          (cd target/classes && jar cf ccm-models.jar ccm)
 
-      - name: Run original redeploy script
+      - name: Build Quarkus App
         run: |
-          cd scripts/jade-ccm
-          chmod -R +x .
-          echo "Running ./redeploy-$APP $ENV"
-          ./redeploy-$APP $ENV
+          mvn -f $APP/pom.xml clean package -DskipTests
+
+      - name: Build Docker Image
+        run: |
+          echo "FROM eclipse-temurin:17-focal" > Dockerfile
+          echo "COPY $APP/target/*-runner.jar /app/app.jar" >> Dockerfile
+          echo 'CMD ["java", "-jar", "/app/app.jar"]' >> Dockerfile
+          docker build -t $APP .
+
+      - name: Push to OpenShift ImageStream
+        run: |
+          docker tag $APP $REGISTRY/$OCP_PROJECT/$APP:latest
+          docker push $REGISTRY/$OCP_PROJECT/$APP:latest
+
+      - name: Trigger rollout
+        run: |
+          oc rollout restart deployment/$APP -n $OCP_PROJECT
+          oc rollout status deployment/$APP -n $OCP_PROJECT
