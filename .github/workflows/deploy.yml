@@ -63,26 +63,14 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/
 
-      - name: Build and install CCM models
+      - name: Run repackage CCM models
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy with script or kamel
+      - name: Run original redeploy script
         run: |
           cd scripts/jade-ccm
-          chmod +x ./redeploy-$APP
-          echo "Checking for deployment script: ./redeploy-$APP"
-          if [[ -f ./redeploy-$APP ]]; then
-            echo "Found script: redeploy-$APP"
-            chmod +x ./redeploy-$APP
-            ./redeploy-$APP $ENV
-          elif [[ -f integrations/$APP.java ]]; then
-             echo "Running Camel K integration: $APP"
-             kamel run integrations/$APP.java \
-               --name=$APP \
-               --namespace=$OCP_PROJECT
-          else
-            echo "No deployment method found for $APP"
-            exit 1
-          fi
+          chmod -R +x .
+          echo "Running ./redeploy-$APP $ENV"
+          ./redeploy-$APP $ENV
