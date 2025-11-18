@@ -63,10 +63,10 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/
 
-      # - name: Run repackage CCM models
-      #   run: |
-      #     chmod +x ./repackage-ccm-models
-      #     ./repackage-ccm-models
+      - name: Run repackage CCM models
+        run: |
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
 
       - name: Run original redeploy script
         run: |
