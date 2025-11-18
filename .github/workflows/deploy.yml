@@ -1,7 +1,8 @@
 name: Deploy to OpenShift
 
-permissions:
-  contents: read
+permissions: 
+  id-token: write  
+  contents: read 
 
 on:
   workflow_dispatch:
