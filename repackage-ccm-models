@@ -1,23 +1,37 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🏗️ Repackaging CCM models using Maven..."
+echo "🏗️ Repackaging CCM models..."
 
-# Step 1 — full compile so dependencies (Jackson, javax.json) are available
-mvn -q -e -DskipTests clean package
+# 1) Prepare output dir
+mkdir -p target/classes
 
-# Step 2 — verify compiled classes exist
-if [ ! -d "target/classes/ccm/models" ]; then
-  echo "❌ Models not found in target/classes/ccm/models"
+# 2) Build dependency classpath for the models using Maven
+echo "📚 Building Maven classpath for models..."
+mvn -q -f pom.xml dependency:build-classpath \
+  -DincludeScope=compile \
+  -Dmdep.outputFile=target/cp.txt
+
+CP=$(cat target/cp.txt)
+
+# 3) Collect model + utils Java sources
+echo "🔎 Collecting model + utils sources..."
+find src/main/java/ccm/models src/main/java/ccm/utils \
+  -type f -name "*.java" > target/model_sources.txt
+
+if [ ! -s target/model_sources.txt ]; then
+  echo "❌ No model classes found under src/main/java/ccm/models or src/main/java/ccm/utils"
   exit 1
 fi
 
-# Step 3 — create jar file EXACTLY where systemPath expects it
-mkdir -p target/classes
+# 4) Compile them with full classpath
+echo "🧪 Compiling model classes with javac..."
+javac --release 17 -cp "$CP" -d target/classes @target/model_sources.txt
 
+# 5) Build the ccm-models.jar where the POM expects it:
+#    ../target/classes/ccm-models.jar (relative to each app module)
 echo "📦 Creating ccm-models.jar ..."
+jar cf target/classes/ccm-models.jar -C target/classes ccm
 
-jar cf target/classes/ccm-models.jar -C target/classes ccm/models -C target/classes ccm/utils
-
-echo "✅ Successfully built target/classes/ccm-models.jar"
+echo "✅ ccm-models.jar created:"
 ls -lh target/classes/ccm-models.jar
