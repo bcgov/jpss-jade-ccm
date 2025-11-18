@@ -1,31 +1,13 @@
-#!/bin/bash
-set -e
-
-echo "🏗️ Repackaging CCM models..."
-
-# Path to model module
-MODEL_MODULE="ccm-models"
-
-# Ensure module exists
-if [ ! -d "$MODEL_MODULE" ]; then
-  echo "❌ $MODEL_MODULE directory not found. Are you in repo root?"
-  exit 1
+mvn clean test
+if [[ "$?" -ne 0 ]] ; then
+  echo 'could not perform tests';
+  return $rc
 fi
 
-echo "📦 Compiling $MODEL_MODULE ..."
-mvn -q -f $MODEL_MODULE/pom.xml clean compile -DskipTests
+# preserve current directory
+# create jar
+pushd target/classes/
+jar cvf ccm-models.jar ccm/models/*/*/*.class ccm/models/*/*/*/*.class ccm/utils/*.class
 
-# Ensure compiled classes exist
-if [ ! -d "$MODEL_MODULE/target/classes" ]; then
-  echo "❌ No compiled classes found in $MODEL_MODULE/target/classes"
-  exit 1
-fi
-
-echo "📦 Creating output directory target/classes ..."
-mkdir -p target/classes
-
-echo "📦 Building ccm-models.jar ..."
-jar cf target/classes/ccm-models.jar -C $MODEL_MODULE/target/classes .
-
-echo "✅ Successfully created: target/classes/ccm-models.jar"
-ls -lh target/classes/ccm-models.jar
+# return to current directory
+popd
