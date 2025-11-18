@@ -86,7 +86,7 @@ else
     oc -n $ns delete deployment $app
 
     # remove the image stream from the OpenShift namespace
-    oc -n $ns delete imagestream $app
+    oc -n $ns create imagestream $app
 
     # remove the OpenShift tagged image from the local docker registry
     docker rmi $image_registry_url/$ns/$app
