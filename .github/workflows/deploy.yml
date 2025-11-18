@@ -3,11 +3,12 @@ name: Deploy to OpenShift
 permissions: 
   id-token: write  
   contents: read 
+
 on:
   workflow_dispatch:
     inputs:
       app:
-        description: "Select the application to deploy"
+        description: 'Select the application to deploy'
         required: true
         type: choice
         options:
@@ -21,12 +22,11 @@ on:
           - ccm-notification-service
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
-
       env:
-        description: "Environment"
+        description: 'Select the environment'
         required: true
         type: choice
-        default: "dev"
+        default: 'dev'
         options:
           - dev
           - test
@@ -46,80 +46,53 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # ---------------------------
-      # Install OC CLI
-      # ---------------------------
-      - name: Install OpenShift CLI
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Install OpenShift CLI (oc)
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
+          oc version --client
 
-      # ---------------------------
-      # Login to OpenShift
-      # ---------------------------
       - name: Login to OpenShift
         run: |
-          oc login $OCP_SERVER --token=$OCP_TOKEN
-          oc project $OCP_PROJECT
+          oc login "$OCP_SERVER" --token="$OCP_TOKEN" --insecure-skip-tls-verify=true
+          oc project "$OCP_PROJECT"
 
-      # ---------------------------
-      # Repackage CCM MODELS
-      # (this recreates ccm-models.jar exactly like your local box)
-      # ---------------------------
-      - name: Repackage CCM models
+      - name: Install Camel K CLI (kamel)
+        run: |
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/kamel
+          kamel version || true
+
+      - name: Build CCM models jar (ccm-models.jar)
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-
-      # ---------------------------
-      # Build selected CCM app
-      # ---------------------------
-      - name: Build selected CCM app
+      - name: Deploy ${{ env.APP }} via script or Camel K
         run: |
-          echo "Building $APP ..."
-          mvn -q -f $APP/pom.xml clean package -DskipTests
-
-      # ---------------------------
-      # Build Container Image
-      # ---------------------------
-      - name: Build Docker image
-        run: |
-          IMAGE="image-registry.openshift-image-registry.svc:5000/$OCP_PROJECT/$APP:latest"
-          echo "Building image: $IMAGE"
-          docker build -t $IMAGE -f $APP/Dockerfile .
-
-      # ---------------------------
-      # Push Image to OpenShift Internal Registry
-      # ---------------------------
-      - name: Push image to OpenShift internal registry
-        run: |
-          IMAGE="image-registry.openshift-image-registry.svc:5000/$OCP_PROJECT/$APP:latest"
-
-          echo "🔐 Logging into image registry..."
-          docker login -u kubeadmin -p "$OCP_TOKEN" image-registry.openshift-image-registry.svc:5000
-
-          echo "⬆️ Pushing image..."
-          docker push $IMAGE
-
-      # ---------------------------
-      # Run redeploy script
-      # ---------------------------
-      - name: Deploy using jade-ccm scripts
-        run: |
-          echo "🚀 Running redeploy script for $APP ..."
           cd scripts/jade-ccm
-
-          if [[ -f "./redeploy-$APP" ]]; then
-            chmod +x ./redeploy-$APP
-            ./redeploy-$APP $ENV
+          chmod +x ./redeploy-"$APP"
+          echo "🔍 Checking for deployment script: ./redeploy-$APP"
+          if [[ -f ./redeploy-"$APP" ]]; then
+            echo "✅ Found script: redeploy-$APP"
+            ./redeploy-"$APP" "$ENV"
+          elif [[ -f integrations/"$APP".java ]]; then
+            echo "🚀 Running Camel K integration: $APP"
+            kamel run integrations/"$APP".java \
+              --name="$APP" \
+              --namespace="$OCP_PROJECT"
           else
-            echo "❌ No redeploy script found for $APP"
+            echo "❌ No deployment method found for $APP"
             exit 1
           fi
-
-      - name: Deployment Complete
-        run: echo "🎉 Deployment completed successfully!"
