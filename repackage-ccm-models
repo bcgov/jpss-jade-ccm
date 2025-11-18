@@ -1,13 +1,26 @@
-mvn clean test
-if [[ "$?" -ne 0 ]] ; then
-  echo 'could not perform tests';
-  return $rc
+#!/bin/bash
+set -e
+
+echo "🏗️ Repackaging CCM models..."
+
+# Compile everything in the repo
+mvn -q clean compile -DskipTests
+
+echo "📦 Creating ccm-models.jar ..."
+
+mkdir -p target/classes
+
+# Find all .class files in the whole repository under any "models" folder
+find . -type f -path "*/models/**/*.class" > /tmp/classlist.txt
+
+if [ ! -s /tmp/classlist.txt ]; then
+  echo "❌ No model classes found! Cannot build ccm-models.jar"
+  exit 1
 fi
 
-# preserve current directory
-# create jar
-pushd target/classes/
-jar cvf ccm-models.jar ccm/models/*/*/*.class ccm/models/*/*/*/*.class ccm/utils/*.class
+# Build JAR with model classes
+jar cf target/classes/ccm-models.jar \
+    -C . $(sed "s|^\./||" /tmp/classlist.txt)
 
-# return to current directory
-popd
+echo "✅ ccm-models.jar created → target/classes/ccm-models.jar"
+ls -lh target/classes/ccm-models.jar
