@@ -67,6 +67,10 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN" --insecure-skip-tls-verify=true
           oc project "$OCP_PROJECT"
 
+      - name: Login to OpenShift Image Registry
+        run: oc registry login --insecure=true
+
+
       - name: Install Camel K CLI (kamel)
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
