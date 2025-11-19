@@ -64,7 +64,7 @@ jobs:
 
       - name: Login to OpenShift
         run: |
-          oc login "$OCP_SERVER" --token="$OCP_TOKEN" --insecure-skip-tls-verify=true
+          oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
       - name: Login to OpenShift Image Registry
