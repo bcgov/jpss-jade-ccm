@@ -83,20 +83,17 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy ${{ env.APP }} via script or Camel K
+      - name: Deploy with script or kamel
         run: |
           cd scripts/jade-ccm
-          chmod +x ./redeploy-"$APP"
-          echo "🔍 Checking for deployment script: ./redeploy-$APP"
-          if [[ -f ./redeploy-"$APP" ]]; then
-            echo "✅ Found script: redeploy-$APP"
-            ./redeploy-"$APP" "$ENV"
-          elif [[ -f integrations/"$APP".java ]]; then
-            echo "🚀 Running Camel K integration: $APP"
-            kamel run integrations/"$APP".java \
-              --name="$APP" \
-              --namespace="$OCP_PROJECT"
+
+          echo "Checking for deployment script: redeploy-$APP"
+
+          if [[ -f redeploy-$APP ]]; then
+            echo "Found deployment script: redeploy-$APP"
+            chmod +x redeploy-$APP
+            ./redeploy-$APP $ENV
           else
-            echo "❌ No deployment method found for $APP"
+            echo "No deployment script found for $APP"
             exit 1
           fi
