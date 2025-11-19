@@ -41,7 +41,7 @@ jobs:
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
-      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      OCP_TOKEN: ${{ secrets.OC_BUILD_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
 
     steps:
