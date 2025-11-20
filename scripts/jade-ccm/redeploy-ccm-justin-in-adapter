@@ -124,7 +124,7 @@ if [ "$env" != "local" ]; then
     ## tag image for OpenShift
     docker tag $app $image_registry_url/$ns/$app
     ## login to OpenShift image registry
-    echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
+    ##echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
     if [ $? -ne 0 ]; then
         echo "Error.  Login to OpenShift image registry failed."
         exit 1
