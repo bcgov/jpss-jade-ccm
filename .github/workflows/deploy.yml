@@ -1,8 +1,8 @@
 name: Deploy to OpenShift
 
-permissions: 
-  id-token: write  
-  contents: read 
+permissions:
+  id-token: write
+  contents: read
 
 on:
   workflow_dispatch:
@@ -23,10 +23,10 @@ on:
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
       env:
-        description: 'Select the environment'
+        description: 'Environment'
         required: true
         type: choice
-        default: 'dev'
+        default: dev
         options:
           - dev
           - test
@@ -41,58 +41,51 @@ jobs:
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
-      OCP_TOKEN: ${{ secrets.OC_BUILD_TOKEN }}
+      OCP_TOKEN: ${{ secrets.OCP_BUILD_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
+      REGISTRY: image-registry.apps.silver.devops.gov.bc.ca
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-
-      - name: Install OpenShift CLI (oc)
+      - name: Install OpenShift CLI
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
-          oc version --client
 
       - name: Login to OpenShift
         run: |
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      - name: Login to OpenShift Image Registry
-        run: oc registry login --insecure=true
-
+      - name: Login to Image Registry
+        run: |
+          docker login \
+            -u "system:serviceaccount:${OCP_PROJECT}:github-deployer" \
+            -p "$OCP_TOKEN" \
+            "$REGISTRY"
 
       - name: Install Camel K CLI (kamel)
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
           sudo mv kamel /usr/local/bin/kamel
-          kamel version || true
 
-      - name: Build CCM models jar (ccm-models.jar)
+      - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy with script or kamel
+      - name: Deploy
         run: |
           cd scripts/jade-ccm
+          echo "Checking for: redeploy-$APP"
 
-          echo "Checking for deployment script: redeploy-$APP"
-
-          if [[ -f redeploy-$APP ]]; then
-            echo "Found deployment script: redeploy-$APP"
-            chmod +x redeploy-$APP
-            ./redeploy-$APP $ENV
+          if [[ -f "redeploy-${APP}" ]]; then
+            chmod +x redeploy-${APP}
+            ./redeploy-${APP} "$ENV"
           else
             echo "No deployment script found for $APP"
             exit 1
