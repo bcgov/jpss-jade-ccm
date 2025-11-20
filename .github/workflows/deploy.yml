@@ -43,7 +43,7 @@ jobs:
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OC_BUILD_TOKEN }}
       OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
-      REGISTRY: image-registry.apps.silver.devops.gov.bc.ca
+      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -60,12 +60,13 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      - name: Login to Image Registry
+      - name: Login to OpenShift Registry
         run: |
-          docker login \
-            -u "system:serviceaccount:${OCP_PROJECT}:github-deployer" \
-            -p "$OCP_TOKEN" \
-            "$REGISTRY"
+          echo "$SA_REGISTRY_PASSWORD" | docker login \
+            -u token \
+            --password-stdin \
+            image-registry.apps.silver.devops.gov.bc.ca
+
 
       - name: Install Camel K CLI (kamel)
         run: |
