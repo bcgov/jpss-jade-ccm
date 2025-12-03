@@ -7,8 +7,8 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      project:
-        description: 'Target OpenShift project/cluster (namespace prefix)'
+      cluster:
+        description: 'Target OpenShift cluster (namespace prefix)'
         required: true
         type: choice
         options:
@@ -47,20 +47,17 @@ jobs:
     environment: ${{ github.event.inputs.env }}
 
     env:
-      PROJECT: ${{ github.event.inputs.project }}
+      CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
 
-      # Derived OpenShift project namespace
-      OCP_PROJECT: ${{ github.event.inputs.project }}-${{ github.event.inputs.env }}
+      # Derived OpenShift namespace
+      OCP_PROJECT: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
 
-      # Dynamic secret injection
-      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.project)] }}
-      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}', github.event.inputs.project)] }}
-      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.project)] }}
-
-      # Internal OpenShift registry per cluster
-      REGISTRY_HOST: image-registry.apps.${{ github.event.inputs.project }}.devops.gov.bc.ca
+      # Secrets loaded dynamically
+      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
+      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
+      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.cluster)] }}
 
     steps:
       - name: Checkout repository
@@ -75,9 +72,20 @@ jobs:
 
       - name: Login to OpenShift
         run: |
-          echo "Logging into $PROJECT cluster..."
+          echo "Logging into $CLUSTER cluster..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
+
+      - name: Set Registry Host (based on cluster)
+        run: |
+          if [[ "${{ env.CLUSTER }}" == "ac13ae" ]]; then
+            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+          elif [[ "${{ env.CLUSTER }}" == "cef5dd" ]]; then
+            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+          else
+            echo "❌ Unsupported cluster: ${{ env.CLUSTER }}"
+            exit 1
+          fi
 
       - name: Login to OpenShift Image Registry
         run: |
@@ -97,10 +105,10 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Run Application Deployment Script
+      - name: Deploy Application
         run: |
           cd scripts/jade-ccm
-          echo "Checking for deployment script: redeploy-${APP}"
+          echo "Checking for redeploy script: redeploy-${APP}"
 
           if [[ -f "redeploy-${APP}" ]]; then
             echo "Deploying $APP to $OCP_PROJECT..."
