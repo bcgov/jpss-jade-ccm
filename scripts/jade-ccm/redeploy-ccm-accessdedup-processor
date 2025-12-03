@@ -5,7 +5,7 @@ echo "Redeploying ccm-accessdedup-processor to $1 ..."
 
 echo "Step 0: Validating environment ..."
 
-ns_set="cef5dd"
+ns_set="$CLUSTER"
 image_registry_url=$(oc registry info)
 app="ccm-accessdedup-processor"
 
@@ -54,14 +54,11 @@ echo "Step 1: Setting default logging level ..."
 
 logging_level="INFO"
 
-if [ "$env" = "prod" ]; then
-    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
-    read answer
-    if [ "$answer" != "y" ]; then
-        echo "Aborting deployment."
-        ns=""
-        exit 1
-    fi
+if [[ "$ENV" == "prod" && "$AUTO_APPROVE" != "true" ]]; then
+  echo "WARNING: You are about to deploy to PRODUCTION. Are you sure? (y/n)"
+  read -r answer
+  [[ "$answer" == "y" ]] || { echo "Aborting deployment."; exit 1; }
+fi
 
     # Override logging level for Prod deployment
     logging_level="INFO"
