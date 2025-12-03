@@ -7,8 +7,16 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      cluster:
+        description: "Target cluster"
+        required: true
+        type: choice
+        options:
+          - cef5dd
+          - ac13ae
+
       app:
-        description: 'Select the application to deploy'
+        description: 'Application to deploy'
         required: true
         type: choice
         options:
@@ -22,6 +30,7 @@ on:
           - ccm-notification-service
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
+
       env:
         description: 'Environment'
         required: true
@@ -35,15 +44,26 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.env }}
 
     env:
+      CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
-      OCP_SERVER: ${{ secrets.OCP_SERVER }}
-      OCP_TOKEN: ${{ secrets.OC_BUILD_TOKEN }}
-      OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
-      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
+
+      # Automatically build namespace
+      OCP_PROJECT: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
+
+      # Secrets stored:
+      # OCP_SERVER_CEF5DD, OCP_TOKEN_CEF5DD
+      # OCP_SERVER_AC13AE, OCP_TOKEN_AC13AE
+      # OC_REG_TOKEN_CEF5DD, OC_REG_TOKEN_AC13AE
+
+      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
+      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
+      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.cluster)] }}
+
+      REGISTRY: image-registry.apps.${{ github.event.inputs.cluster }}.devops.gov.bc.ca
+
 
     steps:
       - name: Checkout repository
@@ -57,16 +77,16 @@ jobs:
 
       - name: Login to OpenShift
         run: |
+          echo "Logging into $CLUSTER cluster..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      - name: Login to OpenShift Registry
+      - name: Login to OpenShift Image Registry
         run: |
           echo "$SA_REGISTRY_PASSWORD" | docker login \
             -u token \
             --password-stdin \
-            image-registry.apps.silver.devops.gov.bc.ca
-
+            "$REGISTRY"
 
       - name: Install Camel K CLI (kamel)
         run: |
@@ -82,7 +102,7 @@ jobs:
       - name: Deploy
         run: |
           cd scripts/jade-ccm
-          echo "Checking for: redeploy-$APP"
+          echo "Checking for deployment script: redeploy-$APP"
 
           if [[ -f "redeploy-${APP}" ]]; then
             chmod +x redeploy-${APP}
