@@ -92,7 +92,7 @@ jobs:
       - name: Login to OpenShift Image Registry
         run: |
           echo "$SA_REGISTRY_PASSWORD" | docker login \
-            -u token \
+            -u github-deployer \
             --password-stdin \
             "$REGISTRY_HOST"
 
