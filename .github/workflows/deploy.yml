@@ -120,4 +120,3 @@ jobs:
             echo "❌ No deployment script found for $APP"
             exit 1
           fi
-
