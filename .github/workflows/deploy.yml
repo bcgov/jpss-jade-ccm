@@ -7,13 +7,14 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      cluster:
-        description: "Target cluster"
+      project:
+        description: 'Target OpenShift project/cluster (namespace prefix)'
         required: true
         type: choice
         options:
           - cef5dd
           - ac13ae
+          - clab
 
       app:
         description: 'Application to deploy'
@@ -32,7 +33,7 @@ on:
           - ccm-justin-out-adapter
 
       env:
-        description: 'Environment'
+        description: 'Deployment environment'
         required: true
         type: choice
         default: dev
@@ -44,26 +45,23 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
 
     env:
-      CLUSTER: ${{ github.event.inputs.cluster }}
+      PROJECT: ${{ github.event.inputs.project }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
 
-      # Automatically build namespace
-      OCP_PROJECT: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
+      # Derived OpenShift project namespace
+      OCP_PROJECT: ${{ github.event.inputs.project }}-${{ github.event.inputs.env }}
 
-      # Secrets stored:
-      # OCP_SERVER_CEF5DD, OCP_TOKEN_CEF5DD
-      # OCP_SERVER_AC13AE, OCP_TOKEN_AC13AE
-      # OC_REG_TOKEN_CEF5DD, OC_REG_TOKEN_AC13AE
+      # Dynamic secret injection
+      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.project)] }}
+      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}', github.event.inputs.project)] }}
+      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.project)] }}
 
-      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
-      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
-      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.cluster)] }}
-
-      REGISTRY: image-registry.apps.${{ github.event.inputs.cluster }}.devops.gov.bc.ca
-
+      # Internal OpenShift registry per cluster
+      REGISTRY_HOST: image-registry.apps.${{ github.event.inputs.project }}.devops.gov.bc.ca
 
     steps:
       - name: Checkout repository
@@ -74,10 +72,11 @@ jobs:
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
+          oc version --client
 
       - name: Login to OpenShift
         run: |
-          echo "Logging into $CLUSTER cluster..."
+          echo "Logging into $PROJECT cluster..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
@@ -86,7 +85,7 @@ jobs:
           echo "$SA_REGISTRY_PASSWORD" | docker login \
             -u token \
             --password-stdin \
-            "$REGISTRY"
+            "$REGISTRY_HOST"
 
       - name: Install Camel K CLI (kamel)
         run: |
@@ -99,15 +98,16 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy
+      - name: Run Application Deployment Script
         run: |
           cd scripts/jade-ccm
-          echo "Checking for deployment script: redeploy-$APP"
+          echo "Checking for deployment script: redeploy-${APP}"
 
           if [[ -f "redeploy-${APP}" ]]; then
+            echo "Deploying $APP to $OCP_PROJECT..."
             chmod +x redeploy-${APP}
             ./redeploy-${APP} "$ENV"
           else
-            echo "No deployment script found for $APP"
+            echo "❌ No deployment script found for $APP"
             exit 1
           fi
