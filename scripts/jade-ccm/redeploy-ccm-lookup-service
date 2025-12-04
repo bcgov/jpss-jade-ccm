@@ -58,8 +58,6 @@ if [[ "$ENV" == "prod" && "$AUTO_APPROVE" != "true" ]]; then
   echo "WARNING: You are about to deploy to PRODUCTION. Are you sure? (y/n)"
   read -r answer
   [[ "$answer" == "y" ]] || { echo "Aborting deployment."; exit 1; }
-fi
-
     # Override logging level for Prod deployment
     logging_level="INFO"
 
