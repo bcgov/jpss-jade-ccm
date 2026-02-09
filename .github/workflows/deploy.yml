@@ -64,6 +64,11 @@ jobs:
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
           oc version --client
+          
+      - name: Switch to OpenShift project
+        run: |
+          echo "Using project $NAMESPACE"
+          oc project "$NAMESPACE"
 
       - name: Validate OpenShift credentials
         run: |
