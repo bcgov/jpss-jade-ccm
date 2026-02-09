@@ -115,15 +115,60 @@ jobs:
         run: |
           ENV="${NAMESPACE##*-}"
           echo "ENV=$ENV" >> $GITHUB_ENV
-      
+            
       - name: Deploy application
+        shell: bash
         run: |
+          set -euo pipefail
+      
           cd scripts/jade-ccm
       
-          export PROJECT="$NAMESPACE"
-          echo "Deploying $APP to $PROJECT (env=$ENV)"
+          # ------------------------------------------------------------------
+          # Normalize variables for legacy redeploy scripts
+          # ------------------------------------------------------------------
       
-          chmod +x redeploy-${APP}
-          ./redeploy-${APP} "$ENV"
-
-
+          # ENV must be dev|test|prod
+          export ENV="${ENV}"
+      
+          # NAMESPACE already provided (example: cef5dd-dev)
+          export NAMESPACE="${NAMESPACE}"
+      
+          # PROJECT is expected by redeploy scripts (example: cef5dd)
+          export PROJECT="${NAMESPACE%-*}"
+      
+          # Common aliases used across scripts
+          export OPENSHIFT_PROJECT="${PROJECT}"
+          export OCP_PROJECT="${PROJECT}"
+          export OS_PROJECT="${PROJECT}"
+      
+          # Safety checks
+          if [[ -z "$ENV" || -z "$PROJECT" || -z "$NAMESPACE" ]]; then
+            echo "❌ Invalid deployment context"
+            echo "ENV=$ENV"
+            echo "PROJECT=$PROJECT"
+            echo "NAMESPACE=$NAMESPACE"
+            exit 1
+          fi
+      
+          echo "🚀 Deploying application"
+          echo "  App:        $APP"
+          echo "  Namespace:  $NAMESPACE"
+          echo "  Project:    $PROJECT"
+          echo "  Environment:$ENV"
+      
+          # ------------------------------------------------------------------
+          # Execute redeploy script
+          # ------------------------------------------------------------------
+      
+          SCRIPT="redeploy-${APP}"
+      
+          if [[ ! -f "$SCRIPT" ]]; then
+            echo "❌ Deployment script not found: $SCRIPT"
+            exit 1
+          fi
+      
+          chmod +x "$SCRIPT"
+      
+          # Pass ENV explicitly (legacy scripts expect $1)
+          ./"$SCRIPT" "$ENV"
+      
