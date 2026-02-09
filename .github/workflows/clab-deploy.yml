@@ -99,15 +99,18 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy
+      - name: Deploy Application
+        env:
+          CI: true
         run: |
           cd scripts/jade-ccm
-          echo "Checking for deployment script: redeploy-$APP"
-
+          echo "Checking for redeploy script: redeploy-${APP}"
+      
           if [[ -f "redeploy-${APP}" ]]; then
+            echo "Deploying $APP to $OCP_PROJECT..."
             chmod +x redeploy-${APP}
             ./redeploy-${APP} "$ENV"
           else
-            echo "No deployment script found for $APP"
+            echo "❌ No deployment script found for $APP"
             exit 1
           fi
