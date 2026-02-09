@@ -119,13 +119,11 @@ jobs:
       - name: Deploy application
         run: |
           cd scripts/jade-ccm
-          echo "Deploying $APP to $NAMESPACE (env=$ENV)"
       
-          if [[ -f "redeploy-${APP}" ]]; then
-            chmod +x redeploy-${APP}
-            ./redeploy-${APP} "$ENV"
-          else
-            echo "❌ No deployment script found for $APP"
-            exit 1
-          fi
+          export PROJECT="$NAMESPACE"
+          echo "Deploying $APP to $PROJECT (env=$ENV)"
+      
+          chmod +x redeploy-${APP}
+          ./redeploy-${APP} "$ENV"
+
 
