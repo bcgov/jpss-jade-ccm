@@ -111,11 +111,16 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
+      - name: Derive environment from namespace
+        run: |
+          ENV="${NAMESPACE##*-}"
+          echo "ENV=$ENV" >> $GITHUB_ENV
+      
       - name: Deploy application
         run: |
           cd scripts/jade-ccm
-          echo "Deploying $APP to $NAMESPACE"
-
+          echo "Deploying $APP to $NAMESPACE (env=$ENV)"
+      
           if [[ -f "redeploy-${APP}" ]]; then
             chmod +x redeploy-${APP}
             ./redeploy-${APP}
@@ -123,3 +128,4 @@ jobs:
             echo "❌ No deployment script found for $APP"
             exit 1
           fi
+
