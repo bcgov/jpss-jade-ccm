@@ -40,7 +40,7 @@ jobs:
     name: Deploy to OpenShift
     runs-on: ubuntu-latest
 
-    # 🔐 Environment == namespace
+    # GitHub Environment == OpenShift namespace
     environment: ${{ github.event.inputs.namespace }}
 
     env:
@@ -49,7 +49,7 @@ jobs:
       CI: true
       AUTO_APPROVE: "true"
 
-      # Secrets come from the environment
+      # Secrets come from the GitHub Environment
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
@@ -74,22 +74,46 @@ jobs:
 
       - name: Login to OpenShift
         run: |
-          echo "Logging into OpenShift API..."
+          echo "Logging into OpenShift..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
-      
+
       - name: Switch to OpenShift project
         run: |
           echo "Using project $NAMESPACE"
           oc project "$NAMESPACE"
 
+      # -------------------------------------------------------
+      # Derive CLUSTER and ENV (what the script expects)
+      # -------------------------------------------------------
+      - name: Derive CLUSTER and ENV from namespace
+        shell: bash
+        run: |
+          set -e
+
+          CLUSTER="${NAMESPACE%-*}"
+          ENV="${NAMESPACE##*-}"
+
+          if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
+            echo "❌ Invalid ENV derived from namespace: $ENV"
+            exit 1
+          fi
+
+          echo "Derived values:"
+          echo "  NAMESPACE=$NAMESPACE"
+          echo "  CLUSTER=$CLUSTER"
+          echo "  ENV=$ENV"
+
+          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
+          echo "ENV=$ENV" >> $GITHUB_ENV
+
       - name: Set Registry Host
         run: |
-          if [[ "$NAMESPACE" == cef5dd-* ]]; then
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
             echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
-          elif [[ "$NAMESPACE" == ac13ae-* ]]; then
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
             echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
           else
-            echo "❌ Unsupported namespace: $NAMESPACE"
+            echo "❌ Unsupported cluster: $CLUSTER"
             exit 1
           fi
 
@@ -111,26 +135,9 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Derive CLUSTER from namespace
-        shell: bash
-        run: |
-          set -e
-      
-          if [[ -z "$NAMESPACE" ]]; then
-            echo "❌ NAMESPACE is not set"
-            exit 1
-          fi
-      
-          CLUSTER="${NAMESPACE%-*}"
-      
-          echo "Derived values:"
-          echo "  NAMESPACE=$NAMESPACE"
-          echo "  CLUSTER=$CLUSTER"
-          echo "  ENV=$ENV"
-      
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
-      
-          
+      # -------------------------------------------------------
+      # Deploy (script unchanged)
+      # -------------------------------------------------------
       - name: Deploy application
         shell: bash
         run: |
