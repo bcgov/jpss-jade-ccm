@@ -71,24 +71,37 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$NAMESPACE"
 
-      # 🔥 Use INTERNAL registry (fixes 500 errors)
-      - name: Login to Internal OpenShift Registry
+      # 🔥 FORCE oc registry info to return INTERNAL registry
+      - name: Override oc registry info
         run: |
-          INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000
+          echo "Creating wrapper for oc registry info..."
+
+          mkdir -p /tmp/oc-wrapper
+          cp /usr/local/bin/oc /tmp/oc-wrapper/oc-real
+
+          cat <<'EOF' > /tmp/oc-wrapper/oc
+          #!/bin/bash
+          if [[ "$1" == "registry" && "$2" == "info" ]]; then
+            echo "image-registry.openshift-image-registry.svc:5000"
+          else
+            /tmp/oc-wrapper/oc-real "$@"
+          fi
+          EOF
+
+          chmod +x /tmp/oc-wrapper/oc
+          echo "/tmp/oc-wrapper" >> $GITHUB_PATH
+
+      # 🔥 Login to INTERNAL registry
+      - name: Login to internal registry
+        run: |
           echo "Logging into internal registry..."
           echo $(oc whoami -t) | docker login \
             -u $(oc whoami) \
             --password-stdin \
-            $INTERNAL_REGISTRY
+            image-registry.openshift-image-registry.svc:5000
 
-      # 🔥 Patch registry URL inside script (no repo change)
-      - name: Force internal registry inside script
-        run: |
-          sed -i 's|image_registry_url=$(oc registry info)|image_registry_url=image-registry.openshift-image-registry.svc:5000|g' \
-          scripts/jade-ccm/redeploy-${APP}
-
-      # 🔥 Replace invalid deployer label with latest=true
-      - name: Replace deployer label with latest tag
+      # 🔥 Fix invalid deployer label (replace with latest=true)
+      - name: Remove invalid deployer label
         run: |
           sed -i 's/deployer="\$deployer"/latest="true"/g' \
           scripts/jade-ccm/redeploy-${APP}
@@ -104,12 +117,13 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Show debug values
+      - name: Debug values
         run: |
           echo "Cluster:   $CLUSTER"
           echo "Namespace: $NAMESPACE"
           echo "App:       $APP"
           echo "Env:       $ENV"
+          echo "Registry:  $(oc registry info)"
 
       - name: Deploy Application
         run: |
