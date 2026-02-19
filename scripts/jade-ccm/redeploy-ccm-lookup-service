@@ -130,7 +130,7 @@ if [ "$env" != "local" ]; then
     docker logout $image_registry_url
 
     # add image stream labels
-    oc -n $ns label imagestream $app deployer="$deployer" version="$version"
+    #oc -n $ns label imagestream $app deployer="$deployer" version="$version"
 fi
 
 ####################################################################################################
