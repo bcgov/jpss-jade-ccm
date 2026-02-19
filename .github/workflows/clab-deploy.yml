@@ -49,11 +49,8 @@ jobs:
       CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
-
-      # Namespace automatically derived
       NAMESPACE: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
 
-      # Secrets (must exist in repo secrets)
       OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
       OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
 
@@ -70,11 +67,12 @@ jobs:
 
       - name: Login to OpenShift
         run: |
-          echo "Logging into $CLUSTER cluster..."
+          echo "Logging into $CLUSTER..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$NAMESPACE"
 
-      - name: Login to INTERNAL OpenShift Image Registry
+      # 🔥 Use INTERNAL registry (fixes 500 errors)
+      - name: Login to Internal OpenShift Registry
         run: |
           INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000
           echo "Logging into internal registry..."
@@ -82,6 +80,18 @@ jobs:
             -u $(oc whoami) \
             --password-stdin \
             $INTERNAL_REGISTRY
+
+      # 🔥 Patch registry URL inside script (no repo change)
+      - name: Force internal registry inside script
+        run: |
+          sed -i 's|image_registry_url=$(oc registry info)|image_registry_url=image-registry.openshift-image-registry.svc:5000|g' \
+          scripts/jade-ccm/redeploy-${APP}
+
+      # 🔥 Replace invalid deployer label with latest=true
+      - name: Replace deployer label with latest tag
+        run: |
+          sed -i 's/deployer="\$deployer"/latest="true"/g' \
+          scripts/jade-ccm/redeploy-${APP}
 
       - name: Install Camel K CLI
         run: |
@@ -94,7 +104,7 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Show derived values (debug safety)
+      - name: Show debug values
         run: |
           echo "Cluster:   $CLUSTER"
           echo "Namespace: $NAMESPACE"
