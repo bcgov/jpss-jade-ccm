@@ -128,7 +128,7 @@ if [ "$env" != "local" ]; then
     ## push image to OpenShift
     docker push $image_registry_url/$ns/$app
     ## logout of OpenShift image registry
-    docker logout $image_registry_url
+    # docker logout $image_registry_url
 
     # add image stream labels
     #oc -n $ns label imagestream $app deployer="$deployer" version="$version"
