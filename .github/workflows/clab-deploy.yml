@@ -16,7 +16,7 @@ on:
           - ac13ae
 
       app:
-        description: 'Application to deploy'
+        description: "Application to deploy"
         required: true
         type: choice
         options:
@@ -32,7 +32,7 @@ on:
           - ccm-justin-out-adapter
 
       env:
-        description: 'Environment'
+        description: "Environment"
         required: true
         type: choice
         default: dev
@@ -49,8 +49,11 @@ jobs:
       CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
-      OCP_PROJECT: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
 
+      # Namespace automatically derived
+      NAMESPACE: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
+
+      # Secrets (must exist in repo secrets)
       OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
       OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
 
@@ -63,18 +66,18 @@ jobs:
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
+          oc version --client
 
       - name: Login to OpenShift
         run: |
           echo "Logging into $CLUSTER cluster..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
-          oc project "$OCP_PROJECT"
+          oc project "$NAMESPACE"
 
-      - name: Login to OpenShift Internal Registry
+      - name: Login to INTERNAL OpenShift Image Registry
         run: |
-          INTERNAL_REGISTRY=$(oc registry info)
-          echo "Using registry: $INTERNAL_REGISTRY"
-
+          INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000
+          echo "Logging into internal registry..."
           echo $(oc whoami -t) | docker login \
             -u $(oc whoami) \
             --password-stdin \
@@ -90,6 +93,13 @@ jobs:
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
+
+      - name: Show derived values (debug safety)
+        run: |
+          echo "Cluster:   $CLUSTER"
+          echo "Namespace: $NAMESPACE"
+          echo "App:       $APP"
+          echo "Env:       $ENV"
 
       - name: Deploy Application
         run: |
