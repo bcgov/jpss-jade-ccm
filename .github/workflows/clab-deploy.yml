@@ -49,21 +49,10 @@ jobs:
       CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
       ENV: ${{ github.event.inputs.env }}
-
-      # Automatically build namespace
       OCP_PROJECT: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
-
-      # Secrets stored:
-      # OCP_SERVER_CEF5DD, OCP_TOKEN_CEF5DD
-      # OCP_SERVER_AC13AE, OCP_TOKEN_AC13AE
-      # OC_REG_TOKEN_CEF5DD, OC_REG_TOKEN_AC13AE
 
       OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
       OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
-      SA_REGISTRY_PASSWORD: ${{ secrets[format('OC_REG_TOKEN_{0}', github.event.inputs.cluster)] }}
-
-      REGISTRY: image-registry.apps.${{ github.event.inputs.cluster }}.devops.gov.bc.ca
-
 
     steps:
       - name: Checkout repository
@@ -81,14 +70,17 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$OCP_PROJECT"
 
-      - name: Login to OpenShift Image Registry
+      - name: Login to OpenShift Internal Registry
         run: |
-          echo "$SA_REGISTRY_PASSWORD" | docker login \
-            -u token \
-            --password-stdin \
-            "$REGISTRY"
+          INTERNAL_REGISTRY=$(oc registry info)
+          echo "Using registry: $INTERNAL_REGISTRY"
 
-      - name: Install Camel K CLI (kamel)
+          echo $(oc whoami -t) | docker login \
+            -u $(oc whoami) \
+            --password-stdin \
+            $INTERNAL_REGISTRY
+
+      - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
@@ -100,17 +92,7 @@ jobs:
           ./repackage-ccm-models
 
       - name: Deploy Application
-        env:
-          CI: true
         run: |
           cd scripts/jade-ccm
-          echo "Checking for redeploy script: redeploy-${APP}"
-      
-          if [[ -f "redeploy-${APP}" ]]; then
-            echo "Deploying $APP to $OCP_PROJECT..."
-            chmod +x redeploy-${APP}
-            ./redeploy-${APP} "$ENV"
-          else
-            echo "❌ No deployment script found for $APP"
-            exit 1
-          fi
+          chmod +x redeploy-${APP}
+          ./redeploy-${APP} "$ENV"
