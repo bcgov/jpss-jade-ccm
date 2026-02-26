@@ -121,7 +121,7 @@ public class DemsPersonData {
     }
 
     public static String generateFullGivenNamesAndLastNameFromAccused(CaseAccused accused) {
-        if(accused.getSurname() == null) {
+        if(accused.getSurname() == null || accused.getGiven_1_name() == null) {
             return accused.getFull_name();
         }
 

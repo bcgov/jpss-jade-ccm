@@ -32,7 +32,7 @@ public class DemsChargeAssessmentCaseData {
             if(case_name.length() > 0) {
                 case_name.append(SEMICOLON_SPACE_STRING);
             }
-            if(ba.getSurname() != null && !ba.getSurname().isEmpty()) {
+            if((ba.getSurname() != null && !ba.getSurname().isEmpty()) && (ba.getGiven_1_name() != null && !ba.getGiven_1_name().isEmpty())) {
                 // JADE-1470 surnames should be in all uppercase.
                 case_name.append(ba.getSurname().toUpperCase());
                 case_name.append(COMMA_STRING + " ");
@@ -187,7 +187,10 @@ public class DemsChargeAssessmentCaseData {
         List<String> assessmentCrownList = new ArrayList<String>();
         Set<String> assessmentCrownSet = new HashSet<>();
         assessmentCrownSet.add(primaryChargeAssessmentData.getAssessment_crown_name());
-        
+        List<String> prfsnlStaffList = new ArrayList<String>();
+        Set<String> prfsnlStaffSet = new HashSet<>();
+        prfsnlStaffSet.add(primaryChargeAssessmentData.getPrfsnl_staff_name());
+
         List<String> initiatingAgencyNameList = new ArrayList<String>();
         Set<String> initiatingAgencyNameSet = new HashSet<>();
         initiatingAgencyNameSet.add(primaryChargeAssessmentData.getInitiating_agency_name());
@@ -256,36 +259,41 @@ public class DemsChargeAssessmentCaseData {
                 if (data.getAssessment_crown_name() != null && !assessmentCrownSet.contains(data.getAssessment_crown_name())){
                     assessmentCrownSet.add(data.getAssessment_crown_name());
                 }
-               if (data.getInitiating_agency_name() != null && !initiatingAgencyNameSet.contains(data.getInitiating_agency_name())){
-                initiatingAgencyNameSet.add(data.getInitiating_agency_name());
-               }
-               if (data.getProposed_crown_office() != null && !proposedCrownOfficeSet.contains(data.getProposed_crown_office())) {
+                if (data.getPrfsnl_staff_name() != null && !prfsnlStaffSet.contains(data.getPrfsnl_staff_name())){
+                    prfsnlStaffSet.add(data.getPrfsnl_staff_name());
+                }
+                if (data.getInitiating_agency_name() != null && !initiatingAgencyNameSet.contains(data.getInitiating_agency_name())){
+                    initiatingAgencyNameSet.add(data.getInitiating_agency_name());
+                }
+                if (data.getProposed_crown_office() != null && !proposedCrownOfficeSet.contains(data.getProposed_crown_office())) {
                     proposedCrownOfficeSet.add(data.getProposed_crown_office());
-               }
-               if (data.getInitiating_agency() != null && !initiatingAgencySet.contains(data.getInitiating_agency())) {
-                initiatingAgencySet.add(data.getInitiating_agency());
-               }
-               if (data.getRcc_id() != null && !agencyFileIdSet.contains(data.getRcc_id())) {
+                }
+                if (data.getInitiating_agency() != null && !initiatingAgencySet.contains(data.getInitiating_agency())) {
+                    initiatingAgencySet.add(data.getInitiating_agency());
+                }
+                if (data.getRcc_id() != null && !agencyFileIdSet.contains(data.getRcc_id())) {
                     agencyFileIdSet.add(data.getRcc_id());
-               }
-               if (data.getAgency_file() != null && !agencyFileNumberSet.contains(data.getAgency_file())){
-                agencyFileNumberSet.add(data.getAgency_file());
-               }
-               if (data.getInvestigating_officer() != null && !investigatingOfficerSet.contains(data.getInvestigating_officer())){
-                investigatingOfficerSet.add(data.getInvestigating_officer());
-               }
-               if (data.getProposed_process_type_list() != null && !proposedProcessTypeSet.contains(data.getProposed_process_type_list())){
-                proposedProcessTypeSet.add(data.getProposed_process_type_list());
-               }
+                }
+                if (data.getAgency_file() != null && !agencyFileNumberSet.contains(data.getAgency_file())){
+                    agencyFileNumberSet.add(data.getAgency_file());
+                }
+                if (data.getInvestigating_officer() != null && !investigatingOfficerSet.contains(data.getInvestigating_officer())){
+                    investigatingOfficerSet.add(data.getInvestigating_officer());
+                }
+                if (data.getProposed_process_type_list() != null && !proposedProcessTypeSet.contains(data.getProposed_process_type_list())){
+                    proposedProcessTypeSet.add(data.getProposed_process_type_list());
+                }
             }
         }
         assessmentCrownList.addAll(assessmentCrownSet);
+        prfsnlStaffList.addAll(prfsnlStaffSet);
         initiatingAgencyNameList.addAll(initiatingAgencyNameSet);
         proposedCrownOfficeList.addAll(proposedCrownOfficeSet);
         initiatingAgencyList.addAll(initiatingAgencySet);
         
         DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), earliestSubmitDate);
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
+        DemsFieldData prfsnlStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_ASSIGNED_LEGAL_STAFF.getLabel(), prfsnlStaffList);
         
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryChargeAssessmentData.getCharge());
@@ -384,6 +392,7 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(agencyFileNo);
         fieldData.add(submitDate);
         fieldData.add(assessmentCrown);
+        fieldData.add(prfsnlStaff);
         fieldData.add(caseDecision);
         fieldData.add(proposedCharges);
         fieldData.add(initiatingAgency);

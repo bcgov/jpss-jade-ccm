@@ -19,6 +19,7 @@ public class ChargeAssessmentData {
     private String rcc_submit_date;
 
     private String assessment_crown_name;
+    private String prfsnl_staff_name;
     private String case_status_code;
     private String rcc_status_code;
     private String file_note;
@@ -69,6 +70,7 @@ public class ChargeAssessmentData {
         setProposed_crown_office_subtype_cd(jaf.getCrn_decision_agency_subtype_cd());
 
         setAssessment_crown_name(jaf.getAssessment_crown_name());
+        setPrfsnl_staff_name(jaf.getPrfsnl_staff_name());
         setCase_decision_cd(jaf.getCase_decision_cd());
         setCharge(jaf.getCharge());
         setLimitation_date(jaf.getLimitation_date());
@@ -206,6 +208,15 @@ public class ChargeAssessmentData {
     public void setAssessment_crown_name(String assessment_crown_name) {
         this.assessment_crown_name = assessment_crown_name;
     }
+
+    public String getPrfsnl_staff_name() {
+        return prfsnl_staff_name;
+    }
+
+    public void setPrfsnl_staff_name(String prfsnl_staff_name) {
+        this.prfsnl_staff_name = prfsnl_staff_name;
+    }
+
     public String getCase_decision_cd() {
         return case_status_code;
     }

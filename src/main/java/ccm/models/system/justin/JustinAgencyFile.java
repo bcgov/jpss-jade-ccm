@@ -20,6 +20,8 @@ public class JustinAgencyFile {
   private String crn_decision_agency_subtype_cd;
   private String assessment_crown_name;
   private String assessment_crown_part_id;
+  private String prfsnl_staff_name;
+  private String prfsnl_staff_part_id;
   private String case_decision_cd;
   private String rcc_state_cd;
 
@@ -158,6 +160,22 @@ public class JustinAgencyFile {
 
   public void setAssessment_crown_part_id(String assessment_crown_part_id) {
     this.assessment_crown_part_id = assessment_crown_part_id;
+  }
+
+  public String getPrfsnl_staff_name() {
+    return prfsnl_staff_name;
+  }
+
+  public void setPrfsnl_staff_name(String prfsnl_staff_name) {
+    this.prfsnl_staff_name = prfsnl_staff_name;
+  }
+
+  public String getPrfsnl_staff_part_id() {
+    return prfsnl_staff_part_id;
+  }
+
+  public void setPrfsnl_staff_part_id(String prfsnl_staff_part_id) {
+    this.prfsnl_staff_part_id = prfsnl_staff_part_id;
   }
 
   public String getCase_decision_cd() {
