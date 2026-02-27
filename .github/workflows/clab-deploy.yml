@@ -71,11 +71,18 @@ jobs:
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
           oc project "$NAMESPACE"
 
-      # 🔥 FORCE oc registry info to return INTERNAL registry
+      - name: Show deployment details
+        run: |
+          echo "----------------------------------------"
+          echo "🚀 Deployment Summary"
+          echo "Cluster:     $CLUSTER"
+          echo "Namespace:   $NAMESPACE"
+          echo "Application: $APP"
+          echo "Environment: $ENV"
+          echo "----------------------------------------"
+
       - name: Override oc registry info
         run: |
-          echo "Creating wrapper for oc registry info..."
-
           mkdir -p /tmp/oc-wrapper
           cp /usr/local/bin/oc /tmp/oc-wrapper/oc-real
 
@@ -91,16 +98,13 @@ jobs:
           chmod +x /tmp/oc-wrapper/oc
           echo "/tmp/oc-wrapper" >> $GITHUB_PATH
 
-      # 🔥 Login to INTERNAL registry
       - name: Login to internal registry
         run: |
-          echo "Logging into internal registry..."
           echo $(oc whoami -t) | docker login \
             -u $(oc whoami) \
             --password-stdin \
             image-registry.openshift-image-registry.svc:5000
 
-      # 🔥 Fix invalid deployer label (replace with latest=true)
       - name: Remove invalid deployer label
         run: |
           sed -i 's/deployer="\$deployer"/latest="true"/g' \
@@ -117,16 +121,25 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Debug values
-        run: |
-          echo "Cluster:   $CLUSTER"
-          echo "Namespace: $NAMESPACE"
-          echo "App:       $APP"
-          echo "Env:       $ENV"
-          echo "Registry:  $(oc registry info)"
-
       - name: Deploy Application
         run: |
           cd scripts/jade-ccm
           chmod +x redeploy-${APP}
           ./redeploy-${APP} "$ENV"
+
+      - name: Configure logging and retry settings
+        run: |
+          echo "Applying logging and retry configuration to $APP..."
+
+          oc set env deployment/$APP \
+            LOGGING_LEVEL_ROOT=INFO \
+            LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
+            LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
+            SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
+            SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
+            -n $NAMESPACE
+
+          echo "Restarting deployment to apply changes..."
+          oc rollout restart deployment/$APP -n $NAMESPACE
+
+          echo "Configuration applied successfully."
