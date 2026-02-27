@@ -7,17 +7,13 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      namespace:
-        description: "Target OpenShift namespace"
+      cluster:
+        description: "Target cluster"
         required: true
         type: choice
         options:
-          - cef5dd-dev
-          - cef5dd-test
-          - cef5dd-prod
-          - ac13ae-dev
-          - ac13ae-test
-          - ac13ae-prod
+          - cef5dd
+          - ac13ae
 
       app:
         description: "Application to deploy"
@@ -35,24 +31,28 @@ on:
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
 
+      env:
+        description: "Environment"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - test
+          - prod
+
 jobs:
   deploy:
-    name: Deploy to OpenShift
     runs-on: ubuntu-latest
 
-    # GitHub Environment == OpenShift namespace
-    environment: ${{ github.event.inputs.namespace }}
-
     env:
-      NAMESPACE: ${{ github.event.inputs.namespace }}
+      CLUSTER: ${{ github.event.inputs.cluster }}
       APP: ${{ github.event.inputs.app }}
-      CI: true
-      AUTO_APPROVE: "true"
+      ENV: ${{ github.event.inputs.env }}
+      NAMESPACE: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
 
-      # Secrets come from the GitHub Environment
-      OCP_SERVER: ${{ secrets.OCP_SERVER }}
-      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
-      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
+      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
+      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
 
     steps:
       - name: Checkout repository
@@ -65,64 +65,50 @@ jobs:
           sudo mv oc /usr/local/bin/oc
           oc version --client
 
-      - name: Validate OpenShift credentials
-        run: |
-          if [[ -z "$OCP_SERVER" || -z "$OCP_TOKEN" ]]; then
-            echo "❌ Missing OpenShift credentials for environment: $NAMESPACE"
-            exit 1
-          fi
-
       - name: Login to OpenShift
         run: |
-          echo "Logging into OpenShift..."
+          echo "Logging into $CLUSTER..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
-
-      - name: Switch to OpenShift project
-        run: |
-          echo "Using project $NAMESPACE"
           oc project "$NAMESPACE"
 
-      # -------------------------------------------------------
-      # Derive CLUSTER and ENV (what the script expects)
-      # -------------------------------------------------------
-      - name: Derive CLUSTER and ENV from namespace
-        shell: bash
+      - name: Show deployment details
         run: |
-          set -e
+          echo "----------------------------------------"
+          echo "🚀 Deployment Summary"
+          echo "Cluster:     $CLUSTER"
+          echo "Namespace:   $NAMESPACE"
+          echo "Application: $APP"
+          echo "Environment: $ENV"
+          echo "----------------------------------------"
 
-          CLUSTER="${NAMESPACE%-*}"
-          ENV="${NAMESPACE##*-}"
-
-          if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
-            echo "❌ Invalid ENV derived from namespace: $ENV"
-            exit 1
-          fi
-
-          echo "Derived values:"
-          echo "  NAMESPACE=$NAMESPACE"
-          echo "  CLUSTER=$CLUSTER"
-          echo "  ENV=$ENV"
-
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
-          echo "ENV=$ENV" >> $GITHUB_ENV
-
-      - name: Set Registry Host
+      - name: Override oc registry info
         run: |
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+          mkdir -p /tmp/oc-wrapper
+          cp /usr/local/bin/oc /tmp/oc-wrapper/oc-real
+
+          cat <<'EOF' > /tmp/oc-wrapper/oc
+          #!/bin/bash
+          if [[ "$1" == "registry" && "$2" == "info" ]]; then
+            echo "image-registry.openshift-image-registry.svc:5000"
           else
-            echo "❌ Unsupported cluster: $CLUSTER"
-            exit 1
+            /tmp/oc-wrapper/oc-real "$@"
           fi
+          EOF
 
-      - name: Login to OpenShift Image Registry
+          chmod +x /tmp/oc-wrapper/oc
+          echo "/tmp/oc-wrapper" >> $GITHUB_PATH
+
+      - name: Login to internal registry
         run: |
-          echo "$SA_REGISTRY_PASSWORD" | docker login \
-            -u github-deployer \
+          echo $(oc whoami -t) | docker login \
+            -u $(oc whoami) \
             --password-stdin \
-            "$REGISTRY_HOST"
+            image-registry.openshift-image-registry.svc:5000
+
+      - name: Remove invalid deployer label
+        run: |
+          sed -i 's/deployer="\$deployer"/latest="true"/g' \
+          scripts/jade-ccm/redeploy-${APP}
 
       - name: Install Camel K CLI
         run: |
@@ -135,12 +121,25 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      # -------------------------------------------------------
-      # Deploy (script unchanged)
-      # -------------------------------------------------------
-      - name: Deploy application
-        shell: bash
+      - name: Deploy Application
         run: |
           cd scripts/jade-ccm
           chmod +x redeploy-${APP}
           ./redeploy-${APP} "$ENV"
+
+      - name: Configure logging and retry settings
+        run: |
+          echo "Applying logging and retry configuration to $APP..."
+
+          oc set env deployment/$APP \
+            LOGGING_LEVEL_ROOT=INFO \
+            LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
+            LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
+            SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
+            SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
+            -n $NAMESPACE
+
+          echo "Restarting deployment to apply changes..."
+          oc rollout restart deployment/$APP -n $NAMESPACE
+
+          echo "Configuration applied successfully."
