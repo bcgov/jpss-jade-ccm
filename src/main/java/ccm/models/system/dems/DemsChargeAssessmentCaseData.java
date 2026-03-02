@@ -189,7 +189,9 @@ public class DemsChargeAssessmentCaseData {
         assessmentCrownSet.add(primaryChargeAssessmentData.getAssessment_crown_name());
         List<String> prfsnlStaffList = new ArrayList<String>();
         Set<String> prfsnlStaffSet = new HashSet<>();
-        prfsnlStaffSet.add(primaryChargeAssessmentData.getPrfsnl_staff_name());
+        if(primaryChargeAssessmentData.getPrfsnl_staff_name() != null) {
+            prfsnlStaffSet.add(primaryChargeAssessmentData.getPrfsnl_staff_name());
+        }
 
         List<String> initiatingAgencyNameList = new ArrayList<String>();
         Set<String> initiatingAgencyNameSet = new HashSet<>();
