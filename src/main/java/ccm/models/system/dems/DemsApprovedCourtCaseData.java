@@ -222,6 +222,27 @@ public class DemsApprovedCourtCaseData {
         }
         DemsFieldData courtFileId = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.MDOC_JUSTIN_NO.getLabel(), courtFileIDbuilder.toString());
 
+        StringBuilder courtFilebuilder = new StringBuilder();
+        if(primaryCourtCaseData.getCourt_file_no()!=null) {
+            courtFilebuilder.append(primaryCourtCaseData.getCourt_file_no());
+        }
+        if(courtCaseDataList != null) {
+            for (CourtCaseData courtcase : courtCaseDataList) {
+                boolean matchFound = false;
+                if(courtcase.getCourt_file_no()!=null && courtFilebuilder.toString().contains(courtcase.getCourt_file_no())) {
+                    matchFound = true;
+                }
+
+                if(!matchFound) {
+                    if(courtFilebuilder.length() > 0) {
+                        courtFilebuilder.append("; ");
+                    }
+                    courtFilebuilder.append(courtcase.getCourt_file_no());
+                }
+
+            }
+        }
+        DemsFieldData courtFile = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.COURT_FILE.getLabel(), courtFilebuilder.toString());
 
         StringBuilder courtFileNobuilder = new StringBuilder();
         if(primaryCourtCaseData.getCourt_file_number_seq_type()!=null) {
@@ -283,6 +304,7 @@ public class DemsApprovedCourtCaseData {
         fieldData.add(designation);
         fieldData.add(swornDate);
         fieldData.add(approvedCharges);
+        fieldData.add(courtFile);
         fieldData.add(courtFileNo);
         fieldData.add(courtFileDetails);
         fieldData.add(courtHomeReg);

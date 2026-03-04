@@ -17,6 +17,9 @@
     "name" : "Assessment Crown",
     "value" : [ "Visiting, Crown" ]
   }, {
+    "name" : "RCC Assigned Legal Staff",
+    "value" : []
+  }, {
     "name" : "Case Decision",
     "value" : "ACT - Approved to Court"
   }, {
