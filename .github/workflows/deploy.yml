@@ -155,7 +155,23 @@ jobs:
             SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
             -n $NAMESPACE
 
-          echo "Restarting deployment to apply changes..."
-          oc rollout restart deployment/$APP -n $NAMESPACE
+      - name: Configure accessdedup processor properties
+        if: ${{ env.APP == 'ccm-accessdedup-processor' }}
+        run: |
+            echo "Applying Quarkus Kafka Streams config..."
+  
+            oc set env deployment/$APP \
+              QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
+              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
+              CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
+              CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
+              CCM_TOPIC_KPIS_NAME=kpis-topic \
+              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
+              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
+              -n $NAMESPACE
 
-          echo "Configuration applied successfully."
+
+             echo "Restarting deployment to apply changes..."
+             oc rollout restart deployment/$APP -n $NAMESPACE
+
+             echo "Configuration applied successfully."
