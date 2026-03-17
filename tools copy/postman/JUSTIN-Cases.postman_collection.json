@@ -1,0 +1,561 @@
+{
+	"info": {
+		"_postman_id": "3cbef8a6-55fe-41eb-b1cd-09bda88d5da0",
+		"name": "JUSTIN-Cases",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/health",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "newEventsBatch",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/newEventsBatch",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"newEventsBatch"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "inProgressEvents",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/inProgressEvents",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"inProgressEvents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "eventStatus",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n \"event_message_id\":\"2003\",\r\n \"is_success\":\"T\"\r\n}"
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/eventStatus?event_message_id=2397&is_success=T",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"eventStatus"
+					],
+					"query": [
+						{
+							"key": "event_message_id",
+							"value": "2397"
+						},
+						{
+							"key": "is_success",
+							"value": "T"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "queueEvents",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}"
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/queueEvents",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"queueEvents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "eventByIdOrGuid",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "event",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/event?event_message_id=2988",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"event"
+					],
+					"query": [
+						{
+							"key": "event_message_id",
+							"value": "2988"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventById",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/event?event_message_id=2988",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"event"
+					],
+					"query": [
+						{
+							"key": "event_message_id",
+							"value": "2988"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventsLast1Hour",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"system\":\"DEMS\"}"
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/requeueEventsLast1Hour",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"requeueEventsLast1Hour"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "2003",
+							"description": "event_message_id",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventsLast24Hours",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"system\":\"DEMS\"}"
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/requeueEventsLast24Hours",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"requeueEventsLast24Hours"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "requeueEventSByDateRange Copy",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n \"from_dt\":\"18-MAY-2022\",\r\n \"to_dt\":\"19-MAY-2022\",\r\n \"system\":\"DEMS\"\r\n}"
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/requeueEventsByDtRange?from_dt=2022-05-25 00:00:00&to_dt=2022-05-26 00:00:00&system=DEMS",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"requeueEventsByDtRange"
+					],
+					"query": [
+						{
+							"key": "from_dt",
+							"value": "2022-05-25 00:00:00"
+						},
+						{
+							"key": "to_dt",
+							"value": "2022-05-26 00:00:00"
+						},
+						{
+							"key": "system",
+							"value": "DEMS"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "agencyFile",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/agencyFile?rcc_id=173181.0877",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"agencyFile"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "173181.0877"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "imageDataGet (agency file)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"document_keys\": [\r\n        {\r\n            \"rcc_id\": \"50473.0734\",\r\n            \"report_types\": \"VEHICLE\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"imageDataGet"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50285.0734",
+							"disabled": true
+						},
+						{
+							"key": "report_types",
+							"value": "VEHICLE",
+							"disabled": true
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "imageDataGet (court file)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"document_keys\": [\r\n        {             \r\n            \"mdoc_justin_no\": \"39852\",             \r\n            \"report_types\": \"INFORMATION\"         \r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/imageDataGet",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"imageDataGet"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "50285.0734",
+							"disabled": true
+						},
+						{
+							"key": "report_types",
+							"value": "VEHICLE",
+							"disabled": true
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "authUsers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/authUsers?rcc_id=173215.0877",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"authUsers"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "173215.0877"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "courtFile",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/courtFile?mdoc_justin_no=136405",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"courtFile"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "136405"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "apprSummary",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/apprSummary?mdoc_justin_no=39869",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"apprSummary"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "39869"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "crownAssignments",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/crownAssignments?mdoc_justin_no=39869",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"crownAssignments"
+					],
+					"query": [
+						{
+							"key": "mdoc_justin_no",
+							"value": "39869"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "agencyFile Copy",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"process_status_cd\":\"NEW\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/agencyFile?rcc_id=173181.0877",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"agencyFile"
+					],
+					"query": [
+						{
+							"key": "rcc_id",
+							"value": "173181.0877"
+						}
+					]
+				},
+				"description": "Get Agency File Data"
+			},
+			"response": []
+		},
+		{
+			"name": "demsUserSet",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{JUSTIN-API-URI}}/demsUserSet?part_id=85056.07345",
+					"host": [
+						"{{JUSTIN-API-URI}}"
+					],
+					"path": [
+						"demsUserSet"
+					],
+					"query": [
+						{
+							"key": "part_id",
+							"value": "85056.07345"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{JUSTIN-Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
