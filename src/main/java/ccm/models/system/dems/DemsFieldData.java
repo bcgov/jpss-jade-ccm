@@ -65,6 +65,7 @@ public class DemsFieldData {
         DESIGNATION("Designation"),
         SWORN_DATE("Sworn Date"),
         CHARGES("Charges"),
+        COURT_FILE("Court File"),
         COURT_FILE_NO("Court File No."),
         COURT_FILE_DETAILS("Court File Details"),
         COURT_HOME_REG("Court Home Registry"),

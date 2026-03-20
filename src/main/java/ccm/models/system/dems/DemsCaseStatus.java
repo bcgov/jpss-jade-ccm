@@ -10,6 +10,7 @@ public class DemsCaseStatus {
     private String agencyFileId = "";
     private String agencyFileNo = "";
     private String courtFileId = "";
+    private String courtFile = "";
     private String courtFileNo = "";
     private String status = "";
     private String rccStatus = "";
@@ -87,6 +88,14 @@ public class DemsCaseStatus {
 
     public void setCourtFileId(String courtFileId) {
         this.courtFileId = courtFileId;
+    }
+
+    public String getCourtFile() {
+        return courtFile;
+    }
+
+    public void setCourtFile(String courtFile) {
+        this.courtFile = courtFile;
     }
 
     public String getCourtFileNo() {
