@@ -161,11 +161,27 @@ jobs:
           # Deploy using Helm
           cd ../../Helm
 
+          # Construct image repository URL dynamically based on cluster and namespace
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+          else
+            IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
+          fi
+
+          IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${APP}"
+
+          echo "Deploying with:"
+          echo "  Namespace: $NAMESPACE"
+          echo "  Image Repository: $IMAGE_REPO"
+
           helm upgrade --install $APP . \
             -f values-${APP}.yml \
             -f values-${APP}-${ENV}.yml \
             --set namespace=$NAMESPACE \
             --set image.namespace=$NAMESPACE \
+            --set image.repository=$IMAGE_REPO \
             --namespace $NAMESPACE \
             --create-namespace \
             --wait \

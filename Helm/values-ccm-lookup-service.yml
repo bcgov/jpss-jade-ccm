@@ -1,5 +1,6 @@
 name: ccm-lookup-service
-namespace: cef5dd-dev
+# namespace will be set via --set namespace=<value> or from environment-specific values
+namespace: ""
 replicas: 2
 labels:
   integration: ccm-lookup-service
@@ -14,9 +15,10 @@ strategy:
   maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: cef5dd-dev
+  # namespace and repository will be set via --set or constructed dynamically
+  namespace: ""
   name: ccm-lookup-service
-  repository: image-registry.openshift-image-registry.svc:5000/cef5dd-dev/ccm-lookup-service
+  repository: ""
   tag: latest
   pullPolicy: IfNotPresent
 container:
