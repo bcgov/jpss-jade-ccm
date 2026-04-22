@@ -4,9 +4,28 @@
 # Multinode configuration for development environment
 replicas: 2
 
+# Pod anti-affinity to ensure pods are spread across different nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - ccm-app
+        topologyKey: kubernetes.io/hostname
+
 service:
   type: ClusterIP
   port: 80
+
+# Pod Disruption Budget - ensure at least 1 pod available during updates
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
 
 # Development-specific environment variables
 env:

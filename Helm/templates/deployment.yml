@@ -15,6 +15,10 @@ spec:
       labels:
         {{- include "ccm-app.selectorLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Values.container.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -43,6 +47,14 @@ spec:
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
             {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
           {{- if .Values.volumeMounts }}
           volumeMounts:
             {{- range .Values.volumeMounts }}
