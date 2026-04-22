@@ -1,16 +1,25 @@
 name: ccm-splunk-adapter
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 labels:
   integration: ccm-splunk-adapter
   camel_generation: '1'
 annotations:
   operator_id: camel-k
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: c<PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ct8viinmil8713q5ole0
-  tag: sha256:6ee3ed5c3152e2d0296fdcf2115bbc605ec6f6e804bb56dc77504a3b32abaac6
+  namespace: c""
+  name: ccm-splunk-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 container:
   name: integration

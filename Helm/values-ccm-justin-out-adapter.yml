@@ -1,5 +1,5 @@
 name: ccm-justin-out-adapter
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 
 labels:
@@ -9,11 +9,20 @@ labels:
 annotations:
   operator_id: camel-k
 
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
+
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-cvis1onjtak1cscce0pg
-  tag: sha256:48282b18feba1cca87a1eeb1a4dd2a3bc036b19b10a8730ef2b3a4bc5be6a80b
+  namespace: ""
+  name: ccm-justin-out-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 
 container:

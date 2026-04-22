@@ -1,16 +1,25 @@
 name: ccm-reports-processor
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 labels:
   integration: ccm-reports-processor
   camel_generation: '1'
 annotations:
   operator_id: camel-k
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ct8vimvmil8713q5oli0
-  tag: sha256:85e38513975dd5065090c49749a47e5b79516746889b64171a51538886429495
+  namespace: ""
+  name: ccm-reports-processor
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 container:
   name: integration

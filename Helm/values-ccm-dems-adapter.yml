@@ -1,10 +1,13 @@
 name: ccm-dems-adapter
+# namespace will be set via --set namespace=<value> or from environment-specific values
+namespace: ""
 replicas: 1
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ctb4a3nmil8713q5olj0
-  tag: sha256:24246e44d42dd5de44619ecfd4424cbdb26239d51f19ab52ae84417072cd044d
+  namespace: ""
+  name: ccm-dems-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 
 container:
@@ -56,3 +59,11 @@ labels:
 
 annotations:
   camel_operator_id: camel-k
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%

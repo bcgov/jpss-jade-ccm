@@ -1,16 +1,25 @@
 name: ccm-pidp-adapter
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 labels:
   integration: ccm-pidp-adapter
   camel_generation: '1'
 annotations:
   operator_id: camel-k
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ctb4a3nmil8713q5oljg
-  tag: sha256:4c9bb36f09f0bcaf0d171876ead6a545c860a7920dd5931138f74a94aa00b10b
+  namespace: ""
+  name: ccm-pidp-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 container:
   name: integration

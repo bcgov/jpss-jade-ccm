@@ -1,5 +1,5 @@
 name: ccm-justin-events-adapter
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 
 labels:
@@ -10,11 +10,20 @@ annotations:
   operator_id: camel-k
   restartedAt: "2025-06-03T11:00:10Z"
 
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
+
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ct8vimvmil8713q5olhg
-  tag: sha256:dbd409419e55083df045212c4d26b9e98dd11c036ae19fdea49f09bca1784657
+  namespace: ""
+  name: ccm-justin-events-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 
 container:

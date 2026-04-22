@@ -1,8 +1,18 @@
 name: ccm-accessdedup-processor
+# namespace will be set via --set namespace=<value> or from environment-specific values
+namespace: ""
 app: jade-ccm
 version: 1.6-1
 
 replicas: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 
 container:
   name: container
