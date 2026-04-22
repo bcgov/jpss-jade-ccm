@@ -43,6 +43,7 @@ spec:
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
             {{- end }}
+          {{- if .Values.volumeMounts }}
           volumeMounts:
             {{- range .Values.volumeMounts }}
             - name: {{ .name }}
@@ -54,10 +55,12 @@ spec:
               readOnly: {{ .readOnly }}
               {{- end }}
             {{- end }}
+          {{- end }}
           {{- if .Values.container.resources }}
           resources:
             {{ toYaml .Values.container.resources | nindent 12 }}
           {{- end }}
+      {{- if .Values.volumes }}
       volumes:
         {{- range .Values.volumes }}
         - name: {{ .name }}
@@ -69,6 +72,7 @@ spec:
           emptyDir: {{ toYaml .emptyDir | nindent 12 }}
           {{- end }}
         {{- end }}
+      {{- end }}
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
