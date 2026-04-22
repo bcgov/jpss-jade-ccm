@@ -35,24 +35,8 @@ env:
   - name: QUARKUS_LOG_CONSOLE_COLOR
     value: "true"
 
-volumeMounts:
-  - name: user-properties
-    mountPath: /etc/camel/conf.d/user.properties
-    subPath: user.properties
-  - name: ccm-configs
-    mountPath: /etc/camel/conf.d/_configmaps/ccm-configs
-
-volumes:
-  - name: user-properties
-    configMap:
-      name: ccm-dems-adapter-user-properties
-      items:
-        - key: application.properties
-          path: user.properties
-  - name: ccm-configs
-    configMap:
-      name: ccm-configs
-
+volumeMounts: []
+volumes: []
 labels:
   integration: ccm-dems-adapter
   camel_generation: "1"

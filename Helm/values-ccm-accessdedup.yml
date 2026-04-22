@@ -29,3 +29,5 @@ env:
 strategy:
   maxUnavailable: 25%
   maxSurge: 25%
+volumes: []
+volumeMounts: []
