@@ -110,6 +110,11 @@ jobs:
           sed -i 's/deployer="\$deployer"/latest="true"/g' \
           scripts/jade-ccm/redeploy-${APP}
 
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
       - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
@@ -121,7 +126,37 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy Application
+      - name: Deploy Application (Helm)
+        if: ${{ env.APP == 'ccm-lookup-service' }}
+        run: |
+          echo "Deploying $APP using Helm..."
+
+          # Build the application first
+          cd scripts/jade-ccm
+          chmod +x redeploy-${APP}
+
+          # Run only the build steps (steps 0-3) from the deployment script
+          # We'll handle the actual deployment with Helm
+          export HELM_DEPLOY=true
+          ./redeploy-${APP} "$ENV"
+
+          # Deploy using Helm
+          cd ../../Helm
+
+          helm upgrade --install $APP . \
+            -f values-${APP}.yml \
+            -f values-${APP}-${ENV}.yml \
+            --set namespace=$NAMESPACE \
+            --set image.namespace=$NAMESPACE \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+          echo "Helm deployment completed successfully!"
+
+      - name: Deploy Application (Legacy)
+        if: ${{ env.APP != 'ccm-lookup-service' }}
         run: |
           cd scripts/jade-ccm
           chmod +x redeploy-${APP}
