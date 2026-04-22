@@ -182,7 +182,6 @@ jobs:
             --set image.namespace=$NAMESPACE \
             --set image.repository=$IMAGE_REPO \
             --namespace $NAMESPACE \
-            --create-namespace \
             --wait \
             --timeout 5m
 
