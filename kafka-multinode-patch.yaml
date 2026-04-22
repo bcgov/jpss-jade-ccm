@@ -1,0 +1,49 @@
+# Patch for Kafka Broker Node Pool - Add Pod Anti-Affinity
+# Apply with: oc patch kafkanodepool brokers -n cef5dd-dev --type=merge --patch-file kafka-multinode-patch.yaml
+
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: brokers
+  namespace: cef5dd-dev
+spec:
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          # Prefer to schedule broker pods on different nodes
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: strimzi.io/pool-name
+                  operator: In
+                  values:
+                  - brokers
+              topologyKey: kubernetes.io/hostname
+---
+# Patch for Kafka Controller Node Pool - Add Pod Anti-Affinity
+# Apply with: oc patch kafkanodepool controllers -n cef5dd-dev --type=merge --patch-file kafka-multinode-patch-controllers.yaml
+
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controllers
+  namespace: cef5dd-dev
+spec:
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          # Prefer to schedule controller pods on different nodes
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: strimzi.io/pool-name
+                  operator: In
+                  values:
+                  - controllers
+              topologyKey: kubernetes.io/hostname

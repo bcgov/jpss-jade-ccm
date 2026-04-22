@@ -139,6 +139,13 @@ fi
 
 echo "Step 4: Deploying processor ..."
 
+# Check if HELM_DEPLOY is set - if so, skip deployment (Helm will handle it)
+if [ "$HELM_DEPLOY" = "true" ]; then
+    echo "HELM_DEPLOY is set - skipping deployment step (Helm will handle deployment)"
+    echo "Build completed successfully. Exiting for Helm deployment."
+    exit 0
+fi
+
 if [ "$env" = "local" ]; then
     # handle local deployment
 

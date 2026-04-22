@@ -141,10 +141,9 @@ jobs:
           ./repackage-ccm-models
 
       # -------------------------------------------------------
-      # Deploy with Helm (for ccm-lookup-service)
+      # Deploy with Helm (for ALL services)
       # -------------------------------------------------------
       - name: Deploy application (Helm)
-        if: ${{ env.APP == 'ccm-lookup-service' }}
         shell: bash
         run: |
           echo "Deploying $APP using Helm..."
@@ -189,27 +188,12 @@ jobs:
 
           echo "Helm deployment completed successfully!"
 
-      # -------------------------------------------------------
-      # Deploy with OpenShift templates (legacy - all other apps)
-      # -------------------------------------------------------
-      - name: Deploy application (Legacy)
-        if: ${{ env.APP != 'ccm-lookup-service' }}
-        shell: bash
-        run: |
-          cd scripts/jade-ccm
-          chmod +x redeploy-${APP}
-          ./redeploy-${APP} "$ENV"
-
       - name: Configure logging and retry settings
         run: |
           echo "Applying logging and retry configuration to $APP..."
 
-          # Determine deployment name based on whether it's Helm or legacy
-          if [ "$APP" = "ccm-lookup-service" ]; then
-            DEPLOYMENT_NAME="${APP}-ccm-app"
-          else
-            DEPLOYMENT_NAME="$APP"
-          fi
+          # All apps now use Helm naming convention: app-ccm-app
+          DEPLOYMENT_NAME="${APP}-ccm-app"
 
           oc set env deployment/$DEPLOYMENT_NAME \
             LOGGING_LEVEL_ROOT=INFO \
@@ -224,12 +208,8 @@ jobs:
         run: |
             echo "Applying Quarkus Kafka Streams config..."
 
-            # Determine deployment name based on whether it's Helm or legacy
-            if [ "$APP" = "ccm-lookup-service" ]; then
-              DEPLOYMENT_NAME="${APP}-ccm-app"
-            else
-              DEPLOYMENT_NAME="$APP"
-            fi
+            # All apps now use Helm naming convention: app-ccm-app
+            DEPLOYMENT_NAME="${APP}-ccm-app"
 
             oc set env deployment/$DEPLOYMENT_NAME \
               QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \

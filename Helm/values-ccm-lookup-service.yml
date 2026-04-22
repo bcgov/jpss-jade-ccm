@@ -41,28 +41,8 @@ container:
     containerPort: 8080
     protocol: TCP
 
-# Health checks for Quarkus application
-livenessProbe:
-  httpGet:
-    path: /q/health/live
-    port: 8080
-    scheme: HTTP
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 3
-  successThreshold: 1
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /q/health/ready
-    port: 8080
-    scheme: HTTP
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  timeoutSeconds: 3
-  successThreshold: 1
-  failureThreshold: 3
+# Health checks disabled - application doesn't expose /q/health endpoints
+# livenessProbe and readinessProbe are not configured
 env:
 - name: CAMEL_K_DIGEST
   value: vTr7o4IGQr0ETqMC39bmmbTTIbMVrfXZi2v_Dd5vrvnQ
