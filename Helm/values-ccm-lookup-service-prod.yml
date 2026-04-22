@@ -4,6 +4,10 @@
 # Single node configuration for production environment
 replicas: 1
 
+service:
+  type: ClusterIP
+  port: 80
+
 # Production-specific environment variables
 env:
 - name: CAMEL_K_DIGEST

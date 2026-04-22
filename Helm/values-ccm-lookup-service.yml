@@ -6,11 +6,18 @@ labels:
   camel_generation: '2'
 annotations:
   operator_id: camel-k
+service:
+  type: ClusterIP
+  port: 80
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
   namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ct8vil7mil8713q5olfg
-  tag: sha256:33208c9a93df252690bad8af3f09ea3d0ab3f1dd072ac85509ada8e17df99aae
+  name: ccm-lookup-service
+  repository: image-registry.openshift-image-registry.svc:5000/<PLACEHOLDER_NAMESPACE>/ccm-lookup-service
+  tag: latest
   pullPolicy: IfNotPresent
 container:
   name: integration

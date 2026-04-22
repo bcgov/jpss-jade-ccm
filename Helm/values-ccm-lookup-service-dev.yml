@@ -4,6 +4,10 @@
 # Multinode configuration for development environment
 replicas: 3
 
+service:
+  type: ClusterIP
+  port: 80
+
 # Development-specific environment variables
 env:
 - name: CAMEL_K_DIGEST

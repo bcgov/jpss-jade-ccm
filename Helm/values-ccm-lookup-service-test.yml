@@ -4,6 +4,10 @@
 # Multinode configuration for test environment
 replicas: 2
 
+service:
+  type: ClusterIP
+  port: 80
+
 # Test-specific environment variables
 env:
 - name: CAMEL_K_DIGEST
