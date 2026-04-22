@@ -2,7 +2,7 @@
 # This file extends values-ccm-lookup-service.yml
 
 # Multinode configuration for development environment
-replicas: 3
+replicas: 2
 
 service:
   type: ClusterIP
