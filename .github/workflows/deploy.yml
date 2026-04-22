@@ -124,19 +124,60 @@ jobs:
           echo "Environment: $ENV"
           echo "----------------------------------------"
           
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
       - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
           sudo mv kamel /usr/local/bin/kamel
+
       - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
+
       # -------------------------------------------------------
-      # Deploy (script unchanged)
+      # Deploy with Helm (for ccm-lookup-service)
       # -------------------------------------------------------
-      - name: Deploy application
+      - name: Deploy application (Helm)
+        if: ${{ env.APP == 'ccm-lookup-service' }}
+        shell: bash
+        run: |
+          echo "Deploying $APP using Helm..."
+
+          # Build the application first
+          cd scripts/jade-ccm
+          chmod +x redeploy-${APP}
+
+          # Run only the build steps (steps 0-3) from the deployment script
+          # We'll handle the actual deployment with Helm
+          export HELM_DEPLOY=true
+          ./redeploy-${APP} "$ENV"
+
+          # Deploy using Helm
+          cd ../../Helm
+
+          helm upgrade --install $APP . \
+            -f values-${APP}.yml \
+            -f values-${APP}-${ENV}.yml \
+            --set namespace=$NAMESPACE \
+            --set image.namespace=$NAMESPACE \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+          echo "Helm deployment completed successfully!"
+
+      # -------------------------------------------------------
+      # Deploy with OpenShift templates (legacy - all other apps)
+      # -------------------------------------------------------
+      - name: Deploy application (Legacy)
+        if: ${{ env.APP != 'ccm-lookup-service' }}
         shell: bash
         run: |
           cd scripts/jade-ccm
