@@ -1,6 +1,6 @@
 name: ccm-lookup-service
-namespace: <PLACEHOLDER_NAMESPACE>
-replicas: 3
+namespace: cef5dd-dev
+replicas: 2
 labels:
   integration: ccm-lookup-service
   camel_generation: '2'
@@ -14,9 +14,9 @@ strategy:
   maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
+  namespace: cef5dd-dev
   name: ccm-lookup-service
-  repository: image-registry.openshift-image-registry.svc:5000/<PLACEHOLDER_NAMESPACE>/ccm-lookup-service
+  repository: image-registry.openshift-image-registry.svc:5000/cef5dd-dev/ccm-lookup-service
   tag: latest
   pullPolicy: IfNotPresent
 container:
