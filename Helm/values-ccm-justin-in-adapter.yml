@@ -79,5 +79,11 @@ env:
   - name: QUARKUS_LOG_CONSOLE_COLOR
     value: "true"
 
+envFrom:
+  - configMapRef:
+      name: ccm-quarkus-configs
+  - secretRef:
+      name: ccm-quarkus-secrets
+
 volumes: []
 volumeMounts: []

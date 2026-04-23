@@ -39,6 +39,10 @@ spec:
                 {{ toYaml .valueFrom | nindent 16 }}
               {{- end }}
             {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- toYaml .Values.envFrom | nindent 12 }}
+          {{- end }}
           ports:
             {{- if .Values.container.ports }}
             {{- range .Values.container.ports }}

@@ -29,5 +29,11 @@ env:
 strategy:
   maxUnavailable: 25%
   maxSurge: 25%
+envFrom:
+  - configMapRef:
+      name: ccm-quarkus-configs
+  - secretRef:
+      name: ccm-quarkus-secrets
+
 volumes: []
 volumeMounts: []
