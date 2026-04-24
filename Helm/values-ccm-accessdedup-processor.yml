@@ -23,12 +23,14 @@ image:
   pullPolicy: Always
 
 env:
-  timezone: Canada/Pacific
-  kafkaBroker: events-kafka-bootstrap:9092
-
-strategy:
-  maxUnavailable: 25%
-  maxSurge: 25%
+  - name: TZ
+    value: Canada/Pacific
+  - name: QUARKUS_LOG_LEVEL
+    value: INFO
+  - name: QUARKUS_LOG_CONSOLE_JSON
+    value: "false"
+  - name: QUARKUS_LOG_CONSOLE_COLOR
+    value: "true"
 envFrom:
   - configMapRef:
       name: ccm-quarkus-configs

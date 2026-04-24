@@ -16,7 +16,7 @@ strategy:
   maxSurge: 25%
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: c""
+  namespace: ""
   name: ccm-splunk-adapter
   repository: ""
   tag: latest
