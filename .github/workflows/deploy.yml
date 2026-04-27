@@ -211,6 +211,7 @@ jobs:
 
             oc set env deployment/$DEPLOYMENT_NAME \
               QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
+              QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=events-kafka-bootstrap:9092 \
               CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
               CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
               CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
