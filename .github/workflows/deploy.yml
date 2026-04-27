@@ -182,7 +182,7 @@ jobs:
             --set image.repository=$IMAGE_REPO \
             --namespace $NAMESPACE \
             --wait \
-            --timeout 5m
+            --timeout 15m
 
           echo "Helm deployment completed successfully!"
 
