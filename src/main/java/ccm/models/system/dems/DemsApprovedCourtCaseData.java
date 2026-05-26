@@ -67,6 +67,10 @@ public class DemsApprovedCourtCaseData {
                 if(!caseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel())) {
                     caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
                 }
+            } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel().equals(caseFlag)) {
+                if(!caseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel())) {
+                    caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel());
+                }
             }
         }
 
@@ -182,6 +186,10 @@ public class DemsApprovedCourtCaseData {
                     } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel().equals(caseFlag)) {
                         if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel())) {
                             courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
+                        }
+                    } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel().equals(caseFlag)) {
+                        if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel())) {
+                            courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel());
                         }
                     }
                 }
