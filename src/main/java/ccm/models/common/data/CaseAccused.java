@@ -22,6 +22,8 @@ public class CaseAccused {
     private Boolean do_lto_yn;
     //fix for JADE-2559
     private Boolean rvo_yn;
+    // BCPSDEMS-2504
+    private Boolean cpo_yn;
 
     public CaseAccused() {
     }
@@ -45,6 +47,8 @@ public class CaseAccused {
         setDo_lto_yn(ja.getDo_lto_yn() != null && "Y".equalsIgnoreCase(ja.getDo_lto_yn()));
         //fix for JADE-2559
         setRvo_yn(ja.getRvo_yn() != null && "Y".equalsIgnoreCase(ja.getRvo_yn()));
+        // BCPSDEMS-2504
+        setCpo_yn(ja.getCpo_yn() != null && "Y".equalsIgnoreCase(ja.getCpo_yn()));
         StringBuilder name_process = new StringBuilder();
         if(ja.getProposed_process_type() != null) {
             name_process.append(ja.getProposed_process_type());
@@ -173,11 +177,20 @@ public class CaseAccused {
     public void setDo_lto_yn(Boolean do_lto_yn) {
         this.do_lto_yn = do_lto_yn;
     }
+
     public Boolean getRvo_yn() {
         return rvo_yn;
     }
     public void setRvo_yn(Boolean rvo_yn) {
         this.rvo_yn = rvo_yn;
+    }
+
+    public Boolean getCpo_yn() {
+        return cpo_yn;
+    }
+
+    public void setCpo_yn(Boolean cpo_yn) {
+        this.cpo_yn = cpo_yn;
     }
 
 }
