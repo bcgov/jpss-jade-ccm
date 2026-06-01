@@ -1,13 +1,13 @@
-echo "Redeploying ccm-notification-service to $1 ..."
+echo "Redeploying ccm-justin-in-events-adapter to $1 ..."
 
 ####################################################################################################
 # 0. Validate environment
 
 echo "Step 0: Validating environment ..."
 
-ns_set="cef5dd"
+ns_set="$CLUSTER"
 image_registry_url=$(oc registry info)
-app="ccm-notification-service"
+app="ccm-justin-in-adapter"
 
 if [ "$1" = "dev" ]; then
     env="dev"
@@ -54,14 +54,10 @@ echo "Step 1: Setting default logging level ..."
 
 logging_level="INFO"
 
-if [ "$env" = "prod" ]; then
-    echo "WARNING:  You are about to deploy to PRODUCTION.  Are you sure? (y/n)"
-    read answer
-    if [ "$answer" != "y" ]; then
-        echo "Aborting deployment."
-        ns=""
-        exit 1
-    fi
+if [[ "$ENV" == "prod" && "$AUTO_APPROVE" != "true" ]]; then
+  echo "WARNING: You are about to deploy to PRODUCTION. Are you sure? (y/n)"
+  read -r answer
+  [[ "$answer" == "y" ]] || { echo "Aborting deployment."; exit 1; }
 
     # Override logging level for Prod deployment
     logging_level="INFO"
@@ -72,7 +68,7 @@ fi
 ####################################################################################################
 # 2. Un-deploy existing adapter
 
-echo "Step 2: Un-deploying existing service ..."
+echo "Step 2: Un-deploying existing adapter ..."
 
 if [ "$env" = "local" ]; then
     # handle local deployment
@@ -124,7 +120,7 @@ if [ "$env" != "local" ]; then
     ## tag image for OpenShift
     docker tag $app $image_registry_url/$ns/$app
     ## login to OpenShift image registry
-    echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
+    ##echo $(oc whoami -t) | docker login -u $(oc whoami) --password-stdin $image_registry_url
     if [ $? -ne 0 ]; then
         echo "Error.  Login to OpenShift image registry failed."
         exit 1
@@ -132,16 +128,16 @@ if [ "$env" != "local" ]; then
     ## push image to OpenShift
     docker push $image_registry_url/$ns/$app
     ## logout of OpenShift image registry
-    docker logout $image_registry_url
+    # docker logout $image_registry_url
 
     # add image stream labels
-    oc -n $ns label imagestream $app deployer="$deployer" version="$version"
+    #oc -n $ns label imagestream $app deployer="$deployer" version="$version"
 fi
 
 ####################################################################################################
 # 4. Deploy the dems adapter
 
-echo "Step 4: Deploying notification service ..."
+echo "Step 4: Deploying justin in adapter ..."
 
 if [ "$env" = "local" ]; then
     # handle local deployment
@@ -157,7 +153,7 @@ else
     echo "Deploying $app to $ns ..."
 
     # create the deployment in the OpenShift namespace
-    oc -n $ns process -f "openshift/template-$app.yaml" -p NAMESPACE=$ns | oc -n $ns apply -f -
+    oc -n $ns process -f "openshift/template-$app.yaml" -p NAMESPACE=$ns -p ENV=$env | oc -n $ns apply -f -
 
     # wait for the deployment to complete
     echo "Waiting for deployment to complete..."
