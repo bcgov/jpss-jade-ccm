@@ -134,9 +134,16 @@ if [ "$env" != "local" ]; then
 fi
 
 ####################################################################################################
-# 4. Deploy the dems adapter
+# 4. Deploy the lookup service
 
-echo "Step 4: Deploying justin events adapter ..."
+echo "Step 4: Deploying lookup service ..."
+
+# Check if HELM_DEPLOY is set - if so, skip deployment (Helm will handle it)
+if [ "$HELM_DEPLOY" = "true" ]; then
+    echo "HELM_DEPLOY is set - skipping deployment step (Helm will handle deployment)"
+    echo "Build completed successfully. Exiting for Helm deployment."
+    exit 0
+fi
 
 if [ "$env" = "local" ]; then
     # handle local deployment

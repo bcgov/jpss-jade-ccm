@@ -1,5 +1,5 @@
 name: ccm-justin-events-adapter
-namespace: <PLACEHOLDER_NAMESPACE>
+namespace: ""
 replicas: 1
 
 labels:
@@ -10,11 +10,20 @@ annotations:
   operator_id: camel-k
   restartedAt: "2025-06-03T11:00:10Z"
 
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
+
 image:
   registry: image-registry.openshift-image-registry.svc:5000
-  namespace: <PLACEHOLDER_NAMESPACE>
-  name: camel-k-kit-ct8vimvmil8713q5olhg
-  tag: sha256:dbd409419e55083df045212c4d26b9e98dd11c036ae19fdea49f09bca1784657
+  namespace: ""
+  name: ccm-justin-events-adapter
+  repository: ""
+  tag: latest
   pullPolicy: IfNotPresent
 
 container:
@@ -74,58 +83,11 @@ env:
   - name: QUARKUS_LOG_CONSOLE_COLOR
     value: "true"
 
-volumes:
-  - name: i-source-000
-    configMap:
-      name: ccm-justin-events-adapter-source-000
-      items:
-        - key: content
-          path: CcmJustinEventsAdapter.java
-  - name: user-properties
-    configMap:
-      name: ccm-justin-events-adapter-user-properties
-      items:
-        - key: application.properties
-          path: user.properties
-  - name: application-properties
-    configMap:
-      name: ccm-justin-events-adapter-application-properties
-      items:
-        - key: application.properties
-          path: application.properties
-  - name: ccm-configs
-    configMap:
-      name: ccm-configs
-  - name: ccm-secrets
-    secret:
-      secretName: ccm-secrets
-  - name: cm-d3ee10e8c4bd18748fd90547383dd5a98d4d00cb
-    configMap:
-      name: cm-d3ee10e8c4bd18748fd90547383dd5a98d4d00cb
-      items:
-        - key: ccm-models.jar
-          path: ccm-models.jar
+envFrom:
+  - configMapRef:
+      name: ccm-quarkus-configs
+  - secretRef:
+      name: ccm-quarkus-secrets
 
-volumeMounts:
-  - name: i-source-000
-    mountPath: /etc/camel/sources/CcmJustinEventsAdapter.java
-    subPath: CcmJustinEventsAdapter.java
-    readOnly: true
-  - name: user-properties
-    mountPath: /etc/camel/conf.d/user.properties
-    subPath: user.properties
-    readOnly: true
-  - name: application-properties
-    mountPath: /etc/camel/application.properties
-    subPath: application.properties
-    readOnly: true
-  - name: ccm-configs
-    mountPath: /etc/camel/conf.d/_configmaps/ccm-configs
-    readOnly: true
-  - name: ccm-secrets
-    mountPath: /etc/camel/conf.d/_secrets/ccm-secrets
-    readOnly: true
-  - name: cm-d3ee10e8c4bd18748fd90547383dd5a98d4d00cb
-    mountPath: /etc/camel/resources/ccm-models.jar
-    subPath: ccm-models.jar
-    readOnly: true
+volumes: []
+volumeMounts: []

@@ -39,7 +39,6 @@ jobs:
   deploy:
     name: Deploy to OpenShift
     runs-on: ubuntu-latest
-
     # GitHub Environment == OpenShift namespace
     environment: ${{ github.event.inputs.namespace }}
 
@@ -124,30 +123,77 @@ jobs:
           echo "Environment: $ENV"
           echo "----------------------------------------"
           
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
       - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
           sudo mv kamel /usr/local/bin/kamel
+
       - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
+
       # -------------------------------------------------------
-      # Deploy (script unchanged)
+      # Deploy with Helm (for ALL services)
       # -------------------------------------------------------
-      - name: Deploy application
+      - name: Deploy application (Helm)
         shell: bash
         run: |
+          echo "Deploying $APP using Helm..."
+
+          # Build the application first
           cd scripts/jade-ccm
           chmod +x redeploy-${APP}
+
+          # Run only the build steps (steps 0-3) from the deployment script
+          # We'll handle the actual deployment with Helm
+          export HELM_DEPLOY=true
           ./redeploy-${APP} "$ENV"
+
+          # Deploy using Helm
+          cd ../../Helm
+
+          # Construct image repository URL dynamically based on cluster and namespace
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+          else
+            IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
+          fi
+
+          IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${APP}"
+
+          echo "Deploying with:"
+          echo "  Namespace: $NAMESPACE"
+          echo "  Image Repository: $IMAGE_REPO"
+
+          helm upgrade --install $APP . \
+            -f values-${APP}.yml \
+            -f values-${APP}-${ENV}.yml \
+            --set namespace=$NAMESPACE \
+            --set image.namespace=$NAMESPACE \
+            --set image.repository=$IMAGE_REPO \
+            --namespace $NAMESPACE \
+            --wait \
+            --timeout 15m
+
+          echo "Helm deployment completed successfully!"
 
       - name: Configure logging and retry settings
         run: |
           echo "Applying logging and retry configuration to $APP..."
 
-          oc set env deployment/$APP \
+          # All apps now use Helm naming convention: app-ccm-app
+          DEPLOYMENT_NAME="${APP}-ccm-app"
+
+          oc set env deployment/$DEPLOYMENT_NAME \
             LOGGING_LEVEL_ROOT=INFO \
             LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
             LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
@@ -159,9 +205,13 @@ jobs:
         if: ${{ env.APP == 'ccm-accessdedup-processor' }}
         run: |
             echo "Applying Quarkus Kafka Streams config..."
-  
-            oc set env deployment/$APP \
+
+            # All apps now use Helm naming convention: app-ccm-app
+            DEPLOYMENT_NAME="${APP}-ccm-app"
+
+            oc set env deployment/$DEPLOYMENT_NAME \
               QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
+              QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=events-kafka-bootstrap:9092 \
               CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
               CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
               CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
@@ -172,6 +222,6 @@ jobs:
 
 
              echo "Restarting deployment to apply changes..."
-             oc rollout restart deployment/$APP -n $NAMESPACE
+             oc rollout restart deployment/$DEPLOYMENT_NAME -n $NAMESPACE
 
              echo "Configuration applied successfully."
