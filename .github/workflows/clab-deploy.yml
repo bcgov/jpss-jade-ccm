@@ -1,0 +1,160 @@
+name: Deploy to OpenShift
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: "Target cluster"
+        required: true
+        type: choice
+        options:
+          - cef5dd
+          - ac13ae
+
+      app:
+        description: "Application to deploy"
+        required: true
+        type: choice
+        options:
+          - ccm-justin-in-adapter
+          - ccm-dems-adapter
+          - ccm-lookup-service
+          - ccm-splunk-adapter
+          - ccm-accessdedup-processor
+          - ccm-reports-processor
+          - ccm-pidp-adapter
+          - ccm-notification-service
+          - ccm-justin-events-adapter
+          - ccm-justin-out-adapter
+
+      env:
+        description: "Environment"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - test
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      CLUSTER: ${{ github.event.inputs.cluster }}
+      APP: ${{ github.event.inputs.app }}
+      ENV: ${{ github.event.inputs.env }}
+      NAMESPACE: ${{ github.event.inputs.cluster }}-${{ github.event.inputs.env }}
+
+      OCP_SERVER: ${{ secrets[format('OCP_SERVER_{0}', github.event.inputs.cluster)] }}
+      OCP_TOKEN:  ${{ secrets[format('OCP_TOKEN_{0}',  github.event.inputs.cluster)] }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenShift CLI
+        run: |
+          curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
+          tar -xzf oc.tar.gz
+          sudo mv oc /usr/local/bin/oc
+          oc version --client
+
+      - name: Login to OpenShift
+        run: |
+          echo "Logging into $CLUSTER..."
+          oc login "$OCP_SERVER" --token="$OCP_TOKEN"
+          oc project "$NAMESPACE"
+
+      - name: Show deployment details
+        run: |
+          echo "----------------------------------------"
+          echo "🚀 Deployment Summary"
+          echo "Cluster:     $CLUSTER"
+          echo "Namespace:   $NAMESPACE"
+          echo "Application: $APP"
+          echo "Environment: $ENV"
+          echo "----------------------------------------"
+
+      - name: Override oc registry info
+        run: |
+          mkdir -p /tmp/oc-wrapper
+          cp /usr/local/bin/oc /tmp/oc-wrapper/oc-real
+
+          cat <<'EOF' > /tmp/oc-wrapper/oc
+          #!/bin/bash
+          if [[ "$1" == "registry" && "$2" == "info" ]]; then
+            echo "image-registry.openshift-image-registry.svc:5000"
+          else
+            /tmp/oc-wrapper/oc-real "$@"
+          fi
+          EOF
+
+          chmod +x /tmp/oc-wrapper/oc
+          echo "/tmp/oc-wrapper" >> $GITHUB_PATH
+
+      - name: Login to internal registry
+        run: |
+          echo $(oc whoami -t) | docker login \
+            -u $(oc whoami) \
+            --password-stdin \
+            image-registry.openshift-image-registry.svc:5000
+
+      - name: Remove invalid deployer label
+        run: |
+          sed -i 's/deployer="\$deployer"/latest="true"/g' \
+          scripts/jade-ccm/redeploy-${APP}
+
+      - name: Install Camel K CLI
+        run: |
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/kamel
+
+      - name: Build CCM models jar
+        run: |
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
+
+      - name: Deploy Application
+        run: |
+          cd scripts/jade-ccm
+          chmod +x redeploy-${APP}
+          ./redeploy-${APP} "$ENV"
+
+      - name: Configure logging and retry settings
+        run: |
+          echo "Applying logging and retry configuration to $APP..."
+
+          oc set env deployment/$APP \
+            LOGGING_LEVEL_ROOT=INFO \
+            LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
+            LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
+            SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
+            SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
+            -n $NAMESPACE
+
+      - name: Configure accessdedup processor properties
+        if: ${{ env.APP == 'ccm-accessdedup-processor' }}
+        run: |
+          echo "Applying Quarkus Kafka Streams config..."
+
+          oc set env deployment/$APP \
+            QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
+            CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
+            CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
+            CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
+            CCM_TOPIC_KPIS_NAME=kpis-topic \
+            CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
+            CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
+            -n $NAMESPACE
+
+          echo "Restarting deployment to apply changes..."
+          oc rollout restart deployment/$APP -n $NAMESPACE
+
+          echo "Configuration applied successfully."
