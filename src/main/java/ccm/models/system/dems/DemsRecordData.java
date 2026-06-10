@@ -241,8 +241,9 @@ public class DemsRecordData {
                 setType("NOTES AND WILL SAYS");
             } else if(report.equals(REPORT_TYPES.WITNESS_WILL_SAY)) {
                 setType("NOTES AND WILL SAYS");
-                setApprovedForDisclosure("No");
-                setReviewedBy("System set - Review required");
+                // BCPSDEMS-2526 - Remove Automatic Coding for Witness Wil Say reports
+                //setApprovedForDisclosure("No");
+                //setReviewedBy("System set - Review required");
             }
 
         }
