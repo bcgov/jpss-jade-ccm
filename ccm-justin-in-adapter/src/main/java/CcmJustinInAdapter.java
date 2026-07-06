@@ -7,6 +7,9 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import ccm.models.system.justin.JustinAgencyFileStatus;
+import ccm.models.system.justin.JustinDemsCaseStatus;
+import ccm.models.system.justin.JustinAgencyFileCaseDetail;
 import ccm.models.system.justin.JustinCaseHyperlinkData;
 import ccm.models.system.justin.JustinCaseHyperlinkDataList;
 import ccm.models.system.justin.JustinRccCaseList;
@@ -27,6 +30,8 @@ public class CcmJustinInAdapter extends RouteBuilder {
     getCaseListHyperlink();
     // part of JADE-3025
     getPrimaryCaseByAgencyNo();
+    // JADE-3349
+    getPrimaryCaseByAgencyNoDetails();
   }
 
   private void version() {
@@ -283,7 +288,7 @@ public class CcmJustinInAdapter extends RouteBuilder {
         exchange.setProperty("exchangeId",exchange.getExchangeId());
       }
     })
-    .log(LoggingLevel.INFO, "Received request (exchange id: ${exchangeProperty.exchangeId}) for case hyperlink. agencyIdCode: ${header.agencyIdCode}  agencyFileNumber: ${header.agencyFileNumber} ...")
+    .log(LoggingLevel.INFO, "Received request (exchange id: ${exchangeProperty.exchangeId}) for case. agencyIdCode: ${header.agencyIdCode}  agencyFileNumber: ${header.agencyFileNumber} ...")
 
     // check for credentials
     .choice()
@@ -398,4 +403,162 @@ public class CcmJustinInAdapter extends RouteBuilder {
     .log(LoggingLevel.INFO,"Complete get primary case by agency no.")
     ;
   }
+
+
+  private void getPrimaryCaseByAgencyNoDetails() {
+    // use method name as route id
+    String routeId = new Object() {}.getClass().getEnclosingMethod().getName();
+    String path = "justin/api/v1/" + routeId;
+
+    // IN: header = rcc_id
+    from("platform-http:/" + path + "?httpMethodRestrict=GET")
+    .routeId(routeId)
+    .streamCaching() // https://camel.apache.org/manual/faq/why-is-my-message-body-empty.html
+
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        exchange.setProperty("exchangeId",exchange.getExchangeId());
+      }
+    })
+    .log(LoggingLevel.INFO, "Received request (exchange id: ${exchangeProperty.exchangeId}) for case details. agencyIdCode: ${header.agencyIdCode}  agencyFileNumber: ${header.agencyFileNumber} ...")
+
+    // check for credentials
+    .choice()
+      .when(simple("${header.authorization} != 'Bearer {{justin.in.token}}'"))
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setBody(simple("Unauthorized access"))
+        .log(LoggingLevel.ERROR,"HTTP response 401. Body: ${body}")
+        .stop()
+    .end()
+
+    //.log(LoggingLevel.INFO,"Processing request... agencyIdCode = ${header[agencyIdCode]}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        String agencyIdCode = (String)exchange.getIn().getHeader("agencyIdCode");
+        String agencyFileNumber = (String)exchange.getIn().getHeader("agencyFileNumber");
+        if (agencyFileNumber == null || agencyFileNumber.isEmpty() || agencyIdCode == null || agencyIdCode.isBlank()){
+          exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400));
+          log.info("required header parameters empty, returning 400");
+        }
+      }
+    })
+
+    // check for parameters valid
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == '400'"))
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+        .setBody(simple("Required parameters are empty or missing"))
+        .log(LoggingLevel.ERROR,"HTTP response 400. Body: ${body}")
+        .stop()
+    .end()
+
+    .log(LoggingLevel.INFO,"Processing request primary case agency in lookup... ")
+
+    .removeHeader("CamelHttpUri")
+    .removeHeader("CamelHttpBaseUri")
+    .removeHeaders("CamelHttp*")
+    .setHeader(Exchange.HTTP_METHOD, simple("GET"))
+    .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+    .to("http://ccm-lookup-service/getAgencyFileStatus?throwExceptionOnFailure=false")
+    .log(LoggingLevel.INFO, "Headers: ${headers}")
+    .log(LoggingLevel.INFO, "Body got from justin: ${body}.")
+    .choice()
+    .when().simple("${header.CamelHttpResponseCode} == 200")
+      // file found
+      .setProperty("agencyFileStatus", jsonpath("$.chargeAssessmentStatus"))
+      .setProperty("rccId", jsonpath("$.rccId"))
+      .log(LoggingLevel.INFO, "agency file found, parsing response...")
+    .endChoice()
+    .when().simple("${header.CamelHttpResponseCode} == 404")
+      .setProperty("message", jsonpath("$.message"))
+      .log(LoggingLevel.INFO, "Agency File not found")
+    .endChoice()
+    .otherwise()
+      .setProperty("message", simple("${header.CamelHttpResponseCode} ${header.CamelHttpResponseText}"))
+    .end()
+
+    .process(new Processor() {
+    @Override
+    public void process(Exchange ex) {
+      String agencyFileStatus = (String) ex.getProperty("agencyFileStatus");
+      String rccId = (String) ex.getProperty("rccId");
+      String messsage = (String) ex.getProperty("message");
+      JustinAgencyFileStatus justinAgencyStatus = new JustinAgencyFileStatus(agencyFileStatus, messsage, rccId);
+      ex.getMessage().setBody(justinAgencyStatus);
+    }})
+    .setProperty("justinAgencyFileStatus", simple("${body}"))
+    .marshal().json(JsonLibrary.Jackson, JustinAgencyFileStatus.class)
+    .log(LoggingLevel.INFO, "justin response: ${body}")
+
+    .choice()
+    .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.rccId} != null"))
+      .setHeader("rcc_id",simple("${exchangeProperty.rccId}"))
+      .toD("http://ccm-lookup-service/getPrimaryCourtCaseExists?throwExceptionOnFailure=false")
+      .log(LoggingLevel.INFO, "Body got from dems: ${body}.")
+      .unmarshal().json()
+      .setProperty("caseId").simple("${body[id]}")
+      .setProperty("caseStatus").simple("${body[status]}")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          String caseStatus = (String) exchange.getProperty("caseStatus");
+          String caseId = (String) exchange.getProperty("caseId");
+          JustinDemsCaseStatus demsCaseStatus = new JustinDemsCaseStatus(caseId, null, caseStatus);
+          int responseCode = (int)exchange.getMessage().getHeader("CamelHttpResponseCode");
+          String responseText = (String)exchange.getMessage().getHeader("CamelHttpResponseText");
+
+          if(responseCode == 404) {
+            exchange.setProperty("message", "Dems Case Not Found");
+            demsCaseStatus.setMessage("Dems Case Not Found");
+          } else if(responseCode > 299) {
+            String message = String.format("%d %s", responseCode, responseText);
+            exchange.setProperty("message", message);
+            demsCaseStatus.setMessage(message);
+          }
+          exchange.getMessage().setBody(demsCaseStatus);
+        }})
+        .setProperty("demsCaseStatus", simple("${body}"))
+        .marshal().json(JsonLibrary.Jackson, JustinDemsCaseStatus.class)
+        .log(LoggingLevel.INFO, "dems response: ${body}")
+
+    .otherwise()
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) {
+          JustinDemsCaseStatus demsCaseStatus = new JustinDemsCaseStatus(null, null, null);
+          exchange.getMessage().setBody(demsCaseStatus);
+        }})
+        .setProperty("demsCaseStatus", simple("${body}"))
+        .marshal().json(JsonLibrary.Jackson, JustinDemsCaseStatus.class)
+        .log(LoggingLevel.INFO, "dems response: ${body}")
+
+    .end()
+
+    // set the agencyDetail object to return the details of the lookup.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        JustinAgencyFileStatus justinAgencyFileStatus = (JustinAgencyFileStatus)exchange.getProperty("justinAgencyFileStatus", JustinAgencyFileStatus.class);
+        JustinDemsCaseStatus demsCaseStatus = (JustinDemsCaseStatus)exchange.getProperty("demsCaseStatus", JustinDemsCaseStatus.class);
+        JustinAgencyFileCaseDetail agencyDetail = new JustinAgencyFileCaseDetail();
+        agencyDetail.setJustinRcc(justinAgencyFileStatus);
+        agencyDetail.setDemsCase(demsCaseStatus);
+        
+        exchange.getMessage().setBody(agencyDetail);
+      }
+    })
+    .marshal().json(JsonLibrary.Jackson, JustinAgencyFileCaseDetail.class)
+
+    .log(LoggingLevel.INFO, "call response: ${body}")
+    .log(LoggingLevel.INFO,"Complete get primary case by agency no.")
+    ;
+  }
+
+
+
+
 }
