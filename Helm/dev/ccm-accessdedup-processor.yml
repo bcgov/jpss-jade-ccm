@@ -1,0 +1,30 @@
+# Environment-specific values for ccm-accessdedup-processor in DEV
+# This file extends values-ccm-accessdedup.yml
+
+# Multinode configuration for development environment
+replicas: 2
+
+# Override image repository for dev environment
+image:
+  repository: image-registry.apps.silver.devops.gov.bc.ca/cef5dd-dev/ccm-accessdedup-processor
+  tag: latest
+  pullPolicy: Always
+
+# Pod anti-affinity to ensure pods are spread across different nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - ccm-app
+        topologyKey: kubernetes.io/hostname
+
+# Pod Disruption Budget - ensure at least 1 pod available during updates
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

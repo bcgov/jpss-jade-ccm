@@ -52,6 +52,12 @@
             <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
         </dependency>
 
+        <!-- Quarkus Health Checks -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+
         <!-- Kafka Streams Test Utils -->
         <dependency>
             <groupId>org.apache.kafka</groupId>

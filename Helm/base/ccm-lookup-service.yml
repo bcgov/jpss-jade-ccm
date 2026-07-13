@@ -1,0 +1,106 @@
+name: ccm-lookup-service
+# namespace will be set via --set namespace=<value> or from environment-specific values
+namespace: ""
+# Camel K digest for this integration - stored in Secret to avoid Git secret scanning
+camelDigest: vTr7o4IGQr0ETqMC39bmmbTTIbMVrfXZi2v_Dd5vrvnQ
+replicas: 2
+labels:
+  integration: ccm-lookup-service
+  camel_generation: '2'
+annotations:
+  operator_id: camel-k
+service:
+  type: ClusterIP
+  port: 80
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
+image:
+  registry: image-registry.openshift-image-registry.svc:5000
+  # namespace and repository will be set via --set or constructed dynamically
+  namespace: ""
+  name: ccm-lookup-service
+  repository: ""
+  tag: latest
+  pullPolicy: IfNotPresent
+container:
+  name: integration
+  command:
+  - /bin/sh
+  - -c
+  args:
+  - echo exec java -Xmx525M -cp ./resources:/etc/camel/application.properties:/etc/camel/conf.d/_configmaps/ccm-configs:/etc/camel/conf.d/_resources:/etc/camel/conf.d/_secrets/ccm-secrets:/etc/camel/conf.d/user.properties:/etc/camel/resources:/etc/camel/resources/ccm-models.jar:/etc/camel/sources/CcmLookupService.java:dependencies/app/camel-k-integration-1.10.8.jar
+  workingDir: /deployments
+  resources:
+    requests:
+      cpu: 5m
+      memory: 500Mi
+    limits:
+      cpu: 200m
+      memory: 1000Mi
+  ports:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+
+# Health probes using Quarkus SmallRye Health endpoints
+livenessProbe:
+  httpGet:
+    path: /q/health/live
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /q/health/ready
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+env:
+- name: CAMEL_K_DIGEST
+  valueFrom:
+    secretKeyRef:
+      name: ccm-lookup-service-digest
+      key: camel-k-digest
+- name: CAMEL_K_CONF
+  value: /etc/camel/application.properties
+- name: CAMEL_K_CONF_D
+  value: /etc/camel/conf.d
+- name: CAMEL_K_VERSION
+  value: 1.10.8
+- name: CAMEL_K_OPERATOR_ID
+  value: camel-k
+- name: CAMEL_K_INTEGRATION
+  value: ccm-lookup-service
+- name: CAMEL_K_RUNTIME_VERSION
+  value: 1.15.6.redhat-00051
+- name: CAMEL_K_MOUNT_PATH_CONFIGMAPS
+  value: /etc/camel/conf.d/_configmaps
+- name: CAMEL_K_MOUNT_PATH_SECRETS
+  value: /etc/camel/conf.d/_secrets
+- name: NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: TZ
+  value: Canada/Pacific
+- name: QUARKUS_LOG_LEVEL
+  value: DEBUG
+- name: QUARKUS_LOG_CONSOLE_JSON
+  value: 'false'
+- name: QUARKUS_LOG_CONSOLE_COLOR
+  value: 'true'
+volumes: []
+volumeMounts: []

@@ -1,0 +1,80 @@
+name: ccm-dems-adapter
+# namespace will be set via --set namespace=<value> or from environment-specific values
+namespace: ""
+replicas: 1
+image:
+  registry: image-registry.openshift-image-registry.svc:5000
+  namespace: ""
+  name: ccm-dems-adapter
+  repository: ""
+  tag: latest
+  pullPolicy: IfNotPresent
+
+container:
+  name: integration
+  command:
+    - /bin/sh
+    - -c
+  args:
+    - echo exec java -Xmx525M -cp ... # (trimmed for Helm)
+  resources:
+    requests:
+      cpu: 5m
+      memory: 500Mi
+    limits:
+      cpu: 200m
+      memory: 1000Mi
+
+# Health probes using Quarkus SmallRye Health endpoints
+livenessProbe:
+  httpGet:
+    path: /q/health/live
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /q/health/ready
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+env:
+  - name: TZ
+    value: Canada/Pacific
+  - name: QUARKUS_LOG_LEVEL
+    value: INFO
+  - name: QUARKUS_LOG_CONSOLE_JSON
+    value: "false"
+  - name: QUARKUS_LOG_CONSOLE_COLOR
+    value: "true"
+
+volumeMounts: []
+envFrom:
+  - configMapRef:
+      name: ccm-quarkus-configs
+  - secretRef:
+      name: ccm-quarkus-secrets
+
+volumes: []
+labels:
+  integration: ccm-dems-adapter
+  camel_generation: "1"
+
+annotations:
+  camel_operator_id: camel-k
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%

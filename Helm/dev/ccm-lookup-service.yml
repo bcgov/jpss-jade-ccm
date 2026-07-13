@@ -1,0 +1,84 @@
+# Environment-specific values for ccm-lookup-service in DEV
+# This file extends values-ccm-lookup-service.yml
+
+# Multinode configuration for development environment
+replicas: 2
+
+# Override image repository for dev environment
+image:
+  repository: image-registry.apps.silver.devops.gov.bc.ca/cef5dd-dev/ccm-lookup-service
+  tag: latest
+  pullPolicy: Always
+
+# Pod anti-affinity to ensure pods are spread across different nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - ccm-app
+        topologyKey: kubernetes.io/hostname
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Pod Disruption Budget - ensure at least 1 pod available during updates
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler - automatically scale based on CPU/memory
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Development-specific environment variables
+env:
+- name: CAMEL_K_DIGEST
+  valueFrom:
+    secretKeyRef:
+      name: ccm-lookup-service-digest
+      key: camel-k-digest
+- name: CAMEL_K_CONF
+  value: /etc/camel/application.properties
+- name: CAMEL_K_CONF_D
+  value: /etc/camel/conf.d
+- name: CAMEL_K_VERSION
+  value: 1.10.8
+- name: CAMEL_K_OPERATOR_ID
+  value: camel-k
+- name: CAMEL_K_INTEGRATION
+  value: ccm-lookup-service
+- name: CAMEL_K_RUNTIME_VERSION
+  value: 1.15.6.redhat-00051
+- name: CAMEL_K_MOUNT_PATH_CONFIGMAPS
+  value: /etc/camel/conf.d/_configmaps
+- name: CAMEL_K_MOUNT_PATH_SECRETS
+  value: /etc/camel/conf.d/_secrets
+- name: NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: TZ
+  value: Canada/Pacific
+- name: QUARKUS_LOG_LEVEL
+  value: DEBUG
+- name: QUARKUS_LOG_CONSOLE_JSON
+  value: 'false'
+- name: QUARKUS_LOG_CONSOLE_COLOR
+  value: 'true'
+- name: KAFKA-BROKER-URL
+  value: events-kafka-bootstrap:9092

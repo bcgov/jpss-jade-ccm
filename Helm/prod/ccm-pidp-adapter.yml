@@ -1,0 +1,8 @@
+# Environment-specific values for ccm-pidp-adapter in PROD
+# This file extends values-ccm-pidp-adapter.yml
+
+# Single node configuration for production environment
+replicas: 1
+
+# No pod anti-affinity needed for single replica
+# No PDB needed for single replica

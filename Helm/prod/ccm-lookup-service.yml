@@ -1,0 +1,51 @@
+# Environment-specific values for ccm-lookup-service in PROD
+# This file extends values-ccm-lookup-service.yml
+
+# Single node configuration for production environment
+replicas: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Production-specific environment variables
+env:
+- name: CAMEL_K_DIGEST
+  valueFrom:
+    secretKeyRef:
+      name: ccm-lookup-service-digest
+      key: camel-k-digest
+- name: CAMEL_K_CONF
+  value: /etc/camel/application.properties
+- name: CAMEL_K_CONF_D
+  value: /etc/camel/conf.d
+- name: CAMEL_K_VERSION
+  value: 1.10.8
+- name: CAMEL_K_OPERATOR_ID
+  value: camel-k
+- name: CAMEL_K_INTEGRATION
+  value: ccm-lookup-service
+- name: CAMEL_K_RUNTIME_VERSION
+  value: 1.15.6.redhat-00051
+- name: CAMEL_K_MOUNT_PATH_CONFIGMAPS
+  value: /etc/camel/conf.d/_configmaps
+- name: CAMEL_K_MOUNT_PATH_SECRETS
+  value: /etc/camel/conf.d/_secrets
+- name: NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: TZ
+  value: Canada/Pacific
+- name: QUARKUS_LOG_LEVEL
+  value: INFO
+- name: QUARKUS_LOG_CONSOLE_JSON
+  value: 'true'
+- name: QUARKUS_LOG_CONSOLE_COLOR
+  value: 'false'
+- name: KAFKA-BROKER-URL
+  value: events-kafka-bootstrap:9092
