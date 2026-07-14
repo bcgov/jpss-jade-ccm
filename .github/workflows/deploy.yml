@@ -191,12 +191,22 @@ jobs:
 
             # Build the application first
             cd scripts/jade-ccm
-            chmod +x redeploy-${CURRENT_APP}
+
+            # Determine the correct script name
+            # Most services use -quarkus suffix, except ccm-accessdedup-processor
+            if [[ "$CURRENT_APP" == "ccm-accessdedup-processor" ]]; then
+              SCRIPT_NAME="redeploy-${CURRENT_APP}"
+            else
+              SCRIPT_NAME="redeploy-${CURRENT_APP}-quarkus"
+            fi
+
+            echo "Using script: $SCRIPT_NAME"
+            chmod +x $SCRIPT_NAME
 
             # Run only the build steps (steps 0-3) from the deployment script
             # We'll handle the actual deployment with Helm
             export HELM_DEPLOY=true
-            ./redeploy-${CURRENT_APP} "$ENV"
+            ./$SCRIPT_NAME "$ENV"
 
             # Deploy using Helm
             cd ../../Helm
