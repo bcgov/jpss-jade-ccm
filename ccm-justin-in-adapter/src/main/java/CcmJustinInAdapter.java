@@ -511,8 +511,10 @@ public class CcmJustinInAdapter extends RouteBuilder {
           int responseCode = (int)exchange.getMessage().getHeader("CamelHttpResponseCode");
           String responseText = (String)exchange.getMessage().getHeader("CamelHttpResponseText");
 
-          if(responseCode == 404) {
+          if(responseCode == 404 || caseId == "") {
             exchange.setProperty("message", "Dems Case Not Found");
+            demsCaseStatus.setId(null);
+            demsCaseStatus.setStatus(null);
             demsCaseStatus.setMessage("Dems Case Not Found");
           } else if(responseCode > 299) {
             String message = String.format("%d %s", responseCode, responseText);
