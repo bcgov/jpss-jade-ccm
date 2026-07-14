@@ -97,13 +97,66 @@ jobs:
           echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "ENV=$ENV" >> $GITHUB_ENV
 
-      - name: Configure Docker for OpenShift Registry
+      - name: Configure Buildah for OpenShift Registry
         run: |
-          # Configure docker to trust OpenShift's authentication
-          # Export dockercfg from OpenShift for docker to use
-          mkdir -p ~/.docker
-          oc registry login --to=~/.docker/config.json
-          echo "Docker registry authentication configured"
+          # Install buildah (better OpenShift compatibility than docker)
+          sudo apt-get update -qq
+          sudo apt-get install -y buildah
+
+          # Create a wrapper script that redirects docker commands to buildah
+          sudo tee /usr/local/bin/docker-wrapper > /dev/null << 'EOF'
+          #!/bin/bash
+          # Wrapper to use buildah for docker commands with OpenShift
+
+          if [[ "$1" == "login" ]]; then
+            # Handle docker login - use buildah login
+            shift
+            buildah login "$@"
+          elif [[ "$1" == "logout" ]]; then
+            # Handle docker logout
+            shift
+            buildah logout "$@"
+          elif [[ "$1" == "push" ]]; then
+            # Handle docker push
+            shift
+            buildah push "$@"
+          elif [[ "$1" == "tag" ]]; then
+            # Handle docker tag using buildah tag
+            shift
+            buildah tag "$@"
+          elif [[ "$1" == "build" ]]; then
+            # Handle docker build
+            buildah bud "$@"
+          elif [[ "$1" == "rmi" ]]; then
+            # Handle docker rmi
+            shift
+            buildah rmi "$@" 2>/dev/null || true
+          elif [[ "$1" == "stop" ]] || [[ "$1" == "rm" ]] || [[ "$1" == "run" ]]; then
+            # For container operations, try to use actual docker if available
+            /usr/bin/docker "$@" 2>/dev/null || true
+          else
+            # For other commands, try buildah or docker
+            buildah "$@" 2>/dev/null || /usr/bin/docker "$@"
+          fi
+          EOF
+
+          sudo chmod +x /usr/local/bin/docker-wrapper
+
+          # Replace docker with our wrapper
+          sudo mv /usr/bin/docker /usr/bin/docker.original || true
+          sudo ln -sf /usr/local/bin/docker-wrapper /usr/bin/docker
+
+          # Pre-authenticate buildah with OpenShift registry
+          TOKEN=$(oc whoami -t)
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+          fi
+
+          echo "$TOKEN" | buildah login -u $(oc whoami) --password-stdin "$REGISTRY"
+
+          echo "Buildah configured as docker replacement with OpenShift authentication"
 
       - name: Show deployment details
         run: |
