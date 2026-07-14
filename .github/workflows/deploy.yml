@@ -24,6 +24,7 @@ on:
         required: true
         type: choice
         options:
+          - all
           - ccm-justin-in-adapter
           - ccm-dems-adapter
           - ccm-lookup-service
@@ -119,7 +120,11 @@ jobs:
           echo "🚀 Deployment Summary"
           echo "Cluster:     $CLUSTER"
           echo "Namespace:   $NAMESPACE"
-          echo "Application: $APP"
+          if [[ "$APP" == "all" ]]; then
+            echo "Application: ALL (10 services)"
+          else
+            echo "Application: $APP"
+          fi
           echo "Environment: $ENV"
           echo "----------------------------------------"
           
@@ -145,21 +150,30 @@ jobs:
       - name: Deploy application (Helm)
         shell: bash
         run: |
-          echo "Deploying $APP using Helm..."
+          # Define all applications
+          ALL_APPS=(
+            "ccm-justin-in-adapter"
+            "ccm-dems-adapter"
+            "ccm-lookup-service"
+            "ccm-splunk-adapter"
+            "ccm-accessdedup-processor"
+            "ccm-reports-processor"
+            "ccm-pidp-adapter"
+            "ccm-notification-service"
+            "ccm-justin-events-adapter"
+            "ccm-justin-out-adapter"
+          )
 
-          # Build the application first
-          cd scripts/jade-ccm
-          chmod +x redeploy-${APP}
+          # Determine which apps to deploy
+          if [[ "$APP" == "all" ]]; then
+            echo "🚀 Deploying ALL applications..."
+            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
+          else
+            echo "🚀 Deploying single application: $APP"
+            APPS_TO_DEPLOY=("$APP")
+          fi
 
-          # Run only the build steps (steps 0-3) from the deployment script
-          # We'll handle the actual deployment with Helm
-          export HELM_DEPLOY=true
-          ./redeploy-${APP} "$ENV"
-
-          # Deploy using Helm
-          cd ../../Helm
-
-          # Construct image repository URL dynamically based on cluster and namespace
+          # Construct image registry URL based on cluster
           if [[ "$CLUSTER" == "cef5dd" ]]; then
             IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
           elif [[ "$CLUSTER" == "ac13ae" ]]; then
@@ -168,49 +182,101 @@ jobs:
             IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
           fi
 
-          IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${APP}"
+          # Deploy each application
+          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "📦 Deploying: $CURRENT_APP"
+            echo "=========================================="
 
-          echo "Deploying with:"
-          echo "  Namespace: $NAMESPACE"
-          echo "  Image Repository: $IMAGE_REPO"
+            # Build the application first
+            cd scripts/jade-ccm
+            chmod +x redeploy-${CURRENT_APP}
 
-          helm upgrade --install $APP . \
-            -f base/${APP}.yml \
-            -f ${ENV}/${APP}.yml \
-            --set namespace=$NAMESPACE \
-            --set image.namespace=$NAMESPACE \
-            --set image.repository=$IMAGE_REPO \
-            --namespace $NAMESPACE \
-            --wait \
-            --timeout 15m
+            # Run only the build steps (steps 0-3) from the deployment script
+            # We'll handle the actual deployment with Helm
+            export HELM_DEPLOY=true
+            ./redeploy-${CURRENT_APP} "$ENV"
 
-          echo "Helm deployment completed successfully!"
+            # Deploy using Helm
+            cd ../../Helm
+
+            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
+
+            echo "Deploying with:"
+            echo "  Namespace: $NAMESPACE"
+            echo "  Image Repository: $IMAGE_REPO"
+
+            helm upgrade --install $CURRENT_APP . \
+              -f base/${CURRENT_APP}.yml \
+              -f ${ENV}/${CURRENT_APP}.yml \
+              --set namespace=$NAMESPACE \
+              --set image.namespace=$NAMESPACE \
+              --set image.repository=$IMAGE_REPO \
+              --namespace $NAMESPACE \
+              --wait \
+              --timeout 15m
+
+            echo "✅ $CURRENT_APP deployed successfully!"
+            cd ../..
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "✅ All deployments completed successfully!"
+          echo "=========================================="
 
       - name: Configure logging and retry settings
         run: |
-          echo "Applying logging and retry configuration to $APP..."
+          # Define all applications
+          ALL_APPS=(
+            "ccm-justin-in-adapter"
+            "ccm-dems-adapter"
+            "ccm-lookup-service"
+            "ccm-splunk-adapter"
+            "ccm-accessdedup-processor"
+            "ccm-reports-processor"
+            "ccm-pidp-adapter"
+            "ccm-notification-service"
+            "ccm-justin-events-adapter"
+            "ccm-justin-out-adapter"
+          )
 
-          # All apps now use Helm naming convention: app-ccm-app
-          DEPLOYMENT_NAME="${APP}-ccm-app"
+          # Determine which apps to configure
+          if [[ "$APP" == "all" ]]; then
+            APPS_TO_CONFIGURE=("${ALL_APPS[@]}")
+          else
+            APPS_TO_CONFIGURE=("$APP")
+          fi
 
-          oc set env deployment/$DEPLOYMENT_NAME \
-            LOGGING_LEVEL_ROOT=INFO \
-            LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
-            LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
-            SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
-            SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
-            -n $NAMESPACE
+          # Configure each application
+          for CURRENT_APP in "${APPS_TO_CONFIGURE[@]}"; do
+            echo "Applying logging and retry configuration to $CURRENT_APP..."
+
+            # All apps now use Helm naming convention: app-ccm-app
+            DEPLOYMENT_NAME="${CURRENT_APP}-ccm-app"
+
+            oc set env deployment/$DEPLOYMENT_NAME \
+              LOGGING_LEVEL_ROOT=INFO \
+              LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
+              LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
+              SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
+              SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
+              -n $NAMESPACE
+
+            echo "✅ Configuration applied to $CURRENT_APP"
+          done
 
       - name: Configure accessdedup processor properties
-        if: ${{ env.APP == 'ccm-accessdedup-processor' }}
+        if: ${{ env.APP == 'ccm-accessdedup-processor' || env.APP == 'all' }}
         run: |
             echo "Applying Quarkus Kafka Streams config..."
 
             # All apps now use Helm naming convention: app-ccm-app
-            DEPLOYMENT_NAME="${APP}-ccm-app"
+            DEPLOYMENT_NAME="ccm-accessdedup-processor-ccm-app"
 
             oc set env deployment/$DEPLOYMENT_NAME \
-              QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
+              QUARKUS_KAFKA_STREAMS_APPLICATION_ID=ccm-accessdedup-processor \
               QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=events-kafka-bootstrap:9092 \
               CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
               CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
