@@ -1,4 +1,4 @@
-name: Deploy with Helm Only
+name: Deploy to OpenShift
 
 permissions:
   id-token: write
@@ -38,7 +38,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy with Helm
+    name: Deploy to OpenShift
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.namespace }}
 
@@ -67,136 +67,62 @@ jobs:
 
       - name: Derive environment from namespace
         run: |
-          CLUSTER="${NAMESPACE%-*}"
           ENV="${NAMESPACE##*-}"
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
-          echo "ENV=$ENV" >> $GITHUB_ENV
-          echo "Cluster: $CLUSTER, Environment: $ENV"
-
-      - name: Install Helm
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          helm version
-
-      - name: Deploy with Helm
-        run: |
-          # Define all applications
-          ALL_APPS=(
-            "ccm-justin-in-adapter"
-            "ccm-dems-adapter"
-            "ccm-lookup-service"
-            "ccm-splunk-adapter"
-            "ccm-accessdedup-processor"
-            "ccm-reports-processor"
-            "ccm-pidp-adapter"
-            "ccm-notification-service"
-            "ccm-justin-events-adapter"
-            "ccm-justin-out-adapter"
-          )
-
-          # Determine which apps to deploy
-          if [[ "$APP" == "all" ]]; then
-            echo "🚀 Deploying ALL applications..."
-            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
-          else
-            echo "🚀 Deploying single application: $APP"
-            APPS_TO_DEPLOY=("$APP")
-          fi
-
-          # Determine image registry based on cluster
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
-          else
-            IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
-          fi
-
-          cd Helm
-
-          # Deploy each application
-          SUCCESS_COUNT=0
-          FAILED_APPS=()
-
-          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
-            echo ""
-            echo "=========================================="
-            echo "📦 Deploying: $CURRENT_APP"
-            echo "=========================================="
-
-            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
-
-            echo "Using image: $IMAGE_REPO"
-
-            if helm upgrade --install $CURRENT_APP . \
-              -f base/${CURRENT_APP}.yml \
-              -f ${ENV}/${CURRENT_APP}.yml \
-              --set namespace=$NAMESPACE \
-              --set image.namespace=$NAMESPACE \
-              --set image.repository=$IMAGE_REPO \
-              --namespace $NAMESPACE \
-              --wait \
-              --timeout 10m; then
-
-              echo "✅ $CURRENT_APP deployed successfully!"
-              ((SUCCESS_COUNT++))
-            else
-              echo "❌ $CURRENT_APP deployment failed"
-              FAILED_APPS+=("$CURRENT_APP")
-            fi
-          done
-
-          echo ""
-          echo "=========================================="
-          echo "Deployment Summary"
-          echo "=========================================="
-          echo "✅ Successful: $SUCCESS_COUNT/${#APPS_TO_DEPLOY[@]}"
-
-          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
-            echo "❌ Failed applications:"
-            for FAILED_APP in "${FAILED_APPS[@]}"; do
-              echo "   - $FAILED_APP"
-            done
+          if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
+            echo "❌ Invalid ENV derived from namespace: $ENV"
             exit 1
-          else
-            echo "🎉 All applications deployed successfully!"
           fi
+          echo "ENV=$ENV" >> $GITHUB_ENV
+          echo "Deploying to environment: $ENV"
 
-      - name: Configure logging and retry settings
+      - name: Show deployment details
         run: |
-          # Define all applications
-          ALL_APPS=(
-            "ccm-justin-in-adapter"
-            "ccm-dems-adapter"
-            "ccm-lookup-service"
-            "ccm-splunk-adapter"
-            "ccm-accessdedup-processor"
-            "ccm-reports-processor"
-            "ccm-pidp-adapter"
-            "ccm-notification-service"
-            "ccm-justin-events-adapter"
-            "ccm-justin-out-adapter"
-          )
-
-          # Determine which apps to configure
+          echo "=========================================="
+          echo "🚀 Deployment Summary"
+          echo "Namespace:   $NAMESPACE"
           if [[ "$APP" == "all" ]]; then
-            APPS_TO_CONFIGURE=("${ALL_APPS[@]}")
+            echo "Application: ALL (10 services, events adapter last)"
           else
-            APPS_TO_CONFIGURE=("$APP")
+            echo "Application: $APP"
           fi
+          echo "Environment: $ENV"
+          echo "=========================================="
 
-          # Configure each application
-          for CURRENT_APP in "${APPS_TO_CONFIGURE[@]}"; do
-            echo "Configuring $CURRENT_APP..."
-            DEPLOYMENT_NAME="${CURRENT_APP}-ccm-app"
+      - name: Install Camel K CLI
+        run: |
+          curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
+          chmod +x kamel
+          sudo mv kamel /usr/local/bin/kamel
 
-            oc set env deployment/$DEPLOYMENT_NAME \
-              LOGGING_LEVEL_ROOT=INFO \
-              LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
-              LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
-              SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
-              SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
-              -n $NAMESPACE || true
+      - name: Build CCM models jar
+        run: |
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
 
-            echo "✅ Configuration applied to $CURRENT_APP"
-          done
+      - name: Deploy application(s)
+        run: |
+          cd scripts/jade-ccm
+
+          if [[ "$APP" == "all" ]]; then
+            echo "Deploying all services using deploy-all script..."
+            chmod +x ./deploy-all
+            ./deploy-all "$ENV"
+          else
+            echo "Deploying single service: $APP"
+
+            # Determine the correct script name
+            if [[ "$APP" == "ccm-accessdedup-processor" ]]; then
+              SCRIPT="./redeploy-${APP}"
+            else
+              SCRIPT="./redeploy-${APP}-quarkus"
+            fi
+
+            if [[ -f "$SCRIPT" ]]; then
+              chmod +x "$SCRIPT"
+              "$SCRIPT" "$ENV"
+              echo "✅ Deployment completed!"
+            else
+              echo "❌ Script not found: $SCRIPT"
+              exit 1
+            fi
+          fi
