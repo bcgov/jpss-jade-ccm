@@ -96,24 +96,10 @@ jobs:
           echo "  ENV=$ENV"
           echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "ENV=$ENV" >> $GITHUB_ENV
-      - name: Set Registry Host
-        run: |
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
-          else
-            echo "❌ Unsupported cluster: $CLUSTER"
-            exit 1
-          fi
-      - name: Login to OpenShift Image Registry
-        run: |
-          # Use oc to get the current token and login to the registry
-          TOKEN=$(oc whoami -t)
-          echo "$TOKEN" | docker login \
-            -u $(oc whoami) \
-            --password-stdin \
-            "$REGISTRY_HOST"
+      # Note: Registry authentication is handled by OpenShift internal registry
+      # since we're already authenticated via 'oc login'. The build process
+      # uses OpenShift's internal image streams which don't require separate
+      # docker/podman login when using 'oc' commands.
 
       - name: Show deployment details
         run: |
