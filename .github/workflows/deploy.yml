@@ -99,6 +99,31 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
+      - name: Test registry authentication
+        run: |
+          echo "Testing registry authentication methods..."
+
+          REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+          TOKEN=$(oc whoami -t)
+          USERNAME=$(oc whoami)
+
+          echo "Username: $USERNAME"
+          echo "Registry: $REGISTRY"
+
+          # Test 1: Direct curl to registry
+          echo "Test 1: Curl registry with token"
+          curl -u "$USERNAME:$TOKEN" "https://$REGISTRY/v2/" -v || echo "Curl failed"
+
+          # Test 2: Docker login
+          echo "Test 2: Docker login"
+          echo "$TOKEN" | docker login -u "$USERNAME" --password-stdin "$REGISTRY" || echo "Docker login failed"
+
+          # Test 3: Podman login
+          echo "Test 3: Installing podman and testing"
+          sudo apt-get update -qq
+          sudo apt-get install -y podman
+          echo "$TOKEN" | podman login -u "$USERNAME" --password-stdin "$REGISTRY" || echo "Podman login failed"
+
       - name: Deploy application(s)
         run: |
           cd scripts/jade-ccm
