@@ -47,6 +47,7 @@ jobs:
       APP: ${{ github.event.inputs.app }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -94,35 +95,34 @@ jobs:
           chmod +x kamel
           sudo mv kamel /usr/local/bin/kamel
 
+      - name: Derive cluster from namespace
+        run: |
+          CLUSTER="${NAMESPACE%-*}"
+          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
+          echo "Cluster: $CLUSTER"
+
+      - name: Set Registry Host
+        run: |
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+          else
+            echo "❌ Unsupported cluster: $CLUSTER"
+            exit 1
+          fi
+
+      - name: Login to OpenShift Image Registry
+        run: |
+          echo "$SA_REGISTRY_PASSWORD" | docker login \
+            -u github-deployer \
+            --password-stdin \
+            "$REGISTRY_HOST"
+
       - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
-
-      - name: Test registry authentication
-        run: |
-          echo "Testing registry authentication methods..."
-
-          REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
-          TOKEN=$(oc whoami -t)
-          USERNAME=$(oc whoami)
-
-          echo "Username: $USERNAME"
-          echo "Registry: $REGISTRY"
-
-          # Test 1: Direct curl to registry
-          echo "Test 1: Curl registry with token"
-          curl -u "$USERNAME:$TOKEN" "https://$REGISTRY/v2/" -v || echo "Curl failed"
-
-          # Test 2: Docker login
-          echo "Test 2: Docker login"
-          echo "$TOKEN" | docker login -u "$USERNAME" --password-stdin "$REGISTRY" || echo "Docker login failed"
-
-          # Test 3: Podman login
-          echo "Test 3: Installing podman and testing"
-          sudo apt-get update -qq
-          sudo apt-get install -y podman
-          echo "$TOKEN" | podman login -u "$USERNAME" --password-stdin "$REGISTRY" || echo "Podman login failed"
 
       - name: Deploy application(s)
         run: |
