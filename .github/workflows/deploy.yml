@@ -52,7 +52,6 @@ jobs:
       # Secrets come from the GitHub Environment
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
-      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -109,8 +108,10 @@ jobs:
           fi
       - name: Login to OpenShift Image Registry
         run: |
-          echo "$SA_REGISTRY_PASSWORD" | docker login \
-            -u github-deployer \
+          # Use oc to get the current token and login to the registry
+          TOKEN=$(oc whoami -t)
+          echo "$TOKEN" | docker login \
+            -u $(oc whoami) \
             --password-stdin \
             "$REGISTRY_HOST"
 
