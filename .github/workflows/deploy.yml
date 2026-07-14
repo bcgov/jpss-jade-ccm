@@ -119,35 +119,152 @@ jobs:
             --password-stdin \
             "$REGISTRY_HOST"
 
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
       - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      - name: Deploy application(s)
+      - name: Build and push Docker images
         run: |
-          cd scripts/jade-ccm
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
 
+          # Determine which apps to build
           if [[ "$APP" == "all" ]]; then
-            echo "Deploying all services using deploy-all script..."
-            chmod +x ./deploy-all
-            ./deploy-all "$ENV"
+            echo "🔨 Building Docker images for ALL applications..."
+            APPS_TO_BUILD=("${ALL_APPS[@]}")
           else
-            echo "Deploying single service: $APP"
+            echo "🔨 Building Docker image for: $APP"
+            APPS_TO_BUILD=("$APP")
+          fi
 
-            # Determine the correct script name
-            if [[ "$APP" == "ccm-accessdedup-processor" ]]; then
-              SCRIPT="./redeploy-${APP}"
-            else
-              SCRIPT="./redeploy-${APP}-quarkus"
-            fi
+          # Build each application
+          for CURRENT_APP in "${APPS_TO_BUILD[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "🔨 Building: $CURRENT_APP"
+            echo "=========================================="
 
-            if [[ -f "$SCRIPT" ]]; then
-              chmod +x "$SCRIPT"
-              "$SCRIPT" "$ENV"
-              echo "✅ Deployment completed!"
-            else
-              echo "❌ Script not found: $SCRIPT"
+            cd "$CURRENT_APP"
+
+            # Build with Maven
+            echo "Building with Maven..."
+            mvn clean package -Dquarkus.package.type=uber-jar -DskipTests
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Maven build failed for $CURRENT_APP"
               exit 1
             fi
+
+            # Build Docker image
+            echo "Building Docker image..."
+            docker build --platform linux/amd64 -t $CURRENT_APP .
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker build failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Tag and push to registry
+            echo "Tagging and pushing to registry..."
+            docker tag $CURRENT_APP ${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}:latest
+            docker push ${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker push failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            echo "✅ $CURRENT_APP built and pushed successfully!"
+            cd ..
+          done
+
+      - name: Deploy with Helm
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to deploy
+          if [[ "$APP" == "all" ]]; then
+            echo "🚀 Deploying ALL applications with Helm..."
+            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
+          else
+            echo "🚀 Deploying single application with Helm: $APP"
+            APPS_TO_DEPLOY=("$APP")
+          fi
+
+          cd Helm
+
+          # Deploy each application
+          SUCCESS_COUNT=0
+          FAILED_APPS=()
+
+          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "📦 Deploying: $CURRENT_APP"
+            echo "=========================================="
+
+            IMAGE_REPO="${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}"
+            echo "Using image: $IMAGE_REPO"
+
+            if helm upgrade --install $CURRENT_APP . \
+              -f base/${CURRENT_APP}.yml \
+              -f ${ENV}/${CURRENT_APP}.yml \
+              --set namespace=$NAMESPACE \
+              --set image.namespace=$NAMESPACE \
+              --set image.repository=$IMAGE_REPO \
+              --namespace $NAMESPACE \
+              --wait \
+              --timeout 15m; then
+
+              echo "✅ $CURRENT_APP deployed successfully!"
+              ((SUCCESS_COUNT++))
+            else
+              echo "❌ $CURRENT_APP deployment failed"
+              FAILED_APPS+=("$CURRENT_APP")
+            fi
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "Deployment Summary"
+          echo "=========================================="
+          echo "✅ Successful: $SUCCESS_COUNT/${#APPS_TO_DEPLOY[@]}"
+
+          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
+            echo "❌ Failed applications:"
+            for FAILED_APP in "${FAILED_APPS[@]}"; do
+              echo "   - $FAILED_APP"
+            done
+            exit 1
+          else
+            echo "🎉 All applications deployed successfully!"
           fi
