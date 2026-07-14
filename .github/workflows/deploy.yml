@@ -96,10 +96,33 @@ jobs:
           echo "  ENV=$ENV"
           echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "ENV=$ENV" >> $GITHUB_ENV
-      # Note: Registry authentication is handled by OpenShift internal registry
-      # since we're already authenticated via 'oc login'. The build process
-      # uses OpenShift's internal image streams which don't require separate
-      # docker/podman login when using 'oc' commands.
+      - name: Setup Docker Registry Authentication
+        run: |
+          # Get registry host based on cluster
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            REGISTRY_HOST="image-registry.apps.silver.devops.gov.bc.ca"
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            REGISTRY_HOST="image-registry.apps.clab.devops.gov.bc.ca"
+          fi
+
+          # Install podman for better OpenShift compatibility
+          sudo apt-get update -qq
+          sudo apt-get install -y podman
+
+          # Get OpenShift token and login with podman
+          TOKEN=$(oc whoami -t)
+          echo "$TOKEN" | podman login -u $(oc whoami) --password-stdin $REGISTRY_HOST 2>/dev/null || true
+
+          # Create docker config directory and copy podman auth to docker
+          mkdir -p ~/.docker
+          if [ -f ~/.config/containers/auth.json ]; then
+            cp ~/.config/containers/auth.json ~/.docker/config.json
+          fi
+
+          # Alias docker to podman for the deployment scripts
+          sudo ln -sf /usr/bin/podman /usr/local/bin/docker
+
+          echo "Registry authentication setup completed"
 
       - name: Show deployment details
         run: |
