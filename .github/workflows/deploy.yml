@@ -1,4 +1,4 @@
-name: Deploy to OpenShift
+name: Deploy to OpenShift (Simple)
 
 permissions:
   id-token: write
@@ -40,14 +40,11 @@ jobs:
   deploy:
     name: Deploy to OpenShift
     runs-on: ubuntu-latest
-    # GitHub Environment == OpenShift namespace
     environment: ${{ github.event.inputs.namespace }}
 
     env:
       NAMESPACE: ${{ github.event.inputs.namespace }}
       APP: ${{ github.event.inputs.app }}
-      CI: true
-      AUTO_APPROVE: "true"
 
       # Secrets come from the GitHub Environment
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
@@ -63,106 +60,38 @@ jobs:
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
           oc version --client
+
       - name: Validate OpenShift credentials
         run: |
           if [[ -z "$OCP_SERVER" || -z "$OCP_TOKEN" ]]; then
             echo "❌ Missing OpenShift credentials for environment: $NAMESPACE"
             exit 1
           fi
+
       - name: Login to OpenShift
         run: |
           echo "Logging into OpenShift..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
+
       - name: Switch to OpenShift project
         run: |
           echo "Using project $NAMESPACE"
           oc project "$NAMESPACE"
-      # -------------------------------------------------------
-      # Derive CLUSTER and ENV (what the script expects)
-      # -------------------------------------------------------
-      - name: Derive CLUSTER and ENV from namespace
-        shell: bash
+
+      - name: Derive environment from namespace
         run: |
-          set -e
-          CLUSTER="${NAMESPACE%-*}"
           ENV="${NAMESPACE##*-}"
           if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
             echo "❌ Invalid ENV derived from namespace: $ENV"
             exit 1
           fi
-          echo "Derived values:"
-          echo "  NAMESPACE=$NAMESPACE"
-          echo "  CLUSTER=$CLUSTER"
-          echo "  ENV=$ENV"
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "ENV=$ENV" >> $GITHUB_ENV
-
-      - name: Configure Buildah for OpenShift Registry
-        run: |
-          # Install buildah (better OpenShift compatibility than docker)
-          sudo apt-get update -qq
-          sudo apt-get install -y buildah
-
-          # Create a wrapper script that redirects docker commands to buildah
-          sudo tee /usr/local/bin/docker-wrapper > /dev/null << 'EOF'
-          #!/bin/bash
-          # Wrapper to use buildah for docker commands with OpenShift
-
-          if [[ "$1" == "login" ]]; then
-            # Handle docker login - use buildah login
-            shift
-            buildah login "$@"
-          elif [[ "$1" == "logout" ]]; then
-            # Handle docker logout
-            shift
-            buildah logout "$@"
-          elif [[ "$1" == "push" ]]; then
-            # Handle docker push
-            shift
-            buildah push "$@"
-          elif [[ "$1" == "tag" ]]; then
-            # Handle docker tag using buildah tag
-            shift
-            buildah tag "$@"
-          elif [[ "$1" == "build" ]]; then
-            # Handle docker build
-            buildah bud "$@"
-          elif [[ "$1" == "rmi" ]]; then
-            # Handle docker rmi
-            shift
-            buildah rmi "$@" 2>/dev/null || true
-          elif [[ "$1" == "stop" ]] || [[ "$1" == "rm" ]] || [[ "$1" == "run" ]]; then
-            # For container operations, try to use actual docker if available
-            /usr/bin/docker "$@" 2>/dev/null || true
-          else
-            # For other commands, try buildah or docker
-            buildah "$@" 2>/dev/null || /usr/bin/docker "$@"
-          fi
-          EOF
-
-          sudo chmod +x /usr/local/bin/docker-wrapper
-
-          # Replace docker with our wrapper
-          sudo mv /usr/bin/docker /usr/bin/docker.original || true
-          sudo ln -sf /usr/local/bin/docker-wrapper /usr/bin/docker
-
-          # Pre-authenticate buildah with OpenShift registry
-          TOKEN=$(oc whoami -t)
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
-          fi
-
-          echo "$TOKEN" | buildah login -u $(oc whoami) --password-stdin "$REGISTRY"
-
-          echo "Buildah configured as docker replacement with OpenShift authentication"
+          echo "Deploying to environment: $ENV"
 
       - name: Show deployment details
         run: |
-          echo "----------------------------------------"
+          echo "=========================================="
           echo "🚀 Deployment Summary"
-          echo "Cluster:     $CLUSTER"
           echo "Namespace:   $NAMESPACE"
           if [[ "$APP" == "all" ]]; then
             echo "Application: ALL (10 services)"
@@ -170,12 +99,7 @@ jobs:
             echo "Application: $APP"
           fi
           echo "Environment: $ENV"
-          echo "----------------------------------------"
-          
-      - name: Install Helm
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          helm version
+          echo "=========================================="
 
       - name: Install Camel K CLI
         run: |
@@ -188,160 +112,31 @@ jobs:
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
 
-      # -------------------------------------------------------
-      # Deploy with Helm (for ALL services)
-      # -------------------------------------------------------
-      - name: Deploy application (Helm)
-        shell: bash
+      - name: Deploy application
         run: |
-          # Define all applications
-          ALL_APPS=(
-            "ccm-justin-in-adapter"
-            "ccm-dems-adapter"
-            "ccm-lookup-service"
-            "ccm-splunk-adapter"
-            "ccm-accessdedup-processor"
-            "ccm-reports-processor"
-            "ccm-pidp-adapter"
-            "ccm-notification-service"
-            "ccm-justin-events-adapter"
-            "ccm-justin-out-adapter"
-          )
+          cd scripts/jade-ccm
 
-          # Determine which apps to deploy
           if [[ "$APP" == "all" ]]; then
-            echo "🚀 Deploying ALL applications..."
-            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
+            echo "Deploying all services..."
+            chmod +x ./deploy-all-services
+            ./deploy-all-services "$ENV"
           else
-            echo "🚀 Deploying single application: $APP"
-            APPS_TO_DEPLOY=("$APP")
-          fi
-
-          # Construct image registry URL based on cluster
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
-          else
-            IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
-          fi
-
-          # Deploy each application
-          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
-            echo ""
-            echo "=========================================="
-            echo "📦 Deploying: $CURRENT_APP"
-            echo "=========================================="
-
-            # Build the application first
-            cd scripts/jade-ccm
+            echo "Deploying single service: $APP"
 
             # Determine the correct script name
-            # Most services use -quarkus suffix, except ccm-accessdedup-processor
-            if [[ "$CURRENT_APP" == "ccm-accessdedup-processor" ]]; then
-              SCRIPT_NAME="redeploy-${CURRENT_APP}"
+            if [[ "$APP" == "ccm-accessdedup-processor" ]]; then
+              SCRIPT="./redeploy-${APP}"
             else
-              SCRIPT_NAME="redeploy-${CURRENT_APP}-quarkus"
+              SCRIPT="./redeploy-${APP}-quarkus"
             fi
 
-            echo "Using script: $SCRIPT_NAME"
-            chmod +x $SCRIPT_NAME
-
-            # Run only the build steps (steps 0-3) from the deployment script
-            # We'll handle the actual deployment with Helm
-            export HELM_DEPLOY=true
-            ./$SCRIPT_NAME "$ENV"
-
-            # Deploy using Helm
-            cd ../../Helm
-
-            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
-
-            echo "Deploying with:"
-            echo "  Namespace: $NAMESPACE"
-            echo "  Image Repository: $IMAGE_REPO"
-
-            helm upgrade --install $CURRENT_APP . \
-              -f base/${CURRENT_APP}.yml \
-              -f ${ENV}/${CURRENT_APP}.yml \
-              --set namespace=$NAMESPACE \
-              --set image.namespace=$NAMESPACE \
-              --set image.repository=$IMAGE_REPO \
-              --namespace $NAMESPACE \
-              --wait \
-              --timeout 15m
-
-            echo "✅ $CURRENT_APP deployed successfully!"
-            cd ../..
-          done
-
-          echo ""
-          echo "=========================================="
-          echo "✅ All deployments completed successfully!"
-          echo "=========================================="
-
-      - name: Configure logging and retry settings
-        run: |
-          # Define all applications
-          ALL_APPS=(
-            "ccm-justin-in-adapter"
-            "ccm-dems-adapter"
-            "ccm-lookup-service"
-            "ccm-splunk-adapter"
-            "ccm-accessdedup-processor"
-            "ccm-reports-processor"
-            "ccm-pidp-adapter"
-            "ccm-notification-service"
-            "ccm-justin-events-adapter"
-            "ccm-justin-out-adapter"
-          )
-
-          # Determine which apps to configure
-          if [[ "$APP" == "all" ]]; then
-            APPS_TO_CONFIGURE=("${ALL_APPS[@]}")
-          else
-            APPS_TO_CONFIGURE=("$APP")
+            if [[ -f "$SCRIPT" ]]; then
+              chmod +x "$SCRIPT"
+              "$SCRIPT" "$ENV"
+            else
+              echo "❌ Script not found: $SCRIPT"
+              exit 1
+            fi
           fi
 
-          # Configure each application
-          for CURRENT_APP in "${APPS_TO_CONFIGURE[@]}"; do
-            echo "Applying logging and retry configuration to $CURRENT_APP..."
-
-            # All apps now use Helm naming convention: app-ccm-app
-            DEPLOYMENT_NAME="${CURRENT_APP}-ccm-app"
-
-            oc set env deployment/$DEPLOYMENT_NAME \
-              LOGGING_LEVEL_ROOT=INFO \
-              LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
-              LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
-              SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
-              SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
-              -n $NAMESPACE
-
-            echo "✅ Configuration applied to $CURRENT_APP"
-          done
-
-      - name: Configure accessdedup processor properties
-        if: ${{ env.APP == 'ccm-accessdedup-processor' || env.APP == 'all' }}
-        run: |
-            echo "Applying Quarkus Kafka Streams config..."
-
-            # All apps now use Helm naming convention: app-ccm-app
-            DEPLOYMENT_NAME="ccm-accessdedup-processor-ccm-app"
-
-            oc set env deployment/$DEPLOYMENT_NAME \
-              QUARKUS_KAFKA_STREAMS_APPLICATION_ID=ccm-accessdedup-processor \
-              QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS=events-kafka-bootstrap:9092 \
-              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
-              CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
-              CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
-              CCM_TOPIC_KPIS_NAME=kpis-topic \
-              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
-              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
-              -n $NAMESPACE
-
-
-             echo "Restarting deployment to apply changes..."
-             oc rollout restart deployment/$DEPLOYMENT_NAME -n $NAMESPACE
-
-             echo "Configuration applied successfully."
+          echo "✅ Deployment completed!"
