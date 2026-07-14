@@ -1,4 +1,4 @@
-name: Deploy with Helm Only
+.name: Deploy with Helm Only
 
 permissions:
   id-token: write
