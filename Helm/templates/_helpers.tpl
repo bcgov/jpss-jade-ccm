@@ -8,8 +8,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 {{/* Define selector labels */}}
 {{- define "ccm-app.selectorLabels" -}}
-app.kubernetes.io/name: {{ .Chart.Name }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app: {{ .Values.app }}
 {{- end }}
 
 {{/* Define full name */}}
