@@ -195,6 +195,52 @@ jobs:
             cd ..
           done
 
+      - name: Patch existing deployments for Helm adoption
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to patch
+          if [[ "$APP" == "all" ]]; then
+            APPS_TO_PATCH=("${ALL_APPS[@]}")
+          else
+            APPS_TO_PATCH=("$APP")
+          fi
+
+          echo "Patching deployments for Helm adoption..."
+          for CURRENT_APP in "${APPS_TO_PATCH[@]}"; do
+            # Check if deployment exists
+            if oc get deployment "$CURRENT_APP" -n "$NAMESPACE" &>/dev/null; then
+              echo "Patching $CURRENT_APP with Helm metadata..."
+
+              # Add Helm annotations
+              oc -n "$NAMESPACE" annotate deployment "$CURRENT_APP" \
+                meta.helm.sh/release-name="$CURRENT_APP" \
+                meta.helm.sh/release-namespace="$NAMESPACE" \
+                --overwrite || true
+
+              # Add Helm label
+              oc -n "$NAMESPACE" label deployment "$CURRENT_APP" \
+                app.kubernetes.io/managed-by=Helm \
+                --overwrite || true
+
+              echo "✅ Patched $CURRENT_APP"
+            else
+              echo "⚠️  Deployment $CURRENT_APP does not exist yet (will be created by Helm)"
+            fi
+          done
+
       - name: Deploy with Helm
         run: |
           # Define all applications
