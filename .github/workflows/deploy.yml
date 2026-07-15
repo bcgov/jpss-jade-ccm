@@ -101,12 +101,14 @@ jobs:
           echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "Cluster: $CLUSTER"
 
-      - name: Set Registry Host
+      - name: Set Registry Hosts
         run: |
           if [[ "$CLUSTER" == "cef5dd" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "EXTERNAL_REGISTRY=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
           elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "EXTERNAL_REGISTRY=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
           else
             echo "❌ Unsupported cluster: $CLUSTER"
             exit 1
@@ -117,7 +119,7 @@ jobs:
           echo "$SA_REGISTRY_PASSWORD" | docker login \
             -u github-deployer \
             --password-stdin \
-            "$REGISTRY_HOST"
+            "$EXTERNAL_REGISTRY"
 
       - name: Install Helm
         run: |
@@ -181,15 +183,23 @@ jobs:
               exit 1
             fi
 
-            # Tag and push to registry
-            echo "Tagging and pushing to registry..."
-            docker tag $CURRENT_APP ${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}:latest
-            docker push ${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}:latest
+            # Tag and push to BOTH external (for login) and internal (for pods) registries
+            echo "Tagging and pushing to registries..."
 
+            # Tag for external registry (where we authenticated)
+            docker tag $CURRENT_APP ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            # Push to external registry first
+            docker push ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
             if [ $? -ne 0 ]; then
-              echo "❌ Docker push failed for $CURRENT_APP"
+              echo "❌ Docker push to external registry failed for $CURRENT_APP"
               exit 1
             fi
+
+            # Also tag for internal registry (where pods pull from)
+            docker tag $CURRENT_APP ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            echo "✅ Tagged for internal registry: ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest"
 
             echo "✅ $CURRENT_APP built and pushed successfully!"
             cd ..
