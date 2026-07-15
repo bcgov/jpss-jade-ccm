@@ -6,7 +6,7 @@ replicas: 2
 
 # Override image repository for dev environment
 image:
-  repository: image-registry.apps.silver.devops.gov.bc.ca/cef5dd-dev/ccm-accessdedup-processor
+  repository: image-registry.openshift-image-registry.svc:5000/cef5dd-dev/ccm-accessdedup-processor
   tag: latest
   pullPolicy: Always
 
