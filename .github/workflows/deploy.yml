@@ -232,15 +232,12 @@ jobs:
             echo "📦 Deploying: $CURRENT_APP"
             echo "=========================================="
 
-            IMAGE_REPO="${REGISTRY_HOST}/${NAMESPACE}/${CURRENT_APP}"
-            echo "Using image: $IMAGE_REPO"
+            echo "Deploying: $CURRENT_APP"
 
             if helm upgrade --install $CURRENT_APP . \
               -f base/${CURRENT_APP}.yml \
               -f ${ENV}/${CURRENT_APP}.yml \
               --set namespace=$NAMESPACE \
-              --set image.namespace=$NAMESPACE \
-              --set image.repository=$IMAGE_REPO \
               --namespace $NAMESPACE \
               --wait \
               --timeout 15m; then
