@@ -2,7 +2,7 @@ name: ccm-pidp-adapter
 namespace: ""
 # Camel K digest for this integration - stored in Secret to avoid Git secret scanning
 camelDigest: vzbMnRKpRWwrdsWb_B25RvpD2pVenB_2LY6Y1g1K6o6E
-replicas: 1
+replicas: 2  # Dev/Test: 2, Prod: 3
 labels:
   integration: ccm-pidp-adapter
   camel_generation: '1'
@@ -16,13 +16,11 @@ service:
 strategy:
   maxUnavailable: 25%
   maxSurge: 25%
+# Image repository will be set via --set image.repository=<value> from pipeline
 image:
-  registry: image-registry.openshift-image-registry.svc:5000
-  namespace: ""
-  name: ccm-pidp-adapter
   repository: ""
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 container:
   name: container
   command:
@@ -108,5 +106,22 @@ envFrom:
   - secretRef:
       name: ccm-quarkus-secrets
 
-volumes: []
-volumeMounts: []
+volumes:
+  - name: pidp-kafka-client-p12-volume
+    configMap:
+      name: ccm-quarkus-configs
+  - name: pidp-kafka-server-p12-volume
+    configMap:
+      name: ccm-quarkus-configs
+volumeMounts:
+  - name: pidp-kafka-client-p12-volume
+    mountPath: /etc/keystore/pidp-kafka-client.p12
+    subPath: pidp-kafka-client.p12
+  - name: pidp-kafka-server-p12-volume
+    mountPath: /etc/keystore/pidp-kafka-server.p12
+    subPath: pidp-kafka-server.p12
+
+# Pod Disruption Budget (disabled by default, enabled for prod via --set)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

@@ -2,7 +2,7 @@ name: ccm-notification-service
 namespace: ""
 # Camel K digest for this integration - stored in Secret to avoid Git secret scanning
 camelDigest: vEJ27Z0caoWfoxdiXVIu1cGsnRA3AZAi63eL5DJipzro
-replicas: 1
+replicas: 2  # Dev/Test: 2, Prod: 3
 labels:
   integration: ccm-notification-service
   camel_generation: '1'
@@ -16,13 +16,11 @@ service:
 strategy:
   maxUnavailable: 25%
   maxSurge: 25%
+# Image repository will be set via --set image.repository=<value> from pipeline
 image:
-  registry: image-registry.openshift-image-registry.svc:5000
-  namespace: ""
-  name: ccm-notification-service
   repository: ""
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 container:
   name: container
   command:
@@ -110,3 +108,8 @@ envFrom:
 
 volumes: []
 volumeMounts: []
+
+# Pod Disruption Budget (disabled by default, enabled for prod via --set)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

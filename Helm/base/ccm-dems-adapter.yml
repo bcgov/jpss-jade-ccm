@@ -1,14 +1,20 @@
 name: ccm-dems-adapter
-# namespace will be set via --set namespace=<value> or from environment-specific values
+# namespace will be set via --set namespace=<value> from pipeline
 namespace: ""
-replicas: 1
-image:
-  registry: image-registry.openshift-image-registry.svc:5000
-  namespace: ""
-  name: ccm-dems-adapter
-  repository: ""
-  tag: latest
-  pullPolicy: IfNotPresent
+app: jade-ccm
+version: 1.6-1
+
+# Default replicas (can be overridden via --set replicas=<value>)
+# Dev/Test: 2, Prod: 3
+replicas: 2
+
+service:
+  type: ClusterIP
+  port: 80
+
+strategy:
+  maxUnavailable: 25%
+  maxSurge: 25%
 
 container:
   name: container
@@ -24,6 +30,12 @@ container:
     limits:
       cpu: 200m
       memory: 1000Mi
+
+# Image repository will be set via --set image.repository=<value> from pipeline
+image:
+  repository: ""
+  tag: latest
+  pullPolicy: Always
 
 # Health probes using Quarkus SmallRye Health endpoints
 livenessProbe:
@@ -71,10 +83,7 @@ labels:
 annotations:
   camel_operator_id: camel-k
 
-service:
-  type: ClusterIP
-  port: 80
-
-strategy:
-  maxUnavailable: 25%
-  maxSurge: 25%
+# Pod Disruption Budget (disabled by default, enabled for prod via --set)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

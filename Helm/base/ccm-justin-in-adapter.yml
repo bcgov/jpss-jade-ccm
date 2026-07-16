@@ -1,9 +1,14 @@
 name: ccm-justin-in-adapter
-# namespace will be set via --set namespace=<value> or from environment-specific values
+# namespace will be set via --set namespace=<value> from pipeline
 namespace: ""
+app: jade-ccm
+version: 1.6-1
 # Camel K digest for this integration - stored in Secret to avoid Git secret scanning
 camelDigest: vUkyA-7dJcQy8wUzo9uqpuA_vAfTVG4x_dit9JqXSHOQ
-replicas: 1
+
+# Default replicas (can be overridden via --set replicas=<value>)
+# Dev/Test: 2, Prod: 3
+replicas: 2
 
 labels:
   integration: ccm-justin-in-adapter
@@ -20,14 +25,11 @@ strategy:
   maxUnavailable: 25%
   maxSurge: 25%
 
+# Image repository will be set via --set image.repository=<value> from pipeline
 image:
-  registry: image-registry.openshift-image-registry.svc:5000
-  # namespace and repository will be set via --set or constructed dynamically
-  namespace: ""
-  name: ccm-justin-in-adapter
   repository: ""
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 container:
   name: container
@@ -113,3 +115,8 @@ envFrom:
 
 volumes: []
 volumeMounts: []
+
+# Pod Disruption Budget (disabled by default, enabled for prod via --set)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
