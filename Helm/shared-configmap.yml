@@ -17,7 +17,7 @@ data:
   kafka-broker-url: events-kafka-bootstrap:9092
 
   # Kafka Streams configuration (required for ccm-accessdedup-processor)
-  quarkus.kafka-streams.bootstrap-servers: events-kafka-bootstrap:9093
+  quarkus.kafka-streams.bootstrap-servers: events-kafka-bootstrap:9092
 
   # DEMS configuration
   dems-case-auto-creation: "true"
