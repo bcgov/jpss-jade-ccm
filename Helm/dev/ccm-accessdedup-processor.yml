@@ -28,3 +28,17 @@ affinity:
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+
+# Dev environment uses port 9092 for Kafka Streams
+# Override all env vars from base to include environment-specific Kafka config
+env:
+  - name: TZ
+    value: Canada/Pacific
+  - name: QUARKUS_LOG_LEVEL
+    value: INFO
+  - name: QUARKUS_LOG_CONSOLE_JSON
+    value: "false"
+  - name: QUARKUS_LOG_CONSOLE_COLOR
+    value: "true"
+  - name: QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS
+    value: "events-kafka-bootstrap:9092"
