@@ -342,12 +342,37 @@ jobs:
             echo "📦 Deploying: $CURRENT_APP"
             echo "=========================================="
 
-            echo "Deploying: $CURRENT_APP"
+            # Compute image repository based on cluster
+            if [[ "$CLUSTER" == "cef5dd" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+            elif [[ "$CLUSTER" == "ac13ae" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+            else
+              IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
+            fi
+
+            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
+
+            # Set environment-specific values
+            if [[ "$ENV" == "prod" ]]; then
+              REPLICAS=3
+              PDB_ENABLED=true
+            else
+              REPLICAS=2
+              PDB_ENABLED=false
+            fi
+
+            echo "Deploying with:"
+            echo "  Image: $IMAGE_REPO"
+            echo "  Replicas: $REPLICAS"
+            echo "  PDB Enabled: $PDB_ENABLED"
 
             if helm upgrade --install $CURRENT_APP . \
               -f base/${CURRENT_APP}.yml \
-              -f ${ENV}/${CURRENT_APP}.yml \
               --set namespace=$NAMESPACE \
+              --set image.repository=$IMAGE_REPO \
+              --set replicas=$REPLICAS \
+              --set podDisruptionBudget.enabled=$PDB_ENABLED \
               --namespace $NAMESPACE \
               --wait \
               --timeout 15m; then

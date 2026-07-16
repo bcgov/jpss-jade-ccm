@@ -1,8 +1,0 @@
-# Environment-specific values for ccm-reports-processor in PROD
-# This file extends values-ccm-reports-processor.yml
-
-# Single node configuration for production environment
-replicas: 1
-
-# No pod anti-affinity needed for single replica
-# No PDB needed for single replica

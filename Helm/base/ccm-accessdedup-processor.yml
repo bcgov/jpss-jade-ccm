@@ -1,10 +1,12 @@
 name: ccm-accessdedup-processor
-# namespace will be set via --set namespace=<value> or from environment-specific values
+# namespace will be set via --set namespace=<value> from pipeline
 namespace: ""
 app: jade-ccm
 version: 1.6-1
 
-replicas: 1
+# Default replicas (can be overridden via --set replicas=<value>)
+# Dev/Test: 2, Prod: 3
+replicas: 2
 
 service:
   type: ClusterIP
@@ -17,8 +19,9 @@ strategy:
 container:
   name: container
 
+# Image repository will be set via --set image.repository=<value> from pipeline
 image:
-  repository: image-registry.openshift-image-registry.svc:5000/cef5dd-test/ccm-accessdedup-processor
+  repository: ""
   tag: latest
   pullPolicy: Always
 
@@ -31,6 +34,9 @@ env:
     value: "false"
   - name: QUARKUS_LOG_CONSOLE_COLOR
     value: "true"
+  - name: QUARKUS_KAFKA_STREAMS_BOOTSTRAP_SERVERS
+    value: "events-kafka-bootstrap:9092"
+
 envFrom:
   - configMapRef:
       name: ccm-quarkus-configs
@@ -58,5 +64,30 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
-volumes: []
-volumeMounts: []
+# Pod anti-affinity to spread pods across nodes (all environments)
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - ccm-app
+        topologyKey: kubernetes.io/hostname
+
+# Pod Disruption Budget (disabled by default, enabled for prod via --set)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+volumes:
+  - name: kafka-cluster-ca-cert
+    secret:
+      secretName: events-cluster-ca-cert
+volumeMounts:
+  - name: kafka-cluster-ca-cert
+    mountPath: /etc/kafka-certs
+    readOnly: true

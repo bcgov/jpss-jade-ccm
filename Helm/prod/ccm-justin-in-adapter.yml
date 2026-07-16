@@ -1,8 +1,0 @@
-# Environment-specific values for ccm-justin-in-adapter in PROD
-# This file extends values-ccm-justin-in-adapter.yml
-
-# Single node configuration for production environment
-replicas: 1
-
-# No pod anti-affinity needed for single replica
-# No PDB needed for single replica
