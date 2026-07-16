@@ -251,6 +251,60 @@ jobs:
             fi
           done
 
+      - name: Apply shared ConfigMap
+        run: |
+          echo "Applying shared ConfigMap to $NAMESPACE..."
+          oc apply -f Helm/shared-configmap.yml -n $NAMESPACE
+          echo "✅ ConfigMap applied successfully"
+
+      - name: Create Kafka topics for accessdedup processor
+        run: |
+          echo "Ensuring Kafka topics exist for ccm-accessdedup-processor..."
+
+          # Check if bulk-caseusers topic exists
+          if ! oc get kafkatopic ccm-bulk-caseusers -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-caseusers topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-caseusers
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            config:
+              min.insync.replicas: "2"
+            topicName: ccm-bulk-caseusers
+          EOF
+            echo "✅ ccm-bulk-caseusers topic created"
+          else
+            echo "✅ ccm-bulk-caseusers topic already exists"
+          fi
+
+          # Check if bulk-chargeassessments topic exists
+          if ! oc get kafkatopic ccm-bulk-chargeassessments -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-chargeassessments topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-chargeassessments
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            topicName: ccm-bulk-chargeassessments
+          EOF
+            echo "✅ ccm-bulk-chargeassessments topic created"
+          else
+            echo "✅ ccm-bulk-chargeassessments topic already exists"
+          fi
+
       - name: Deploy with Helm
         run: |
           # Define all applications
@@ -320,4 +374,33 @@ jobs:
             exit 1
           else
             echo "🎉 All applications deployed successfully!"
+          fi
+
+      - name: Configure accessdedup processor environment
+        if: ${{ env.APP == 'ccm-accessdedup-processor' || env.APP == 'all' }}
+        run: |
+          echo "Configuring ccm-accessdedup-processor environment variables..."
+
+          DEPLOYMENT_NAME="ccm-accessdedup-processor-ccm-app"
+
+          # Check if deployment exists
+          if oc get deployment $DEPLOYMENT_NAME -n $NAMESPACE &>/dev/null; then
+            echo "Setting topic name environment variables..."
+            oc set env deployment/$DEPLOYMENT_NAME \
+              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=ccm-bulk-chargeassessments \
+              CCM_TOPIC_BULK_CASEUSERS_NAME=ccm-bulk-caseusers \
+              CCM_TOPIC_CASEUSER_ERRORS_NAME=ccm-caseuser-errors \
+              CCM_TOPIC_KPIS_NAME=ccm-kpis \
+              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
+              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
+              -n $NAMESPACE
+
+            echo "✅ Environment variables configured successfully"
+
+            echo "Waiting for deployment rollout..."
+            oc rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=5m
+
+            echo "✅ ccm-accessdedup-processor configured and running"
+          else
+            echo "⚠️  Deployment $DEPLOYMENT_NAME not found, skipping configuration"
           fi
