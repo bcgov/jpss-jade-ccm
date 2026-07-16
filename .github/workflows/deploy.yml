@@ -378,7 +378,7 @@ jobs:
               --timeout 15m; then
 
               echo "✅ $CURRENT_APP deployed successfully!"
-              ((SUCCESS_COUNT++))
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             else
               echo "❌ $CURRENT_APP deployment failed"
               FAILED_APPS+=("$CURRENT_APP")
