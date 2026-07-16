@@ -24,7 +24,7 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 container:
-  name: integration
+  name: container
   command:
   - /bin/sh
   - -c

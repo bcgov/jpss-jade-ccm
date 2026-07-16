@@ -30,7 +30,7 @@ image:
   pullPolicy: IfNotPresent
 
 container:
-  name: integration
+  name: container
   command:
     - /bin/sh
     - -c
