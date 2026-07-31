@@ -253,8 +253,26 @@ jobs:
 
       - name: Apply shared ConfigMap
         run: |
-          echo "Applying shared ConfigMap to $NAMESPACE..."
-          oc apply -f Helm/shared-configmap.yml -n $NAMESPACE
+          echo "Applying shared ConfigMap to $NAMESPACE (env: $ENV)..."
+
+          VALUES_FILE="Helm/values-${ENV}.yaml"
+          if [[ ! -f "$VALUES_FILE" ]]; then
+            echo "❌ No per-environment values file found: $VALUES_FILE"
+            echo "   Refusing to apply a generic ConfigMap — it could overwrite"
+            echo "   environment-specific URLs. Create $VALUES_FILE first."
+            exit 1
+          fi
+
+          # Render the ConfigMap for THIS environment from the chart + overlay,
+          # then apply it. This replaced the old single dev-valued shared
+          # ConfigMap manifest, which overwrote test/prod with dev URLs.
+          echo "Rendering ccm-quarkus-configs from $VALUES_FILE..."
+          helm template ccm-app ./Helm \
+            -f "$VALUES_FILE" \
+            --set quarkusConfig.enabled=true \
+            -s templates/config-map.yml \
+            | oc apply -n "$NAMESPACE" -f -
+
           echo "✅ ConfigMap applied successfully"
 
       - name: Create Kafka topics for accessdedup processor

@@ -14,5 +14,5 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* Define full name */}}
 {{- define "ccm-app.fullname" -}}
-{{ .Release.Name }}
+{{ .Release.Name }}{{ .Values.deploySuffix | default "" }}
 {{- end }}

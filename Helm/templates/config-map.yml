@@ -1,13 +1,23 @@
-{{- if .Values.config }}
-{{- if .Values.config.enabled }}
+{{- if .Values.quarkusConfig }}
+{{- if .Values.quarkusConfig.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "ccm-app.fullname" . }}-config
+  name: {{ .Values.quarkusConfig.name | default "ccm-quarkus-configs" }}
   labels:
+    app: jade-ccm
     {{- include "ccm-app.labels" . | nindent 4 }}
 data:
-  {{- range $key, $value := .Values.config.data }}
+  {{- /* Env-specific values (quarkusConfig.env) are layered over the shared
+         defaults (quarkusConfig.shared). Set quarkusConfig.useShared: false in a
+         per-env file (e.g. prod) to render ONLY that env's keys — needed when an
+         environment must not inherit any shared key it doesn't actually have. */}}
+  {{- $base := dict }}
+  {{- if ne .Values.quarkusConfig.useShared false }}
+  {{- $base = .Values.quarkusConfig.shared | default dict }}
+  {{- end }}
+  {{- $merged := merge (dict) (.Values.quarkusConfig.env | default dict) $base }}
+  {{- range $key, $value := $merged }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
 {{- end }}

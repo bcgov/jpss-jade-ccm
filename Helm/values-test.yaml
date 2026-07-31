@@ -1,0 +1,18 @@
+# Environment overlay: TEST (cef5dd-test)
+#
+#   helm upgrade --install ccm-app ./Helm -n cef5dd-test -f Helm/values-test.yaml
+#
+# Values here override quarkusConfig.shared from values.yaml. Only keys that
+# differ from the shared defaults, or exist only in test, belong here.
+
+quarkusConfig:
+  env:
+    # Environment-specific endpoints (test)
+    dems-host-url: wsgw.test.jag.gov.bc.ca/bcpsdems/api/v1
+    dems-case-hyperlink-prefix: https://dems.test.jag.gov.bc.ca/Edt.aspx#/cases/
+    justin-host-url: wsgw.test.jag.gov.bc.ca/justin/dems/api/v1
+    pidp-api-oauth-token-endpoint-url-tst: test.common-sso.justice.gov.bc.ca/auth/realms/BCPS/protocol/openid-connect/token
+
+    # Test-only keys
+    dems-case-default-group-id: "6"
+    topic-reports-consumer-count: "5"

@@ -1,0 +1,19 @@
+# Environment overlay: DEV (cef5dd-dev)
+#
+#   helm upgrade --install ccm-app ./Helm -n cef5dd-dev -f Helm/values-dev.yaml
+#
+# Values here override quarkusConfig.shared from values.yaml. Only keys that
+# differ from the shared defaults, or exist only in dev, belong here.
+
+quarkusConfig:
+  env:
+    # Environment-specific endpoints (dev)
+    dems-host-url: wsgw.dev.jag.gov.bc.ca/bcpsdems/api/v1
+    dems-case-hyperlink-prefix: https://dems.dev.jag.gov.bc.ca/Edt.aspx#/cases/
+    justin-host-url: wsgw.dev.jag.gov.bc.ca/justin/dems/api/v1
+    pidp-api-oauth-token-endpoint-url-tst: dev.common-sso.justice.gov.bc.ca/auth/realms/BCPS/protocol/openid-connect/token
+
+    # Dev-only keys (Kafka Streams / TLS truststore not present in test)
+    kafka-streams-bootstrap-servers: events-kafka-bootstrap:9093
+    quarkus.kafka-streams.ssl.truststore.location: /etc/kafka-certs/ca.crt
+    quarkus.kafka-streams.ssl.truststore.type: PEM

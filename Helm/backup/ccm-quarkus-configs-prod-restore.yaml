@@ -1,0 +1,36 @@
+# Point-in-time restore backup of ccm-quarkus-configs
+# Namespace: cef5dd-prod   Captured: 2026-07-31
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ccm-quarkus-configs
+  namespace: cef5dd-prod
+  labels:
+    app: jade-ccm
+data:
+  dems-case-auto-creation: "true"
+  dems-case-auto-creation-submit-date-cutoff: "15"
+  dems-case-hyperlink-prefix: "https://dems.bcps.gov.bc.ca/Edt.aspx#/cases/"
+  dems-case-hyperlink-suffix: "/case-file/1-2--entire-file-basic-columns"
+  dems-case-hyperlinklist-suffix: "/court-file--vcf/1--front-end-court"
+  dems-case-template-id: "9"
+  dems-host-url: "wsgw.jag.gov.bc.ca/bcpsdems/api/v1"
+  dems-org-unit-id: "1"
+  justin-disable-file-notes-processing: "true"
+  justin-host-url: "wsgw.jag.gov.bc.ca/justin/dems/api/v1"
+  kafka-broker-url: "events-kafka-bootstrap:9092"
+  pidp-api-host: "https://diam-islinterfaces-e27db1-prod.apps.gold.devops.gov.bc.ca/api/v1/"
+  pidp-api-oauth-client-id: "jade-ccm-webapi-client"
+  pidp-api-oauth-token-endpoint-url: "common-sso.justice.gov.bc.ca/auth/realms/BCPS/protocol/openid-connect/token"
+  pidp-kafka-apicurioregistry-url: "https://serviceregistry.ag.gov.bc.ca/apis/ccompat/v6"
+  pidp-kafka-bootstrapservers-url: "diam-kafka-prod-a239c6-prod.apps.gold.devops.gov.bc.ca:443"
+  pidp-kafka-oauth-client-id: "digitalevidence-jade-ccm-consumer"
+  pidp-kafka-oauth-token-endpoint-url: "https://common-sso.justice.gov.bc.ca/auth/realms/Kafka/protocol/openid-connect/token"
+  pidp-kafka-topic-participantmerge-name: "digitalevidence-justin-participant-merge-topic"
+  pidp-kafka-topic-processresponse-name: "digitalevidence-processresponse-topic"
+  pidp-kafka-topic-usercreation-name: "digitalevidence-usercreation-plain-topic"
+  splunk-host-url: "hec.monitoring.ag.gov.bc.ca:8088/services/collector"
+  topic-bulk-chargeassessment-consumer-count: "5"
+  topic-chargeassessment-consumer-count: "3"
+  topic-courtcase-consumer-count: "3"
+  topic-reports-consumer-count: "5"
