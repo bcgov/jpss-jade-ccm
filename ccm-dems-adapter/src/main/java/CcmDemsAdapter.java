@@ -4182,6 +4182,17 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"documentId = ${header.documentId}...")
 
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String documentId = exchange.getMessage().getHeader("documentId", String.class);
+        if(documentId != null) {
+          exchange.getMessage().setHeader("urlDocumentId", JsonParseUtils.encodeUrlSensitiveChars(documentId));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4190,9 +4201,9 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId"))
+    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.urlDocumentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId"))
     .log(LoggingLevel.DEBUG,"Query URL: ${exchangeProperty.queryUrl}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.urlDocumentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .choice()
