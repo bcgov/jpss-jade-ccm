@@ -61,21 +61,21 @@ public class DemsChargeAssessmentCaseData {
     public DemsChargeAssessmentCaseData() {
     }
 
-    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList) 
+    public DemsChargeAssessmentCaseData(String caseTemplateId, ChargeAssessmentData primaryChargeAssessmentData , List<ChargeAssessmentData> chargeAssessmentDataList)
     {
         createdViaUi = true;
         List<CaseAccused> caseAccusedList = new ArrayList<CaseAccused>();
 
         if (primaryChargeAssessmentData.getAccused_persons() != null) {
             for (CaseAccused caseAccused : primaryChargeAssessmentData.getAccused_persons()) {
-            
+
                 if (!caseAccusedList.contains(caseAccused)){
                     caseAccusedList.add(caseAccused);
                 }
             }
         }
         if (chargeAssessmentDataList != null && !chargeAssessmentDataList.isEmpty()) {
-            
+
             for (ChargeAssessmentData chargeData : chargeAssessmentDataList) {
                 if (chargeData.getAccused_persons() != null) {
                     for (CaseAccused caseAccused :  chargeData.getAccused_persons()) {
@@ -83,12 +83,12 @@ public class DemsChargeAssessmentCaseData {
                             caseAccusedList.add(caseAccused);
                         }
                     }
-                }      
+                }
             }
         }
 
         setName(generateCaseName(caseAccusedList));
-        
+
         setTimeZoneId(PACIFIC_TIMEZONE);
         setKey(primaryChargeAssessmentData.getRcc_id());
         setDescription("");
@@ -113,6 +113,8 @@ public class DemsChargeAssessmentCaseData {
                 //fix for JADE-2559
             } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel().equals(caseFlag)){
                 caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
+            } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel().equals(caseFlag)){
+                caseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel());
             } else {
                 System.out.println("DEBUG: Unknown case flag - '" + caseFlag + "'");
                 System.out.println("DEBUG: DO_LTO.getName() - '" + DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.DO_LTO.getLabel() + "'");
@@ -150,6 +152,10 @@ public class DemsChargeAssessmentCaseData {
                     if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel())) {
                         courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.RVO.getLabel());
                     }
+                } else if(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel().equals(caseFlag)) {
+                    if(!courtCaseDataCaseFlagList.contains(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel())) {
+                        courtCaseDataCaseFlagList.add(DemsListItemFieldData.CASE_FLAG_FIELD_MAPPINGS.CPO.getLabel());
+                    }
                 }
             }
             caseFlagList.addAll(courtCaseDataCaseFlagList);
@@ -173,7 +179,7 @@ public class DemsChargeAssessmentCaseData {
 
         List<DemsFieldData> fieldData = new ArrayList<DemsFieldData>();
 
-      
+
         // added as part of JADE-2594
         String earliestSubmitDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getRcc_submit_date());
         String earliestOffenceDate = DateTimeUtils.convertToUtcFromBCDateTimeString(primaryChargeAssessmentData.getEarliest_offence_date());
@@ -205,7 +211,7 @@ public class DemsChargeAssessmentCaseData {
         List<String> initiatingAgencyList = new ArrayList<String>();
         Set<String> initiatingAgencySet = new HashSet<>();
         initiatingAgencySet.add(primaryChargeAssessmentData.getInitiating_agency());
-        
+
 
         Set<String>agencyFileIdSet = new HashSet<>();
         //agencyFileIdSet.add(primaryChargeAssessmentData.getRcc_id());
@@ -292,23 +298,23 @@ public class DemsChargeAssessmentCaseData {
         initiatingAgencyNameList.addAll(initiatingAgencyNameSet);
         proposedCrownOfficeList.addAll(proposedCrownOfficeSet);
         initiatingAgencyList.addAll(initiatingAgencySet);
-        
+
         DemsFieldData submitDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.SUBMIT_DATE.getLabel(), earliestSubmitDate);
         DemsFieldData assessmentCrown = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.ASSESSMENT_CROWN.getLabel(), assessmentCrownList);
         DemsFieldData prfsnlStaff = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_ASSIGNED_LEGAL_STAFF.getLabel(), prfsnlStaffList);
-        
+
         DemsFieldData caseDecision = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_DECISION.getLabel(), caseDesionLabel);
         DemsFieldData proposedCharges = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CHARGES.getLabel(), primaryChargeAssessmentData.getCharge());
         DemsFieldData initiatingAgency = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY.getLabel(),initiatingAgencyList);
         DemsFieldData initiatingAgencyName = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.INITIATING_AGENCY_NAME.getLabel(), initiatingAgencyNameList);
-        
-        
+
+
         DemsFieldData caseFlags = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.CASE_FLAGS.getLabel(), caseFlagList);
-      
+
 
         DemsFieldData offenceDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.OFFENCE_DATE.getLabel(), earliestOffenceDate);
         DemsFieldData proposedAppDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_APP_DATE.getLabel(), propAppearanceDate);
-        
+
         DemsFieldData limitationDate = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.LIMITATION_DATE.getLabel(), limitationDateStr);
         DemsFieldData rccStatus = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.RCC_STATUS.getLabel(), primaryChargeAssessmentData.getRcc_status_code());
         DemsFieldData proposedCrownOffice = new DemsFieldData(DemsFieldData.FIELD_MAPPINGS.PROPOSED_CROWN_OFFICE.getLabel(), proposedCrownOfficeList);
@@ -345,14 +351,14 @@ public class DemsChargeAssessmentCaseData {
         StringBuilder agencyFileNumberBuilder = new StringBuilder(primaryChargeAssessmentData.getAgency_file());
         StringBuilder investigatingOfficerBuilder = new StringBuilder("");
         StringBuilder proposedProcessTypeBuilder = new StringBuilder("");
-        
+
         if (!agencyFileIdSet.isEmpty()) {
             int elementCounter =0;
             for (String element : agencyFileIdSet) {
                 if (elementCounter > 0 || distinctAgencyFileIdBuffer.length() > 0) {
                     distinctAgencyFileIdBuffer.append(";");
                 }
-                distinctAgencyFileIdBuffer.append(element);    
+                distinctAgencyFileIdBuffer.append(element);
                 elementCounter++;
             }
         }
@@ -362,7 +368,7 @@ public class DemsChargeAssessmentCaseData {
                 if (elementCounter > 0 || agencyFileNumberBuilder.length() > 0) {
                     agencyFileNumberBuilder.append(";");
                 }
-                agencyFileNumberBuilder.append(element);    
+                agencyFileNumberBuilder.append(element);
                 elementCounter++;
             }
         }
@@ -372,7 +378,7 @@ public class DemsChargeAssessmentCaseData {
                 if (elementCounter > 0) {
                     investigatingOfficerBuilder.append(";");
                 }
-                investigatingOfficerBuilder.append(element);    
+                investigatingOfficerBuilder.append(element);
                 elementCounter++;
             }
         }
@@ -382,7 +388,7 @@ public class DemsChargeAssessmentCaseData {
                 if (elementCounter > 0) {
                     proposedProcessTypeBuilder.append(";");
                 }
-                proposedProcessTypeBuilder.append(element);    
+                proposedProcessTypeBuilder.append(element);
                 elementCounter++;
             }
         }
@@ -414,7 +420,7 @@ public class DemsChargeAssessmentCaseData {
         fieldData.add(limitationDate);
         fieldData.add(accusedFullName);
         fieldData.add(rccStatus);
-       
+
         fieldData.add(primaryAgencyFileId);
         fieldData.add(primaryAgencyFileNo);
         fieldData.add(lastJustinUpdate);

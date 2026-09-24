@@ -19,6 +19,8 @@ public class JustinAccused {
   private String do_lto_yn;
   //fix for JADE-2559
   private String rvo_yn;
+  // BCPSDEMS-2504
+  private String cpo_yn;
   //added as part of jade - 2859
   //private String otc_pin;
 
@@ -113,6 +115,13 @@ public class JustinAccused {
   public void setRvo_yn(String rvo_yn) {
     this.rvo_yn = rvo_yn;
   }
+  public String getCpo_yn() {
+    return cpo_yn;
+  }
+  public void setCpo_yn(String cpo_yn) {
+    this.cpo_yn = cpo_yn;
+  }
+  
   /*public String getOtc_pin() {
     return otc_pin;
   }

@@ -1,7 +1,10 @@
 package ccm.models.system.justin;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_NULL) 
 public class JustinAgencyFileStatus {
-    private String agencyFileStatus ;
+    private String agencyFileStatus;
     private String message;
     private String rccId;
 
@@ -15,7 +18,6 @@ public class JustinAgencyFileStatus {
         return agencyFileStatus;
     }
 
-
     public void setAgencyFileStatus(String agencyFileStatus) {
         this.agencyFileStatus = agencyFileStatus;
     }
@@ -24,7 +26,6 @@ public class JustinAgencyFileStatus {
         return message;
     }
 
-
     public void setMessage(String message) {
         this.message = message;
     }
@@ -32,7 +33,6 @@ public class JustinAgencyFileStatus {
     public String getRccId() {
         return rccId;
     }
-
 
     public void setRccId(String rccId) {
         this.rccId = rccId;

@@ -8,7 +8,8 @@ public class DemsListItemFieldData {
         // K(11,"K"),
         // Indigenous(12,"Indigenous"),
         // HROIP(15,"HROIP"),
-        // DO_LTO(14,"DO/LTO");
+        // DO_LTO(14,"DO/LTO"),
+        // CPO(16,"CPO");
 
         VUL1("VUL1"),
         CHI1("CHI1"),
@@ -17,7 +18,8 @@ public class DemsListItemFieldData {
         HROIP("HROIP"),
         //fix for JADE-2559
         RVO("RVO"),
-        DO_LTO("DO/LTO");
+        DO_LTO("DO/LTO"),
+        CPO("CPO");
 
         private String label;
 
@@ -128,7 +130,7 @@ public class DemsListItemFieldData {
         PEND("Pending"),
         NPRQ("No Process Required"),
         ACTIVE("Active");
-        
+
 
         private String name;
 
@@ -145,7 +147,7 @@ public class DemsListItemFieldData {
         public static RMS_PROCESSING_STATUS_MAPPINGS GetRmsProcessingType(String typeCode) {
             RMS_PROCESSING_STATUS_MAPPINGS retValue = null;
             if (typeCode.isBlank()) return retValue;
-            
+
             switch (typeCode) {
                 case "DEST":
                     retValue = DEST;
@@ -168,7 +170,7 @@ public class DemsListItemFieldData {
                 default:
                     break;
             }
-          
+
             return retValue;
 
         }

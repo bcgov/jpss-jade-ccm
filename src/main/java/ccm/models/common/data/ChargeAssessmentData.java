@@ -104,6 +104,8 @@ public class ChargeAssessmentData {
             boolean hasDoLto = false;
             //fix for JADE-2559
             boolean hasRvo = false;
+            // BCPSDEMS-2504
+            boolean hasCpo = false;
 
             for (JustinAccused ja : jaf.getAccused()) {
 
@@ -143,6 +145,11 @@ public class ChargeAssessmentData {
                 if (!hasRvo && accused.getRvo_yn()) {
                     case_flags.add("RVO");
                     hasRvo = true;
+                }
+                // BCPSDEMS-2504
+                if (!hasCpo && accused.getCpo_yn()) {
+                    case_flags.add("CPO");
+                    hasCpo = true;
                 }
             }
         }
