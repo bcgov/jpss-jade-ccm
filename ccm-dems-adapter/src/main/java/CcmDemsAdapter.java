@@ -5797,7 +5797,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     //traverse through all cases in DEMS
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Close/id")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Finish/id")
     .split()
       .jsonpathWriteAsString("$.*")
       .setProperty("caseId",jsonpath("$.id"))
@@ -5826,6 +5826,7 @@ private void getDemsFieldMappingsrccStatus() {
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
               .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+              .log(LoggingLevel.DEBUG, "Body: '${body}'")
               .log(LoggingLevel.INFO, "Case inactivated.")
 
             .endChoice()
