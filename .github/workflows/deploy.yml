@@ -1,16 +1,30 @@
 name: Deploy to OpenShift
 
 permissions:
+  id-token: write
   contents: read
 
 on:
   workflow_dispatch:
     inputs:
-      app:
-        description: 'Select the application to deploy'
+      namespace:
+        description: "Target OpenShift namespace"
         required: true
         type: choice
         options:
+          - cef5dd-dev
+          - cef5dd-test
+          - cef5dd-prod
+          - ac13ae-dev
+          - ac13ae-test
+          - ac13ae-prod
+
+      app:
+        description: "Application to deploy"
+        required: true
+        type: choice
+        options:
+          - all
           - ccm-justin-in-adapter
           - ccm-dems-adapter
           - ccm-lookup-service
@@ -21,68 +35,415 @@ on:
           - ccm-notification-service
           - ccm-justin-events-adapter
           - ccm-justin-out-adapter
-      env:
-        description: 'Select the environment'
-        required: true
-        type: choice
-        default: 'dev'
-        options:
-          - dev
-          - test
-          - prod
 
 jobs:
   deploy:
+    name: Deploy to OpenShift
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.env }}
+    environment: ${{ github.event.inputs.namespace }}
 
     env:
+      NAMESPACE: ${{ github.event.inputs.namespace }}
       APP: ${{ github.event.inputs.app }}
-      ENV: ${{ github.event.inputs.env }}
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
-      OCP_PROJECT: cef5dd-${{ github.event.inputs.env }}
+      SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Install OpenShift CLI (oc)
+        uses: actions/checkout@v5
+
+      - name: Install OpenShift CLI
         run: |
           curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz
           tar -xzf oc.tar.gz
-          sudo mv oc /usr/local/bin/
+          sudo mv oc /usr/local/bin/oc
+          oc version --client
 
       - name: Login to OpenShift
         run: |
-          oc login $OCP_SERVER --token=$OCP_TOKEN
-          oc project $OCP_PROJECT
+          echo "Logging into OpenShift..."
+          oc login "$OCP_SERVER" --token="$OCP_TOKEN"
+          oc project "$NAMESPACE"
+
+      - name: Derive environment from namespace
+        run: |
+          ENV="${NAMESPACE##*-}"
+          if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
+            echo "❌ Invalid ENV derived from namespace: $ENV"
+            exit 1
+          fi
+          echo "ENV=$ENV" >> $GITHUB_ENV
+          echo "Deploying to environment: $ENV"
+
+      - name: Show deployment details
+        run: |
+          echo "=========================================="
+          echo "🚀 Deployment Summary"
+          echo "Namespace:   $NAMESPACE"
+          if [[ "$APP" == "all" ]]; then
+            echo "Application: ALL (10 services, events adapter last)"
+          else
+            echo "Application: $APP"
+          fi
+          echo "Environment: $ENV"
+          echo "=========================================="
 
       - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
-          sudo mv kamel /usr/local/bin/
+          sudo mv kamel /usr/local/bin/kamel
 
-      - name: Build and install CCM models
+      - name: Derive cluster from namespace
         run: |
-          chmod +x ./build-install-ccm-models
-          ./build-install-ccm-models
+          CLUSTER="${NAMESPACE%-*}"
+          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
+          echo "Cluster: $CLUSTER"
 
-      - name: Deploy with script or kamel
+      - name: Set Registry Hosts
         run: |
-          echo "Checking for deployment script: ./redeploy-$APP"
-          if [[ -f ./redeploy-$APP ]]; then
-            echo "Found script: redeploy-$APP"
-            chmod +x ./redeploy-$APP
-            ./redeploy-$APP $ENV
-          elif [[ -f integrations/$APP.java ]]; then
-             echo "Running Camel K integration: $APP"
-             kamel run integrations/$APP.java \
-               --name=$APP \
-               --namespace=$OCP_PROJECT
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            echo "EXTERNAL_REGISTRY=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            echo "EXTERNAL_REGISTRY=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
           else
-            echo "No deployment method found for $APP"
+            echo "❌ Unsupported cluster: $CLUSTER"
             exit 1
           fi
 
+      - name: Login to OpenShift Image Registry
+        run: |
+          echo "$SA_REGISTRY_PASSWORD" | docker login \
+            -u github-deployer \
+            --password-stdin \
+            "$EXTERNAL_REGISTRY"
 
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      - name: Build CCM models jar
+        run: |
+          chmod +x ./repackage-ccm-models
+          ./repackage-ccm-models
+
+      - name: Build and push Docker images
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to build
+          if [[ "$APP" == "all" ]]; then
+            echo "🔨 Building Docker images for ALL applications..."
+            APPS_TO_BUILD=("${ALL_APPS[@]}")
+          else
+            echo "🔨 Building Docker image for: $APP"
+            APPS_TO_BUILD=("$APP")
+          fi
+
+          # Build each application
+          for CURRENT_APP in "${APPS_TO_BUILD[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "🔨 Building: $CURRENT_APP"
+            echo "=========================================="
+
+            cd "$CURRENT_APP"
+
+            # Build with Maven
+            echo "Building with Maven..."
+            mvn clean package -Dquarkus.package.type=uber-jar -DskipTests
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Maven build failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Build Docker image
+            echo "Building Docker image..."
+            docker build --platform linux/amd64 -t $CURRENT_APP .
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker build failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Tag and push to BOTH external (for login) and internal (for pods) registries
+            echo "Tagging and pushing to registries..."
+
+            # Tag for external registry (where we authenticated)
+            docker tag $CURRENT_APP ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            # Push to external registry first
+            docker push ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker push to external registry failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Also tag for internal registry (where pods pull from)
+            docker tag $CURRENT_APP ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            echo "✅ Tagged for internal registry: ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest"
+
+            echo "✅ $CURRENT_APP built and pushed successfully!"
+            cd ..
+          done
+
+      - name: Patch existing deployments for Helm adoption
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to patch
+          if [[ "$APP" == "all" ]]; then
+            APPS_TO_PATCH=("${ALL_APPS[@]}")
+          else
+            APPS_TO_PATCH=("$APP")
+          fi
+
+          echo "Patching deployments for Helm adoption..."
+          for CURRENT_APP in "${APPS_TO_PATCH[@]}"; do
+            # Check if deployment exists
+            if oc get deployment "$CURRENT_APP" -n "$NAMESPACE" &>/dev/null; then
+              echo "Patching $CURRENT_APP with Helm metadata..."
+
+              # Add Helm annotations
+              oc -n "$NAMESPACE" annotate deployment "$CURRENT_APP" \
+                meta.helm.sh/release-name="$CURRENT_APP" \
+                meta.helm.sh/release-namespace="$NAMESPACE" \
+                --overwrite || true
+
+              # Add Helm label
+              oc -n "$NAMESPACE" label deployment "$CURRENT_APP" \
+                app.kubernetes.io/managed-by=Helm \
+                --overwrite || true
+
+              echo "✅ Patched $CURRENT_APP"
+            else
+              echo "⚠️  Deployment $CURRENT_APP does not exist yet (will be created by Helm)"
+            fi
+          done
+
+      - name: Apply shared ConfigMap
+        run: |
+          echo "Applying shared ConfigMap to $NAMESPACE (env: $ENV)..."
+
+          VALUES_FILE="Helm/values-${ENV}.yaml"
+          if [[ ! -f "$VALUES_FILE" ]]; then
+            echo "❌ No per-environment values file found: $VALUES_FILE"
+            echo "   Refusing to apply a generic ConfigMap — it could overwrite"
+            echo "   environment-specific URLs. Create $VALUES_FILE first."
+            exit 1
+          fi
+
+          # Render the ConfigMap for THIS environment from the chart + overlay,
+          # then apply it. This replaced the old single dev-valued shared
+          # ConfigMap manifest, which overwrote test/prod with dev URLs.
+          echo "Rendering ccm-quarkus-configs from $VALUES_FILE..."
+          helm template ccm-app ./Helm \
+            -f "$VALUES_FILE" \
+            --set quarkusConfig.enabled=true \
+            -s templates/config-map.yml \
+            | oc apply -n "$NAMESPACE" -f -
+
+          echo "✅ ConfigMap applied successfully"
+
+      - name: Create Kafka topics for accessdedup processor
+        run: |
+          echo "Ensuring Kafka topics exist for ccm-accessdedup-processor..."
+
+          # Check if bulk-caseusers topic exists
+          if ! oc get kafkatopic ccm-bulk-caseusers -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-caseusers topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-caseusers
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            config:
+              min.insync.replicas: "2"
+            topicName: ccm-bulk-caseusers
+          EOF
+            echo "✅ ccm-bulk-caseusers topic created"
+          else
+            echo "✅ ccm-bulk-caseusers topic already exists"
+          fi
+
+          # Check if bulk-chargeassessments topic exists
+          if ! oc get kafkatopic ccm-bulk-chargeassessments -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-chargeassessments topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-chargeassessments
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            topicName: ccm-bulk-chargeassessments
+          EOF
+            echo "✅ ccm-bulk-chargeassessments topic created"
+          else
+            echo "✅ ccm-bulk-chargeassessments topic already exists"
+          fi
+
+      - name: Deploy with Helm
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to deploy
+          if [[ "$APP" == "all" ]]; then
+            echo "🚀 Deploying ALL applications with Helm..."
+            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
+          else
+            echo "🚀 Deploying single application with Helm: $APP"
+            APPS_TO_DEPLOY=("$APP")
+          fi
+
+          cd Helm
+
+          # Deploy each application
+          SUCCESS_COUNT=0
+          FAILED_APPS=()
+
+          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "📦 Deploying: $CURRENT_APP"
+            echo "=========================================="
+
+            # Compute image repository based on cluster
+            if [[ "$CLUSTER" == "cef5dd" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+            elif [[ "$CLUSTER" == "ac13ae" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+            else
+              IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
+            fi
+
+            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
+
+            # Set environment-specific values
+            if [[ "$ENV" == "prod" ]]; then
+              REPLICAS=3
+              PDB_ENABLED=true
+            else
+              REPLICAS=2
+              PDB_ENABLED=false
+            fi
+
+            echo "Deploying with:"
+            echo "  Image: $IMAGE_REPO"
+            echo "  Replicas: $REPLICAS"
+            echo "  PDB Enabled: $PDB_ENABLED"
+
+            if helm upgrade --install $CURRENT_APP . \
+              -f base/${CURRENT_APP}.yml \
+              --set namespace=$NAMESPACE \
+              --set image.repository=$IMAGE_REPO \
+              --set replicas=$REPLICAS \
+              --set podDisruptionBudget.enabled=$PDB_ENABLED \
+              --namespace $NAMESPACE \
+              --wait \
+              --timeout 15m; then
+
+              echo "✅ $CURRENT_APP deployed successfully!"
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            else
+              echo "❌ $CURRENT_APP deployment failed"
+              FAILED_APPS+=("$CURRENT_APP")
+            fi
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "Deployment Summary"
+          echo "=========================================="
+          echo "✅ Successful: $SUCCESS_COUNT/${#APPS_TO_DEPLOY[@]}"
+
+          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
+            echo "❌ Failed applications:"
+            for FAILED_APP in "${FAILED_APPS[@]}"; do
+              echo "   - $FAILED_APP"
+            done
+            exit 1
+          else
+            echo "🎉 All applications deployed successfully!"
+          fi
+
+      - name: Configure accessdedup processor environment
+        if: ${{ env.APP == 'ccm-accessdedup-processor' || env.APP == 'all' }}
+        run: |
+          echo "Configuring ccm-accessdedup-processor environment variables..."
+
+          DEPLOYMENT_NAME="ccm-accessdedup-processor-ccm-app"
+
+          # Check if deployment exists
+          if oc get deployment $DEPLOYMENT_NAME -n $NAMESPACE &>/dev/null; then
+            echo "Setting topic name environment variables..."
+            oc set env deployment/$DEPLOYMENT_NAME \
+              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=ccm-bulk-chargeassessments \
+              CCM_TOPIC_BULK_CASEUSERS_NAME=ccm-bulk-caseusers \
+              CCM_TOPIC_CASEUSER_ERRORS_NAME=ccm-caseuser-errors \
+              CCM_TOPIC_KPIS_NAME=ccm-kpis \
+              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
+              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
+              -n $NAMESPACE
+
+            echo "✅ Environment variables configured successfully"
+
+            echo "Waiting for deployment rollout..."
+            oc rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=5m
+
+            echo "✅ ccm-accessdedup-processor configured and running"
+          else
+            echo "⚠️  Deployment $DEPLOYMENT_NAME not found, skipping configuration"
+          fi
