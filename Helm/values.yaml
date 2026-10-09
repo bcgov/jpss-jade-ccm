@@ -1,0 +1,62 @@
+# Base values for the ccm-app chart.
+#
+# The shared quarkus ConfigMap (ccm-quarkus-configs) is rendered by
+# templates/config-map.yml. Keys that are identical across every
+# environment live here under quarkusConfig.shared. Keys that differ
+# per environment (URLs, env-only keys) live in values-<env>.yaml
+# under quarkusConfig.env and are merged on top at render time.
+#
+# Deploy with the matching overlay, e.g.:
+#   helm upgrade --install ccm-app ./Helm -n cef5dd-test -f Helm/values-test.yaml
+#   helm upgrade --install ccm-app ./Helm -n cef5dd-dev  -f Helm/values-dev.yaml
+
+quarkusConfig:
+  # Disabled by default so the per-app `helm upgrade --install <app>` releases do
+  # NOT each render/own the shared ccm-quarkus-configs (that would cause ownership
+  # conflicts across the 10 app releases). The dedicated "Apply shared ConfigMap"
+  # CI step renders it once with `--set quarkusConfig.enabled=true`.
+  enabled: false
+  name: ccm-quarkus-configs
+
+  # Constants — identical in dev and test. Do NOT put environment-specific
+  # URLs here; those belong in values-<env>.yaml under quarkusConfig.env.
+  shared:
+    # Kafka configuration
+    kafka-broker-url: events-kafka-bootstrap:9092
+    quarkus.kafka-streams.bootstrap-servers: events-kafka-bootstrap:9092
+
+    # DEMS configuration (non-URL)
+    dems-case-auto-creation: "true"
+    dems-case-auto-creation-submit-date-cutoff: "1965"
+    dems-org-unit-id: "1"
+    dems-case-template-id: "28"
+    dems-case-hyperlink-suffix: /case-file/1-1-entire-file-all-columns
+    dems-case-hyperlinklist-suffix: /court-file--vcf/1--front-end-court
+
+    # JUSTIN configuration (non-URL)
+    justin-disable-file-notes-processing: "false"
+
+    # PIDP Kafka configuration
+    pidp-kafka-apicurioregistry-url: https://pidp-apicurio-5b7aa5-test.apps.silver.devops.gov.bc.ca/apis/ccompat/v6
+    pidp-kafka-bootstrapservers-url: diam-kafka-test-a239c6-test.apps.gold.devops.gov.bc.ca:443
+    pidp-kafka-oauth-client-id: digitalevidence-jade-ccm-consumer
+    pidp-kafka-oauth-token-endpoint-url: https://test.common-sso.justice.gov.bc.ca/auth/realms/Kafka/protocol/openid-connect/token
+    pidp-kafka-topic-participantmerge-name: digitalevidence-justin-participant-merge-topic
+    pidp-kafka-topic-processresponse-name: digitalevidence-processresponse-topic
+    pidp-kafka-topic-usercreation-name: digitalevidence-usercreation-plain-topic
+
+    # PIDP API configuration
+    pidp-api-host: https://diam-islinterfaces-e27db1-test.apps.gold.devops.gov.bc.ca/api/v1/
+    pidp-api-oauth-client-id: jade-ccm-webapi-client
+    pidp-api-oauth-token-endpoint-url: test.common-sso.justice.gov.bc.ca/auth/realms/BCPS/protocol/openid-connect/token
+
+    # Splunk configuration
+    splunk-host-url: hec.monitoring.ag.gov.bc.ca:8088/services/collector
+
+    # Kafka topic consumer counts
+    topic-bulk-chargeassessment-consumer-count: "5"
+    topic-chargeassessment-consumer-count: "3"
+    topic-courtcase-consumer-count: "3"
+
+  # Overridden per environment in values-<env>.yaml.
+  env: {}
