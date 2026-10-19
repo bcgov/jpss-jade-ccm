@@ -1,0 +1,87 @@
+#!/bin/bash
+# Build and deploy a single service using OpenShift builds (no docker push)
+
+APP=$1
+ENV=$2
+NAMESPACE=$3
+
+if [ -z "$APP" ] || [ -z "$ENV" ] || [ -z "$NAMESPACE" ]; then
+    echo "Usage: $0 <app> <env> <namespace>"
+    exit 1
+fi
+
+echo "=========================================="
+echo "Building and deploying: $APP"
+echo "Environment: $ENV"
+echo "Namespace: $NAMESPACE"
+echo "=========================================="
+
+# Navigate to app directory
+APP_DIR="../../${APP}"
+if [ ! -d "$APP_DIR" ]; then
+    echo "Error: Application directory not found: $APP_DIR"
+    exit 1
+fi
+
+cd "$APP_DIR"
+
+# Step 1: Build the application with Maven
+echo "Step 1: Building application with Maven..."
+mvn clean package -Dquarkus.package.type=uber-jar -DskipTests
+
+if [ $? -ne 0 ]; then
+    echo "Error: Maven build failed"
+    exit 1
+fi
+
+echo "✅ Maven build successful"
+
+# Step 2: Build container image using OpenShift BuildConfig
+echo "Step 2: Building container image in OpenShift..."
+
+# Check if BuildConfig exists
+if ! oc get bc "$APP" -n "$NAMESPACE" &>/dev/null; then
+    echo "Creating BuildConfig for $APP..."
+
+    # Create BuildConfig using Dockerfile strategy
+    oc create -n "$NAMESPACE" -f - <<EOF
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: $APP
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: ${APP}:latest
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+EOF
+fi
+
+# Check if ImageStream exists
+if ! oc get is "$APP" -n "$NAMESPACE" &>/dev/null; then
+    echo "Creating ImageStream for $APP..."
+    oc create imagestream "$APP" -n "$NAMESPACE"
+fi
+
+# Start binary build from current directory (includes Dockerfile and target/)
+echo "Starting build..."
+oc start-build "$APP" --from-dir=. --follow -n "$NAMESPACE"
+
+if [ $? -ne 0 ]; then
+    echo "Error: OpenShift build failed"
+    exit 1
+fi
+
+echo "✅ Container image built successfully"
+
+# Return to scripts directory
+cd -
+
+echo "✅ Build completed for $APP"
