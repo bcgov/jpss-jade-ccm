@@ -401,6 +401,23 @@ jobs:
             echo "  Replicas: $REPLICAS"
             echo "  PDB Enabled: $PDB_ENABLED"
 
+            # Adopt resources created by the old redeploy scripts so Helm can take them
+            # over (metadata only, no pod restart). Resources owned by another release
+            # are left alone so Helm still reports the conflict.
+            for RES in $(helm template $CURRENT_APP . -f base/${CURRENT_APP}.yml --set namespace=$NAMESPACE --namespace $NAMESPACE \
+                | oc create --dry-run=client -o name -f - 2>/dev/null); do
+              if ! OWNER=$(oc -n $NAMESPACE get $RES -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}' 2>/dev/null); then
+                continue
+              fi
+              if [[ -z "$OWNER" ]]; then
+                echo "Adopting $RES into release $CURRENT_APP"
+                oc -n $NAMESPACE annotate $RES --overwrite \
+                  meta.helm.sh/release-name=$CURRENT_APP \
+                  meta.helm.sh/release-namespace=$NAMESPACE
+                oc -n $NAMESPACE label $RES --overwrite app.kubernetes.io/managed-by=Helm
+              fi
+            done
+
             if helm upgrade --install $CURRENT_APP . \
               -f base/${CURRENT_APP}.yml \
               --set namespace=$NAMESPACE \

@@ -16,6 +16,6 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "ccm-app.selectorLabels" . | nindent 6 }}
+      {{- include "ccm-app.pdbSelectorLabels" . | nindent 6 }}
 {{- end }}
 {{- end }}

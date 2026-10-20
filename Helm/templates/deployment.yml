@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ccm-app.selectorLabels" . | nindent 8 }}
+        {{- include "ccm-app.podLabels" . | nindent 8 }}
     spec:
       {{- if .Values.affinity }}
       affinity:
@@ -30,11 +30,14 @@ spec:
           {{- if .Values.args }}
           args: {{ toJson .Values.args }}
           {{- end }}
+          {{- $liveEnv := include "ccm-app.liveEnvValues" . | fromYaml }}
           env:
             {{- range .Values.env }}
             - name: {{ .name }}
               {{- if .value }}
               value: "{{ .value }}"
+              {{- else if and .valueFrom (hasKey $liveEnv .name) }}
+              value: {{ get $liveEnv .name | quote }}
               {{- else if .valueFrom }}
               valueFrom:
                 {{ toYaml .valueFrom | nindent 16 }}
