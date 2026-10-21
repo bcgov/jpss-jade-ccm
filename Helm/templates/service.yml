@@ -13,5 +13,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "ccm-app.selectorLabels" . | nindent 4 }}
+    {{- include "ccm-app.serviceSelectorLabels" . | nindent 4 }}
 {{- end }}

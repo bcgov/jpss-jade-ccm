@@ -1,4 +1,0 @@
-apiVersion: v2
-name: ccm-app
-description: A Helm chart for CCM project
-version: 0.1.0
