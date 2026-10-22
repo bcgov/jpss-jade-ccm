@@ -3059,14 +3059,53 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
     .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups")
-    // create initial case group map
-    .convertBodyTo(String.class)
-    //.log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+    .log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) {
-        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
+      public void process(Exchange exchange) throws Exception {
+        List<DemsCaseGroupData> items = new ArrayList<DemsCaseGroupData>();
+        exchange.setProperty("lookup_results", items);
+      }
+    })
+
+    .setProperty("length",jsonpath("$.length()"))
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+        // Loop through list and update the primary id
+        .split()
+          .jsonpathWriteAsString("$.*")
+          .setProperty("caseId",jsonpath("$.id"))
+          .setProperty("caseName",jsonpath("$.name"))
+          .setProperty("caseIsUserGroup",jsonpath("$.isUserGroup"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              Long id = exchange.getProperty("caseId", Long.class);
+              String name = exchange.getProperty("caseName", String.class);
+              Boolean isUserGroup = exchange.getProperty("caseIsUserGroup", Boolean.class);
+              DemsCaseGroupData item = new DemsCaseGroupData(id, name, isUserGroup);
+              log.info("name: "+name);
+              List<DemsCaseGroupData> items = (List<DemsCaseGroupData>)exchange.getProperty("lookup_results", ArrayList.class);
+              items.add(item);
+              exchange.setProperty("lookup_results", items);
+            }
+          })
+
+        .end()
+      .endChoice()
+    .end()
+
+    // create initial case group map
+    .log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        List<DemsCaseGroupData> items = (List<DemsCaseGroupData>)exchange.getProperty("lookup_results", ArrayList.class);
+        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap(items);
         exchange.setProperty("dems_case_group_map", caseGroupMap);
+        exchange.getMessage().setBody(caseGroupMap);
       }
     })
     ;

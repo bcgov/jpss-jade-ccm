@@ -2,10 +2,9 @@ package ccm.models.system.dems;
 
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import javax.json.JsonString;
-import javax.json.JsonNumber;
 import javax.json.JsonReader;
 import javax.json.JsonObject;
 import javax.json.Json;
@@ -16,6 +15,14 @@ public class DemsCaseGroupMap {
 
     public DemsCaseGroupMap() {
         map = new HashMap<String,Long>();
+    }
+
+    public DemsCaseGroupMap(List<DemsCaseGroupData> groupList) {
+        this();
+        for (int i = 0; i < groupList.size(); i++) {
+            DemsCaseGroupData data = groupList.get(i);
+            add(data);
+        }
     }
 
     public DemsCaseGroupMap(String jsonString) {
