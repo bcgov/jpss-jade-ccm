@@ -433,6 +433,21 @@ jobs:
               fi
             done
 
+            # Replace (not merge) the Service selector when it differs from the chart's.
+            # Helm merges selector maps, so keys left by the old redeploy scripts are never
+            # removed and the Service matches no pods (prod outage 2026-10-22 20:03-20:08).
+            if oc -n $NAMESPACE get svc $CURRENT_APP &>/dev/null; then
+              WANT=$(helm template $CURRENT_APP . -f base/${CURRENT_APP}.yml --set namespace=$NAMESPACE \
+                  --namespace $NAMESPACE --dry-run=server -s templates/service.yml 2>/dev/null \
+                | oc create --dry-run=client -o jsonpath='{.spec.selector}' -f - 2>/dev/null)
+              HAVE=$(oc -n $NAMESPACE get svc $CURRENT_APP -o jsonpath='{.spec.selector}')
+              if [[ -n "$WANT" && "$(echo "$WANT" | jq -S -c .)" != "$(echo "$HAVE" | jq -S -c .)" ]]; then
+                echo "Replacing $CURRENT_APP Service selector: $HAVE -> $WANT"
+                oc -n $NAMESPACE patch svc $CURRENT_APP --type=json \
+                  -p "[{\"op\":\"replace\",\"path\":\"/spec/selector\",\"value\":$WANT}]"
+              fi
+            fi
+
             if helm upgrade --install $CURRENT_APP . \
               -f base/${CURRENT_APP}.yml \
               --set namespace=$NAMESPACE \
@@ -444,8 +459,24 @@ jobs:
               --wait \
               --timeout 15m; then
 
-              echo "✅ $CURRENT_APP deployed successfully!"
-              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              # Verify the Service routes to ready pods (catches selector/label mismatches
+              # that helm --wait does not detect).
+              ENDPOINTS=1
+              if oc -n $NAMESPACE get svc $CURRENT_APP &>/dev/null; then
+                for i in $(seq 1 12); do
+                  ENDPOINTS=$(oc -n $NAMESPACE get endpoints $CURRENT_APP -o jsonpath='{.subsets[*].addresses[*].ip}' | wc -w)
+                  [[ $ENDPOINTS -gt 0 ]] && break
+                  sleep 10
+                done
+              fi
+              if [[ $ENDPOINTS -gt 0 ]]; then
+                echo "✅ $CURRENT_APP deployed successfully! (Service endpoints: $ENDPOINTS)"
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              else
+                echo "❌ $CURRENT_APP deployed but its Service has no ready endpoints"
+                oc -n $NAMESPACE get svc $CURRENT_APP -o jsonpath='  Service selector: {.spec.selector}{"\n"}'
+                FAILED_APPS+=("$CURRENT_APP")
+              fi
             else
               echo "❌ $CURRENT_APP deployment failed"
               FAILED_APPS+=("$CURRENT_APP")
@@ -466,33 +497,4 @@ jobs:
             exit 1
           else
             echo "🎉 All applications deployed successfully!"
-          fi
-
-      - name: Configure accessdedup processor environment
-        if: ${{ env.APP == 'ccm-accessdedup-processor' || env.APP == 'all' }}
-        run: |
-          echo "Configuring ccm-accessdedup-processor environment variables..."
-
-          DEPLOYMENT_NAME="ccm-accessdedup-processor-ccm-app"
-
-          # Check if deployment exists
-          if oc get deployment $DEPLOYMENT_NAME -n $NAMESPACE &>/dev/null; then
-            echo "Setting topic name environment variables..."
-            oc set env deployment/$DEPLOYMENT_NAME \
-              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=ccm-bulk-chargeassessments \
-              CCM_TOPIC_BULK_CASEUSERS_NAME=ccm-bulk-caseusers \
-              CCM_TOPIC_CASEUSER_ERRORS_NAME=ccm-caseuser-errors \
-              CCM_TOPIC_KPIS_NAME=ccm-kpis \
-              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
-              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
-              -n $NAMESPACE
-
-            echo "✅ Environment variables configured successfully"
-
-            echo "Waiting for deployment rollout..."
-            oc rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=5m
-
-            echo "✅ ccm-accessdedup-processor configured and running"
-          else
-            echo "⚠️  Deployment $DEPLOYMENT_NAME not found, skipping configuration"
           fi
