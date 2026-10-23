@@ -1,3 +1,4 @@
+{{- if .Values.container }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,8 +14,12 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ccm-app.selectorLabels" . | nindent 8 }}
+        {{- include "ccm-app.podLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Values.container.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -25,16 +30,23 @@ spec:
           {{- if .Values.args }}
           args: {{ toJson .Values.args }}
           {{- end }}
+          {{- $liveEnv := include "ccm-app.liveEnvValues" . | fromYaml }}
           env:
             {{- range .Values.env }}
             - name: {{ .name }}
               {{- if .value }}
               value: "{{ .value }}"
+              {{- else if and .valueFrom (hasKey $liveEnv .name) }}
+              value: {{ get $liveEnv .name | quote }}
               {{- else if .valueFrom }}
               valueFrom:
                 {{ toYaml .valueFrom | nindent 16 }}
               {{- end }}
             {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- toYaml .Values.envFrom | nindent 12 }}
+          {{- end }}
           ports:
             {{- if .Values.container.ports }}
             {{- range .Values.container.ports }}
@@ -43,6 +55,15 @@ spec:
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
             {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.volumeMounts }}
           volumeMounts:
             {{- range .Values.volumeMounts }}
             - name: {{ .name }}
@@ -54,10 +75,12 @@ spec:
               readOnly: {{ .readOnly }}
               {{- end }}
             {{- end }}
+          {{- end }}
           {{- if .Values.container.resources }}
           resources:
             {{ toYaml .Values.container.resources | nindent 12 }}
           {{- end }}
+      {{- if .Values.volumes }}
       volumes:
         {{- range .Values.volumes }}
         - name: {{ .name }}
@@ -69,6 +92,7 @@ spec:
           emptyDir: {{ toYaml .emptyDir | nindent 12 }}
           {{- end }}
         {{- end }}
+      {{- end }}
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
@@ -80,3 +104,4 @@ spec:
       maxSurge: {{ .Values.strategy.maxSurge }}
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
+{{- end }}

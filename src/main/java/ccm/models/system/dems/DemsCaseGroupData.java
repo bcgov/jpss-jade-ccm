@@ -1,11 +1,21 @@
 package ccm.models.system.dems;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DemsCaseGroupData {
     private Long id;
     private String name;
     private Boolean isUserGroup;
 
     public DemsCaseGroupData() {
+    }
+
+    public DemsCaseGroupData(Long id, String name, Boolean isUserGroup) {
+        setId(id);
+        setName(name);
+        setIsUserGroup(isUserGroup);
     }
 
     public Long getId() {

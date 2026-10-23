@@ -1,3 +1,4 @@
+{{- if .Values.service }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,8 +9,9 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: 80
+      targetPort: {{ .Values.service.targetPort | default 8080 }}
       protocol: TCP
       name: http
   selector:
-    {{- include "ccm-app.selectorLabels" . | nindent 4 }}
+    {{- include "ccm-app.serviceSelectorLabels" . | nindent 4 }}
+{{- end }}

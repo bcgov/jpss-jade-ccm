@@ -24,6 +24,7 @@ on:
         required: true
         type: choice
         options:
+          - all
           - ccm-justin-in-adapter
           - ccm-dems-adapter
           - ccm-lookup-service
@@ -39,24 +40,18 @@ jobs:
   deploy:
     name: Deploy to OpenShift
     runs-on: ubuntu-latest
-
-    # GitHub Environment == OpenShift namespace
     environment: ${{ github.event.inputs.namespace }}
 
     env:
       NAMESPACE: ${{ github.event.inputs.namespace }}
       APP: ${{ github.event.inputs.app }}
-      CI: true
-      AUTO_APPROVE: "true"
-
-      # Secrets come from the GitHub Environment
       OCP_SERVER: ${{ secrets.OCP_SERVER }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       SA_REGISTRY_PASSWORD: ${{ secrets.OC_REG_TOKEN }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install OpenShift CLI
         run: |
@@ -64,114 +59,442 @@ jobs:
           tar -xzf oc.tar.gz
           sudo mv oc /usr/local/bin/oc
           oc version --client
-      - name: Validate OpenShift credentials
-        run: |
-          if [[ -z "$OCP_SERVER" || -z "$OCP_TOKEN" ]]; then
-            echo "❌ Missing OpenShift credentials for environment: $NAMESPACE"
-            exit 1
-          fi
+
       - name: Login to OpenShift
         run: |
           echo "Logging into OpenShift..."
           oc login "$OCP_SERVER" --token="$OCP_TOKEN"
-      - name: Switch to OpenShift project
-        run: |
-          echo "Using project $NAMESPACE"
           oc project "$NAMESPACE"
-      # -------------------------------------------------------
-      # Derive CLUSTER and ENV (what the script expects)
-      # -------------------------------------------------------
-      - name: Derive CLUSTER and ENV from namespace
-        shell: bash
+
+      - name: Derive environment from namespace
         run: |
-          set -e
-          CLUSTER="${NAMESPACE%-*}"
           ENV="${NAMESPACE##*-}"
           if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
             echo "❌ Invalid ENV derived from namespace: $ENV"
             exit 1
           fi
-          echo "Derived values:"
-          echo "  NAMESPACE=$NAMESPACE"
-          echo "  CLUSTER=$CLUSTER"
-          echo "  ENV=$ENV"
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
           echo "ENV=$ENV" >> $GITHUB_ENV
-      - name: Set Registry Host
-        run: |
-          if [[ "$CLUSTER" == "cef5dd" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
-          elif [[ "$CLUSTER" == "ac13ae" ]]; then
-            echo "REGISTRY_HOST=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
-          else
-            echo "❌ Unsupported cluster: $CLUSTER"
-            exit 1
-          fi
-      - name: Login to OpenShift Image Registry
-        run: |
-          echo "$SA_REGISTRY_PASSWORD" | docker login \
-            -u github-deployer \
-            --password-stdin \
-            "$REGISTRY_HOST"
+          echo "Deploying to environment: $ENV"
 
       - name: Show deployment details
         run: |
-          echo "----------------------------------------"
+          echo "=========================================="
           echo "🚀 Deployment Summary"
-          echo "Cluster:     $CLUSTER"
           echo "Namespace:   $NAMESPACE"
-          echo "Application: $APP"
+          if [[ "$APP" == "all" ]]; then
+            echo "Application: ALL (10 services, events adapter last)"
+          else
+            echo "Application: $APP"
+          fi
           echo "Environment: $ENV"
-          echo "----------------------------------------"
-          
+          echo "=========================================="
+
       - name: Install Camel K CLI
         run: |
           curl -Lo kamel https://github.com/apache/camel-k/releases/download/v1.10.0/camel-k-client-1.10.0-linux-64bit
           chmod +x kamel
           sudo mv kamel /usr/local/bin/kamel
+
+      - name: Derive cluster from namespace
+        run: |
+          CLUSTER="${NAMESPACE%-*}"
+          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
+          echo "Cluster: $CLUSTER"
+
+      - name: Set Registry Hosts
+        run: |
+          if [[ "$CLUSTER" == "cef5dd" ]]; then
+            echo "EXTERNAL_REGISTRY=image-registry.apps.silver.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
+          elif [[ "$CLUSTER" == "ac13ae" ]]; then
+            echo "EXTERNAL_REGISTRY=image-registry.apps.clab.devops.gov.bc.ca" >> $GITHUB_ENV
+            echo "INTERNAL_REGISTRY=image-registry.openshift-image-registry.svc:5000" >> $GITHUB_ENV
+          else
+            echo "❌ Unsupported cluster: $CLUSTER"
+            exit 1
+          fi
+
+      - name: Login to OpenShift Image Registry
+        run: |
+          echo "$SA_REGISTRY_PASSWORD" | docker login \
+            -u github-deployer \
+            --password-stdin \
+            "$EXTERNAL_REGISTRY"
+
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      # Pin the build toolchain: newer Maven breaks the Quarkus 2.x plugins (ServiceLocator),
+      # and building on JDK 21+ makes Quarkus generate code that fails on the Java 17 runtime.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Maven 3.9.11
+        run: |
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz | tar -xz -C $HOME
+          echo "$HOME/apache-maven-3.9.11/bin" >> $GITHUB_PATH
+
+      - name: Show build toolchain
+        run: mvn -v
+
       - name: Build CCM models jar
         run: |
           chmod +x ./repackage-ccm-models
           ./repackage-ccm-models
-      # -------------------------------------------------------
-      # Deploy (script unchanged)
-      # -------------------------------------------------------
-      - name: Deploy application
-        shell: bash
+
+      - name: Build and push Docker images
         run: |
-          cd scripts/jade-ccm
-          chmod +x redeploy-${APP}
-          ./redeploy-${APP} "$ENV"
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
 
-      - name: Configure logging and retry settings
+          # Determine which apps to build
+          if [[ "$APP" == "all" ]]; then
+            echo "🔨 Building Docker images for ALL applications..."
+            APPS_TO_BUILD=("${ALL_APPS[@]}")
+          else
+            echo "🔨 Building Docker image for: $APP"
+            APPS_TO_BUILD=("$APP")
+          fi
+
+          # Build each application
+          for CURRENT_APP in "${APPS_TO_BUILD[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "🔨 Building: $CURRENT_APP"
+            echo "=========================================="
+
+            cd "$CURRENT_APP"
+
+            # Build with Maven
+            echo "Building with Maven..."
+            mvn clean package -Dquarkus.package.type=uber-jar -DskipTests
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Maven build failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Build Docker image
+            echo "Building Docker image..."
+            docker build --platform linux/amd64 -t $CURRENT_APP .
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker build failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Tag and push to BOTH external (for login) and internal (for pods) registries
+            echo "Tagging and pushing to registries..."
+
+            # Tag for external registry (where we authenticated)
+            docker tag $CURRENT_APP ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            # Push to external registry first
+            docker push ${EXTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+            if [ $? -ne 0 ]; then
+              echo "❌ Docker push to external registry failed for $CURRENT_APP"
+              exit 1
+            fi
+
+            # Also tag for internal registry (where pods pull from)
+            docker tag $CURRENT_APP ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest
+
+            echo "✅ Tagged for internal registry: ${INTERNAL_REGISTRY}/${NAMESPACE}/${CURRENT_APP}:latest"
+
+            echo "✅ $CURRENT_APP built and pushed successfully!"
+            cd ..
+          done
+
+      - name: Patch existing deployments for Helm adoption
         run: |
-          echo "Applying logging and retry configuration to $APP..."
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
 
-          oc set env deployment/$APP \
-            LOGGING_LEVEL_ROOT=INFO \
-            LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN \
-            LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN \
-            SPRING_KAFKA_CONSUMER_PROPERTIES_RETRY_BACKOFF_MS=5000 \
-            SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS=10 \
-            -n $NAMESPACE
+          # Determine which apps to patch
+          if [[ "$APP" == "all" ]]; then
+            APPS_TO_PATCH=("${ALL_APPS[@]}")
+          else
+            APPS_TO_PATCH=("$APP")
+          fi
 
-      - name: Configure accessdedup processor properties
-        if: ${{ env.APP == 'ccm-accessdedup-processor' }}
+          echo "Patching deployments for Helm adoption..."
+          for CURRENT_APP in "${APPS_TO_PATCH[@]}"; do
+            # Check if deployment exists
+            if oc get deployment "$CURRENT_APP" -n "$NAMESPACE" &>/dev/null; then
+              echo "Patching $CURRENT_APP with Helm metadata..."
+
+              # Add Helm annotations
+              oc -n "$NAMESPACE" annotate deployment "$CURRENT_APP" \
+                meta.helm.sh/release-name="$CURRENT_APP" \
+                meta.helm.sh/release-namespace="$NAMESPACE" \
+                --overwrite || true
+
+              # Add Helm label
+              oc -n "$NAMESPACE" label deployment "$CURRENT_APP" \
+                app.kubernetes.io/managed-by=Helm \
+                --overwrite || true
+
+              echo "✅ Patched $CURRENT_APP"
+            else
+              echo "⚠️  Deployment $CURRENT_APP does not exist yet (will be created by Helm)"
+            fi
+          done
+
+      - name: Apply shared ConfigMap
         run: |
-            echo "Applying Quarkus Kafka Streams config..."
-  
-            oc set env deployment/$APP \
-              QUARKUS_KAFKA_STREAMS_APPLICATION_ID=$APP \
-              CCM_TOPIC_BULK_CHARGEASSESSMENTS_NAME=bulk-chargeassessments-topic \
-              CCM_TOPIC_BULK_CASEUSERS_NAME=bulk-caseusers-topic \
-              CCM_TOPIC_CASEUSER_ERRORS_NAME=caseuser-errors-topic \
-              CCM_TOPIC_KPIS_NAME=kpis-topic \
-              CCM_STORE_CASEACCESSSYNC_NAME=caseaccesssync-store \
-              CCM_APPLICATION_NAME_PROPERCASE="CCM Access Dedup Processor" \
-              -n $NAMESPACE
+          echo "Applying shared ConfigMap to $NAMESPACE (env: $ENV)..."
 
+          VALUES_FILE="Helm/values-${ENV}.yaml"
+          if [[ ! -f "$VALUES_FILE" ]]; then
+            echo "❌ No per-environment values file found: $VALUES_FILE"
+            echo "   Refusing to apply a generic ConfigMap — it could overwrite"
+            echo "   environment-specific URLs. Create $VALUES_FILE first."
+            exit 1
+          fi
 
-             echo "Restarting deployment to apply changes..."
-             oc rollout restart deployment/$APP -n $NAMESPACE
+          # Render the ConfigMap for THIS environment from the chart + overlay,
+          # then apply it. This replaced the old single dev-valued shared
+          # ConfigMap manifest, which overwrote test/prod with dev URLs.
+          echo "Rendering ccm-quarkus-configs from $VALUES_FILE..."
+          helm template ccm-app ./Helm \
+            -f "$VALUES_FILE" \
+            --set quarkusConfig.enabled=true \
+            -s templates/config-map.yml \
+            | oc apply -n "$NAMESPACE" -f -
 
-             echo "Configuration applied successfully."
+          echo "✅ ConfigMap applied successfully"
+
+      - name: Create Kafka topics for accessdedup processor
+        run: |
+          echo "Ensuring Kafka topics exist for ccm-accessdedup-processor..."
+
+          # Check if bulk-caseusers topic exists
+          if ! oc get kafkatopic ccm-bulk-caseusers -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-caseusers topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-caseusers
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            config:
+              min.insync.replicas: "2"
+            topicName: ccm-bulk-caseusers
+          EOF
+            echo "✅ ccm-bulk-caseusers topic created"
+          else
+            echo "✅ ccm-bulk-caseusers topic already exists"
+          fi
+
+          # Check if bulk-chargeassessments topic exists
+          if ! oc get kafkatopic ccm-bulk-chargeassessments -n $NAMESPACE &>/dev/null; then
+            echo "Creating ccm-bulk-chargeassessments topic..."
+            cat <<EOF | oc apply -f -
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaTopic
+          metadata:
+            name: ccm-bulk-chargeassessments
+            namespace: $NAMESPACE
+            labels:
+              strimzi.io/cluster: events
+          spec:
+            partitions: 1
+            replicas: 3
+            topicName: ccm-bulk-chargeassessments
+          EOF
+            echo "✅ ccm-bulk-chargeassessments topic created"
+          else
+            echo "✅ ccm-bulk-chargeassessments topic already exists"
+          fi
+
+      - name: Deploy with Helm
+        run: |
+          # Define all applications
+          ALL_APPS=(
+            "ccm-accessdedup-processor"
+            "ccm-dems-adapter"
+            "ccm-justin-in-adapter"
+            "ccm-justin-out-adapter"
+            "ccm-lookup-service"
+            "ccm-notification-service"
+            "ccm-pidp-adapter"
+            "ccm-reports-processor"
+            "ccm-splunk-adapter"
+            "ccm-justin-events-adapter"
+          )
+
+          # Determine which apps to deploy
+          if [[ "$APP" == "all" ]]; then
+            echo "🚀 Deploying ALL applications with Helm..."
+            APPS_TO_DEPLOY=("${ALL_APPS[@]}")
+          else
+            echo "🚀 Deploying single application with Helm: $APP"
+            APPS_TO_DEPLOY=("$APP")
+          fi
+
+          cd Helm
+
+          # Deploy each application
+          SUCCESS_COUNT=0
+          FAILED_APPS=()
+
+          for CURRENT_APP in "${APPS_TO_DEPLOY[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "📦 Deploying: $CURRENT_APP"
+            echo "=========================================="
+
+            # Compute image repository based on cluster
+            if [[ "$CLUSTER" == "cef5dd" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.silver.devops.gov.bc.ca"
+            elif [[ "$CLUSTER" == "ac13ae" ]]; then
+              IMAGE_REGISTRY="image-registry.apps.clab.devops.gov.bc.ca"
+            else
+              IMAGE_REGISTRY="image-registry.openshift-image-registry.svc:5000"
+            fi
+
+            IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
+
+            # Set environment-specific values
+            # Prod runs 2 replicas: 3 exceeds the prod memory-request quota (24Gi).
+            if [[ "$ENV" == "prod" ]]; then
+              REPLICAS=2
+              PDB_ENABLED=true
+            else
+              REPLICAS=2
+              PDB_ENABLED=false
+            fi
+
+            # justin-events-adapter polls JUSTIN; run a single instance to avoid duplicate processing.
+            # No PDB for it: minAvailable 1 on a single pod would block node drains.
+            if [[ "$CURRENT_APP" == "ccm-justin-events-adapter" ]]; then
+              REPLICAS=1
+              PDB_ENABLED=false
+            fi
+
+            # Prod pods use up to ~1.2Gi; raise the 1000Mi memory limit for apps that set one.
+            # Only the limit changes, so memory requests (and quota usage) stay the same.
+            EXTRA_SET=()
+            if [[ "$ENV" == "prod" ]] && grep -q "limits:" base/${CURRENT_APP}.yml; then
+              EXTRA_SET+=(--set container.resources.limits.memory=2Gi)
+            fi
+
+            echo "Deploying with:"
+            echo "  Image: $IMAGE_REPO"
+            echo "  Replicas: $REPLICAS"
+            echo "  PDB Enabled: $PDB_ENABLED"
+
+            # Adopt resources created by the old redeploy scripts so Helm can take them
+            # over (metadata only, no pod restart). Resources owned by another release
+            # are left alone so Helm still reports the conflict.
+            for RES in $(helm template $CURRENT_APP . -f base/${CURRENT_APP}.yml --set namespace=$NAMESPACE --namespace $NAMESPACE \
+                | oc create --dry-run=client -o name -f - 2>/dev/null); do
+              if ! OWNER=$(oc -n $NAMESPACE get $RES -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}' 2>/dev/null); then
+                continue
+              fi
+              if [[ -z "$OWNER" ]]; then
+                echo "Adopting $RES into release $CURRENT_APP"
+                oc -n $NAMESPACE annotate $RES --overwrite \
+                  meta.helm.sh/release-name=$CURRENT_APP \
+                  meta.helm.sh/release-namespace=$NAMESPACE
+                oc -n $NAMESPACE label $RES --overwrite app.kubernetes.io/managed-by=Helm
+              fi
+            done
+
+            # Replace (not merge) the Service selector when it differs from the chart's.
+            # Helm merges selector maps, so keys left by the old redeploy scripts are never
+            # removed and the Service matches no pods (prod outage 2026-10-22 20:03-20:08).
+            if oc -n $NAMESPACE get svc $CURRENT_APP &>/dev/null; then
+              WANT=$(helm template $CURRENT_APP . -f base/${CURRENT_APP}.yml --set namespace=$NAMESPACE \
+                  --namespace $NAMESPACE --dry-run=server -s templates/service.yml 2>/dev/null \
+                | oc create --dry-run=client -o jsonpath='{.spec.selector}' -f - 2>/dev/null)
+              HAVE=$(oc -n $NAMESPACE get svc $CURRENT_APP -o jsonpath='{.spec.selector}')
+              if [[ -n "$WANT" && "$(echo "$WANT" | jq -S -c .)" != "$(echo "$HAVE" | jq -S -c .)" ]]; then
+                echo "Replacing $CURRENT_APP Service selector: $HAVE -> $WANT"
+                oc -n $NAMESPACE patch svc $CURRENT_APP --type=json \
+                  -p "[{\"op\":\"replace\",\"path\":\"/spec/selector\",\"value\":$WANT}]"
+              fi
+            fi
+
+            if helm upgrade --install $CURRENT_APP . \
+              -f base/${CURRENT_APP}.yml \
+              --set namespace=$NAMESPACE \
+              --set image.repository=$IMAGE_REPO \
+              --set replicas=$REPLICAS \
+              --set podDisruptionBudget.enabled=$PDB_ENABLED \
+              "${EXTRA_SET[@]}" \
+              --namespace $NAMESPACE \
+              --wait \
+              --timeout 15m; then
+
+              # Verify the Service routes to ready pods (catches selector/label mismatches
+              # that helm --wait does not detect).
+              ENDPOINTS=1
+              if oc -n $NAMESPACE get svc $CURRENT_APP &>/dev/null; then
+                for i in $(seq 1 12); do
+                  ENDPOINTS=$(oc -n $NAMESPACE get endpoints $CURRENT_APP -o jsonpath='{.subsets[*].addresses[*].ip}' | wc -w)
+                  [[ $ENDPOINTS -gt 0 ]] && break
+                  sleep 10
+                done
+              fi
+              if [[ $ENDPOINTS -gt 0 ]]; then
+                echo "✅ $CURRENT_APP deployed successfully! (Service endpoints: $ENDPOINTS)"
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              else
+                echo "❌ $CURRENT_APP deployed but its Service has no ready endpoints"
+                oc -n $NAMESPACE get svc $CURRENT_APP -o jsonpath='  Service selector: {.spec.selector}{"\n"}'
+                FAILED_APPS+=("$CURRENT_APP")
+              fi
+            else
+              echo "❌ $CURRENT_APP deployment failed"
+              FAILED_APPS+=("$CURRENT_APP")
+            fi
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "Deployment Summary"
+          echo "=========================================="
+          echo "✅ Successful: $SUCCESS_COUNT/${#APPS_TO_DEPLOY[@]}"
+
+          if [ ${#FAILED_APPS[@]} -gt 0 ]; then
+            echo "❌ Failed applications:"
+            for FAILED_APP in "${FAILED_APPS[@]}"; do
+              echo "   - $FAILED_APP"
+            done
+            exit 1
+          else
+            echo "🎉 All applications deployed successfully!"
+          fi

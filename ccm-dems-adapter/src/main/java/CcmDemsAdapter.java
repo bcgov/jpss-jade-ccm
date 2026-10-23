@@ -3059,14 +3059,53 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"Looking up case groups (case id = ${exchangeProperty.dems_case_id}) ...")
     .removeHeader(Exchange.CONTENT_ENCODING) // In certain cases, the encoding was gzip, which DEMS does not support
     .toD("https://{{dems.host}}/cases/${exchangeProperty.dems_case_id}/groups")
-    // create initial case group map
-    .convertBodyTo(String.class)
-    //.log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+    .log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+
     .process(new Processor() {
       @Override
-      public void process(Exchange exchange) {
-        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap((String)exchange.getIn().getBody());
+      public void process(Exchange exchange) throws Exception {
+        List<DemsCaseGroupData> items = new ArrayList<DemsCaseGroupData>();
+        exchange.setProperty("lookup_results", items);
+      }
+    })
+
+    .setProperty("length",jsonpath("$.length()"))
+    .choice()
+      .when(simple("${header.CamelHttpResponseCode} == 200 && ${exchangeProperty.length} > 0"))
+        // Loop through list and update the primary id
+        .split()
+          .jsonpathWriteAsString("$.*")
+          .setProperty("caseId",jsonpath("$.id"))
+          .setProperty("caseName",jsonpath("$.name"))
+          .setProperty("caseIsUserGroup",jsonpath("$.isUserGroup"))
+
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              Long id = exchange.getProperty("caseId", Long.class);
+              String name = exchange.getProperty("caseName", String.class);
+              Boolean isUserGroup = exchange.getProperty("caseIsUserGroup", Boolean.class);
+              DemsCaseGroupData item = new DemsCaseGroupData(id, name, isUserGroup);
+              log.info("name: "+name);
+              List<DemsCaseGroupData> items = (List<DemsCaseGroupData>)exchange.getProperty("lookup_results", ArrayList.class);
+              items.add(item);
+              exchange.setProperty("lookup_results", items);
+            }
+          })
+
+        .end()
+      .endChoice()
+    .end()
+
+    // create initial case group map
+    .log(LoggingLevel.DEBUG, " Message from DEMS: ${body}")
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) throws Exception {
+        List<DemsCaseGroupData> items = (List<DemsCaseGroupData>)exchange.getProperty("lookup_results", ArrayList.class);
+        DemsCaseGroupMap caseGroupMap = new DemsCaseGroupMap(items);
         exchange.setProperty("dems_case_group_map", caseGroupMap);
+        exchange.getMessage().setBody(caseGroupMap);
       }
     })
     ;
@@ -4182,6 +4221,17 @@ private void getDemsFieldMappingsrccStatus() {
     .log(LoggingLevel.INFO,"courtCaseId = ${exchangeProperty.courtCaseId}...")
     .log(LoggingLevel.INFO,"documentId = ${header.documentId}...")
 
+    // escape any potential special characters in title.
+    .process(new Processor() {
+      @Override
+      public void process(Exchange exchange) {
+        String documentId = exchange.getMessage().getHeader("documentId", String.class);
+        if(documentId != null) {
+          exchange.getMessage().setHeader("urlDocumentId", JsonParseUtils.encodeUrlSensitiveChars(documentId));
+        }
+      }
+    })
+
     .removeHeader("CamelHttpUri")
     .removeHeader("CamelHttpBaseUri")
     .removeHeaders("CamelHttp*")
@@ -4190,9 +4240,9 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     // filter on descriptions and title
     // filter-out save version of Yes, and sort any No value first.
-    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId"))
+    .setProperty("queryUrl", simple("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.urlDocumentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId"))
     .log(LoggingLevel.DEBUG,"Query URL: ${exchangeProperty.queryUrl}")
-    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.documentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
+    .toD("https://{{dems.host}}/cases/${exchangeProperty.courtCaseId}/records?filter=documentId:\"${header.urlDocumentId}\"&fields=cc_SaveVersion,cc_OriginalFileNumber,cc_JustinImageId")
     .log(LoggingLevel.DEBUG,"returned case records = ${body}...")
 
     .choice()
@@ -5786,7 +5836,7 @@ private void getDemsFieldMappingsrccStatus() {
     .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
     .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
     //traverse through all cases in DEMS
-    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Close/id")
+    .toD("https://{{dems.host}}/org-units/{{dems.org-unit.id}}/cases/RCC Status:Finish/id")
     .split()
       .jsonpathWriteAsString("$.*")
       .setProperty("caseId",jsonpath("$.id"))
@@ -5815,6 +5865,7 @@ private void getDemsFieldMappingsrccStatus() {
               .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
               .setHeader("Authorization").simple("Bearer " + "{{dems.token}}")
               .toD("https://{{dems.host}}/cases/${exchangeProperty.caseId}")
+              .log(LoggingLevel.DEBUG, "Body: '${body}'")
               .log(LoggingLevel.INFO, "Case inactivated.")
 
             .endChoice()

@@ -1,0 +1,74 @@
+#!/bin/bash
+# Deploy all CCM services using existing redeploy scripts
+# Events adapter deployed last
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <environment>"
+    echo "  environment: dev, test, or prod"
+    exit 1
+fi
+
+ENV=$1
+
+echo "=========================================="
+echo "Deploying ALL CCM Services to $ENV"
+echo "=========================================="
+
+# Define services to deploy (events adapter goes last)
+SERVICES=(
+    "ccm-accessdedup-processor"
+    "ccm-dems-adapter-quarkus"
+    "ccm-justin-in-adapter-quarkus"
+    "ccm-justin-out-adapter-quarkus"
+    "ccm-lookup-service-quarkus"
+    "ccm-notification-service-quarkus"
+    "ccm-pidp-adapter-quarkus"
+    "ccm-reports-processor-quarkus"
+    "ccm-splunk-adapter-quarkus"
+    "ccm-justin-events-adapter-quarkus"  # Events adapter deployed LAST
+)
+
+SUCCESS_COUNT=0
+FAILED_SERVICES=()
+
+# Deploy each service
+for SERVICE in "${SERVICES[@]}"; do
+    SCRIPT="./redeploy-${SERVICE}"
+
+    if [ ! -f "$SCRIPT" ]; then
+        echo "⚠️  Script not found: $SCRIPT"
+        FAILED_SERVICES+=("$SERVICE")
+        continue
+    fi
+
+    echo ""
+    echo "=========================================="
+    echo "📦 Deploying: $SERVICE"
+    echo "=========================================="
+
+    chmod +x "$SCRIPT"
+    if "$SCRIPT" "$ENV"; then
+        echo "✅ $SERVICE deployed successfully"
+        ((SUCCESS_COUNT++))
+    else
+        echo "❌ $SERVICE deployment failed"
+        FAILED_SERVICES+=("$SERVICE")
+    fi
+done
+
+# Summary
+echo ""
+echo "=========================================="
+echo "Deployment Summary"
+echo "=========================================="
+echo "✅ Successful: $SUCCESS_COUNT/${#SERVICES[@]}"
+
+if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+    echo "❌ Failed services:"
+    for SERVICE in "${FAILED_SERVICES[@]}"; do
+        echo "   - $SERVICE"
+    done
+    exit 1
+else
+    echo "🎉 All services deployed successfully!"
+fi
