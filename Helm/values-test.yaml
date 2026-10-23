@@ -16,3 +16,4 @@ quarkusConfig:
     # Test-only keys
     dems-case-default-group-id: "6"
     topic-reports-consumer-count: "5"
+    dems-case-template-id: "6024"
