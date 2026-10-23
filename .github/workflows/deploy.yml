@@ -388,12 +388,27 @@ jobs:
             IMAGE_REPO="${IMAGE_REGISTRY}/${NAMESPACE}/${CURRENT_APP}"
 
             # Set environment-specific values
+            # Prod runs 2 replicas: 3 exceeds the prod memory-request quota (24Gi).
             if [[ "$ENV" == "prod" ]]; then
-              REPLICAS=3
+              REPLICAS=2
               PDB_ENABLED=true
             else
               REPLICAS=2
               PDB_ENABLED=false
+            fi
+
+            # justin-events-adapter polls JUSTIN; run a single instance to avoid duplicate processing.
+            # No PDB for it: minAvailable 1 on a single pod would block node drains.
+            if [[ "$CURRENT_APP" == "ccm-justin-events-adapter" ]]; then
+              REPLICAS=1
+              PDB_ENABLED=false
+            fi
+
+            # Prod pods use up to ~1.2Gi; raise the 1000Mi memory limit for apps that set one.
+            # Only the limit changes, so memory requests (and quota usage) stay the same.
+            EXTRA_SET=()
+            if [[ "$ENV" == "prod" ]] && grep -q "limits:" base/${CURRENT_APP}.yml; then
+              EXTRA_SET+=(--set container.resources.limits.memory=2Gi)
             fi
 
             echo "Deploying with:"
@@ -424,6 +439,7 @@ jobs:
               --set image.repository=$IMAGE_REPO \
               --set replicas=$REPLICAS \
               --set podDisruptionBudget.enabled=$PDB_ENABLED \
+              "${EXTRA_SET[@]}" \
               --namespace $NAMESPACE \
               --wait \
               --timeout 15m; then
