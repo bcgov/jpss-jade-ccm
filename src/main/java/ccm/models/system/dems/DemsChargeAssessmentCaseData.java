@@ -11,7 +11,7 @@ import ccm.models.common.data.ChargeAssessmentData;
 import ccm.utils.DateTimeUtils;
 
 public class DemsChargeAssessmentCaseData {
-    public static final String PACIFIC_TIMEZONE = "Pacific Standard Time";
+    public static final String PACIFIC_TIMEZONE = "Pacific Time (British Columbia)";
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
     public static final String SPACE_STRING = " ";
