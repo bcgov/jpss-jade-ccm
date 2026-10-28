@@ -1,6 +1,9 @@
 package ccm.models.system.dems;
 
 public class DemsFieldData {
+    
+    public static final String BC_TIMEZONE = "British Columbia Standard Time";
+
     public enum FIELD_MAPPINGS {
         // PART_ID(2, "PartID"),
         // AGENCY_FILE_ID(12, "Agency File ID"),
