@@ -12,6 +12,7 @@ public class DemsCaseAppearanceSummaryData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
+    private String timeZoneId;
     private String name;
     private String key;
     private List<DemsFieldData> fields;
@@ -20,6 +21,7 @@ public class DemsCaseAppearanceSummaryData {
     }
 
     public DemsCaseAppearanceSummaryData(String key, String name, CaseAppearanceSummaryList commonList) {
+        setTimeZoneId(DemsFieldData.BC_TIMEZONE);
         setKey(key);
         setName(name);
 
@@ -88,6 +90,14 @@ public class DemsCaseAppearanceSummaryData {
         }
     }
 
+
+    public String getTimeZoneId() {
+        return timeZoneId;
+    }
+
+    public void setTimeZoneId(String timeZoneId) {
+        this.timeZoneId = timeZoneId;
+    }
 
     public String getName() {
         return name;
