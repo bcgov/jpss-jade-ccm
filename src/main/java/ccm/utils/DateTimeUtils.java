@@ -51,13 +51,13 @@ public class DateTimeUtils {
             if (bcDateTimeString.length() > 10) {
                 // this is a date+time.  Add BC timezone to string.
                 if (bcDateTimeString.contains(".")) {
-                    bcDateTimeWithTimeZoneString = bcDateTimeString + " PT";
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + " UTC-7";
                 } else {
-                    bcDateTimeWithTimeZoneString = bcDateTimeString + ".000 PT";
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + ".000 UTC-7";
                 }
             } else {
                 // this is a date.  add default time and BC timezone to string.
-                bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00.000 PT";
+                bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00.000 UTC-7";
             }
 
             zonedDateTime = ZonedDateTime.parse(bcDateTimeWithTimeZoneString, 
