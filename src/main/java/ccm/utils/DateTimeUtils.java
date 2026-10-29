@@ -48,16 +48,17 @@ public class DateTimeUtils {
         // preprocess input date/time string.
         if (bcDateTimeString != null && !bcDateTimeString.isEmpty()) {
             String bcDateTimeWithTimeZoneString = null;
+            ZoneId bcZone = ZoneId.of("America/Vancouver");
             if (bcDateTimeString.length() > 10) {
                 // this is a date+time.  Add BC timezone to string.
                 if (bcDateTimeString.contains(".")) {
-                    bcDateTimeWithTimeZoneString = bcDateTimeString + " UTC-7";
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + " America/Vancouver";
                 } else {
-                    bcDateTimeWithTimeZoneString = bcDateTimeString + ".000 UTC-7";
+                    bcDateTimeWithTimeZoneString = bcDateTimeString + ".000 America/Vancouver";
                 }
             } else {
                 // this is a date.  add default time and BC timezone to string.
-                bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00.000 UTC-7";
+                bcDateTimeWithTimeZoneString = bcDateTimeString + " 00:00:00.000 America/Vancouver";
             }
 
             zonedDateTime = ZonedDateTime.parse(bcDateTimeWithTimeZoneString, 
