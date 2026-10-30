@@ -9,7 +9,6 @@ public class DemsCaseCrownAssignmentData {
     public static final String COMMA_STRING = ",";
     public static final String SEMICOLON_SPACE_STRING = "; ";
 
-    private String timeZoneId;
     private String name;
     private String key;
     private List<DemsFieldData> fields;
@@ -18,7 +17,6 @@ public class DemsCaseCrownAssignmentData {
     }
 
     public DemsCaseCrownAssignmentData(String key, String name, CaseCrownAssignmentList commonList) {
-        setTimeZoneId(DemsFieldData.BC_TIMEZONE);
         setKey(key);
         setName(name);
 
@@ -39,15 +37,6 @@ public class DemsCaseCrownAssignmentData {
         fieldData.add(assignedLegalStaff);
         setFields(fieldData);
 
-    }
-
-
-    public String getTimeZoneId() {
-        return timeZoneId;
-    }
-
-    public void setTimeZoneId(String timeZoneId) {
-        this.timeZoneId = timeZoneId;
     }
 
     public String getName() {
